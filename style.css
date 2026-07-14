@@ -1996,7 +1996,10 @@ fieldset legend {
 .crop-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  /* Matches the shoot bubble's thumbnail shape (62px wide, stretched to the
+     bubble's fixed ~100px height) instead of a square, so what you frame
+     here is what actually shows on every shoot bubble. */
+  aspect-ratio: 31 / 50;
   overflow: hidden;
   border-radius: 14px;
   background: #000;

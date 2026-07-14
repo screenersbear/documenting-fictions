@@ -317,6 +317,15 @@
     return formatDate(new Date());
   }
 
+  // Mirrors the "Due:" label on the deadline — "Shoots:" while the date is
+  // still ahead (or today), "Shot:" once it's in the past, so a glance at
+  // either label tells you whether that half of the bubble is done or not.
+  function shootDateLabel(s, formatter) {
+    if (!s.date) return 'Date TBD';
+    const prefix = s.date >= todayStr() ? 'Shoots' : 'Shot';
+    return `${prefix}: ${formatter(s.date)}`;
+  }
+
   function formatDate(d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -460,7 +469,7 @@
         <div class="shoot-row-top">
           <span class="shoot-row-title"><strong>${escapeHtml(shootDisplayName(s))}</strong></span>
           <div class="shoot-row-dates">
-            <span class="mi-sub">${s.date ? prettyDateShort(s.date) : 'Date TBD'}</span>
+            <span class="mi-sub">${shootDateLabel(s, prettyDateShort)}</span>
             ${s.deadline ? `<span class="shoot-row-due">Due: ${prettyDateShort(s.deadline)}</span>` : ''}
           </div>
         </div>
@@ -857,7 +866,7 @@
       <div class="card-body">
         <p class="card-title">${escapeHtml(shootDisplayName(s))}</p>
         <div class="card-meta">
-          <span class="badge">${s.date ? prettyDate(s.date) : 'Date TBD'}</span>
+          <span class="badge">${shootDateLabel(s, prettyDate)}</span>
         </div>
         ${s.deadline ? `<p class="card-due">Due: ${prettyDate(s.deadline)}</p>` : ''}
         ${statusLabel ? `<div class="card-meta"><span class="badge">${statusLabel}</span></div>` : ''}
@@ -2160,7 +2169,8 @@
   let cropZoom = 1;
   let cropOffsetX = 0;
   let cropOffsetY = 0;
-  let cropStageSize = 0;
+  let cropStageWidth = 0;
+  let cropStageHeight = 0;
   let cropDragging = false;
   let cropDragStartX = 0;
   let cropDragStartY = 0;
@@ -2174,13 +2184,13 @@
   // pendingProjectPhoto/scheduleShootAutosave.
   let cropTargetShootId = null;
 
-  // Keeps the image covering the full crop square at all times — the user
-  // can zoom in and reposition, but never past an edge into empty space.
+  // Keeps the image covering the full crop rectangle at all times — the
+  // user can zoom in and reposition, but never past an edge into empty space.
   function clampCropOffsets() {
     const dispW = cropImg.naturalWidth * cropBaseScale * cropZoom;
     const dispH = cropImg.naturalHeight * cropBaseScale * cropZoom;
-    const minX = Math.min(0, cropStageSize - dispW);
-    const minY = Math.min(0, cropStageSize - dispH);
+    const minX = Math.min(0, cropStageWidth - dispW);
+    const minY = Math.min(0, cropStageHeight - dispH);
     cropOffsetX = Math.min(0, Math.max(minX, cropOffsetX));
     cropOffsetY = Math.min(0, Math.max(minY, cropOffsetY));
   }
@@ -2196,13 +2206,15 @@
     cropActivePointers.clear();
     cropDragging = false;
     cropImg.onload = () => {
-      cropStageSize = cropStage.getBoundingClientRect().width;
-      // Base scale matches object-fit:cover — the shorter side fills the square.
-      cropBaseScale = Math.max(cropStageSize / cropImg.naturalWidth, cropStageSize / cropImg.naturalHeight);
+      const stageRect = cropStage.getBoundingClientRect();
+      cropStageWidth = stageRect.width;
+      cropStageHeight = stageRect.height;
+      // Base scale matches object-fit:cover — the shorter side fills the rectangle.
+      cropBaseScale = Math.max(cropStageWidth / cropImg.naturalWidth, cropStageHeight / cropImg.naturalHeight);
       const dispW = cropImg.naturalWidth * cropBaseScale;
       const dispH = cropImg.naturalHeight * cropBaseScale;
-      cropOffsetX = (cropStageSize - dispW) / 2;
-      cropOffsetY = (cropStageSize - dispH) / 2;
+      cropOffsetX = (cropStageWidth - dispW) / 2;
+      cropOffsetY = (cropStageHeight - dispH) / 2;
       applyCropTransform();
     };
     cropImg.src = src;
@@ -2293,13 +2305,18 @@
 
   document.getElementById('cropConfirmBtn').addEventListener('click', () => {
     const scale = cropBaseScale * cropZoom;
-    const sSize = cropStageSize / scale;
+    const sWidth = cropStageWidth / scale;
+    const sHeight = cropStageHeight / scale;
     const sx = -cropOffsetX / scale;
     const sy = -cropOffsetY / scale;
+    // Output at the same 31:50 ratio as the crop stage (and the shoot
+    // bubble thumbnail), just at a higher resolution than the on-screen box.
+    const outputWidth = 124;
+    const outputHeight = 200;
     const canvas = document.createElement('canvas');
-    canvas.width = 200;
-    canvas.height = 200;
-    canvas.getContext('2d').drawImage(cropImg, sx, sy, sSize, sSize, 0, 0, 200, 200);
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+    canvas.getContext('2d').drawImage(cropImg, sx, sy, sWidth, sHeight, 0, 0, outputWidth, outputHeight);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
     const targetId = cropTargetShootId;
     if (targetId) {
