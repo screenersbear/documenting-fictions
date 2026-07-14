@@ -743,19 +743,24 @@
     todayList.innerHTML = '';
     todayShoots.forEach(s => renderShootRow(todayList, s, { showStatus: true }));
 
-    document.getElementById('upcomingSection').hidden = upcomingShoots.length === 0;
+    // Always visible, even at zero — same reasoning as Upcoming deadlines
+    // below: a reliable place to glance at what's coming, empty or not.
     document.getElementById('upcomingCount').textContent = `[${upcomingShoots.length}]`;
     const upList = document.getElementById('upcomingShootsList');
     upList.innerHTML = '';
-    ['this_week', 'next_week', 'later'].forEach(bucketKey => {
-      const bucketShoots = upcomingShoots.filter(s => weekBucket(s.date) === bucketKey);
-      if (!bucketShoots.length) return;
-      const heading = document.createElement('p');
-      heading.className = 'upcoming-subheading';
-      heading.textContent = WEEK_BUCKET_LABELS[bucketKey];
-      upList.appendChild(heading);
-      bucketShoots.forEach(s => renderShootRow(upList, s, { showStatus: true }));
-    });
+    if (!upcomingShoots.length) {
+      upList.innerHTML = '<p class="empty-hint upcoming-empty-hint">Upcoming shoots go here, brometheus.</p>';
+    } else {
+      ['this_week', 'next_week', 'later'].forEach(bucketKey => {
+        const bucketShoots = upcomingShoots.filter(s => weekBucket(s.date) === bucketKey);
+        if (!bucketShoots.length) return;
+        const heading = document.createElement('p');
+        heading.className = 'upcoming-subheading';
+        heading.textContent = WEEK_BUCKET_LABELS[bucketKey];
+        upList.appendChild(heading);
+        bucketShoots.forEach(s => renderShootRow(upList, s, { showStatus: true }));
+      });
+    }
 
     // Always visible, even at zero — unlike Today/Upcoming, this section
     // isn't about whether anything's due right now so much as being a
@@ -776,8 +781,6 @@
         bucketShoots.forEach(s => renderShootRow(deadlineList, s, { showStatus: true }));
       });
     }
-
-    document.getElementById('overviewEmptyHint').hidden = todayShoots.length + upcomingShoots.length > 0;
 
     applyOverviewCollapseState();
   }
