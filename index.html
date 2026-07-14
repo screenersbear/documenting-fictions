@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>Documenting Fictions</title>
+
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#ffffff" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Documenting Fictions" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<link rel="icon" href="icon-512.png" />
+
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="pullToRefreshIndicator" class="pull-refresh-indicator" hidden>
+  <div class="pull-refresh-dots"><span></span><span></span><span></span></div>
+</div>
+
+<div id="app">
+
+  <!-- ============ OVERVIEW ============ -->
+  <section id="view-overview" class="view">
+    <div class="hero-band">
+      <header class="topbar">
+        <div class="brand-row">
+          <div class="brand-logo-wrap shine-sweep">
+            <img src="logo.png" alt="" class="brand-logo" />
+          </div>
+          <h1 class="brand-title">Documenting Fictions</h1>
+          <button type="button" class="app-menu-btn" id="appMenuBtn" aria-label="App menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <button class="new-shoot-cta shine-sweep" id="newShootBtn">+ New Shoot</button>
+    </div>
+
+    <div class="stats-row" id="statsRow"></div>
+
+    <div class="section-block" id="todaySection" hidden>
+      <h2>Today <span id="todayCount"></span><svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h2>
+      <div id="todayShootsList" class="mini-list"></div>
+    </div>
+
+    <div class="section-block" id="upcomingSection" hidden>
+      <h2>Upcoming shoots <span id="upcomingCount"></span><svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h2>
+      <div id="upcomingShootsList" class="mini-list"></div>
+    </div>
+
+    <div class="section-block" id="upcomingDeadlinesSection">
+      <h2>Upcoming deadlines <span id="upcomingDeadlinesCount"></span><svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h2>
+      <div id="upcomingDeadlinesShootsList" class="mini-list"></div>
+    </div>
+
+    <p class="empty-hint upcoming-empty-hint" id="overviewEmptyHint" hidden>Upcoming shoots go here, brometheus.</p>
+  </section>
+
+  <!-- ============ SHOOT LOG ============ -->
+  <section id="view-shoots" class="view" hidden>
+    <header class="topbar">
+      <h1>Shoots</h1>
+      <button class="icon-btn" id="addShootBtn" aria-label="Add shoot">+</button>
+    </header>
+    <button type="button" class="filter-toggle" id="shootFilterToggle">Filter: All</button>
+    <div class="filters" id="shootFilters" hidden></div>
+    <div id="shootList" class="mini-list"></div>
+    <p class="empty-state" id="shootEmpty" hidden>No shoots logged yet.</p>
+  </section>
+
+  <!-- ============ ARCHIVE ============ -->
+  <section id="view-archive" class="view" hidden>
+    <header class="topbar">
+      <h1>Archive</h1>
+    </header>
+    <div class="archive-slideshow" id="archiveSlideshow">
+      <p class="archive-slideshow-empty" id="archiveSlideshowEmpty">final images shown here</p>
+    </div>
+    <button type="button" class="filter-toggle" id="archiveFilterToggle">Filter: All</button>
+    <div class="filters" id="archiveFilters" hidden></div>
+    <div id="archiveList" class="card-list"></div>
+    <p class="empty-state" id="archiveEmpty" hidden>No completed shoots yet.</p>
+  </section>
+
+  <!-- ============ JOURNAL ============ -->
+  <section id="view-journal" class="view" hidden>
+    <header class="topbar">
+      <h1>Journal</h1>
+      <button class="icon-btn" id="addJournalBtn" aria-label="Add entry">+</button>
+    </header>
+    <button type="button" class="filter-toggle" id="journalFilterToggle">Filter: All</button>
+    <div class="filters" id="journalFilters" hidden></div>
+    <div id="journalList" class="card-list"></div>
+    <p class="empty-state" id="journalEmpty" hidden>No journal entries yet.</p>
+  </section>
+
+  <!-- ============ STATS ============ -->
+  <section id="view-stats" class="view" hidden>
+    <header class="topbar">
+      <h1>Stats</h1>
+    </header>
+    <button type="button" class="filter-toggle" id="statsYearFilterToggle">Filter: Year</button>
+    <div class="filters" id="statsYearFilters" hidden></div>
+    <div id="statsFunFact" class="stats-fun-fact" hidden></div>
+    <div class="stats-carousel" id="statsCarousel"></div>
+    <div class="stats-dots" id="statsDots"></div>
+  </section>
+
+  <!-- ============ TAB BAR ============ -->
+  <nav class="tabbar">
+    <button class="tab active" data-view="overview">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="5" y2="13"/><line x1="12" y1="19" x2="12" y2="8"/><line x1="19" y1="19" x2="19" y2="4"/></svg>
+      </span><span>Overview</span>
+    </button>
+    <button class="tab" data-view="shoots">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      </span><span>Shoots</span>
+    </button>
+    <button class="tab" data-view="archive">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/><line x1="10" y1="13" x2="14" y2="13"/></svg>
+      </span><span>Archive</span>
+    </button>
+    <button class="tab" data-view="journal">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+      </span><span>Journal</span>
+    </button>
+    <button class="tab" data-view="stats">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l7.79 4.5"/></svg>
+      </span><span>Stats</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ============ SHOOT MODAL ============ -->
+<div id="shootModalOverlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header shoot-modal-header">
+      <h2 id="shootModalTitle">Log a Shoot</h2>
+      <div class="modal-header-actions">
+        <button type="button" class="icon-btn share-shoot-btn" id="shareShootBtn" aria-label="Share as PDF" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
+        </button>
+        <button class="icon-btn close-btn" data-close="shoot">&times;</button>
+      </div>
+    </div>
+    <form id="shootForm">
+      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="basicInfoHeading">Basic Info<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <div id="basicInfoBody">
+        <label>Title
+          <input type="text" id="shootTitle" maxlength="120" placeholder="Name for the shoot if applicable" />
+        </label>
+        <label>Talent name(s)
+          <input type="text" id="shootTalent" required maxlength="80" placeholder="Who is in front of the camera" />
+        </label>
+        <label>Status
+          <select id="shootStatus">
+            <option value="idea_phase">Early idea</option>
+            <option value="planning">Active planning</option>
+            <option value="waiting_to_shoot">Shoot ready</option>
+            <option value="captured">Captured</option>
+            <option value="waiting_for_selects">Waiting for selects</option>
+            <option value="editing">Editing</option>
+            <option value="delivered">Delivered</option>
+            <option value="rescheduled">Rescheduled</option>
+            <option value="canceled">Canceled</option>
+          </select>
+        </label>
+        <label>Deadline
+          <input type="date" id="shootDeadline" />
+        </label>
+      </div>
+      <h3 class="shoot-section-heading status-group-heading heading-navy" id="logisticsHeading">Logistics<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <div id="logisticsBody">
+        <label>Shoot date
+          <input type="date" id="shootDate" />
+        </label>
+        <div class="time-range-row">
+          <label>Start time
+            <input type="time" id="shootStartTime" />
+          </label>
+          <label>End time
+            <input type="time" id="shootEndTime" />
+          </label>
+        </div>
+        <label>Location
+          <input type="hidden" id="shootLocation" />
+          <button type="button" id="shootLocationBtn" class="location-field-btn">Tap to add location</button>
+        </label>
+
+        <div class="team-section">
+          <p class="team-question">Requires team?</p>
+          <div class="team-yesno-row">
+            <label class="checkbox-row"><input type="checkbox" id="teamRequiredYes" /> Yes</label>
+            <label class="checkbox-row"><input type="checkbox" id="teamRequiredNo" /> No</label>
+          </div>
+          <p class="field-hint team-finalized-note" id="teamFinalizedNote" hidden>Team finalized</p>
+          <div id="teamDetailsBlock" hidden>
+            <div id="teamMembersList" class="team-members-list"></div>
+            <button type="button" id="addTeamMemberBtn" class="primary small-btn">+ Add team member</button>
+            <label class="checkbox-row"><input type="checkbox" id="shootTeamFinalized" /> <span id="teamFinalizedLabel">Team finalized?</span></label>
+          </div>
+        </div>
+
+        <label>Location directions for talent
+          <textarea id="shootLocationDirections" rows="3" maxlength="1000" placeholder="What floor the studio is on, where to park, etc." readonly></textarea>
+        </label>
+      </div>
+
+      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="directionHeading">Direction<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <div id="directionBody">
+        <label>Category
+          <select id="shootCategory" class="bold-select" required>
+            <option value="" disabled>Tap here to select</option>
+            <option value="commercial">Commercial</option>
+            <option value="video">Video</option>
+            <option value="editorial">Editorial</option>
+            <option value="lighting_test">Lighting test</option>
+            <option value="portfolio_building">Portfolio building</option>
+            <option value="test_shoot">Test shoot</option>
+            <option value="event">Event</option>
+            <option value="headshot">Headshot</option>
+            <option value="branding">Branding</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+
+        <p class="continue-prompt" id="categoryContinuePrompt">select a category to continue</p>
+
+        <div id="formSection2" hidden>
+          <label><span id="shootPremiseLabelText">Concept</span>
+            <textarea id="shootPremise" rows="3" maxlength="200" placeholder="visual narrative or message" readonly></textarea>
+          </label>
+
+          <div id="narrativeFieldsBlock">
+            <label>Character/Personality
+              <textarea id="shootCharacter" rows="3" maxlength="120" placeholder="Who the talent is being, even loosely" readonly></textarea>
+            </label>
+
+            <label>World-building notes
+              <textarea id="shootWorldNotes" rows="3" maxlength="1000" placeholder="Setting, implied time or backstory, what's just happened or about to" readonly></textarea>
+            </label>
+
+            <label>General direction notes
+              <textarea id="shootGeneralNotes" rows="3" maxlength="1000" placeholder="Anything else worth remembering about this shoot" readonly></textarea>
+            </label>
+          </div>
+
+          <div id="commercialFieldsBlock" hidden>
+            <label>Shoot goals
+              <textarea id="shootGoals" rows="3" maxlength="1000" placeholder="What this shoot needs to accomplish" readonly></textarea>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="shoot-section-heading status-group-heading heading-navy" id="visualsHeading">Visuals<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <div id="visualsBody">
+        <div class="form-section-label-row">
+          <button type="button" class="manage-link inline-manage-link" id="manageFrameworksBtn">Manage</button>
+        </div>
+        <div id="frameworkTagsContainer"></div>
+
+        <label>Wardrobe &amp; styling notes
+          <textarea id="shootWardrobe" rows="2" maxlength="500" readonly></textarea>
+        </label>
+
+        <div class="moodboard-section">
+          <span class="moodboard-label">Mood board</span>
+          <button type="button" id="addMoodboardPhotos" class="primary small-btn">+ Add photos</button>
+          <input type="file" id="moodboardFileInput" accept="image/*" multiple hidden />
+          <div id="moodboardGrid" class="moodboard-grid"></div>
+          <label class="checkbox-row" id="moodboardCompleteRow"><input type="checkbox" id="shootMoodboardComplete" /> <span id="moodboardCompleteLabel">Mood board complete?</span></label>
+        </div>
+
+        <div class="references-block">
+          <label class="beats-label">References</label>
+          <p class="field-hint">Links to webpages, articles, YouTube videos, other inspiration</p>
+          <div id="referencesList" class="references-list"></div>
+          <button type="button" id="addReferenceBtn" class="primary small-btn">+ Add link</button>
+        </div>
+      </div>
+
+      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="shootDayNotesHeading">Shoot-day notes<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <div id="shootDayNotesBody">
+        <label>Directions for talent
+          <textarea id="shootTalentDirections" rows="3" maxlength="1000" readonly></textarea>
+        </label>
+        <label>Directions for team
+          <textarea id="shootTeamDirections" rows="3" maxlength="1000" readonly></textarea>
+        </label>
+
+        <div class="shot-list-section">
+          <h4 class="subsection-heading" id="shotListHeading">Shot list<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h4>
+          <div id="shotListBody">
+            <div id="shotListItems" class="shot-list-items"></div>
+            <button type="button" id="addShotBtn" class="primary small-btn">+ Add shot</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="postShootContent" hidden>
+        <h3 class="shoot-section-heading status-group-heading heading-navy" id="postShootHeading">Post-shoot Reflection<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+        <div id="postShootBody">
+          <label>What went right
+            <textarea id="shootWentRight" rows="3" maxlength="1000" readonly></textarea>
+          </label>
+          <label>What could've gone better
+            <textarea id="shootCouldBeBetter" rows="3" maxlength="1000" readonly></textarea>
+          </label>
+          <label>Lessons for next time
+            <textarea id="shootLessonsLearned" rows="3" maxlength="1000" readonly></textarea>
+          </label>
+
+          <div class="moodboard-section">
+            <span class="moodboard-label">Final images</span>
+            <button type="button" id="addFinalPhotos" class="post-shoot-toggle">+ Add photos</button>
+            <input type="file" id="finalImagesFileInput" accept="image/*" multiple hidden />
+            <div id="finalImagesGrid" class="moodboard-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="plain-delete-btn pre-save-divider" id="deleteShootBtn" hidden>Delete shoot</button>
+      <div class="modal-actions post-shoot-divider">
+        <button type="button" class="primary" id="saveShootBtn">Save</button>
+        <button type="button" class="primary" id="unarchiveShootBtn" hidden>Unarchive</button>
+        <button type="button" class="complete-shoot-btn" id="completeShootBtn" hidden>Complete Shoot <span class="complete-shoot-btn-note">(archives the session)</span></button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ EXPAND FIELD MODAL ============ -->
+<div id="expandFieldOverlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="expandFieldTitle"></h2>
+      <button class="icon-btn close-btn" id="expandFieldCloseBtn">&times;</button>
+    </div>
+    <textarea id="expandFieldTextarea" rows="12"></textarea>
+    <button type="button" class="primary" id="expandFieldOkBtn">Okay</button>
+  </div>
+</div>
+
+<!-- ============ LOCATION MODAL ============ -->
+<div id="locationModalOverlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Location</h2>
+      <button class="icon-btn close-btn" data-close="location">&times;</button>
+    </div>
+    <div id="locationForm">
+      <label>Location name &amp; address
+        <input type="text" id="locationTextInput" maxlength="200" placeholder="e.g. Studio A, 123 Main St" />
+      </label>
+      <label>Past locations
+        <select id="pastLocationsSelect">
+          <option value="">Select a past location…</option>
+        </select>
+      </label>
+      <button type="button" class="primary" id="saveLocationBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MANAGE FRAMEWORKS MODAL ============ -->
+<div id="frameworksModalOverlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Frameworks</h2>
+      <button class="icon-btn close-btn" data-close="frameworks">&times;</button>
+    </div>
+    <div id="frameworksBody"></div>
+    <form id="newFrameworkForm" class="quick-add-relationship">
+      <input type="text" id="newFrameworkName" placeholder="New framework name" maxlength="60" />
+      <button type="submit" class="primary">Add</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ EDIT CATEGORY FILTERS ============ -->
+<div id="categoryVisibilityOverlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Shoot Categories</h2>
+      <button class="icon-btn close-btn" data-close="categoryVisibility">&times;</button>
+    </div>
+    <p class="field-hint">Choose which categories show up as filters on the Shoots and Archive tabs.</p>
+    <div class="tag-group" id="categoryVisibilityList"></div>
+  </div>
+</div>
+
+<!-- ============ IMAGE VIEWER (mood board full view) ============ -->
+<div id="imageViewerOverlay" class="image-viewer-overlay" hidden>
+  <div class="image-viewer-top">
+    <button type="button" class="image-viewer-close" id="closeImageViewer">&times;</button>
+  </div>
+  <div class="image-viewer-stage" id="imageViewerStage">
+    <img id="imageViewerImg" src="" alt="" class="image-viewer-img" />
+    <div class="image-viewer-caption-overlay" id="imageViewerCaptionOverlay" hidden>
+      <span id="imageViewerCaptionText"></span>
+    </div>
+  </div>
+  <div class="image-viewer-caption-bar">
+    <button type="button" id="imageViewerAddCaptionBtn">+ Add caption</button>
+    <input type="text" id="imageViewerCaptionInput" placeholder="Add a caption" maxlength="140" hidden />
+    <button type="button" class="image-viewer-menu-btn" id="imageViewerMenuBtn">&#8226;&#8226;&#8226;</button>
+    <div id="imageViewerMenu" class="image-viewer-menu" hidden>
+      <button type="button" id="setProjectPhotoFromViewer">Set as project photo</button>
+      <button type="button" id="deleteImageFromViewer" class="options-delete">Delete this image</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PROJECT PHOTO CROP ============ -->
+<div id="projectPhotoCropOverlay" class="modal-overlay crop-overlay" hidden>
+  <div class="modal crop-modal">
+    <div class="modal-header">
+      <h2>Set project photo</h2>
+      <button type="button" class="icon-btn close-btn" id="cropCloseBtn">&times;</button>
+    </div>
+    <p class="field-hint">Drag to reposition, pinch or use the slider to zoom</p>
+    <div class="crop-stage" id="cropStage">
+      <img id="cropImg" src="" alt="" draggable="false" />
+    </div>
+    <div class="crop-zoom-row">
+      <span class="crop-zoom-icon">&minus;</span>
+      <input type="range" id="cropZoomSlider" min="1" max="3" step="0.01" value="1" />
+      <span class="crop-zoom-icon">&plus;</span>
+    </div>
+    <button type="button" class="primary" id="cropConfirmBtn">Set crop</button>
+  </div>
+</div>
+
+<!-- ============ SHOOT OPTIONS ============ -->
+<div id="shootOptionsOverlay" class="modal-overlay options-overlay" hidden>
+  <div class="modal options-modal options-modal-slider">
+    <div class="options-pane-track" id="shootOptionsPaneTrack">
+      <div class="options-pane">
+        <button type="button" class="options-item" id="changeTitleOptionBtn">Change shoot title</button>
+        <button type="button" class="options-item" id="changeProjectPhotoOptionBtn">Change project photo</button>
+        <button type="button" class="options-item" id="changeStatusOptionBtn">Change status</button>
+        <button type="button" class="options-item" id="changeDeadlineOptionBtn">Change deadline</button>
+        <button type="button" class="options-item" id="shareShootOptionBtn">Share as PDF</button>
+        <button type="button" class="options-item" id="archiveShootOptionBtn">Archive shoot</button>
+        <button type="button" class="options-item options-delete" id="deleteShootOptionBtn">Delete</button>
+        <button type="button" class="options-item options-cancel" id="shootOptionsCancelBtn">Cancel</button>
+      </div>
+      <div class="options-pane">
+        <button type="button" class="options-item options-back" id="statusOptionsBackBtn">&larr; Back</button>
+        <div id="statusOptionsList"></div>
+      </div>
+      <div class="options-pane">
+        <button type="button" class="options-item options-back" id="titleOptionsBackBtn">&larr; Back</button>
+        <input type="text" id="shootTitleRenameInput" class="options-rename-input" maxlength="120" placeholder="Name for the shoot" />
+        <button type="button" class="options-item primary" id="saveTitleOptionBtn">Save</button>
+      </div>
+      <div class="options-pane">
+        <button type="button" class="options-item options-back" id="projectPhotoBackBtn">&larr; Back</button>
+        <div id="projectPhotoPickerGrid" class="moodboard-grid project-photo-picker-grid"></div>
+      </div>
+      <div class="options-pane">
+        <button type="button" class="options-item options-back" id="deadlineOptionsBackBtn">&larr; Back</button>
+        <input type="date" id="shootDeadlineRenameInput" class="options-rename-input" />
+        <button type="button" class="options-item primary" id="saveDeadlineOptionBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ JOURNAL ENTRY OPTIONS ============ -->
+<div id="journalOptionsOverlay" class="modal-overlay options-overlay" hidden>
+  <div class="modal options-modal">
+    <button type="button" class="options-item options-delete" id="deleteJournalOptionBtn">Delete entry</button>
+    <button type="button" class="options-item options-cancel" id="journalOptionsCancelBtn">Cancel</button>
+  </div>
+</div>
+
+<!-- ============ APP MENU ============ -->
+<div id="appMenuOverlay" class="modal-overlay options-overlay" hidden>
+  <div class="modal options-modal options-modal-slider">
+    <div class="options-pane-track" id="appMenuPaneTrack">
+      <div class="options-pane">
+        <button type="button" class="options-item" id="shootDisplayOptionsBtn">Shoot display options</button>
+        <button type="button" class="options-item" id="importDataBtn">Import shoot data</button>
+        <button type="button" class="options-item" id="exportDataBtn">Export shoot data</button>
+        <button type="button" class="options-item options-delete" id="deleteAllShootDataBtn">Delete all shoot data</button>
+        <button type="button" class="options-item options-cancel" id="appMenuCancelBtn">Cancel</button>
+      </div>
+      <div class="options-pane">
+        <button type="button" class="options-item options-back" id="displayOptionsBackBtn">&larr; Back</button>
+        <button type="button" class="options-item choice-item" id="displayModeTalentBtn">Display talent name</button>
+        <button type="button" class="options-item choice-item" id="displayModeTitleBtn">Display shoot title</button>
+      </div>
+    </div>
+    <input type="file" id="importFileInput" accept="application/json" hidden />
+  </div>
+</div>
+
+<!-- ============ STATS DETAIL PANEL ============ -->
+<div id="statsDetailOverlay" class="stats-detail-overlay" hidden>
+  <div class="stats-detail-panel">
+    <div class="stats-detail-header">
+      <h2 id="statsDetailTitle"></h2>
+      <button type="button" class="icon-btn close-btn" id="statsDetailCloseBtn">&times;</button>
+    </div>
+    <div id="statsDetailList" class="mini-list"></div>
+    <p class="empty-state" id="statsDetailEmpty" hidden>No shoots in this category.</p>
+  </div>
+</div>
+
+<!-- ============ STAT BOX DETAIL (Overview counters, centered) ============ -->
+<div id="statBoxDetailOverlay" class="stat-box-detail-overlay" hidden>
+  <div class="stat-box-detail-modal">
+    <div class="modal-header">
+      <h2 id="statBoxDetailTitle"></h2>
+      <button type="button" class="icon-btn close-btn" id="statBoxDetailCloseBtn">&times;</button>
+    </div>
+    <div id="statBoxDetailList" class="mini-list"></div>
+    <p class="empty-state" id="statBoxDetailEmpty" hidden>No shoots here yet.</p>
+  </div>
+</div>
+
+<!-- ============ TAB INTRO ============ -->
+<div id="tabIntroOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2 id="tabIntroTitle"></h2>
+    <p id="tabIntroText"></p>
+    <button type="button" class="primary" id="tabIntroCloseBtn">got it!</button>
+  </div>
+</div>
+
+<!-- ============ POST-SHOOT REFLECTION PROMPT ============ -->
+<div id="postShootPromptOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2>Post-shoot Reflection</h2>
+    <p id="postShootPromptText">Complete post shoot reflection?</p>
+    <div class="modal-actions" id="postShootPromptActions">
+      <button type="button" class="secondary" id="postShootPromptLaterBtn">Later</button>
+      <button type="button" class="primary" id="postShootPromptYesBtn">Yes</button>
+    </div>
+    <button type="button" class="primary" id="postShootPromptDismissBtn" hidden>got it!</button>
+  </div>
+</div>
+
+<!-- ============ DAY-AFTER SHOOT CHECK-IN ============ -->
+<div id="dayAfterPromptOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2>Shoot check-in</h2>
+    <p id="dayAfterPromptText"></p>
+    <div class="modal-actions" id="dayAfterPromptActions">
+      <button type="button" class="secondary" id="dayAfterNoBtn">Not yet</button>
+      <button type="button" class="primary" id="dayAfterYesBtn">Yes</button>
+    </div>
+    <button type="button" class="primary" id="dayAfterOkBtn" hidden>tysm for the reminder</button>
+  </div>
+</div>
+
+<!-- ============ DAILY REPORT ============ -->
+<div id="dailyReportOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal daily-report-modal">
+    <h2>Daily report</h2>
+    <div id="dailyReportList" class="mini-list"></div>
+    <button type="button" class="primary" id="dailyReportCloseBtn">got it!</button>
+  </div>
+</div>
+
+<!-- ============ ADD DEADLINE PROMPT ============ -->
+<div id="deadlinePromptOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal daily-report-modal">
+    <h2>Add deadline?</h2>
+    <p>Set a due date for this shoot now, or add one later from Basic Info.</p>
+    <input type="date" id="deadlinePromptDateInput" class="deadline-prompt-input" />
+    <div class="modal-actions" id="deadlinePromptActions">
+      <button type="button" class="secondary" id="deadlinePromptNotNowBtn">Not now</button>
+      <button type="button" class="primary" id="deadlinePromptOkBtn">Okay</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ IMPORT CONFIRMATION ============ -->
+<div id="importConfirmOverlay" class="modal-overlay confirm-overlay" hidden>
+  <div class="modal confirm-modal">
+    <p class="confirm-message">Importing will replace all shoots, frameworks, and photos currently in this app with the contents of the backup file. This can't be undone. Continue?</p>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="cancelImportBtn">Cancel</button>
+      <button type="button" class="primary" id="confirmImportBtn">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ JOURNAL ENTRY MODAL ============ -->
+<div id="journalModalOverlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Journal Entry</h2>
+      <button class="icon-btn close-btn" data-close="journal">&times;</button>
+    </div>
+    <div id="journalForm">
+      <label>Subject
+        <input type="text" id="journalSubject" maxlength="120" placeholder="What's this entry about" />
+      </label>
+      <p class="field-hint" id="journalLinkedHint" hidden>Tap the text below to revisit and edit this shoot's reflection.</p>
+      <label>Entry
+        <textarea id="journalBody" rows="12" placeholder="Write freely…"></textarea>
+      </label>
+      <div class="beats-block">
+        <label class="beats-label">Hashtags</label>
+        <div class="beats-chips" id="journalTagsChips"></div>
+        <input type="text" id="journalTagsInput" placeholder="Type a hashtag, press Enter" />
+        <div class="beats-suggestions" id="journalTagsSuggestions"></div>
+      </div>
+      <div class="moodboard-section">
+        <span class="moodboard-label">Photos</span>
+        <button type="button" id="addJournalPhotos" class="primary small-btn">+ Add photos</button>
+        <input type="file" id="journalImagesFileInput" accept="image/*" multiple hidden />
+        <div id="journalImagesGrid" class="moodboard-grid"></div>
+      </div>
+      <button type="button" class="plain-delete-btn pre-save-divider" id="deleteJournalBtn" hidden>Delete</button>
+      <div class="modal-actions">
+        <button type="button" class="primary" id="saveJournalBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TOAST ============ -->
+<div id="toast" class="toast" hidden></div>
+
+<script src="lib/jspdf.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
