@@ -249,7 +249,8 @@ h1, h2, h3 {
   background: var(--surface);
   border: 1px solid var(--text);
   border-radius: 12px;
-  padding: 0 14px 0 0;
+  /* Kept tight — every px here is a px the title/dates don't get. */
+  padding: 0 6px 0 0;
   display: flex;
   align-items: stretch;
   gap: 10px;
@@ -277,23 +278,30 @@ h1, h2, h3 {
 
 /* Every shoot bubble on every page (Overview, Shoots, Archive, Stats) reserves
    the same height — the most any bubble's content can actually reach: a
-   2-line title (clamped, see .shoot-row-title), the date + due date, and a
+   2-line title, wrapped below it the date + due date (each can be its own
+   line once .shoot-row-top wraps — see .shoot-row-title's min-width), and a
    2-line badge (status/pending line + a second pending line). Measured at
-   97px with that worst-case content; a couple px of headroom on top. */
+   136px with that worst case; a little headroom on top. */
 .shoot-row-body {
-  min-height: 100px;
+  min-height: 140px;
 }
 
 .shoot-row-top {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   font-size: 16px;
-  gap: 10px;
+  gap: 4px 10px;
 }
 
+/* A guaranteed minimum width, not just min-width:0's "can shrink to
+   nothing" — below this, the fixed-width dates column wraps to its own
+   line (flex-wrap above) instead of squeezing the title into single
+   illegible characters. */
 .shoot-row-title {
-  min-width: 0;
+  flex: 1 1 120px;
+  min-width: 120px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -315,6 +323,10 @@ h1, h2, h3 {
 .shoot-row-due {
   color: var(--accent);
   font-weight: 700;
+}
+
+.shoot-row-due.overdue {
+  color: var(--red);
 }
 
 .shoot-row .badge {
@@ -362,6 +374,7 @@ h1, h2, h3 {
   color: var(--text);
 }
 
+#proofsPendingSection h2,
 #upcomingDeadlinesSection h2 {
   background: var(--text);
   color: #fff;
@@ -592,13 +605,6 @@ h1, h2, h3 {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.card-due {
-  margin: 4px 0 0;
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 13px;
 }
 
 .card-meta {

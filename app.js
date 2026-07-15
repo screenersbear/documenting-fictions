@@ -419,11 +419,11 @@
     return !s.archived && !POST_CAPTURE_STATUSES.includes(s.status) && s.status !== 'rescheduled' && s.status !== 'canceled' && s.date === todayStr();
   }
 
-  // Deadlines can be set at any status, not just editing, so this doesn't
-  // filter on status the way isUpcoming()/isToday() do for shoot dates —
-  // only archived and past-due deadlines are excluded.
+  // A past-due deadline stays listed here (in red, via the .overdue class on
+  // .shoot-row-due) rather than quietly disappearing — it's still owed, just
+  // late. It only drops off once delivered or archived.
   function isUpcomingDeadline(s) {
-    return !s.archived && !!s.deadline && s.deadline >= todayStr();
+    return !s.archived && !!s.deadline && s.status !== 'delivered';
   }
 
   function shootPendingLabels(s) {
@@ -453,6 +453,15 @@
       : `<div class="shoot-thumb shoot-thumb-empty">${SHOOT_THUMB_EMPTY_SVG}</div>`;
   }
 
+  // Same thumbnail treatment as a shoot bubble, for a journal entry's cover
+  // photo — src is resolved separately since it isn't a plain stored field
+  // the way a shoot's projectPhoto is (see journalEntryImagesKey() below).
+  function journalThumbHtml(src) {
+    return src
+      ? `<div class="shoot-thumb"><img src="${src}" alt="" /></div>`
+      : `<div class="shoot-thumb shoot-thumb-empty">${SHOOT_THUMB_EMPTY_SVG}</div>`;
+  }
+
   function renderShootRow(container, s, opts) {
     const statusLabel = (opts && opts.showStatus) ? (STATUS_LABELS[s.status] || '') : '';
     const pendingLabels = (opts && opts.showPending) ? shootPendingLabels(s) : [];
@@ -461,6 +470,13 @@
     // moves to waiting_for_selects, proofs have already gone out.
     const proofsPendingText = s.status === 'captured' ? 'Pending: Proofs' : '';
     const badgeHtml = [statusLabel, pendingText, proofsPendingText].filter(Boolean).join('<br>');
+    // Once archived there's nothing left to deliver, so the deadline no
+    // longer means anything — don't show it. Otherwise, an overdue deadline
+    // still shows (until the shoot's delivered or archived), just in red.
+    const isOverdue = !!s.deadline && s.deadline < todayStr();
+    const dueHtml = (s.deadline && !s.archived)
+      ? `<span class="shoot-row-due${isOverdue ? ' overdue' : ''}">Due: ${prettyDateShort(s.deadline)}</span>`
+      : '';
     const div = document.createElement('div');
     div.className = 'shoot-row';
     div.innerHTML = `
@@ -470,7 +486,7 @@
           <span class="shoot-row-title"><strong>${escapeHtml(shootDisplayName(s))}</strong></span>
           <div class="shoot-row-dates">
             <span class="mi-sub">${shootDateLabel(s, prettyDateShort)}</span>
-            ${s.deadline ? `<span class="shoot-row-due">Due: ${prettyDateShort(s.deadline)}</span>` : ''}
+            ${dueHtml}
           </div>
         </div>
         ${badgeHtml ? `<span class="badge">${badgeHtml}</span>` : ''}
@@ -537,6 +553,13 @@
 
   function journalImagesKey(entryId) {
     return entryId + '__journal';
+  }
+
+  // Linked entries share their source shoot's final-images store (see
+  // currentJournalImagesKey() for the same rule applied to the open modal);
+  // this is the list-view equivalent for looking up any entry's images.
+  function journalEntryImagesKey(e) {
+    return e.sourceShootId ? finalImagesKey(e.sourceShootId) : journalImagesKey(e.id);
   }
 
   function resizeImageFile(file, maxDim, quality) {
@@ -726,6 +749,8 @@
     const deadlineShoots = state.shoots.filter(isUpcomingDeadline)
       .filter(s => weekBucket(s.deadline) === 'this_week' || weekBucket(s.deadline) === 'next_week')
       .sort((a, b) => dateSortKey(a.deadline).localeCompare(dateSortKey(b.deadline)));
+    const proofsPendingShoots = state.shoots.filter(s => !s.archived && s.status === 'captured')
+      .sort((a, b) => dateSortKey(a.date).localeCompare(dateSortKey(b.date)));
 
     const readyToShootCount = state.shoots.filter(STAT_BOX_FILTERS.ready).length;
     const stillPlanningCount = state.shoots.filter(STAT_BOX_FILTERS.planning).length;
@@ -771,6 +796,18 @@
       });
     }
 
+    // Always visible, same reasoning as Upcoming deadlines below — a
+    // reliable place to check, empty or not, rather than something that
+    // pops in and out of the page.
+    document.getElementById('proofsPendingCount').textContent = `[${proofsPendingShoots.length}]`;
+    const proofsList = document.getElementById('proofsPendingShootsList');
+    proofsList.innerHTML = '';
+    if (!proofsPendingShoots.length) {
+      proofsList.innerHTML = '<p class="empty-hint">No shoots waiting on proofs.</p>';
+    } else {
+      proofsPendingShoots.forEach(s => renderShootRow(proofsList, s, { showStatus: true }));
+    }
+
     // Always visible, even at zero — unlike Today/Upcoming, this section
     // isn't about whether anything's due right now so much as being a
     // reliable place to glance at what's coming, empty or not.
@@ -797,6 +834,7 @@
   const OVERVIEW_COLLAPSE_SECTIONS = [
     ['overview:today', '#todaySection h2', 'todayShootsList'],
     ['overview:upcoming', '#upcomingSection h2', 'upcomingShootsList'],
+    ['overview:proofsPending', '#proofsPendingSection h2', 'proofsPendingShootsList'],
     ['overview:upcomingDeadlines', '#upcomingDeadlinesSection h2', 'upcomingDeadlinesShootsList'],
   ];
 
@@ -852,36 +890,6 @@
     document.getElementById('shootFilters').hidden = true;
     renderShoots();
   });
-
-  function appendShootCard(container, s, opts) {
-    const card = document.createElement('div');
-    card.className = 'card';
-    const statusLabel = STATUS_LABELS[s.status] || '';
-    const proofsPendingText = s.status === 'captured' ? 'Pending: Proofs' : '';
-    const secondaryLine = (opts && opts.showPending)
-      ? (shootPendingLabels(s).length ? `<p class="card-concept">[${escapeHtml(shootPendingLabels(s).join(' · '))}]</p>` : '')
-      : (s.premise ? `<p class="card-concept">${escapeHtml(s.premise)}</p>` : '');
-    card.innerHTML = `
-      ${shootThumbHtml(s)}
-      <div class="card-body">
-        <p class="card-title">${escapeHtml(shootDisplayName(s))}</p>
-        <div class="card-meta">
-          <span class="badge">${shootDateLabel(s, prettyDate)}</span>
-        </div>
-        ${s.deadline ? `<p class="card-due">Due: ${prettyDate(s.deadline)}</p>` : ''}
-        ${statusLabel ? `<div class="card-meta"><span class="badge">${statusLabel}</span></div>` : ''}
-        ${proofsPendingText ? `<div class="card-meta"><span class="badge">${proofsPendingText}</span></div>` : ''}
-        ${secondaryLine}
-      </div>
-      <button type="button" class="card-options-btn" aria-label="Options">&#8942;</button>
-    `;
-    card.addEventListener('click', () => openShootModal(s.id));
-    card.querySelector('.card-options-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      openShootOptions(s.id);
-    });
-    container.appendChild(card);
-  }
 
   function renderShoots() {
     renderCategoryFilterChips('shootFilters', 'shootFilterToggle', shootFilter);
@@ -1012,7 +1020,7 @@
 
     list.innerHTML = '';
     document.getElementById('archiveEmpty').hidden = items.length !== 0;
-    items.forEach(s => appendShootCard(list, s));
+    items.forEach(s => renderShootRow(list, s, { showStatus: true }));
   }
 
   // ---------- Journal ----------
@@ -1146,7 +1154,14 @@
     items.forEach(e => {
       const card = document.createElement('div');
       card.className = 'card';
+      // A linked entry's cover photo is the shoot's own project photo — same
+      // picture you'd see on that shoot's bubble. Otherwise, fall back to
+      // this entry's own uploaded photos, fetched async since IDB has no
+      // synchronous read.
+      const linkedShoot = e.sourceShootId ? state.shoots.find(s => s.id === e.sourceShootId) : null;
+      const initialThumbSrc = (linkedShoot && linkedShoot.projectPhoto) || null;
       card.innerHTML = `
+        ${journalThumbHtml(initialThumbSrc)}
         <div class="card-body">
           <p class="card-title">${escapeHtml(e.title || 'Untitled entry')}</p>
           <div class="card-meta">
@@ -1162,6 +1177,13 @@
         openJournalOptions(e.id);
       });
       list.appendChild(card);
+      if (!initialThumbSrc) {
+        idbGetImages(journalEntryImagesKey(e)).then(images => {
+          if (!images.length) return;
+          const thumb = card.querySelector('.shoot-thumb');
+          if (thumb) thumb.outerHTML = journalThumbHtml(images[0].src);
+        }).catch(() => {});
+      }
     });
   }
 
