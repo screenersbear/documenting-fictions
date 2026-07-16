@@ -1443,20 +1443,51 @@
   });
 
   // ---------- Framework tags (rendered inside the shoot modal) ----------
+  // Visual Language and Lighting render as their own smaller, collapsible
+  // subsections nested under Visuals (same visual language as Shot list).
+  // Lighting setups (a static block, wired once below) isn't part of this
+  // template — it's re-parented into the Lighting subsection's body after
+  // every render instead, so its own listeners never need rewiring.
   function renderShootFrameworkTags(shoot) {
     const container = document.getElementById('frameworkTagsContainer');
+    const lightingSetupsSection = document.getElementById('lightingSetupsSection');
+    // Detach before wiping the container's contents below — innerHTML= would
+    // otherwise discard this node for good once it's nested inside.
+    if (lightingSetupsSection.parentNode) lightingSetupsSection.parentNode.removeChild(lightingSetupsSection);
+
     const selectedTags = shoot ? (shoot.frameworkTags || []) : [];
-    container.innerHTML = state.frameworks.map(fw => `
-      <fieldset>
-        <legend>${escapeHtml(fw.name)}</legend>
-        <div class="tag-group">
-          ${fw.tags.map(tag => {
-            const entry = selectedTags.find(t => t.frameworkId === fw.id && t.tag === tag);
-            return `<label class="tag-check"><input type="checkbox" data-fw="${fw.id}" value="${escapeHtml(tag)}" ${entry ? 'checked' : ''} /> ${escapeHtml(tag)}</label>`;
-          }).join('')}
+    container.innerHTML = state.frameworks.map(fw => {
+      const collapseKey = `shoot:framework:${fw.id}`;
+      const collapsed = isSectionCollapsed(collapseKey);
+      return `
+        <div class="framework-subsection">
+          <h4 class="subsection-heading framework-heading${collapsed ? ' collapsed' : ''}" data-fw-id="${fw.id}">${escapeHtml(fw.name)}${COLLAPSE_ARROW_SVG}</h4>
+          <div class="framework-subsection-body" data-fw-body="${fw.id}" ${collapsed ? 'hidden' : ''}>
+            <div class="tag-group">
+              ${fw.tags.map(tag => {
+                const entry = selectedTags.find(t => t.frameworkId === fw.id && t.tag === tag);
+                return `<label class="tag-check"><input type="checkbox" data-fw="${fw.id}" value="${escapeHtml(tag)}" ${entry ? 'checked' : ''} /> ${escapeHtml(tag)}</label>`;
+              }).join('')}
+            </div>
+          </div>
         </div>
-      </fieldset>
-    `).join('');
+      `;
+    }).join('');
+
+    container.querySelectorAll('.framework-heading').forEach(heading => {
+      const fwId = heading.dataset.fwId;
+      const body = container.querySelector(`.framework-subsection-body[data-fw-body="${fwId}"]`);
+      heading.addEventListener('click', () => {
+        const nowCollapsed = !body.hidden;
+        setSectionCollapsed(`shoot:framework:${fwId}`, nowCollapsed);
+        body.hidden = nowCollapsed;
+        heading.classList.toggle('collapsed', nowCollapsed);
+      });
+    });
+
+    const lightingFw = state.frameworks.find(fw => fw.name === 'Lighting');
+    const lightingBody = lightingFw ? container.querySelector(`.framework-subsection-body[data-fw-body="${lightingFw.id}"]`) : null;
+    if (lightingBody) lightingBody.appendChild(lightingSetupsSection);
   }
 
   function syncShootFrameworkTags() {
@@ -1545,7 +1576,7 @@
     container.innerHTML = ordered.map(item => `
       <div class="shot-list-row${item.checked ? ' shot-checked' : ''}">
         <input type="checkbox" class="shot-check" data-idx="${item.idx}" ${item.checked ? 'checked' : ''} />
-        <input type="text" class="shot-text" data-idx="${item.idx}" placeholder="Describe the shot" value="${escapeHtml(item.text || '')}" />
+        <textarea class="shot-text" data-idx="${item.idx}" rows="2" placeholder="Describe the shot">${escapeHtml(item.text || '')}</textarea>
         <button type="button" class="delete-shot" data-idx="${item.idx}">&times;</button>
       </div>
     `).join('');
@@ -1557,15 +1588,15 @@
         scheduleShootAutosave();
       });
     });
-    container.querySelectorAll('.shot-text').forEach(input => {
-      input.addEventListener('input', () => {
-        currentShotList[Number(input.dataset.idx)].text = input.value;
+    container.querySelectorAll('.shot-text').forEach(textarea => {
+      textarea.addEventListener('input', () => {
+        currentShotList[Number(textarea.dataset.idx)].text = textarea.value;
         scheduleShootAutosave();
       });
-      input.addEventListener('keydown', (e) => {
+      textarea.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
-        currentShotList[Number(input.dataset.idx)].text = input.value;
+        currentShotList[Number(textarea.dataset.idx)].text = textarea.value;
         currentShotList.push({ text: '', checked: false });
         renderShotList(currentShotList.length - 1);
         scheduleShootAutosave();
@@ -1588,6 +1619,64 @@
   document.getElementById('addShotBtn').addEventListener('click', () => {
     currentShotList.push({ text: '', checked: false });
     renderShotList(currentShotList.length - 1);
+    scheduleShootAutosave();
+  });
+
+  // ---------- Lighting setups (checklist nested under Lighting, in Visuals) ----------
+  // Same structure and behavior as the Shot list above, just its own array
+  // and container so the two lists don't interfere with each other.
+  let currentLightingSetups = [];
+
+  function renderLightingSetups(focusIdx) {
+    const container = document.getElementById('lightingSetupsItems');
+    const indexed = currentLightingSetups.map((item, idx) => ({ ...item, idx }));
+    const ordered = indexed.filter(i => !i.checked).concat(indexed.filter(i => i.checked));
+    container.innerHTML = ordered.map(item => `
+      <div class="shot-list-row${item.checked ? ' shot-checked' : ''}">
+        <input type="checkbox" class="shot-check" data-idx="${item.idx}" ${item.checked ? 'checked' : ''} />
+        <textarea class="shot-text" data-idx="${item.idx}" rows="2" placeholder="Describe the lighting setup">${escapeHtml(item.text || '')}</textarea>
+        <button type="button" class="delete-shot" data-idx="${item.idx}">&times;</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.shot-check').forEach(cb => {
+      cb.addEventListener('change', () => {
+        currentLightingSetups[Number(cb.dataset.idx)].checked = cb.checked;
+        renderLightingSetups();
+        scheduleShootAutosave();
+      });
+    });
+    container.querySelectorAll('.shot-text').forEach(textarea => {
+      textarea.addEventListener('input', () => {
+        currentLightingSetups[Number(textarea.dataset.idx)].text = textarea.value;
+        scheduleShootAutosave();
+      });
+      textarea.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        currentLightingSetups[Number(textarea.dataset.idx)].text = textarea.value;
+        currentLightingSetups.push({ text: '', checked: false });
+        renderLightingSetups(currentLightingSetups.length - 1);
+        scheduleShootAutosave();
+      });
+    });
+    container.querySelectorAll('.delete-shot').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentLightingSetups.splice(Number(btn.dataset.idx), 1);
+        renderLightingSetups();
+        scheduleShootAutosave();
+      });
+    });
+
+    if (focusIdx !== undefined) {
+      const focusInput = container.querySelector(`.shot-text[data-idx="${focusIdx}"]`);
+      if (focusInput) focusInput.focus();
+    }
+  }
+
+  document.getElementById('addLightingSetupBtn').addEventListener('click', () => {
+    currentLightingSetups.push({ text: '', checked: false });
+    renderLightingSetups(currentLightingSetups.length - 1);
     scheduleShootAutosave();
   });
 
@@ -1721,6 +1810,7 @@
     ['shoot:visuals', '#visualsHeading', 'visualsBody'],
     ['shoot:shootDayNotes', '#shootDayNotesHeading', 'shootDayNotesBody'],
     ['shoot:shotList', '#shotListHeading', 'shotListBody'],
+    ['shoot:lightingSetups', '#lightingSetupsHeading', 'lightingSetupsBody'],
     ['shoot:postShoot', '#postShootHeading', 'postShootBody'],
   ];
 
@@ -1753,7 +1843,6 @@
     shootWorldNotes: 'World-building notes',
     shootGoals: 'Shoot goals',
     shootGeneralNotes: 'General direction notes',
-    shootWardrobe: 'Wardrobe & styling notes',
     shootWentRight: 'What went right',
     shootCouldBeBetter: "What could've gone better",
     shootLessonsLearned: 'Lessons for next time',
@@ -1800,7 +1889,7 @@
 
   [
     'shootPremise', 'shootCharacter', 'shootWorldNotes', 'shootGoals',
-    'shootGeneralNotes', 'shootWardrobe',
+    'shootGeneralNotes',
     'shootWentRight', 'shootCouldBeBetter', 'shootLessonsLearned',
     'shootTalentDirections', 'shootTeamDirections', 'shootLocationDirections',
   ].forEach(fieldId => {
@@ -1955,8 +2044,8 @@
   const SHOOT_MODAL_SECTIONS = [
     { id: 'basicInfoHeading', label: 'Basic Info' },
     { id: 'logisticsHeading', label: 'Logistics' },
-    { id: 'directionHeading', label: 'Direction' },
     { id: 'visualsHeading', label: 'Visuals' },
+    { id: 'directionHeading', label: 'Direction' },
     { id: 'shootDayNotesHeading', label: 'Shoot-day notes' },
     { id: 'postShootHeading', label: 'Post-shoot Reflection' },
   ];
@@ -2092,7 +2181,6 @@
     document.getElementById('shootMoodboardComplete').checked = s ? !!s.moodboardComplete : false;
     updateMoodboardCompleteLabel();
     updateMoodboardCompleteVisibility();
-    document.getElementById('shootWardrobe').value = s ? (s.wardrobeNotes || '') : '';
     currentReferences = s && Array.isArray(s.references) ? [...s.references] : [];
     renderReferences();
     document.getElementById('shootGeneralNotes').value = s ? (s.generalNotes || '') : '';
@@ -2104,6 +2192,8 @@
     document.getElementById('shootLocationDirections').value = s ? (s.locationDirections || '') : '';
     currentShotList = s && Array.isArray(s.shotList) ? s.shotList.map(item => ({ ...item })) : [];
     renderShotList();
+    currentLightingSetups = s && Array.isArray(s.lightingSetups) ? s.lightingSetups.map(item => ({ ...item })) : [];
+    renderLightingSetups();
 
     const teamRequired = s ? (s.teamRequired || '') : '';
     document.getElementById('teamRequiredYes').checked = teamRequired === 'yes';
@@ -2594,7 +2684,6 @@
       teamRequired,
       teamFinalized: document.getElementById('shootTeamFinalized').checked,
       teamMembers: teamRequired === 'yes' ? [...currentTeamMembers] : [],
-      wardrobeNotes: document.getElementById('shootWardrobe').value.trim(),
       references: currentReferences.map(r => r.trim()).filter(r => r),
       frameworkTags,
       generalNotes: document.getElementById('shootGeneralNotes').value.trim(),
@@ -2605,6 +2694,7 @@
       teamDirections: document.getElementById('shootTeamDirections').value.trim(),
       locationDirections: document.getElementById('shootLocationDirections').value.trim(),
       shotList: [...currentShotList],
+      lightingSetups: [...currentLightingSetups],
       projectPhoto: pendingProjectPhoto,
     };
   }
@@ -2613,9 +2703,10 @@
   // just because the modal was opened — only once it actually has content.
   function isShootDataBlank(data) {
     return !hasText(data.title) && !hasText(data.location) && !hasText(data.startTime) && !hasText(data.endTime) && !hasText(data.talentName) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals)
-      && !hasText(data.worldNotes) && !hasText(data.wardrobeNotes) && !hasText(data.generalNotes) && !hasText(data.deadline)
+      && !hasText(data.worldNotes) && !hasText(data.generalNotes) && !hasText(data.deadline)
       && !hasText(data.whatWentRight) && !hasText(data.couldBeBetter) && !hasText(data.lessonsLearned)
       && !hasText(data.talentDirections) && !hasText(data.teamDirections) && !hasText(data.locationDirections) && data.shotList.length === 0
+      && data.lightingSetups.length === 0
       && data.frameworkTags.length === 0 && data.references.length === 0
       && data.teamMembers.length === 0 && !data.moodboardComplete && !data.teamRequired && !data.teamFinalized
       && !data.projectPhoto;

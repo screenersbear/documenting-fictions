@@ -1240,24 +1240,23 @@ h1, h2, h3 {
   font-weight: 700;
 }
 
-fieldset {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px 12px;
-  margin: 0;
-}
-
 #frameworkTagsContainer {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-fieldset legend {
-  font-size: 14px;
-  color: var(--text-dim);
-  letter-spacing: 0.5px;
-  padding: 0 4px;
+.framework-subsection-body {
+  margin-top: 10px;
+}
+
+/* Lighting setups nests one level deeper still (under the Lighting
+   framework subsection) — the indent + rule is the only cue for that,
+   since it otherwise reuses the exact same .subsection-heading look. */
+.lighting-setups-section {
+  margin-left: 10px;
+  padding-left: 14px;
+  border-left: 2px solid var(--border);
 }
 
 .tag-group {
@@ -1489,7 +1488,10 @@ fieldset legend {
   flex-shrink: 0;
 }
 
-.shot-text {
+/* #shootForm-qualified so this beats the generic #shootForm textarea rule
+   (higher specificity) now that .shot-text is itself a textarea — without
+   it, the two-line row would balloon to the standard 18px field size. */
+#shootForm .shot-text {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -1500,6 +1502,7 @@ fieldset legend {
   flex: 1;
   min-width: 0;
   text-transform: none;
+  resize: none;
 }
 
 .shot-checked .shot-text {
