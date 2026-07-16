@@ -148,7 +148,20 @@
 <div id="shootModalOverlay" class="modal-overlay" hidden>
   <div class="modal">
     <div class="modal-header shoot-modal-header">
-      <h2 id="shootModalTitle">Log a Shoot</h2>
+      <h2 class="modal-title-jump-wrap">
+        <button type="button" class="modal-title-jump-btn" id="shootModalTitleBtn">
+          <span id="shootModalTitle">Log a Shoot</span>
+          <svg class="modal-title-jump-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="modal-title-jump-menu" id="shootModalJumpMenu" hidden>
+          <button type="button" class="modal-title-jump-item" data-jump="basicInfoHeading">Basic Info</button>
+          <button type="button" class="modal-title-jump-item" data-jump="logisticsHeading">Logistics</button>
+          <button type="button" class="modal-title-jump-item" data-jump="directionHeading">Direction</button>
+          <button type="button" class="modal-title-jump-item" data-jump="visualsHeading">Visuals</button>
+          <button type="button" class="modal-title-jump-item" data-jump="shootDayNotesHeading">Shoot-day notes</button>
+          <button type="button" class="modal-title-jump-item" data-jump="postShootHeading" id="jumpToPostShootItem">Post-shoot Reflection</button>
+        </div>
+      </h2>
       <div class="modal-header-actions">
         <button type="button" class="icon-btn share-shoot-btn" id="shareShootBtn" aria-label="Share as PDF" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>

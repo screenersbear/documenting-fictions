@@ -272,17 +272,19 @@ h1, h2, h3 {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 0;
+  gap: 2px;
+  padding: 6px 0;
 }
 
 /* Every shoot bubble on every page (Overview, Shoots, Archive, Stats) reserves
    the same height — the most any bubble's content can actually reach: a
    2-line title (clamped, see .shoot-row-title), the date + due date, and a
    2-line badge (status/pending line + a second pending line). Measured at
-   97px with that worst-case content; a couple px of headroom on top. */
+   87px with that worst-case content (tight padding/gap above); a couple px
+   of headroom on top. Kept close to that worst case on purpose — anything
+   taller just stretches the thumbnail photo into an odd, elongated crop. */
 .shoot-row-body {
-  min-height: 100px;
+  min-height: 88px;
 }
 
 .shoot-row-top {
@@ -343,6 +345,44 @@ h1, h2, h3 {
   cursor: pointer;
 }
 
+/* Photo-free, fully-stacked alternative to .shoot-row — title, status, and
+   date each get their own line, so nothing ever competes for width with
+   anything else (used in the Overview counter popups, where .shoot-row's
+   side-by-side layout has too little room to work with). */
+.shoot-row-compact {
+  background: var(--surface);
+  border: 1px solid var(--text);
+  border-radius: 12px;
+  padding: 10px 2px 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.shoot-row-compact-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.shoot-row-compact-title {
+  font-size: 16px;
+  font-weight: 700;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shoot-row-compact .badge {
+  background: var(--accent);
+  color: var(--text);
+}
+
 .section-block {
   margin-bottom: 24px;
 }
@@ -363,13 +403,13 @@ h1, h2, h3 {
 }
 
 #todaySection h2,
-#upcomingSection h2 {
+#upcomingSection h2,
+#upcomingDeadlinesSection h2 {
   background: var(--accent);
   color: var(--text);
 }
 
-#proofsPendingSection h2,
-#upcomingDeadlinesSection h2 {
+#proofsPendingSection h2 {
   background: var(--text);
   color: #fff;
 }
@@ -383,7 +423,8 @@ h1, h2, h3 {
 
 .section-block h2.collapsed .collapse-arrow,
 .status-group-heading.collapsed .collapse-arrow,
-.subsection-heading.collapsed .collapse-arrow {
+.subsection-heading.collapsed .collapse-arrow,
+.upcoming-subheading.collapsed .collapse-arrow {
   transform: rotate(-90deg);
 }
 
@@ -398,6 +439,9 @@ h1, h2, h3 {
 }
 
 .upcoming-subheading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin: 6px 0 0 4px;
   font-size: 13px;
   font-weight: 700;
@@ -405,10 +449,26 @@ h1, h2, h3 {
   letter-spacing: 0.5px;
   color: var(--text-dim);
   opacity: 0.6;
+  cursor: pointer;
+}
+
+.upcoming-subheading .collapse-arrow {
+  width: 11px;
+  height: 11px;
 }
 
 .upcoming-subheading:first-child {
   margin-top: 0;
+}
+
+.upcoming-subheading-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upcoming-subheading-rows[hidden] {
+  display: none;
 }
 
 .mini-item {
@@ -890,6 +950,86 @@ h1, h2, h3 {
   font-size: 23px;
 }
 
+.modal-title-jump-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.modal-title-jump-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.modal-title-jump-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-title-jump-arrow {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.modal-title-jump-btn.open .modal-title-jump-arrow {
+  transform: rotate(180deg);
+}
+
+.modal-title-jump-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 5;
+  min-width: 210px;
+}
+
+.modal-title-jump-menu[hidden] {
+  display: none;
+}
+
+.modal-title-jump-item {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+
+.modal-title-jump-item:first-child {
+  border-top: none;
+}
+
+.modal-title-jump-item[hidden] {
+  display: none;
+}
+
 .modal-header-actions {
   position: relative;
   display: flex;
@@ -965,6 +1105,12 @@ h1, h2, h3 {
 }
 
 #postShootContent {
+  scroll-margin-top: 68px;
+}
+
+/* Lets the jump-menu's scrollIntoView land each heading just below the
+   sticky shoot-modal header instead of partly hidden behind it. */
+.shoot-section-heading {
   scroll-margin-top: 68px;
 }
 
@@ -1997,9 +2143,9 @@ fieldset legend {
   position: relative;
   width: 100%;
   /* Matches the shoot bubble's thumbnail shape (62px wide, stretched to the
-     bubble's fixed ~100px height) instead of a square, so what you frame
+     bubble's fixed ~88px height) instead of a square, so what you frame
      here is what actually shows on every shoot bubble. */
-  aspect-ratio: 31 / 50;
+  aspect-ratio: 31 / 44;
   overflow: hidden;
   border-radius: 14px;
   background: #000;

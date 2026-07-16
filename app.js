@@ -351,6 +351,39 @@
 
   const WEEK_BUCKET_LABELS = { this_week: 'This week', next_week: 'Next week', later: 'Later' };
 
+  // A nested level of collapsing inside an already-collapsible Overview
+  // section: each week-bucket subheading (This week / Next week / Later)
+  // toggles just its own rows, independent of its sibling buckets and of
+  // the outer section — same isSectionCollapsed persistence, one key per
+  // bucket (e.g. "overview:upcoming:this_week").
+  function renderBucketedShoots(container, shoots, buckets, dateField, collapsePrefix) {
+    buckets.forEach(bucketKey => {
+      const bucketShoots = shoots.filter(s => weekBucket(s[dateField]) === bucketKey);
+      if (!bucketShoots.length) return;
+
+      const collapseKey = `${collapsePrefix}:${bucketKey}`;
+      const collapsed = isSectionCollapsed(collapseKey);
+
+      const heading = document.createElement('p');
+      heading.className = `upcoming-subheading${collapsed ? ' collapsed' : ''}`;
+      heading.innerHTML = `${escapeHtml(WEEK_BUCKET_LABELS[bucketKey])}${COLLAPSE_ARROW_SVG}`;
+      container.appendChild(heading);
+
+      const rowsWrap = document.createElement('div');
+      rowsWrap.className = 'upcoming-subheading-rows';
+      rowsWrap.hidden = collapsed;
+      bucketShoots.forEach(s => renderShootRow(rowsWrap, s, { showStatus: true }));
+      container.appendChild(rowsWrap);
+
+      heading.addEventListener('click', () => {
+        const nowCollapsed = !rowsWrap.hidden;
+        rowsWrap.hidden = nowCollapsed;
+        heading.classList.toggle('collapsed', nowCollapsed);
+        setSectionCollapsed(collapseKey, nowCollapsed);
+      });
+    });
+  }
+
   function prettyDate(dateStr) {
     if (!dateStr) return '';
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -497,6 +530,29 @@
       if (opts && opts.switchToShootsTab) document.querySelector('.tab[data-view="shoots"]').click();
       openShootModal(s.id);
     });
+    div.querySelector('.row-options-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openShootOptions(s.id);
+    });
+    container.appendChild(div);
+  }
+
+  // A smaller, photo-free row for tight spaces (the Overview counter
+  // popups) — title, status, and shoot date, each on its own line, so
+  // nothing is ever squeezed side-by-side against anything else.
+  function renderCompactShootRow(container, s) {
+    const statusLabel = STATUS_LABELS[s.status] || '';
+    const div = document.createElement('div');
+    div.className = 'shoot-row-compact';
+    div.innerHTML = `
+      <div class="shoot-row-compact-body">
+        <span class="shoot-row-compact-title">${escapeHtml(shootDisplayName(s))}</span>
+        ${statusLabel ? `<span class="badge">${escapeHtml(statusLabel)}</span>` : ''}
+        <span class="mi-sub">${shootDateLabel(s, prettyDateShort)}</span>
+      </div>
+      <button type="button" class="row-options-btn" aria-label="Options">&#8942;</button>
+    `;
+    div.addEventListener('click', () => openShootModal(s.id));
     div.querySelector('.row-options-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       openShootOptions(s.id);
@@ -721,7 +777,7 @@
     document.getElementById('statBoxDetailTitle').textContent = title;
     const list = document.getElementById('statBoxDetailList');
     list.innerHTML = '';
-    shoots.forEach(s => renderShootRow(list, s, { showStatus: true }));
+    shoots.forEach(s => renderCompactShootRow(list, s));
     document.getElementById('statBoxDetailEmpty').hidden = shoots.length > 0;
     const overlay = document.getElementById('statBoxDetailOverlay');
     overlay.hidden = false;
@@ -785,15 +841,7 @@
     if (!upcomingShoots.length) {
       upList.innerHTML = '<p class="empty-hint upcoming-empty-hint">Upcoming shoots go here, brometheus.</p>';
     } else {
-      ['this_week', 'next_week', 'later'].forEach(bucketKey => {
-        const bucketShoots = upcomingShoots.filter(s => weekBucket(s.date) === bucketKey);
-        if (!bucketShoots.length) return;
-        const heading = document.createElement('p');
-        heading.className = 'upcoming-subheading';
-        heading.textContent = WEEK_BUCKET_LABELS[bucketKey];
-        upList.appendChild(heading);
-        bucketShoots.forEach(s => renderShootRow(upList, s, { showStatus: true }));
-      });
+      renderBucketedShoots(upList, upcomingShoots, ['this_week', 'next_week', 'later'], 'date', 'overview:upcoming');
     }
 
     // Always visible, same reasoning as Upcoming deadlines below — a
@@ -817,15 +865,7 @@
     if (!deadlineShoots.length) {
       deadlineList.innerHTML = '<p class="empty-hint">No deadlines on the horizon.</p>';
     } else {
-      ['this_week', 'next_week'].forEach(bucketKey => {
-        const bucketShoots = deadlineShoots.filter(s => weekBucket(s.deadline) === bucketKey);
-        if (!bucketShoots.length) return;
-        const heading = document.createElement('p');
-        heading.className = 'upcoming-subheading';
-        heading.textContent = WEEK_BUCKET_LABELS[bucketKey];
-        deadlineList.appendChild(heading);
-        bucketShoots.forEach(s => renderShootRow(deadlineList, s, { showStatus: true }));
-      });
+      renderBucketedShoots(deadlineList, deadlineShoots, ['this_week', 'next_week'], 'deadline', 'overview:upcomingDeadlines');
     }
 
     applyOverviewCollapseState();
@@ -1789,12 +1829,14 @@
     document.getElementById('postShootPromptOverlay').hidden = true;
     const content = document.getElementById('postShootContent');
     content.hidden = false;
+    updateShootModalJumpMenuVisibility();
     content.scrollIntoView({ behavior: 'smooth', block: 'start' });
     maybeOpenDeadlinePrompt();
   });
 
   document.getElementById('postShootPromptLaterBtn').addEventListener('click', () => {
     document.getElementById('postShootContent').hidden = false;
+    updateShootModalJumpMenuVisibility();
     document.getElementById('postShootPromptText').textContent = "the post-shoot reflection questions will be at the bottom of this shoot whenever you're ready.";
     document.getElementById('postShootPromptActions').hidden = true;
     document.getElementById('postShootPromptDismissBtn').hidden = false;
@@ -1858,6 +1900,7 @@
         document.getElementById('shootCouldBeBetter').value = '';
         document.getElementById('shootLessonsLearned').value = '';
         document.getElementById('postShootContent').hidden = true;
+        updateShootModalJumpMenuVisibility();
         previousStatusValue = newValue;
         scheduleShootAutosave();
       } else {
@@ -1904,8 +1947,21 @@
   let shootHasImages = false;
   let shootSaveTimer = null;
   const shootScrollPositions = {};
+  let shootModalBaseTitle = '';
 
-  // The only two prominent section dividers in the form. Restoring scroll
+  // Shared by the scroll-position-restore anchors below, the jump menu, and
+  // the scrollspy title — the one canonical list of top-level sections in
+  // the form, in on-page order.
+  const SHOOT_MODAL_SECTIONS = [
+    { id: 'basicInfoHeading', label: 'Basic Info' },
+    { id: 'logisticsHeading', label: 'Logistics' },
+    { id: 'directionHeading', label: 'Direction' },
+    { id: 'visualsHeading', label: 'Visuals' },
+    { id: 'shootDayNotesHeading', label: 'Shoot-day notes' },
+    { id: 'postShootHeading', label: 'Post-shoot Reflection' },
+  ];
+
+  // The only prominent section dividers in the form. Restoring scroll
   // snaps to whichever of these sits at or above the remembered position,
   // rather than landing mid-field, which would feel arbitrary. Anchors are
   // offset by the sticky header's height so the heading lands just below it
@@ -1919,14 +1975,8 @@
     // has top padding the header sits inside of, so headerOffset needs to
     // cover that too or the heading still lands partly behind the header.
     const headerOffset = header ? header.getBoundingClientRect().bottom - containerRect.top : 0;
-    [
-      document.getElementById('basicInfoHeading'),
-      document.getElementById('logisticsHeading'),
-      document.getElementById('directionHeading'),
-      document.getElementById('visualsHeading'),
-      document.getElementById('shootDayNotesHeading'),
-      document.getElementById('postShootHeading'),
-    ].forEach(el => {
+    SHOOT_MODAL_SECTIONS.forEach(sec => {
+      const el = document.getElementById(sec.id);
       if (!el) return;
       const rect = el.getBoundingClientRect();
       if (rect.width === 0 && rect.height === 0) return;
@@ -1944,6 +1994,66 @@
     return snapped;
   }
 
+  // ---- Title jump menu + scrollspy ----
+  const shootModalTitleBtn = document.getElementById('shootModalTitleBtn');
+  const shootModalJumpMenu = document.getElementById('shootModalJumpMenu');
+
+  // Post-shoot Reflection is the only section that can be entirely absent
+  // from the form (pre-capture shoots), so its jump-menu item has to track
+  // that same visibility rather than always being offered.
+  function updateShootModalJumpMenuVisibility() {
+    document.getElementById('jumpToPostShootItem').hidden = document.getElementById('postShootContent').hidden;
+  }
+
+  function closeShootModalJumpMenu() {
+    shootModalJumpMenu.hidden = true;
+    shootModalTitleBtn.classList.remove('open');
+  }
+
+  shootModalTitleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = shootModalJumpMenu.hidden;
+    shootModalJumpMenu.hidden = !willOpen;
+    shootModalTitleBtn.classList.toggle('open', willOpen);
+  });
+
+  shootModalJumpMenu.addEventListener('click', (e) => {
+    const item = e.target.closest('.modal-title-jump-item');
+    if (!item) return;
+    const target = document.getElementById(item.dataset.jump);
+    closeShootModalJumpMenu();
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (shootModalJumpMenu.hidden) return;
+    if (!shootModalJumpMenu.contains(e.target) && !shootModalTitleBtn.contains(e.target)) {
+      closeShootModalJumpMenu();
+    }
+  });
+
+  // Updates the sticky title to name whichever section has scrolled past
+  // the header, so it always reads as "where am I" rather than a static
+  // label — falls back to the original Edit/Log-a-Shoot title at the very
+  // top, before any section has passed underneath the header yet.
+  function updateShootModalTitleFromScroll() {
+    const modalEl = shootModalOverlay.querySelector('.modal');
+    const containerRect = modalEl.getBoundingClientRect();
+    const header = document.querySelector('.shoot-modal-header');
+    const headerOffset = header ? header.getBoundingClientRect().bottom - containerRect.top : 0;
+    let active = null;
+    SHOOT_MODAL_SECTIONS.forEach(sec => {
+      const el = document.getElementById(sec.id);
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) return;
+      if (rect.top - containerRect.top <= headerOffset + 2) active = sec;
+    });
+    document.getElementById('shootModalTitle').textContent = active ? active.label : shootModalBaseTitle;
+  }
+
+  shootModalOverlay.querySelector('.modal').addEventListener('scroll', updateShootModalTitleFromScroll, { passive: true });
+
   function openShootModal(id) {
     closeStatsDetail();
     editingShootId = id;
@@ -1952,7 +2062,9 @@
     pendingProjectPhoto = s ? (s.projectPhoto || null) : null;
     shootHasImages = false;
 
-    document.getElementById('shootModalTitle').textContent = s ? 'Edit Shoot' : randomNewShootTitle();
+    shootModalBaseTitle = s ? 'Edit Shoot' : randomNewShootTitle();
+    document.getElementById('shootModalTitle').textContent = shootModalBaseTitle;
+    closeShootModalJumpMenu();
     document.getElementById('deleteShootBtn').hidden = !s;
     document.getElementById('shareShootBtn').hidden = !s;
     const isArchived = s ? !!s.archived : false;
@@ -2007,6 +2119,7 @@
 
     document.getElementById('postShootContent').hidden = !isPostCaptureStatus(previousStatusValue);
     document.getElementById('postShootPromptOverlay').hidden = true;
+    updateShootModalJumpMenuVisibility();
 
     renderMoodboard();
     renderFinalImages();
@@ -2017,6 +2130,7 @@
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         modalEl.scrollTop = snapScrollTarget(savedScroll, modalEl);
+        updateShootModalTitleFromScroll();
       });
     });
   }
@@ -2331,10 +2445,10 @@
     const sHeight = cropStageHeight / scale;
     const sx = -cropOffsetX / scale;
     const sy = -cropOffsetY / scale;
-    // Output at the same 31:50 ratio as the crop stage (and the shoot
+    // Output at the same 31:44 ratio as the crop stage (and the shoot
     // bubble thumbnail), just at a higher resolution than the on-screen box.
     const outputWidth = 124;
-    const outputHeight = 200;
+    const outputHeight = 176;
     const canvas = document.createElement('canvas');
     canvas.width = outputWidth;
     canvas.height = outputHeight;
@@ -3862,9 +3976,13 @@
     }
 
     // Category comparisons — every pair where one category outnumbers another.
+    // Only categories with a known plural label qualify: this naturally
+    // excludes shoots with no category set, and guards against stale
+    // category keys left over from a since-renamed/removed option, either of
+    // which would otherwise render as literal "undefined" in the sentence.
     const catCounts = {};
     shoots.forEach(s => { if (s.category) catCounts[s.category] = (catCounts[s.category] || 0) + 1; });
-    const catEntries = Object.entries(catCounts);
+    const catEntries = Object.entries(catCounts).filter(([cat]) => CATEGORY_PLURAL_LABELS[cat]);
     catEntries.forEach(([catA, nA]) => {
       catEntries.forEach(([catB, nB]) => {
         if (catA !== catB && nA > nB) {
