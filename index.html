@@ -352,7 +352,7 @@
       <div class="modal-actions post-shoot-divider">
         <button type="button" class="primary" id="saveShootBtn">Save</button>
         <button type="button" class="primary" id="unarchiveShootBtn" hidden>Unarchive</button>
-        <button type="button" class="complete-shoot-btn" id="completeShootBtn" hidden>Complete Shoot <span class="complete-shoot-btn-note">(archives the session)</span></button>
+        <button type="button" class="complete-shoot-btn" id="completeShootBtn" hidden>Complete Shoot</button>
       </div>
     </form>
   </div>
@@ -569,6 +569,18 @@
       <button type="button" class="primary" id="postShootPromptYesBtn">Yes</button>
     </div>
     <button type="button" class="primary" id="postShootPromptDismissBtn" hidden>got it!</button>
+  </div>
+</div>
+
+<!-- ============ COMPLETE SHOOT CONFIRM ============ -->
+<div id="completeShootPromptOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2>Complete shoot?</h2>
+    <p>This archives the shoot — it moves out of your active Shoots list and into the Archive tab. You can still reopen, edit, or unarchive it anytime from there.</p>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="completeShootPromptCancelBtn">Cancel</button>
+      <button type="button" class="primary" id="completeShootPromptConfirmBtn">Complete shoot</button>
+    </div>
   </div>
 </div>
 

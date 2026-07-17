@@ -1593,14 +1593,6 @@ h1, h2, h3 {
   margin-top: 0;
 }
 
-.complete-shoot-btn-note {
-  font-size: 13px;
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: normal;
-  opacity: 0.75;
-}
-
 .plain-delete-btn[hidden] {
   display: none;
 }

@@ -3281,6 +3281,15 @@
   }
 
   document.getElementById('completeShootBtn').addEventListener('click', () => {
+    document.getElementById('completeShootPromptOverlay').hidden = false;
+  });
+
+  document.getElementById('completeShootPromptCancelBtn').addEventListener('click', () => {
+    document.getElementById('completeShootPromptOverlay').hidden = true;
+  });
+
+  document.getElementById('completeShootPromptConfirmBtn').addEventListener('click', () => {
+    document.getElementById('completeShootPromptOverlay').hidden = true;
     clearTimeout(shootSaveTimer);
     const data = gatherShootFormData();
     data.archived = true;
