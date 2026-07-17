@@ -356,7 +356,7 @@
   // toggles just its own rows, independent of its sibling buckets and of
   // the outer section — same isSectionCollapsed persistence, one key per
   // bucket (e.g. "overview:upcoming:this_week").
-  function renderBucketedShoots(container, shoots, buckets, dateField, collapsePrefix) {
+  function renderBucketedShoots(container, shoots, buckets, dateField, collapsePrefix, rowOpts) {
     buckets.forEach(bucketKey => {
       const bucketShoots = shoots.filter(s => weekBucket(s[dateField]) === bucketKey);
       if (!bucketShoots.length) return;
@@ -372,7 +372,7 @@
       const rowsWrap = document.createElement('div');
       rowsWrap.className = 'upcoming-subheading-rows';
       rowsWrap.hidden = collapsed;
-      bucketShoots.forEach(s => renderShootRow(rowsWrap, s, { showStatus: true }));
+      bucketShoots.forEach(s => renderShootRow(rowsWrap, s, rowOpts));
       container.appendChild(rowsWrap);
 
       heading.addEventListener('click', () => {
@@ -496,12 +496,18 @@
   }
 
   function renderShootRow(container, s, opts) {
-    const statusLabel = (opts && opts.showStatus) ? (STATUS_LABELS[s.status] || '') : '';
-    const pendingLabels = (opts && opts.showPending) ? shootPendingLabels(s) : [];
+    // Lets a section suppress the whole badge outright — e.g. Overview's
+    // Proofs pending and Upcoming deadlines sections are each already one
+    // homogeneous category, so re-stating "Pending: Proofs" or the status
+    // on every row there is redundant. Today/Upcoming shoots mix several
+    // statuses together, so the badge still earns its place there.
+    const showBadge = !opts || opts.showBadge !== false;
+    const statusLabel = (showBadge && opts && opts.showStatus) ? (STATUS_LABELS[s.status] || '') : '';
+    const pendingLabels = (showBadge && opts && opts.showPending) ? shootPendingLabels(s) : [];
     const pendingText = pendingLabels.length ? `Pending: ${escapeHtml(pendingLabels.join(', '))}` : '';
     // Proofs are only "pending" for the captured step itself — once a shoot
     // moves to waiting_for_selects, proofs have already gone out.
-    const proofsPendingText = s.status === 'captured' ? 'Pending: Proofs' : '';
+    const proofsPendingText = (showBadge && s.status === 'captured') ? 'Pending: Proofs' : '';
     const badgeHtml = [statusLabel, pendingText, proofsPendingText].filter(Boolean).join('<br>');
     // Once archived there's nothing left to deliver, so the deadline no
     // longer means anything — don't show it. Otherwise, an overdue deadline
@@ -841,7 +847,7 @@
     if (!upcomingShoots.length) {
       upList.innerHTML = '<p class="empty-hint upcoming-empty-hint">Upcoming shoots go here, brometheus.</p>';
     } else {
-      renderBucketedShoots(upList, upcomingShoots, ['this_week', 'next_week', 'later'], 'date', 'overview:upcoming');
+      renderBucketedShoots(upList, upcomingShoots, ['this_week', 'next_week', 'later'], 'date', 'overview:upcoming', { showStatus: true });
     }
 
     // Always visible, same reasoning as Upcoming deadlines below — a
@@ -853,7 +859,7 @@
     if (!proofsPendingShoots.length) {
       proofsList.innerHTML = '<p class="empty-hint">No shoots waiting on proofs.</p>';
     } else {
-      proofsPendingShoots.forEach(s => renderShootRow(proofsList, s, { showStatus: true }));
+      proofsPendingShoots.forEach(s => renderShootRow(proofsList, s, { showBadge: false }));
     }
 
     // Always visible, even at zero — unlike Today/Upcoming, this section
@@ -865,7 +871,7 @@
     if (!deadlineShoots.length) {
       deadlineList.innerHTML = '<p class="empty-hint">No deadlines on the horizon.</p>';
     } else {
-      renderBucketedShoots(deadlineList, deadlineShoots, ['this_week', 'next_week'], 'deadline', 'overview:upcomingDeadlines');
+      renderBucketedShoots(deadlineList, deadlineShoots, ['this_week', 'next_week'], 'deadline', 'overview:upcomingDeadlines', { showBadge: false });
     }
 
     applyOverviewCollapseState();
