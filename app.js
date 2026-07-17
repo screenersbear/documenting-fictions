@@ -471,9 +471,14 @@
 
   // Defaults to talent name first (falling back to the shoot title, then a
   // placeholder); the app-wide display setting (state.titleDisplayMode) flips
-  // the priority for every shoot at once.
+  // the priority for every shoot at once, unless this specific shoot has its
+  // own override set (via the shoot's own kebab menu), which wins instead.
+  function shootDisplayMode(s) {
+    return s.titleDisplayOverride || state.titleDisplayMode;
+  }
+
   function shootDisplayName(s) {
-    return state.titleDisplayMode === 'title'
+    return shootDisplayMode(s) === 'title'
       ? (s.title || s.talentName || 'Untitled shoot')
       : (s.talentName || s.title || 'Untitled shoot');
   }
@@ -873,6 +878,21 @@
     } else {
       renderBucketedShoots(deadlineList, deadlineShoots, ['this_week', 'next_week'], 'deadline', 'overview:upcomingDeadlines', { showBadge: false });
     }
+
+    // Section heading colors alternate dynamically, always starting with
+    // yellow — Today drops out of the page entirely when nothing's due
+    // today, so whichever section actually lands first (Today or Upcoming)
+    // gets yellow, not a section tied to a fixed color.
+    const overviewSectionIds = ['todaySection', 'upcomingSection', 'proofsPendingSection', 'upcomingDeadlinesSection'];
+    let nextIsYellow = true;
+    overviewSectionIds.forEach(id => {
+      const section = document.getElementById(id);
+      if (section.hidden) return;
+      const heading = section.querySelector('h2');
+      heading.classList.toggle('heading-yellow', nextIsYellow);
+      heading.classList.toggle('heading-navy', !nextIsYellow);
+      nextIsYellow = !nextIsYellow;
+    });
 
     applyOverviewCollapseState();
   }
@@ -1694,10 +1714,18 @@
     btn.classList.toggle('has-value', !!value);
   }
 
+  // Most-selected locations first (a repeatedly-booked studio should surface
+  // above somewhere you've only shot once) — ties broken alphabetically so
+  // the order stays stable rather than reflecting shoot-creation order.
   function getAllPastLocations() {
-    const set = new Set();
-    state.shoots.forEach(s => { if (s.location && s.location.trim()) set.add(s.location.trim()); });
-    return [...set].sort();
+    const counts = {};
+    state.shoots.forEach(s => {
+      const loc = s.location && s.location.trim();
+      if (loc) counts[loc] = (counts[loc] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([loc]) => loc);
   }
 
   function openLocationModal() {
@@ -2808,6 +2836,7 @@
     optionsShootId = id;
     const s = state.shoots.find(x => x.id === id);
     document.getElementById('archiveShootOptionBtn').textContent = (s && s.archived) ? 'Unarchive shoot' : 'Archive shoot';
+    document.getElementById('toggleTitleDisplayOptionBtn').textContent = (s && shootDisplayMode(s) === 'title') ? 'Show talent name' : 'Show shoot title';
     // The pane track slides via CSS transform, not native scrolling — reset
     // any stray scroll position (e.g. from a focused input the browser tried
     // to "reveal") so it can't stack with the transform and misalign panes.
@@ -2978,6 +3007,19 @@
     const id = optionsShootId;
     closeShootOptions();
     if (id) shareShootPdf(id);
+  });
+
+  document.getElementById('toggleTitleDisplayOptionBtn').addEventListener('click', () => {
+    const id = optionsShootId;
+    closeShootOptions();
+    if (!id) return;
+    const idx = state.shoots.findIndex(x => x.id === id);
+    if (idx === -1) return;
+    const s = state.shoots[idx];
+    const newMode = shootDisplayMode(s) === 'title' ? 'talent' : 'title';
+    state.shoots[idx] = { ...s, titleDisplayOverride: newMode };
+    saveState();
+    renderAll();
   });
 
   document.getElementById('archiveShootOptionBtn').addEventListener('click', () => {

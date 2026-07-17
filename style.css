@@ -402,14 +402,16 @@ h1, h2, h3 {
   cursor: pointer;
 }
 
-#todaySection h2,
-#upcomingSection h2,
-#upcomingDeadlinesSection h2 {
+/* Overview section headings alternate color dynamically (see renderOverview
+   in app.js) rather than each section owning a fixed color — which one
+   lands on yellow vs navy shifts depending on whether Today has any shoots
+   to show, so it's assigned by class instead of by section ID. */
+.section-block h2.heading-yellow {
   background: var(--accent);
   color: var(--text);
 }
 
-#proofsPendingSection h2 {
+.section-block h2.heading-navy {
   background: var(--text);
   color: #fff;
 }
@@ -1251,12 +1253,20 @@ h1, h2, h3 {
 }
 
 /* Lighting setups nests one level deeper still (under the Lighting
-   framework subsection) — the indent + rule is the only cue for that,
-   since it otherwise reuses the exact same .subsection-heading look. */
+   framework subsection) — the left rule is the only cue for that, since it
+   otherwise reuses the exact same .subsection-heading look. Its own
+   border-top is dropped (see #lightingSetupsHeading below) so that rule
+   doesn't pair up with this left border into a boxed-in corner. */
 .lighting-setups-section {
+  margin-top: 18px;
   margin-left: 10px;
   padding-left: 14px;
   border-left: 2px solid var(--border);
+}
+
+#lightingSetupsHeading {
+  border-top: none;
+  padding-top: 0;
 }
 
 .tag-group {

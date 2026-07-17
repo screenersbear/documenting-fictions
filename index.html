@@ -191,6 +191,21 @@
             <option value="canceled">Canceled</option>
           </select>
         </label>
+        <label>Category
+          <select id="shootCategory" class="bold-select" required>
+            <option value="" disabled>Tap here to select</option>
+            <option value="commercial">Commercial</option>
+            <option value="video">Video</option>
+            <option value="editorial">Editorial</option>
+            <option value="lighting_test">Lighting test</option>
+            <option value="portfolio_building">Portfolio building</option>
+            <option value="test_shoot">Test shoot</option>
+            <option value="event">Event</option>
+            <option value="headshot">Headshot</option>
+            <option value="branding">Branding</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
         <label>Deadline
           <input type="date" id="shootDeadline" />
         </label>
@@ -264,22 +279,6 @@
 
       <h3 class="shoot-section-heading status-group-heading heading-navy" id="directionHeading">Direction<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="directionBody">
-        <label>Category
-          <select id="shootCategory" class="bold-select" required>
-            <option value="" disabled>Tap here to select</option>
-            <option value="commercial">Commercial</option>
-            <option value="video">Video</option>
-            <option value="editorial">Editorial</option>
-            <option value="lighting_test">Lighting test</option>
-            <option value="portfolio_building">Portfolio building</option>
-            <option value="test_shoot">Test shoot</option>
-            <option value="event">Event</option>
-            <option value="headshot">Headshot</option>
-            <option value="branding">Branding</option>
-            <option value="other">Other</option>
-          </select>
-        </label>
-
         <p class="continue-prompt" id="categoryContinuePrompt">select a category to continue</p>
 
         <div id="formSection2" hidden>
@@ -467,6 +466,7 @@
     <div class="options-pane-track" id="shootOptionsPaneTrack">
       <div class="options-pane">
         <button type="button" class="options-item" id="changeTitleOptionBtn">Change shoot title</button>
+        <button type="button" class="options-item" id="toggleTitleDisplayOptionBtn">Show shoot title</button>
         <button type="button" class="options-item" id="changeProjectPhotoOptionBtn">Change project photo</button>
         <button type="button" class="options-item" id="changeStatusOptionBtn">Change status</button>
         <button type="button" class="options-item" id="changeDeadlineOptionBtn">Change deadline</button>
