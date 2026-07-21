@@ -1917,9 +1917,10 @@
     ['shoot:logistics', '#logisticsHeading', 'logisticsBody'],
     ['shoot:direction', '#directionHeading', 'directionBody'],
     ['shoot:visuals', '#visualsHeading', 'visualsBody'],
+    ['shoot:lightingSetups', '#lightingSetupsHeading', 'lightingSetupsBody'],
+    ['shoot:team', '#teamHeading', 'teamBody'],
     ['shoot:shootDayNotes', '#shootDayNotesHeading', 'shootDayNotesBody'],
     ['shoot:shotList', '#shotListHeading', 'shotListBody'],
-    ['shoot:lightingSetups', '#lightingSetupsHeading', 'lightingSetupsBody'],
     ['shoot:postShoot', '#postShootHeading', 'postShootBody'],
   ];
 
@@ -2153,8 +2154,9 @@
   const SHOOT_MODAL_SECTIONS = [
     { id: 'basicInfoHeading', label: 'Basic Info' },
     { id: 'logisticsHeading', label: 'Logistics' },
-    { id: 'visualsHeading', label: 'Visuals' },
     { id: 'directionHeading', label: 'Direction' },
+    { id: 'visualsHeading', label: 'Visuals' },
+    { id: 'teamHeading', label: 'Team' },
     { id: 'shootDayNotesHeading', label: 'Shoot-day notes' },
     { id: 'postShootHeading', label: 'Post-shoot Reflection' },
   ];
@@ -3216,9 +3218,21 @@
     if (s.talentName) {
       doc.setTextColor(...navy);
       doc.setFont('courier', 'bold');
-      doc.setFontSize(15);
+      doc.setFontSize(18);
       doc.text(`Talent: ${s.talentName}`, margin, y);
-      y += 26;
+      y += 24;
+      const handles = (s.socialHandles || []).filter(sh => hasText(sh.handle));
+      if (handles.length) {
+        doc.setFont('courier', 'normal');
+        doc.setFontSize(11);
+        handles.forEach(sh => {
+          const platformEntry = SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === sh.platform);
+          const platformLabel = platformEntry ? platformEntry[1] : 'Other';
+          doc.text(`${platformLabel}: ${sh.handle}`, margin, y);
+          y += 15;
+        });
+      }
+      y += 10;
     }
 
     const timeRange = shootTimeRange(s);
@@ -3230,9 +3244,18 @@
       y += 24;
       doc.setFont('courier', 'normal');
       doc.setFontSize(11);
-      if (s.date) { doc.text(prettyDate(s.date), margin, y); y += 16; }
-      if (timeRange) { doc.text(timeRange, margin, y); y += 16; }
-      if (s.location) { doc.text(s.location, margin, y, { maxWidth: pageWidth - margin * 2 }); y += 16; }
+      if (s.date) { doc.text(`Date: ${prettyDate(s.date)}`, margin, y); y += 16; }
+      if (timeRange) { doc.text(`Time: ${timeRange}`, margin, y); y += 16; }
+      if (s.location) {
+        const locLines = doc.splitTextToSize(`Location: ${s.location}`, pageWidth - margin * 2);
+        doc.text(locLines, margin, y);
+        y += locLines.length * 14 + 2;
+      }
+      if (hasText(s.locationDirections)) {
+        const dirLines = doc.splitTextToSize(`Location instructions: ${s.locationDirections}`, pageWidth - margin * 2);
+        doc.text(dirLines, margin, y);
+        y += dirLines.length * 14 + 2;
+      }
       y += 8;
     }
 
@@ -3264,6 +3287,10 @@
         const roleLabel = roleEntry ? roleEntry[1] : 'Other';
         doc.text(`• ${tm.name ? tm.name : 'Unnamed'} — ${roleLabel}`, margin, y);
         y += 15;
+        if (hasText(tm.socialHandle)) {
+          doc.text(`   ${tm.socialHandle}`, margin, y);
+          y += 15;
+        }
       });
       y += 10;
     }

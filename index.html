@@ -156,8 +156,9 @@
         <div class="modal-title-jump-menu" id="shootModalJumpMenu" hidden>
           <button type="button" class="modal-title-jump-item" data-jump="basicInfoHeading">Basic Info</button>
           <button type="button" class="modal-title-jump-item" data-jump="logisticsHeading">Logistics</button>
-          <button type="button" class="modal-title-jump-item" data-jump="visualsHeading">Visuals</button>
           <button type="button" class="modal-title-jump-item" data-jump="directionHeading">Direction</button>
+          <button type="button" class="modal-title-jump-item" data-jump="visualsHeading">Visuals</button>
+          <button type="button" class="modal-title-jump-item" data-jump="teamHeading">Team</button>
           <button type="button" class="modal-title-jump-item" data-jump="shootDayNotesHeading">Shoot-day notes</button>
           <button type="button" class="modal-title-jump-item" data-jump="postShootHeading" id="jumpToPostShootItem">Post-shoot Reflection</button>
         </div>
@@ -236,53 +237,9 @@
         <label>Location directions
           <textarea id="shootLocationDirections" rows="3" maxlength="1000" placeholder="What floor the studio is on, where to park, etc." readonly></textarea>
         </label>
-
-        <div class="team-section">
-          <p class="team-question">Requires team?</p>
-          <div class="team-yesno-row">
-            <label class="checkbox-row"><input type="checkbox" id="teamRequiredYes" /> Yes</label>
-            <label class="checkbox-row"><input type="checkbox" id="teamRequiredNo" /> No</label>
-          </div>
-          <p class="field-hint team-finalized-note" id="teamFinalizedNote" hidden>Team finalized</p>
-          <div id="teamDetailsBlock" hidden>
-            <div id="teamMembersList" class="team-members-list"></div>
-            <button type="button" id="addTeamMemberBtn" class="primary small-btn">+ Add team member</button>
-            <label class="checkbox-row"><input type="checkbox" id="shootTeamFinalized" /> <span id="teamFinalizedLabel">Team finalized?</span></label>
-          </div>
-        </div>
       </div>
 
-      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="visualsHeading">Visuals<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
-      <div id="visualsBody">
-        <div class="moodboard-section">
-          <span class="moodboard-label">Mood board</span>
-          <button type="button" id="addMoodboardPhotos" class="primary small-btn">+ Add photos</button>
-          <input type="file" id="moodboardFileInput" accept="image/*" multiple hidden />
-          <div id="moodboardGrid" class="moodboard-grid"></div>
-          <label class="checkbox-row" id="moodboardCompleteRow"><input type="checkbox" id="shootMoodboardComplete" /> <span id="moodboardCompleteLabel">Mood board complete?</span></label>
-        </div>
-
-        <div class="form-section-label-row">
-          <button type="button" class="manage-link inline-manage-link" id="manageFrameworksBtn">Manage</button>
-        </div>
-        <div id="frameworkTagsContainer"></div>
-        <div class="lighting-setups-section" id="lightingSetupsSection">
-          <h4 class="subsection-heading" id="lightingSetupsHeading">Lighting setups<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h4>
-          <div id="lightingSetupsBody">
-            <div id="lightingSetupsItems" class="shot-list-items"></div>
-            <button type="button" id="addLightingSetupBtn" class="primary small-btn">+ Add lighting setup</button>
-          </div>
-        </div>
-
-        <div class="references-block">
-          <label class="beats-label">References</label>
-          <p class="field-hint">Links to webpages, articles, YouTube videos, other inspiration</p>
-          <div id="referencesList" class="references-list"></div>
-          <button type="button" id="addReferenceBtn" class="primary small-btn">+ Add link</button>
-        </div>
-      </div>
-
-      <h3 class="shoot-section-heading status-group-heading heading-navy" id="directionHeading">Direction<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="directionHeading">Direction<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="directionBody">
         <p class="continue-prompt" id="categoryContinuePrompt">select a category to continue</p>
 
@@ -313,7 +270,52 @@
         </div>
       </div>
 
-      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="shootDayNotesHeading">Shoot-day notes<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <h3 class="shoot-section-heading status-group-heading heading-navy" id="visualsHeading">Visuals<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <div id="visualsBody">
+        <div class="moodboard-section">
+          <span class="moodboard-label">Mood board</span>
+          <button type="button" id="addMoodboardPhotos" class="primary small-btn">+ Add photos</button>
+          <input type="file" id="moodboardFileInput" accept="image/*" multiple hidden />
+          <div id="moodboardGrid" class="moodboard-grid"></div>
+          <label class="checkbox-row" id="moodboardCompleteRow"><input type="checkbox" id="shootMoodboardComplete" /> <span id="moodboardCompleteLabel">Mood board complete?</span></label>
+        </div>
+
+        <div class="form-section-label-row">
+          <button type="button" class="manage-link inline-manage-link" id="manageFrameworksBtn">Manage</button>
+        </div>
+        <div id="frameworkTagsContainer"></div>
+        <div class="lighting-setups-section" id="lightingSetupsSection">
+          <h4 class="subsection-heading" id="lightingSetupsHeading">Lighting setups<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h4>
+          <div id="lightingSetupsBody">
+            <div id="lightingSetupsItems" class="shot-list-items"></div>
+            <button type="button" id="addLightingSetupBtn" class="primary small-btn">+ Add lighting setup</button>
+          </div>
+        </div>
+
+        <div class="references-block">
+          <label class="beats-label">References</label>
+          <p class="field-hint">Links to webpages, articles, YouTube videos, other inspiration</p>
+          <div id="referencesList" class="references-list"></div>
+          <button type="button" id="addReferenceBtn" class="primary small-btn">+ Add link</button>
+        </div>
+      </div>
+
+      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="teamHeading">Team<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <div id="teamBody">
+        <p class="team-question">Requires team?</p>
+        <div class="team-yesno-row">
+          <label class="checkbox-row"><input type="checkbox" id="teamRequiredYes" /> Yes</label>
+          <label class="checkbox-row"><input type="checkbox" id="teamRequiredNo" /> No</label>
+        </div>
+        <p class="field-hint team-finalized-note" id="teamFinalizedNote" hidden>Team finalized</p>
+        <div id="teamDetailsBlock" hidden>
+          <button type="button" id="addTeamMemberBtn" class="primary small-btn">+ Add team member</button>
+          <div id="teamMembersList" class="team-members-list"></div>
+          <label class="checkbox-row"><input type="checkbox" id="shootTeamFinalized" /> <span id="teamFinalizedLabel">Team finalized?</span></label>
+        </div>
+      </div>
+
+      <h3 class="shoot-section-heading status-group-heading heading-navy" id="shootDayNotesHeading">Shoot-day notes<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="shootDayNotesBody">
         <label>Directions for talent
           <textarea id="shootTalentDirections" rows="3" maxlength="1000" readonly></textarea>
@@ -332,7 +334,7 @@
       </div>
 
       <div id="postShootContent" hidden>
-        <h3 class="shoot-section-heading status-group-heading heading-navy" id="postShootHeading">Post-shoot Reflection<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+        <h3 class="shoot-section-heading status-group-heading heading-yellow" id="postShootHeading">Post-shoot Reflection<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
         <div id="postShootBody">
           <label>What went right
             <textarea id="shootWentRight" rows="3" maxlength="1000" readonly></textarea>

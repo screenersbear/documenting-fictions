@@ -1078,6 +1078,7 @@ h1, h2, h3 {
 #logisticsBody[hidden],
 #directionBody[hidden],
 #visualsBody[hidden],
+#teamBody[hidden],
 #shootDayNotesBody[hidden],
 #shotListBody[hidden] {
   display: none;
@@ -1094,6 +1095,7 @@ h1, h2, h3 {
 #logisticsBody,
 #directionBody,
 #visualsBody,
+#teamBody,
 #shootDayNotesBody {
   display: flex;
   flex-direction: column;
@@ -1319,10 +1321,8 @@ h1, h2, h3 {
   flex-shrink: 0;
 }
 
-.team-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+#teamFinalizedLabel {
+  font-size: 18px;
 }
 
 .team-question {
@@ -2206,6 +2206,12 @@ h1, h2, h3 {
   width: 100%;
   height: 90dvh;
   max-height: 90dvh;
+  /* Overrides the base .modal's overflow-y: auto — this modal's content is
+     sized to fit exactly (flex column, no overflow of its own), so without
+     this the outer modal competes with the PDF viewer inside the iframe
+     for scroll/touch gestures, which is what stopped multi-page PDFs from
+     scrolling at all. */
+  overflow: hidden;
   border-radius: 20px;
   padding: 16px 16px calc(env(safe-area-inset-bottom) + 16px);
   animation: slideUp 0.2s ease;
@@ -2223,6 +2229,15 @@ h1, h2, h3 {
 
 #pdfPreviewShareBtn {
   flex-shrink: 0;
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  font-size: 17px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  letter-spacing: 0.5px;
+  cursor: pointer;
 }
 
 .crop-stage {
