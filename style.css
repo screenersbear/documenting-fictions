@@ -2309,11 +2309,18 @@ h1, h2, h3 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   color: var(--text);
   font-size: 18px;
   font-family: var(--font-body);
   margin-bottom: 18px;
+}
+
+/* The native calendar icon doesn't reliably respect padding-right on its
+   own — left unset, it crowds the input's right edge while the typed date
+   on the left sits properly inset, reading as lopsided. */
+.deadline-prompt-input::-webkit-calendar-picker-indicator {
+  margin-left: 8px;
 }
 
 #dailyReportList {
