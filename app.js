@@ -66,6 +66,13 @@
     ['other', 'Other'],
   ];
 
+  const SOCIAL_PLATFORM_OPTIONS = [
+    ['instagram', 'Instagram'],
+    ['tiktok', 'TikTok'],
+    ['youtube', 'YouTube'],
+    ['other', 'Other'],
+  ];
+
   const CATEGORY_LABELS = {
     commercial: 'Commercial',
     video: 'Video',
@@ -1532,18 +1539,62 @@
     if (next) next.focus();
   });
 
+  // ---------- Social media handles (dynamic list, right under Talent name) ----------
+  let currentSocialHandles = [];
+
+  function renderSocialHandles() {
+    const container = document.getElementById('socialHandlesList');
+    container.innerHTML = currentSocialHandles.map((sh, idx) => `
+      <div class="social-handle-row">
+        <select class="social-handle-platform" data-idx="${idx}">
+          ${SOCIAL_PLATFORM_OPTIONS.map(([val, label]) => `<option value="${val}" ${sh.platform === val ? 'selected' : ''}>${label}</option>`).join('')}
+        </select>
+        <input type="text" class="social-handle-input" data-idx="${idx}" placeholder="@handle" value="${escapeHtml(sh.handle || '')}" />
+        <button type="button" class="delete-social-handle" data-idx="${idx}">&times;</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.social-handle-platform').forEach(sel => {
+      sel.addEventListener('change', () => {
+        currentSocialHandles[Number(sel.dataset.idx)].platform = sel.value;
+      });
+    });
+    container.querySelectorAll('.social-handle-input').forEach(input => {
+      input.addEventListener('input', () => {
+        currentSocialHandles[Number(input.dataset.idx)].handle = input.value;
+      });
+    });
+    container.querySelectorAll('.delete-social-handle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentSocialHandles.splice(Number(btn.dataset.idx), 1);
+        renderSocialHandles();
+        scheduleShootAutosave();
+      });
+    });
+  }
+
+  document.getElementById('addSocialHandleBtn').addEventListener('click', () => {
+    currentSocialHandles.push({ platform: 'instagram', handle: '' });
+    renderSocialHandles();
+    scheduleShootAutosave();
+  });
+
   // ---------- Team members (dynamic list inside the shoot modal) ----------
+  // Each member renders as its own outlined card — position, name, and
+  // social handle stacked on their own line — rather than a single packed
+  // row, so none of the three fields end up squeezed.
   let currentTeamMembers = [];
 
   function renderTeamMembers() {
     const container = document.getElementById('teamMembersList');
     container.innerHTML = currentTeamMembers.map((tm, idx) => `
-      <div class="team-member-row">
+      <div class="team-member-card">
+        <button type="button" class="delete-team-member" data-idx="${idx}">&times;</button>
         <select class="team-member-role" data-idx="${idx}">
           ${TEAM_ROLE_OPTIONS.map(([val, label]) => `<option value="${val}" ${tm.role === val ? 'selected' : ''}>${label}</option>`).join('')}
         </select>
         <input type="text" class="team-member-name" data-idx="${idx}" placeholder="Name" value="${escapeHtml(tm.name || '')}" />
-        <button type="button" class="delete-team-member" data-idx="${idx}">&times;</button>
+        <input type="text" class="team-member-social" data-idx="${idx}" placeholder="Social media handle" value="${escapeHtml(tm.socialHandle || '')}" />
       </div>
     `).join('');
 
@@ -1557,6 +1608,11 @@
         currentTeamMembers[Number(input.dataset.idx)].name = input.value;
       });
     });
+    container.querySelectorAll('.team-member-social').forEach(input => {
+      input.addEventListener('input', () => {
+        currentTeamMembers[Number(input.dataset.idx)].socialHandle = input.value;
+      });
+    });
     container.querySelectorAll('.delete-team-member').forEach(btn => {
       btn.addEventListener('click', () => {
         currentTeamMembers.splice(Number(btn.dataset.idx), 1);
@@ -1567,7 +1623,7 @@
   }
 
   document.getElementById('addTeamMemberBtn').addEventListener('click', () => {
-    currentTeamMembers.push({ role: 'makeup_artist', name: '' });
+    currentTeamMembers.push({ role: 'makeup_artist', name: '', socialHandle: '' });
     renderTeamMembers();
     scheduleShootAutosave();
   });
@@ -1728,6 +1784,17 @@
       .map(([loc]) => loc);
   }
 
+  // Whatever directions were entered the most recent time this exact
+  // location was shot at (by shoot date; undated shoots sort last so they
+  // only win if nothing else has directions on file) — lets picking a
+  // known location bring its directions along automatically.
+  function getLastLocationDirections(location) {
+    const matches = state.shoots.filter(s => (s.location || '').trim() === location && hasText(s.locationDirections));
+    if (!matches.length) return '';
+    matches.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    return matches[0].locationDirections;
+  }
+
   function openLocationModal() {
     document.getElementById('locationTextInput').value = document.getElementById('shootLocation').value;
     const select = document.getElementById('pastLocationsSelect');
@@ -1743,8 +1810,16 @@
   });
 
   document.getElementById('saveLocationBtn').addEventListener('click', () => {
-    document.getElementById('shootLocation').value = document.getElementById('locationTextInput').value.trim();
+    const newLocation = document.getElementById('locationTextInput').value.trim();
+    const oldLocation = document.getElementById('shootLocation').value;
+    document.getElementById('shootLocation').value = newLocation;
     updateLocationBtnDisplay();
+    // Only autofill on an actual change — re-saving the same location
+    // shouldn't clobber directions the user may have just edited by hand.
+    if (newLocation && newLocation !== oldLocation) {
+      const lastDirections = getLastLocationDirections(newLocation);
+      if (lastDirections) document.getElementById('shootLocationDirections').value = lastDirections;
+    }
     document.getElementById('locationModalOverlay').hidden = true;
     scheduleShootAutosave();
   });
@@ -1882,7 +1957,7 @@
     shootLessonsLearned: 'Lessons for next time',
     shootTalentDirections: 'Directions for talent',
     shootTeamDirections: 'Directions for team',
-    shootLocationDirections: 'Location directions for talent',
+    shootLocationDirections: 'Location directions',
   };
   let expandFieldTargetId = null;
 
@@ -2205,6 +2280,8 @@
     document.getElementById('shootLocation').value = s ? (s.location || '') : '';
     updateLocationBtnDisplay();
     document.getElementById('shootTalent').value = s ? s.talentName : '';
+    currentSocialHandles = s && Array.isArray(s.socialHandles) ? s.socialHandles.map(sh => ({ ...sh })) : [];
+    renderSocialHandles();
     document.getElementById('shootCategory').value = s ? (s.category || '') : '';
     updateCategoryTierUI();
     document.getElementById('shootPremise').value = s ? (s.premise || '') : '';
@@ -2709,6 +2786,7 @@
       endTime: document.getElementById('shootEndTime').value,
       location: document.getElementById('shootLocation').value.trim(),
       talentName: document.getElementById('shootTalent').value.trim(),
+      socialHandles: [...currentSocialHandles],
       category: document.getElementById('shootCategory').value,
       premise: document.getElementById('shootPremise').value.trim(),
       character: document.getElementById('shootCharacter').value.trim(),
@@ -2742,7 +2820,7 @@
       && !hasText(data.talentDirections) && !hasText(data.teamDirections) && !hasText(data.locationDirections) && data.shotList.length === 0
       && data.lightingSetups.length === 0
       && data.frameworkTags.length === 0 && data.references.length === 0
-      && data.teamMembers.length === 0 && !data.moodboardComplete && !data.teamRequired && !data.teamFinalized
+      && data.teamMembers.length === 0 && data.socialHandles.length === 0 && !data.moodboardComplete && !data.teamRequired && !data.teamFinalized
       && !data.projectPhoto;
   }
 
@@ -2824,7 +2902,7 @@
   });
 
   document.getElementById('shareShootBtn').addEventListener('click', () => {
-    if (editingShootId) shareShootPdf(editingShootId);
+    if (editingShootId) openPdfPreview(editingShootId);
   });
 
   // ---------- Shoot options (row/card kebab menu) ----------
@@ -3006,7 +3084,7 @@
   document.getElementById('shareShootOptionBtn').addEventListener('click', () => {
     const id = optionsShootId;
     closeShootOptions();
-    if (id) shareShootPdf(id);
+    if (id) openPdfPreview(id);
   });
 
   document.getElementById('toggleTitleDisplayOptionBtn').addEventListener('click', () => {
@@ -3250,23 +3328,53 @@
     return doc;
   }
 
-  async function shareShootPdf(id) {
+  // ---------- PDF preview (shows the built PDF before offering to share it) ----------
+  let pdfPreviewBlob = null;
+  let pdfPreviewFilename = '';
+  let pdfPreviewTitle = '';
+
+  async function openPdfPreview(id) {
     const s = state.shoots.find(x => x.id === id);
     if (!s) return;
     try {
       const doc = await buildShootPdf(s);
-      const blob = doc.output('blob');
+      pdfPreviewBlob = doc.output('blob');
       const safeName = (s.talentName || s.title || 'shoot').replace(/[^\w\- ]+/g, '').trim() || 'shoot';
-      const filename = `${safeName}.pdf`;
-      const file = new File([blob], filename, { type: 'application/pdf' });
+      pdfPreviewFilename = `${safeName}.pdf`;
+      pdfPreviewTitle = s.title || s.talentName || 'Shoot';
+      document.getElementById('pdfPreviewFrame').src = URL.createObjectURL(pdfPreviewBlob);
+      document.getElementById('pdfPreviewOverlay').hidden = false;
+    } catch (err) {
+      console.error('Failed to build shoot PDF', err);
+      showToast('Could not create PDF');
+    }
+  }
 
+  function closePdfPreview() {
+    document.getElementById('pdfPreviewOverlay').hidden = true;
+    const frame = document.getElementById('pdfPreviewFrame');
+    if (frame.src) URL.revokeObjectURL(frame.src);
+    frame.src = '';
+    pdfPreviewBlob = null;
+  }
+
+  document.getElementById('pdfPreviewCloseBtn').addEventListener('click', closePdfPreview);
+
+  document.getElementById('pdfPreviewOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('pdfPreviewOverlay')) closePdfPreview();
+  });
+
+  document.getElementById('pdfPreviewShareBtn').addEventListener('click', async () => {
+    if (!pdfPreviewBlob) return;
+    try {
+      const file = new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: s.title || s.talentName || 'Shoot' });
+        await navigator.share({ files: [file], title: pdfPreviewTitle });
       } else {
-        const url = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(pdfPreviewBlob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = filename;
+        a.download = pdfPreviewFilename;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -3278,7 +3386,7 @@
         showToast('Could not create PDF');
       }
     }
-  }
+  });
 
   document.getElementById('completeShootBtn').addEventListener('click', () => {
     document.getElementById('completeShootPromptOverlay').hidden = false;

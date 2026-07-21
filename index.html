@@ -178,6 +178,11 @@
         <label>Talent name(s)
           <input type="text" id="shootTalent" required maxlength="80" placeholder="Who is in front of the camera" />
         </label>
+        <div class="social-handles-section">
+          <p class="team-question">Social media handles</p>
+          <div id="socialHandlesList" class="social-handles-list"></div>
+          <button type="button" id="addSocialHandleBtn" class="primary small-btn">+ Add handle</button>
+        </div>
         <label>Status
           <select id="shootStatus">
             <option value="idea_phase">Early idea</option>
@@ -228,6 +233,10 @@
           <button type="button" id="shootLocationBtn" class="location-field-btn">Tap to add location</button>
         </label>
 
+        <label>Location directions
+          <textarea id="shootLocationDirections" rows="3" maxlength="1000" placeholder="What floor the studio is on, where to park, etc." readonly></textarea>
+        </label>
+
         <div class="team-section">
           <p class="team-question">Requires team?</p>
           <div class="team-yesno-row">
@@ -241,10 +250,6 @@
             <label class="checkbox-row"><input type="checkbox" id="shootTeamFinalized" /> <span id="teamFinalizedLabel">Team finalized?</span></label>
           </div>
         </div>
-
-        <label>Location directions for talent
-          <textarea id="shootLocationDirections" rows="3" maxlength="1000" placeholder="What floor the studio is on, where to park, etc." readonly></textarea>
-        </label>
       </div>
 
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="visualsHeading">Visuals<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
@@ -457,6 +462,18 @@
       <span class="crop-zoom-icon">&plus;</span>
     </div>
     <button type="button" class="primary" id="cropConfirmBtn">Set crop</button>
+  </div>
+</div>
+
+<!-- ============ PDF PREVIEW ============ -->
+<div id="pdfPreviewOverlay" class="modal-overlay pdf-preview-overlay" hidden>
+  <div class="modal pdf-preview-modal">
+    <div class="modal-header">
+      <h2>Shoot PDF</h2>
+      <button type="button" class="icon-btn close-btn" id="pdfPreviewCloseBtn">&times;</button>
+    </div>
+    <iframe id="pdfPreviewFrame" class="pdf-preview-frame" title="PDF preview"></iframe>
+    <button type="button" class="primary" id="pdfPreviewShareBtn">Share</button>
   </div>
 </div>
 
