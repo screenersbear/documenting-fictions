@@ -687,9 +687,9 @@ h1, h2, h3 {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  background: #fff;
+  background: var(--text);
   border: 2px solid var(--text);
-  color: var(--text);
+  color: #fff;
   font-family: var(--font-title);
   font-weight: 700;
   font-size: 17px;
@@ -1359,6 +1359,13 @@ h1, h2, h3 {
   font-weight: 700;
 }
 
+.pdf-sections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 14px 0;
+}
+
 #frameworkTagsContainer {
   display: flex;
   flex-direction: column;
@@ -1454,7 +1461,7 @@ h1, h2, h3 {
   margin: 0;
 }
 
-.social-handles-section .team-question {
+.talents-section > .team-question {
   font-size: 15px;
 }
 
@@ -1504,7 +1511,7 @@ h1, h2, h3 {
 
 .team-member-role,
 .team-member-name,
-.team-member-social {
+.talent-name {
   display: block;
   width: 100%;
   box-sizing: border-box;
@@ -1518,18 +1525,37 @@ h1, h2, h3 {
   text-transform: none;
 }
 
-.team-member-card .delete-team-member {
+.team-member-card .delete-team-member,
+.team-member-card .delete-talent {
   position: absolute;
   top: 10px;
   right: 10px;
 }
 
-/* ---- Social media handles (dynamic list, right under Talent name) ---- */
-.social-handles-section {
+/* ---- Talents (dynamic list of talent cards, right under Title) ---- */
+.talents-section {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
+
+/* Each talent card nests its own social-handles sub-list (reusing
+   .social-handles-list/.social-handle-row etc. below) under a smaller,
+   secondary heading — kept distinct from the outer "Talent name(s)"
+   heading's own size override just above. */
+.talent-social-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.talent-social-heading {
+  font-size: 13px;
+  margin: 0;
+}
+
+/* ---- Social media handles (dynamic list, nested inside a talent or
+   team member card) ---- */
 
 .social-handles-list {
   display: flex;
@@ -1622,7 +1648,8 @@ h1, h2, h3 {
   font-size: 16px;
 }
 
-.delete-team-member {
+.delete-team-member,
+.delete-talent {
   width: 28px;
   height: 28px;
   border-radius: 50%;

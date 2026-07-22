@@ -159,7 +159,7 @@
           <button type="button" class="modal-title-jump-item" data-jump="directionHeading">Direction</button>
           <button type="button" class="modal-title-jump-item" data-jump="visualsHeading">Visuals</button>
           <button type="button" class="modal-title-jump-item" data-jump="teamHeading">Team</button>
-          <button type="button" class="modal-title-jump-item" data-jump="shootDayNotesHeading">Shoot-day notes</button>
+          <button type="button" class="modal-title-jump-item" data-jump="shootDayNotesHeading">Shoot day</button>
           <button type="button" class="modal-title-jump-item" data-jump="postShootHeading" id="jumpToPostShootItem">Post-shoot Reflection</button>
         </div>
       </h2>
@@ -191,13 +191,10 @@
         <label>Title
           <input type="text" id="shootTitle" maxlength="120" placeholder="Name for the shoot if applicable" />
         </label>
-        <label>Talent name(s)
-          <input type="text" id="shootTalent" required maxlength="80" placeholder="Who is in front of the camera" />
-        </label>
-        <div class="social-handles-section">
-          <p class="team-question">Social media handles</p>
-          <div id="socialHandlesList" class="social-handles-list"></div>
-          <button type="button" id="addSocialHandleBtn" class="primary small-btn">+ Add handle</button>
+        <div class="talents-section">
+          <p class="team-question">Talent name(s)</p>
+          <button type="button" id="addTalentBtn" class="primary small-btn">+ Add talent</button>
+          <div id="talentsList" class="team-members-list"></div>
         </div>
         <label>Category
           <select id="shootCategory" class="bold-select" required>
@@ -322,7 +319,7 @@
       </div>
 
       <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
-      <h3 class="shoot-section-heading status-group-heading heading-navy" id="shootDayNotesHeading">Shoot-day notes<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <h3 class="shoot-section-heading status-group-heading heading-navy" id="shootDayNotesHeading">Shoot day<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="shootDayNotesBody">
         <label>Directions for talent
           <textarea id="shootTalentDirections" rows="6" maxlength="1000" readonly></textarea>
@@ -472,6 +469,25 @@
       <span class="crop-zoom-icon">&plus;</span>
     </div>
     <button type="button" class="primary" id="cropConfirmBtn">Set crop</button>
+  </div>
+</div>
+
+<!-- ============ PDF SECTIONS CHOICE ============ -->
+<div id="pdfSectionsOverlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Share as PDF</h2>
+      <button type="button" class="icon-btn close-btn" id="pdfSectionsCloseBtn">&times;</button>
+    </div>
+    <p class="field-hint">Choose which sections to include.</p>
+    <div class="pdf-sections-list">
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionTalent" checked /> Talent</label>
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionDetails" checked /> Details</label>
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionReferences" checked /> References</label>
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionTeam" checked /> Team</label>
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionMoodboard" checked /> Mood board</label>
+    </div>
+    <button type="button" class="primary" id="pdfSectionsBuildBtn">Build PDF</button>
   </div>
 </div>
 

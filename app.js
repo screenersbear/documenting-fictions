@@ -261,7 +261,7 @@
   // (the closest of the new three reflection boxes, since a clean 3-way
   // split of old freeform text isn't possible).
   function migrateShoot(s, frameworks) {
-    if (s.frameworkTags && s.category && s.status !== undefined && s.moodboardComplete !== undefined && Array.isArray(s.references) && s.teamRequired !== undefined) return s;
+    if (s.frameworkTags && s.category && s.status !== undefined && s.moodboardComplete !== undefined && Array.isArray(s.references) && s.teamRequired !== undefined && Array.isArray(s.talents)) return s;
     const dfp = frameworks.find(f => f.name === 'Documenting Fictions Principles');
     const vl = frameworks.find(f => f.name === 'Visual Language');
     const frameworkTags = s.frameworkTags || [];
@@ -295,7 +295,8 @@
       moodboardComplete: s.moodboardComplete || false,
       teamRequired: s.teamRequired || (s.requiresTeam ? 'yes' : ''),
       teamFinalized: s.teamFinalized || false,
-      teamMembers: s.teamMembers || [],
+      teamMembers: (s.teamMembers || []).map(tm => ({ socialPlatform: 'instagram', ...tm })),
+      talents: Array.isArray(s.talents) ? s.talents : (hasText(s.talentName) || (s.socialHandles || []).some(sh => hasText(sh.handle)) ? [{ name: s.talentName || '', socialHandles: s.socialHandles || [] }] : []),
       archived: s.archived || false,
     };
   }
@@ -490,13 +491,22 @@
     return labels;
   }
 
+  // The first talent with a name, used wherever a shoot needs a single
+  // "the talent" fallback (display name, PDF title/filename) despite
+  // possibly having several talent cards.
+  function primaryTalentName(s) {
+    const t = (s.talents || []).find(t => hasText(t.name));
+    return t ? t.name : '';
+  }
+
   // Defaults to talent name first (falling back to the shoot title, then a
   // placeholder); the app-wide display setting (state.titleDisplayMode) flips
   // the priority for every shoot at once.
   function shootDisplayName(s) {
+    const talentName = primaryTalentName(s);
     return state.titleDisplayMode === 'title'
-      ? (s.title || s.talentName || 'Untitled shoot')
-      : (s.talentName || s.title || 'Untitled shoot');
+      ? (s.title || talentName || 'Untitled shoot')
+      : (talentName || s.title || 'Untitled shoot');
   }
 
   const SHOOT_THUMB_EMPTY_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
@@ -779,14 +789,14 @@
   document.getElementById('newShootBtn').addEventListener('click', () => openShootModal(null));
 
   const STAT_BOX_FILTERS = {
+    ideas: s => !s.archived && s.status === 'idea_phase',
     ready: s => !s.archived && s.status === 'waiting_to_shoot',
-    planning: s => !s.archived && (s.status === 'idea_phase' || s.status === 'planning'),
     pending: s => !s.archived && shootPendingLabels(s).length > 0,
   };
 
   const STAT_BOX_TITLES = {
+    ideas: 'Ideas',
     ready: 'Ready to shoot',
-    planning: 'Still planning',
     pending: 'Teams + mood boards pending',
   };
 
@@ -850,22 +860,22 @@
     const proofsPendingShoots = state.shoots.filter(s => !s.archived && s.status === 'captured')
       .sort((a, b) => dateSortKey(a.date).localeCompare(dateSortKey(b.date)));
 
+    const ideasCount = state.shoots.filter(STAT_BOX_FILTERS.ideas).length;
     const readyToShootCount = state.shoots.filter(STAT_BOX_FILTERS.ready).length;
-    const stillPlanningCount = state.shoots.filter(STAT_BOX_FILTERS.planning).length;
     const pendingTeamMoodboardCount = state.shoots.filter(STAT_BOX_FILTERS.pending).length;
 
     document.getElementById('statsRow').innerHTML = `
-      <div class="stat-box" data-stat="ready">
-        <span class="stat-num">${readyToShootCount}</span>
-        <span class="stat-label">Ready to shoot</span>
-      </div>
-      <div class="stat-box" data-stat="planning">
-        <span class="stat-num">${stillPlanningCount}</span>
-        <span class="stat-label">Still planning</span>
+      <div class="stat-box" data-stat="ideas">
+        <span class="stat-num">${ideasCount}</span>
+        <span class="stat-label">Ideas</span>
       </div>
       <div class="stat-box" data-stat="pending">
         <span class="stat-num">${pendingTeamMoodboardCount}</span>
         <span class="stat-label">Teams + mood boards pending</span>
+      </div>
+      <div class="stat-box" data-stat="ready">
+        <span class="stat-num">${readyToShootCount}</span>
+        <span class="stat-label">Ready to shoot</span>
       </div>
     `;
 
@@ -1644,43 +1654,77 @@
     if (next) next.focus();
   });
 
-  // ---------- Social media handles (dynamic list, right under Talent name) ----------
-  let currentSocialHandles = [];
+  // ---------- Talents (dynamic list of talent cards, right under Title) ----------
+  // Each talent is its own outlined card (mirrors .team-member-card) with a
+  // name field and its own nested social-handles sub-list, so a shoot with
+  // multiple people in front of the camera can track each one separately.
+  let currentTalents = [];
 
-  function renderSocialHandles() {
-    const container = document.getElementById('socialHandlesList');
-    container.innerHTML = currentSocialHandles.map((sh, idx) => `
-      <div class="social-handle-row">
-        <select class="social-handle-platform" data-idx="${idx}">
-          ${SOCIAL_PLATFORM_OPTIONS.map(([val, label]) => `<option value="${val}" ${sh.platform === val ? 'selected' : ''}>${label}</option>`).join('')}
-        </select>
-        <input type="text" class="social-handle-input" data-idx="${idx}" placeholder="@handle" value="${escapeHtml(sh.handle || '')}" />
-        <button type="button" class="delete-social-handle" data-idx="${idx}">&times;</button>
+  function renderTalents() {
+    const container = document.getElementById('talentsList');
+    container.innerHTML = currentTalents.map((talent, idx) => `
+      <div class="team-member-card">
+        <button type="button" class="delete-talent" data-idx="${idx}">&times;</button>
+        <input type="text" class="talent-name" data-idx="${idx}" placeholder="Talent name" value="${escapeHtml(talent.name || '')}" />
+        <div class="talent-social-section">
+          <p class="team-question talent-social-heading">Social media handle(s)</p>
+          <div class="social-handles-list">
+            ${(talent.socialHandles || []).map((sh, shIdx) => `
+              <div class="social-handle-row">
+                <select class="social-handle-platform" data-talent-idx="${idx}" data-handle-idx="${shIdx}">
+                  ${SOCIAL_PLATFORM_OPTIONS.map(([val, label]) => `<option value="${val}" ${sh.platform === val ? 'selected' : ''}>${label}</option>`).join('')}
+                </select>
+                <input type="text" class="social-handle-input" data-talent-idx="${idx}" data-handle-idx="${shIdx}" placeholder="@handle" value="${escapeHtml(sh.handle || '')}" />
+                <button type="button" class="delete-social-handle" data-talent-idx="${idx}" data-handle-idx="${shIdx}">&times;</button>
+              </div>
+            `).join('')}
+          </div>
+          <button type="button" class="primary small-btn add-talent-handle-btn" data-talent-idx="${idx}">+ Add handle</button>
+        </div>
       </div>
     `).join('');
 
+    container.querySelectorAll('.delete-talent').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentTalents.splice(Number(btn.dataset.idx), 1);
+        renderTalents();
+        scheduleShootAutosave();
+      });
+    });
+    container.querySelectorAll('.talent-name').forEach(input => {
+      input.addEventListener('input', () => {
+        currentTalents[Number(input.dataset.idx)].name = input.value;
+      });
+    });
+    container.querySelectorAll('.add-talent-handle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentTalents[Number(btn.dataset.talentIdx)].socialHandles.push({ platform: 'instagram', handle: '' });
+        renderTalents();
+        scheduleShootAutosave();
+      });
+    });
     container.querySelectorAll('.social-handle-platform').forEach(sel => {
       sel.addEventListener('change', () => {
-        currentSocialHandles[Number(sel.dataset.idx)].platform = sel.value;
+        currentTalents[Number(sel.dataset.talentIdx)].socialHandles[Number(sel.dataset.handleIdx)].platform = sel.value;
       });
     });
     container.querySelectorAll('.social-handle-input').forEach(input => {
       input.addEventListener('input', () => {
-        currentSocialHandles[Number(input.dataset.idx)].handle = input.value;
+        currentTalents[Number(input.dataset.talentIdx)].socialHandles[Number(input.dataset.handleIdx)].handle = input.value;
       });
     });
     container.querySelectorAll('.delete-social-handle').forEach(btn => {
       btn.addEventListener('click', () => {
-        currentSocialHandles.splice(Number(btn.dataset.idx), 1);
-        renderSocialHandles();
+        currentTalents[Number(btn.dataset.talentIdx)].socialHandles.splice(Number(btn.dataset.handleIdx), 1);
+        renderTalents();
         scheduleShootAutosave();
       });
     });
   }
 
-  document.getElementById('addSocialHandleBtn').addEventListener('click', () => {
-    currentSocialHandles.push({ platform: 'instagram', handle: '' });
-    renderSocialHandles();
+  document.getElementById('addTalentBtn').addEventListener('click', () => {
+    currentTalents.push({ name: '', socialHandles: [] });
+    renderTalents();
     scheduleShootAutosave();
   });
 
@@ -1699,7 +1743,12 @@
           ${TEAM_ROLE_OPTIONS.map(([val, label]) => `<option value="${val}" ${tm.role === val ? 'selected' : ''}>${label}</option>`).join('')}
         </select>
         <input type="text" class="team-member-name" data-idx="${idx}" placeholder="Name" value="${escapeHtml(tm.name || '')}" />
-        <input type="text" class="team-member-social" data-idx="${idx}" placeholder="Social media handle" value="${escapeHtml(tm.socialHandle || '')}" />
+        <div class="social-handle-row">
+          <select class="social-handle-platform team-member-social-platform" data-idx="${idx}">
+            ${SOCIAL_PLATFORM_OPTIONS.map(([val, label]) => `<option value="${val}" ${(tm.socialPlatform || 'instagram') === val ? 'selected' : ''}>${label}</option>`).join('')}
+          </select>
+          <input type="text" class="social-handle-input team-member-social" data-idx="${idx}" placeholder="Social media handle" value="${escapeHtml(tm.socialHandle || '')}" />
+        </div>
       </div>
     `).join('');
 
@@ -1711,6 +1760,11 @@
     container.querySelectorAll('.team-member-name').forEach(input => {
       input.addEventListener('input', () => {
         currentTeamMembers[Number(input.dataset.idx)].name = input.value;
+      });
+    });
+    container.querySelectorAll('.team-member-social-platform').forEach(sel => {
+      sel.addEventListener('change', () => {
+        currentTeamMembers[Number(sel.dataset.idx)].socialPlatform = sel.value;
       });
     });
     container.querySelectorAll('.team-member-social').forEach(input => {
@@ -1728,7 +1782,7 @@
   }
 
   document.getElementById('addTeamMemberBtn').addEventListener('click', () => {
-    currentTeamMembers.push({ role: 'makeup_artist', name: '', socialHandle: '' });
+    currentTeamMembers.push({ role: 'makeup_artist', name: '', socialPlatform: 'instagram', socialHandle: '' });
     renderTeamMembers();
     scheduleShootAutosave();
   });
@@ -2263,7 +2317,7 @@
     { id: 'directionHeading', label: 'Direction' },
     { id: 'visualsHeading', label: 'Visuals' },
     { id: 'teamHeading', label: 'Team' },
-    { id: 'shootDayNotesHeading', label: 'Shoot-day notes' },
+    { id: 'shootDayNotesHeading', label: 'Shoot day' },
     { id: 'postShootHeading', label: 'Post-shoot Reflection' },
   ];
 
@@ -2388,9 +2442,10 @@
     document.getElementById('shootEndTime').value = s ? (s.endTime || '') : '';
     document.getElementById('shootLocation').value = s ? (s.location || '') : '';
     updateLocationBtnDisplay();
-    document.getElementById('shootTalent').value = s ? s.talentName : '';
-    currentSocialHandles = s && Array.isArray(s.socialHandles) ? s.socialHandles.map(sh => ({ ...sh })) : [];
-    renderSocialHandles();
+    currentTalents = s && Array.isArray(s.talents)
+      ? s.talents.map(t => ({ name: t.name || '', socialHandles: (t.socialHandles || []).map(sh => ({ ...sh })) }))
+      : [];
+    renderTalents();
     document.getElementById('shootCategory').value = s ? (s.category || '') : '';
     updateCategoryTierUI();
     document.getElementById('shootPremise').value = s ? (s.premise || '') : '';
@@ -2895,8 +2950,7 @@
       startTime: document.getElementById('shootStartTime').value,
       endTime: document.getElementById('shootEndTime').value,
       location: document.getElementById('shootLocation').value.trim(),
-      talentName: document.getElementById('shootTalent').value.trim(),
-      socialHandles: [...currentSocialHandles],
+      talents: currentTalents.map(t => ({ name: t.name.trim(), socialHandles: [...t.socialHandles] })),
       category: document.getElementById('shootCategory').value,
       premise: document.getElementById('shootPremise').value.trim(),
       character: document.getElementById('shootCharacter').value.trim(),
@@ -2924,13 +2978,13 @@
   // A brand-new, never-touched shoot draft shouldn't get written to state
   // just because the modal was opened — only once it actually has content.
   function isShootDataBlank(data) {
-    return !hasText(data.title) && !hasText(data.location) && !hasText(data.startTime) && !hasText(data.endTime) && !hasText(data.talentName) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals)
+    return !hasText(data.title) && !hasText(data.location) && !hasText(data.startTime) && !hasText(data.endTime) && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals)
       && !hasText(data.worldNotes) && !hasText(data.generalNotes) && !hasText(data.deadline)
       && !hasText(data.whatWentRight) && !hasText(data.couldBeBetter) && !hasText(data.lessonsLearned)
       && !hasText(data.talentDirections) && !hasText(data.teamDirections) && !hasText(data.locationDirections) && data.shotList.length === 0
       && data.lightingSetups.length === 0
       && data.frameworkTags.length === 0 && data.references.length === 0
-      && data.teamMembers.length === 0 && data.socialHandles.length === 0 && !data.moodboardComplete && !data.teamRequired && !data.teamFinalized
+      && data.teamMembers.length === 0 && !data.moodboardComplete && !data.teamRequired && !data.teamFinalized
       && !data.projectPhoto;
   }
 
@@ -3012,7 +3066,7 @@
   });
 
   document.getElementById('shareShootBtn').addEventListener('click', () => {
-    if (editingShootId) openPdfPreview(editingShootId);
+    if (editingShootId) openPdfSectionsModal(editingShootId);
   });
 
   // ---------- Shoot options (row/card kebab menu) ----------
@@ -3193,7 +3247,7 @@
   document.getElementById('shareShootOptionBtn').addEventListener('click', () => {
     const id = optionsShootId;
     closeShootOptions();
-    if (id) openPdfPreview(id);
+    if (id) openPdfSectionsModal(id);
   });
 
   document.getElementById('archiveShootOptionBtn').addEventListener('click', () => {
@@ -3290,7 +3344,8 @@
     return y + lineHeight * lines.length;
   }
 
-  async function buildShootPdf(s) {
+  async function buildShootPdf(s, chosenSections) {
+    const sections = chosenSections || { talent: true, details: true, references: true, team: true, moodboard: true };
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -3306,7 +3361,7 @@
 
     doc.setFont('courier', 'bold');
     doc.setFontSize(titleFontSize);
-    const titleLines = doc.splitTextToSize((s.title || s.talentName || 'Shoot').toUpperCase(), pageWidth - titleX - margin);
+    const titleLines = doc.splitTextToSize((s.title || primaryTalentName(s) || 'Shoot').toUpperCase(), pageWidth - titleX - margin);
     const titleBlockHeight = titleLines.length * titleLineHeight;
     const headerHeight = Math.max(64, titleBlockHeight + 28);
 
@@ -3327,28 +3382,31 @@
     doc.setTextColor(...navy);
     let y = headerHeight + 34;
 
-    if (s.talentName) {
-      doc.setTextColor(...navy);
-      doc.setFont('courier', 'bold');
-      doc.setFontSize(18);
-      doc.text(`Talent: ${s.talentName}`, margin, y);
-      y += 24;
-      const handles = (s.socialHandles || []).filter(sh => hasText(sh.handle));
-      if (handles.length) {
-        doc.setFont('courier', 'normal');
-        doc.setFontSize(11);
-        handles.forEach(sh => {
-          const platformEntry = SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === sh.platform);
-          const platformLabel = platformEntry ? platformEntry[1] : 'Other';
-          doc.text(`${platformLabel}: ${sh.handle}`, margin, y);
-          y += 15;
-        });
-      }
-      y += 10;
+    const talentsWithContent = (s.talents || []).filter(t => hasText(t.name));
+    if (talentsWithContent.length && sections.talent) {
+      talentsWithContent.forEach(talent => {
+        doc.setTextColor(...navy);
+        doc.setFont('courier', 'bold');
+        doc.setFontSize(18);
+        doc.text(`Talent: ${talent.name}`, margin, y);
+        y += 24;
+        const handles = (talent.socialHandles || []).filter(sh => hasText(sh.handle));
+        if (handles.length) {
+          doc.setFont('courier', 'normal');
+          doc.setFontSize(11);
+          handles.forEach(sh => {
+            const platformEntry = SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === sh.platform);
+            const platformLabel = platformEntry ? platformEntry[1] : 'Other';
+            doc.text(`${platformLabel}: ${sh.handle}`, margin, y);
+            y += 15;
+          });
+        }
+        y += 10;
+      });
     }
 
     const timeRange = shootTimeRange(s);
-    if (s.date || timeRange || s.location) {
+    if ((s.date || timeRange || s.location) && sections.details) {
       doc.setTextColor(...navy);
       doc.setFont('courier', 'bold');
       doc.setFontSize(18);
@@ -3364,7 +3422,7 @@
     }
 
     const refs = (s.references || []).map(r => r.trim()).filter(Boolean);
-    if (refs.length) {
+    if (refs.length && sections.references) {
       doc.setFont('courier', 'bold');
       doc.setFontSize(18);
       doc.text('References:', margin, y);
@@ -3379,7 +3437,7 @@
     }
 
     const team = s.teamRequired === 'yes' ? (s.teamMembers || []) : [];
-    if (team.length) {
+    if (team.length && sections.team) {
       doc.setFont('courier', 'bold');
       doc.setFontSize(18);
       doc.text('Team:', margin, y);
@@ -3392,7 +3450,9 @@
         doc.text(`• ${tm.name ? tm.name : 'Unnamed'} — ${roleLabel}`, margin, y);
         y += 15;
         if (hasText(tm.socialHandle)) {
-          doc.text(`   ${tm.socialHandle}`, margin, y);
+          const platformEntry = SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === tm.socialPlatform);
+          const platformLabel = platformEntry ? platformEntry[1] : 'Other';
+          doc.text(`   ${platformLabel}: ${tm.socialHandle}`, margin, y);
           y += 15;
         }
       });
@@ -3403,7 +3463,7 @@
     // they're internal visual-direction planning, not something meant to
     // go out to a client or talent.
 
-    const images = await idbGetImages(s.id);
+    const images = sections.moodboard ? await idbGetImages(s.id) : [];
     if (images.length) {
       if (y > pageHeight - margin - 220) { doc.addPage(); y = margin; }
       doc.setFont('courier', 'bold');
@@ -3450,12 +3510,53 @@
     return doc;
   }
 
+  // ---------- PDF sections choice (shown before building, so the user can
+  // opt out of sections they don't want in this particular share — every
+  // section that's currently always included stays checked by default). ----------
+  let pdfSectionsShootId = null;
+
+  function openPdfSectionsModal(id) {
+    pdfSectionsShootId = id;
+    document.getElementById('pdfSectionTalent').checked = true;
+    document.getElementById('pdfSectionDetails').checked = true;
+    document.getElementById('pdfSectionReferences').checked = true;
+    document.getElementById('pdfSectionTeam').checked = true;
+    document.getElementById('pdfSectionMoodboard').checked = true;
+    document.getElementById('pdfSectionsOverlay').hidden = false;
+  }
+
+  function closePdfSectionsModal() {
+    document.getElementById('pdfSectionsOverlay').hidden = true;
+  }
+
+  document.getElementById('pdfSectionsCloseBtn').addEventListener('click', closePdfSectionsModal);
+
+  document.getElementById('pdfSectionsOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('pdfSectionsOverlay')) closePdfSectionsModal();
+  });
+
+  // Calling openPdfPreview synchronously (not after an await) here matters —
+  // its own window.open('', '_blank') call needs to happen inside this
+  // click handler's user-gesture context, or mobile browsers block it.
+  document.getElementById('pdfSectionsBuildBtn').addEventListener('click', () => {
+    const id = pdfSectionsShootId;
+    const chosenSections = {
+      talent: document.getElementById('pdfSectionTalent').checked,
+      details: document.getElementById('pdfSectionDetails').checked,
+      references: document.getElementById('pdfSectionReferences').checked,
+      team: document.getElementById('pdfSectionTeam').checked,
+      moodboard: document.getElementById('pdfSectionMoodboard').checked,
+    };
+    closePdfSectionsModal();
+    if (id) openPdfPreview(id, chosenSections);
+  });
+
   // ---------- PDF preview (shows the built PDF before offering to share it) ----------
   let pdfPreviewBlob = null;
   let pdfPreviewFilename = '';
   let pdfPreviewTitle = '';
 
-  async function openPdfPreview(id) {
+  async function openPdfPreview(id, chosenSections) {
     const s = state.shoots.find(x => x.id === id);
     if (!s) return;
     // A PDF embedded in an iframe doesn't reliably support scrolling past
@@ -3467,11 +3568,11 @@
     // it at the PDF once it's built.
     const previewWindow = window.open('', '_blank');
     try {
-      const doc = await buildShootPdf(s);
+      const doc = await buildShootPdf(s, chosenSections);
       pdfPreviewBlob = doc.output('blob');
-      const safeName = (s.title || s.talentName || 'shoot').replace(/[^\w\- ]+/g, '').trim() || 'shoot';
+      const safeName = (s.title || primaryTalentName(s) || 'shoot').replace(/[^\w\- ]+/g, '').trim() || 'shoot';
       pdfPreviewFilename = `${safeName}.pdf`;
-      pdfPreviewTitle = s.title || s.talentName || 'Shoot';
+      pdfPreviewTitle = s.title || primaryTalentName(s) || 'Shoot';
       const url = URL.createObjectURL(pdfPreviewBlob);
       if (previewWindow) {
         previewWindow.location.href = url;
@@ -4405,7 +4506,10 @@
     if (moodboardDone > 0) facts.push(`${moodboardDone} of your shoots have a finished mood board.`);
 
     const talentCounts = {};
-    shoots.forEach(s => { const t = (s.talentName || '').trim(); if (t) talentCounts[t] = (talentCounts[t] || 0) + 1; });
+    shoots.forEach(s => (s.talents || []).forEach(talent => {
+      const t = (talent.name || '').trim();
+      if (t) talentCounts[t] = (talentCounts[t] || 0) + 1;
+    }));
     const talentEntries = Object.entries(talentCounts);
     if (talentEntries.length) {
       facts.push(`You've photographed ${talentEntries.length} different talent${talentEntries.length === 1 ? '' : 's'}.`);
