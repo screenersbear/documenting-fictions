@@ -606,6 +606,32 @@ h1, h2, h3 {
   color: #fff;
 }
 
+/* Decorative "file folder tab" — sits right above each top-level section
+   pill in the shoot form, like the pill is the label peeking out of a
+   folder's tab. Stretches to the modal's full width (preserveAspectRatio
+   none) so the same simple path works at any screen size; the negative
+   margin pulls it down to meet the pill instead of leaving a gap. Purely
+   decorative, so it's hidden from the a11y tree. */
+.folder-tab-deco {
+  display: block;
+  width: 100%;
+  height: 26px;
+  margin-bottom: -13px;
+  pointer-events: none;
+}
+
+.folder-tab-deco path {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.folder-tab-deco.tab-fill-yellow path {
+  fill: var(--accent);
+}
+
 .shoot-status-rows {
   display: flex;
   flex-direction: column;
@@ -1268,6 +1294,10 @@ h1, h2, h3 {
   padding-top: 0;
 }
 
+#lightingSetupsBody {
+  margin-top: 10px;
+}
+
 .tag-group {
   display: flex;
   flex-wrap: wrap;
@@ -1863,6 +1893,10 @@ h1, h2, h3 {
   font-size: 19px;
   color: var(--text-dim);
   letter-spacing: 0.5px;
+}
+
+#shootForm .references-block .beats-label {
+  font-size: 20px;
 }
 
 .beats-chips {

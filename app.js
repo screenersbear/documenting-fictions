@@ -3305,18 +3305,9 @@
       y += 10;
     }
 
-    const notes = (s.generalNotes || '').trim();
-    if (notes) {
-      doc.setFont('courier', 'bold');
-      doc.setFontSize(18);
-      doc.text('Notes:', margin, y);
-      y += 24;
-      doc.setFont('courier', 'normal');
-      doc.setFontSize(11);
-      const noteLines = doc.splitTextToSize(notes, pageWidth - margin * 2);
-      doc.text(noteLines, margin, y);
-      y += noteLines.length * 14 + 10;
-    }
+    // General direction notes are deliberately left off the shared PDF —
+    // they're internal visual-direction planning, not something meant to
+    // go out to a client or talent.
 
     const images = await idbGetImages(s.id);
     if (images.length) {
@@ -3384,7 +3375,7 @@
     try {
       const doc = await buildShootPdf(s);
       pdfPreviewBlob = doc.output('blob');
-      const safeName = (s.talentName || s.title || 'shoot').replace(/[^\w\- ]+/g, '').trim() || 'shoot';
+      const safeName = (s.title || s.talentName || 'shoot').replace(/[^\w\- ]+/g, '').trim() || 'shoot';
       pdfPreviewFilename = `${safeName}.pdf`;
       pdfPreviewTitle = s.title || s.talentName || 'Shoot';
       const url = URL.createObjectURL(pdfPreviewBlob);
