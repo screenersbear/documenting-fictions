@@ -596,12 +596,26 @@ h1, h2, h3 {
   margin-top: 0;
 }
 
-/* Archive's month pills nest inside a year's rows — same pill style as the
-   Shoots screen's status groups, just indented a touch and one size down so
-   the year/month hierarchy still reads at a glance. */
+/* Archive's month headings nest inside a year's rows — unlike the year
+   (which keeps the full pill/bubble look shared with the Shoots screen's
+   status groups), a month is plain text: indented, smaller, and colored per
+   the same yellow/navy alternation but with no background or radius, so the
+   bubble treatment stays reserved for the year level. */
 .archive-month-heading {
   margin-left: 20px;
   font-size: 13px;
+  padding: 4px 0;
+  border-radius: 0;
+}
+
+#archiveList .archive-month-heading.heading-yellow {
+  background: none;
+  color: var(--accent);
+}
+
+#archiveList .archive-month-heading.heading-navy {
+  background: none;
+  color: var(--text);
 }
 
 .archive-month-group:first-child > .archive-month-heading {
@@ -658,20 +672,20 @@ h1, h2, h3 {
 }
 
 /* Status swatch button — sits right-aligned in the yellow space above Basic
-   Info's pill, snug against the header (~2px of yellow above it) and hugging
-   its own text rather than spanning the full width. It overlaps the
-   folder-tab-deco decoration behind it (that SVG is unpositioned/static, so
-   this absolutely-positioned button always paints above it regardless of DOM
-   order) — the right side of that decoration is where the fold-tab's dip
-   lives, so there's naturally more yellow below the button there, which is
-   fine. The real <select> stays functionally untouched — same id, same
+   Info's pill, nestled into the fold-tab's dip (the right side of the
+   decoration below, where the line steps down) with just a couple px of
+   yellow between the button's bottom edge and that line. It hugs its own
+   text rather than spanning the full width, and overlaps the folder-tab-deco
+   decoration behind it (that SVG is unpositioned/static, so this
+   absolutely-positioned button always paints above it regardless of DOM
+   order). The real <select> stays functionally untouched — same id, same
    change handling — just made invisible and stretched over the visible
    display span so a tap on the button opens the native status picker;
    #statusSwatchDisplay is kept in sync via JS. */
 .status-swatch-wrap {
   position: absolute;
   right: 0;
-  top: -8px;
+  top: 36px;
 }
 
 .status-swatch-display {
@@ -2506,7 +2520,8 @@ h1, h2, h3 {
 #tabIntroCloseBtn,
 #postShootPromptDismissBtn,
 #dayAfterOkBtn,
-#dailyReportCloseBtn {
+#dailyReportCloseBtn,
+#statusSwatchIntroCloseBtn {
   width: 100%;
   padding: 13px;
   border-radius: 12px;
