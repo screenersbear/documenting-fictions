@@ -172,22 +172,22 @@
     </div>
     <form id="shootForm">
       <svg class="folder-tab-deco tab-fill-yellow" viewBox="0 -90 400 120" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,-90 L0,-90 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
-      <div class="status-swatch-wrap">
-        <span class="status-swatch-display" id="statusSwatchDisplay" aria-hidden="true">Status: Early idea</span>
-        <select id="shootStatus" class="status-swatch-select" aria-label="Status">
-          <option value="idea_phase">Early idea</option>
-          <option value="planning">Active planning</option>
-          <option value="waiting_to_shoot">Shoot ready</option>
-          <option value="captured">Captured</option>
-          <option value="waiting_for_selects">Waiting for selects</option>
-          <option value="editing">Editing</option>
-          <option value="delivered">Delivered</option>
-          <option value="rescheduled">Rescheduled</option>
-          <option value="canceled">Canceled</option>
-        </select>
-      </div>
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="basicInfoHeading">Basic Info<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="basicInfoBody">
+        <div class="status-swatch-wrap">
+          <span class="status-swatch-display" id="statusSwatchDisplay" aria-hidden="true">Status: Early idea</span>
+          <select id="shootStatus" class="status-swatch-select" aria-label="Status">
+            <option value="idea_phase">Early idea</option>
+            <option value="planning">Active planning</option>
+            <option value="waiting_to_shoot">Shoot ready</option>
+            <option value="captured">Captured</option>
+            <option value="waiting_for_selects">Waiting for selects</option>
+            <option value="editing">Editing</option>
+            <option value="delivered">Delivered</option>
+            <option value="rescheduled">Rescheduled</option>
+            <option value="canceled">Canceled</option>
+          </select>
+        </div>
         <label>Title
           <input type="text" id="shootTitle" maxlength="120" placeholder="Name for the shoot if applicable" />
         </label>

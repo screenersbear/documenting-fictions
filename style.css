@@ -667,40 +667,36 @@ h1, h2, h3 {
 }
 
 .folder-tab-deco.tab-fill-yellow {
-  height: 156px;
+  height: 153px;
   margin-top: -78px;
 }
 
-/* Status swatch button — sits right-aligned in the yellow space above Basic
-   Info's pill, nestled into the fold-tab's dip (the right side of the
-   decoration below, where the line steps down) with just a couple px of
-   yellow between the button's bottom edge and that line. It hugs its own
-   text rather than spanning the full width, and overlaps the folder-tab-deco
-   decoration behind it (that SVG is unpositioned/static, so this
-   absolutely-positioned button always paints above it regardless of DOM
-   order). The real <select> stays functionally untouched — same id, same
-   change handling — just made invisible and stretched over the visible
-   display span so a tap on the button opens the native status picker;
+/* Status swatch button — the first thing in Basic Info, right above Title.
+   A normal full-width flow element like its sibling fields/buttons; the real
+   <select> stays functionally untouched — same id, same change handling —
+   just made invisible and stretched over the visible display span (which
+   needs .status-swatch-wrap's own position:relative as its containing
+   block) so a tap on the button opens the native status picker;
    #statusSwatchDisplay is kept in sync via JS. */
 .status-swatch-wrap {
-  position: absolute;
-  right: 0;
-  top: 36px;
+  position: relative;
+  width: 100%;
 }
 
 .status-swatch-display {
   display: block;
+  width: 100%;
   box-sizing: border-box;
   background: #fff;
+  border: 2px solid var(--text);
   color: var(--text);
   font-family: var(--font-title);
   font-weight: 700;
   font-size: 17px;
   text-align: center;
-  padding: 8px 16px;
+  padding: 13px;
   border-radius: 12px;
   pointer-events: none;
-  white-space: nowrap;
 }
 
 .status-swatch-select {
@@ -1219,13 +1215,6 @@ h1, h2, h3 {
   display: flex;
   flex-direction: column;
   gap: 14px;
-}
-
-/* Positioning context for the status swatch button, which sits absolutely
-   within the enlarged yellow space above Basic Info's pill (see
-   .status-swatch-wrap below) rather than in the form's normal flex flow. */
-#shootForm {
-  position: relative;
 }
 
 #shotListBody {
