@@ -49,6 +49,14 @@
     canceled: 'Canceled',
   };
 
+  // Keeps the visible "Status: X" swatch button in sync with the real
+  // (invisible) #shootStatus select underneath it — call after anything
+  // changes that select's value.
+  function updateStatusSwatchDisplay() {
+    const value = document.getElementById('shootStatus').value;
+    document.getElementById('statusSwatchDisplay').textContent = `Status: ${STATUS_LABELS[value] || ''}`;
+  }
+
   // Shared by the upcoming/today filters (exclude), the in-edit bucket
   // (include, minus delivered), and the day-after check-in (exclude) — a
   // single list so a new post-capture status only has to be added once.
@@ -484,14 +492,9 @@
 
   // Defaults to talent name first (falling back to the shoot title, then a
   // placeholder); the app-wide display setting (state.titleDisplayMode) flips
-  // the priority for every shoot at once, unless this specific shoot has its
-  // own override set (via the shoot's own kebab menu), which wins instead.
-  function shootDisplayMode(s) {
-    return s.titleDisplayOverride || state.titleDisplayMode;
-  }
-
+  // the priority for every shoot at once.
   function shootDisplayName(s) {
-    return shootDisplayMode(s) === 'title'
+    return state.titleDisplayMode === 'title'
       ? (s.title || s.talentName || 'Untitled shoot')
       : (s.talentName || s.title || 'Untitled shoot');
   }
@@ -2200,6 +2203,7 @@
     const isArchived = !document.getElementById('unarchiveShootBtn').hidden;
     document.getElementById('completeShootBtn').hidden = !editingShootId || isArchived || document.getElementById('shootStatus').value !== 'delivered';
     updateMoodboardCompleteVisibility();
+    updateStatusSwatchDisplay();
   });
 
   function updateMoodboardCompleteLabel() {
@@ -2362,6 +2366,7 @@
     document.getElementById('shootTitle').value = s ? (s.title || '') : '';
     document.getElementById('shootStatus').value = s ? (s.status || 'idea_phase') : 'idea_phase';
     previousStatusValue = document.getElementById('shootStatus').value;
+    updateStatusSwatchDisplay();
     document.getElementById('shootDate').value = s ? (s.date || '') : '';
     document.getElementById('shootDeadline').value = s ? (s.deadline || '') : '';
     document.getElementById('shootStartTime').value = s ? (s.startTime || '') : '';
@@ -3003,7 +3008,6 @@
     optionsShootId = id;
     const s = state.shoots.find(x => x.id === id);
     document.getElementById('archiveShootOptionBtn').textContent = (s && s.archived) ? 'Unarchive shoot' : 'Archive shoot';
-    document.getElementById('toggleTitleDisplayOptionBtn').textContent = (s && shootDisplayMode(s) === 'title') ? 'Show talent name' : 'Show shoot title';
     // The pane track slides via CSS transform, not native scrolling — reset
     // any stray scroll position (e.g. from a focused input the browser tried
     // to "reveal") so it can't stack with the transform and misalign panes.
@@ -3174,19 +3178,6 @@
     const id = optionsShootId;
     closeShootOptions();
     if (id) openPdfPreview(id);
-  });
-
-  document.getElementById('toggleTitleDisplayOptionBtn').addEventListener('click', () => {
-    const id = optionsShootId;
-    closeShootOptions();
-    if (!id) return;
-    const idx = state.shoots.findIndex(x => x.id === id);
-    if (idx === -1) return;
-    const s = state.shoots[idx];
-    const newMode = shootDisplayMode(s) === 'title' ? 'talent' : 'title';
-    state.shoots[idx] = { ...s, titleDisplayOverride: newMode };
-    saveState();
-    renderAll();
   });
 
   document.getElementById('archiveShootOptionBtn').addEventListener('click', () => {

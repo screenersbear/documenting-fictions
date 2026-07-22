@@ -171,7 +171,21 @@
       </div>
     </div>
     <form id="shootForm">
-      <svg class="folder-tab-deco tab-fill-yellow" viewBox="0 -40 400 70" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L30,4 L46,26 L400,26 L400,-40 L0,-40 Z"/><path class="folder-tab-line" d="M0,4 L30,4 L46,26 L400,26"/></svg>
+      <svg class="folder-tab-deco tab-fill-yellow" viewBox="0 -90 400 120" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L330,4 L346,26 L400,26 L400,-90 L0,-90 Z"/><path class="folder-tab-line" d="M0,4 L330,4 L346,26 L400,26"/></svg>
+      <div class="status-swatch-wrap">
+        <span class="status-swatch-display" id="statusSwatchDisplay" aria-hidden="true">Status: Early idea</span>
+        <select id="shootStatus" class="status-swatch-select" aria-label="Status">
+          <option value="idea_phase">Early idea</option>
+          <option value="planning">Active planning</option>
+          <option value="waiting_to_shoot">Shoot ready</option>
+          <option value="captured">Captured</option>
+          <option value="waiting_for_selects">Waiting for selects</option>
+          <option value="editing">Editing</option>
+          <option value="delivered">Delivered</option>
+          <option value="rescheduled">Rescheduled</option>
+          <option value="canceled">Canceled</option>
+        </select>
+      </div>
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="basicInfoHeading">Basic Info<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="basicInfoBody">
         <label>Title
@@ -185,19 +199,6 @@
           <div id="socialHandlesList" class="social-handles-list"></div>
           <button type="button" id="addSocialHandleBtn" class="primary small-btn">+ Add handle</button>
         </div>
-        <label>Status
-          <select id="shootStatus">
-            <option value="idea_phase">Early idea</option>
-            <option value="planning">Active planning</option>
-            <option value="waiting_to_shoot">Shoot ready</option>
-            <option value="captured">Captured</option>
-            <option value="waiting_for_selects">Waiting for selects</option>
-            <option value="editing">Editing</option>
-            <option value="delivered">Delivered</option>
-            <option value="rescheduled">Rescheduled</option>
-            <option value="canceled">Canceled</option>
-          </select>
-        </label>
         <label>Category
           <select id="shootCategory" class="bold-select" required>
             <option value="" disabled>Tap here to select</option>
@@ -217,7 +218,7 @@
           <input type="date" id="shootDeadline" />
         </label>
       </div>
-      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L30,4 L46,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L30,4 L46,26 L400,26"/></svg>
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L330,4 L346,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L330,4 L346,26 L400,26"/></svg>
       <h3 class="shoot-section-heading status-group-heading heading-navy" id="logisticsHeading">Logistics<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="logisticsBody">
         <label>Shoot date
@@ -241,39 +242,39 @@
         </label>
       </div>
 
-      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L30,4 L46,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L30,4 L46,26 L400,26"/></svg>
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L330,4 L346,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L330,4 L346,26 L400,26"/></svg>
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="directionHeading">Direction<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="directionBody">
         <p class="continue-prompt" id="categoryContinuePrompt">select a category to continue</p>
 
         <div id="formSection2" hidden>
           <label><span id="shootPremiseLabelText">Concept</span>
-            <textarea id="shootPremise" rows="3" maxlength="200" placeholder="visual narrative or message" readonly></textarea>
+            <textarea id="shootPremise" rows="6" maxlength="200" placeholder="visual narrative or message" readonly></textarea>
           </label>
 
           <div id="narrativeFieldsBlock">
             <label>Character/Personality
-              <textarea id="shootCharacter" rows="3" maxlength="1000" placeholder="Who the talent is being, even loosely" readonly></textarea>
+              <textarea id="shootCharacter" rows="6" maxlength="1000" placeholder="Who the talent is being, even loosely" readonly></textarea>
             </label>
 
             <label>World-building notes
-              <textarea id="shootWorldNotes" rows="3" maxlength="1000" placeholder="Setting, implied time or backstory, what's just happened or about to" readonly></textarea>
+              <textarea id="shootWorldNotes" rows="6" maxlength="1000" placeholder="Setting, implied time or backstory, what's just happened or about to" readonly></textarea>
             </label>
 
             <label>General direction notes
-              <textarea id="shootGeneralNotes" rows="3" maxlength="1000" placeholder="Anything else worth remembering about this shoot" readonly></textarea>
+              <textarea id="shootGeneralNotes" rows="6" maxlength="1000" placeholder="Anything else worth remembering about this shoot" readonly></textarea>
             </label>
           </div>
 
           <div id="commercialFieldsBlock" hidden>
             <label>Shoot goals
-              <textarea id="shootGoals" rows="3" maxlength="1000" placeholder="What this shoot needs to accomplish" readonly></textarea>
+              <textarea id="shootGoals" rows="6" maxlength="1000" placeholder="What this shoot needs to accomplish" readonly></textarea>
             </label>
           </div>
         </div>
       </div>
 
-      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L30,4 L46,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L30,4 L46,26 L400,26"/></svg>
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L330,4 L346,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L330,4 L346,26 L400,26"/></svg>
       <h3 class="shoot-section-heading status-group-heading heading-navy" id="visualsHeading">Visuals<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="visualsBody">
         <div class="moodboard-section">
@@ -304,7 +305,7 @@
         </div>
       </div>
 
-      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L30,4 L46,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L30,4 L46,26 L400,26"/></svg>
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L330,4 L346,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L330,4 L346,26 L400,26"/></svg>
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="teamHeading">Team<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="teamBody">
         <p class="team-question">Requires team?</p>
@@ -320,14 +321,14 @@
         </div>
       </div>
 
-      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L30,4 L46,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L30,4 L46,26 L400,26"/></svg>
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L330,4 L346,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L330,4 L346,26 L400,26"/></svg>
       <h3 class="shoot-section-heading status-group-heading heading-navy" id="shootDayNotesHeading">Shoot-day notes<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="shootDayNotesBody">
         <label>Directions for talent
-          <textarea id="shootTalentDirections" rows="3" maxlength="1000" readonly></textarea>
+          <textarea id="shootTalentDirections" rows="6" maxlength="1000" readonly></textarea>
         </label>
         <label>Directions for team
-          <textarea id="shootTeamDirections" rows="3" maxlength="1000" readonly></textarea>
+          <textarea id="shootTeamDirections" rows="6" maxlength="1000" readonly></textarea>
         </label>
 
         <div class="shot-list-section">
@@ -340,7 +341,7 @@
       </div>
 
       <div id="postShootContent" hidden>
-        <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L30,4 L46,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L30,4 L46,26 L400,26"/></svg>
+        <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L330,4 L346,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L330,4 L346,26 L400,26"/></svg>
         <h3 class="shoot-section-heading status-group-heading heading-yellow" id="postShootHeading">Post-shoot Reflection<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
         <div id="postShootBody">
           <label>What went right
@@ -492,7 +493,6 @@
     <div class="options-pane-track" id="shootOptionsPaneTrack">
       <div class="options-pane">
         <button type="button" class="options-item" id="changeTitleOptionBtn">Change shoot title</button>
-        <button type="button" class="options-item" id="toggleTitleDisplayOptionBtn">Show shoot title</button>
         <button type="button" class="options-item" id="changeProjectPhotoOptionBtn">Change project photo</button>
         <button type="button" class="options-item" id="changeStatusOptionBtn">Change status</button>
         <button type="button" class="options-item" id="changeDeadlineOptionBtn">Change deadline</button>

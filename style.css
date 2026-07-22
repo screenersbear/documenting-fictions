@@ -653,8 +653,49 @@ h1, h2, h3 {
 }
 
 .folder-tab-deco.tab-fill-yellow {
-  height: 61px;
-  margin-top: -35px;
+  height: 156px;
+  margin-top: -78px;
+}
+
+/* Status swatch button — sits in the yellow space above Basic Info's pill,
+   overlapping the folder-tab-deco decoration behind it (that SVG is
+   unpositioned/static, so this absolutely-positioned button always paints
+   above it regardless of DOM order). The real <select> stays functionally
+   untouched — same id, same change handling — just made invisible and
+   stretched over the visible display span so a tap on the button opens the
+   native status picker; #statusSwatchDisplay is kept in sync via JS. */
+.status-swatch-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -5px;
+}
+
+.status-swatch-display {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  color: var(--text);
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 17px;
+  text-align: center;
+  padding: 13px;
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.status-swatch-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: none;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
 }
 
 .folder-tab-line {
@@ -1140,7 +1181,8 @@ h1, h2, h3 {
 #visualsBody[hidden],
 #teamBody[hidden],
 #shootDayNotesBody[hidden],
-#shotListBody[hidden] {
+#shotListBody[hidden],
+#lightingSetupsBody[hidden] {
   display: none;
 }
 
@@ -1160,6 +1202,13 @@ h1, h2, h3 {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+/* Positioning context for the status swatch button, which sits absolutely
+   within the enlarged yellow space above Basic Info's pill (see
+   .status-swatch-wrap below) rather than in the form's normal flex flow. */
+#shootForm {
+  position: relative;
 }
 
 #shotListBody {
@@ -1397,6 +1446,10 @@ h1, h2, h3 {
   font-weight: 700;
   color: var(--text);
   margin: 0;
+}
+
+.social-handles-section .team-question {
+  font-size: 15px;
 }
 
 .team-yesno-row {
