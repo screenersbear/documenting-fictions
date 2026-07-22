@@ -358,6 +358,12 @@
 
   const WEEK_BUCKET_LABELS = { this_week: 'This week', next_week: 'Next week', later: 'Later' };
 
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  function monthLabel(monthNum) {
+    return monthNum === '00' ? 'Undated' : (MONTH_NAMES[Number(monthNum) - 1] || monthNum);
+  }
+
   // A nested level of collapsing inside an already-collapsible Overview
   // section: each week-bucket subheading (This week / Next week / Later)
   // toggles just its own rows, independent of its sibling buckets and of
@@ -1084,6 +1090,12 @@
     renderArchive();
   });
 
+  // Groups archived shoots into year > month buckets, most recent first, so
+  // a growing archive stays browsable instead of one long flat list.
+  // Undated shoots (no shoot date recorded) fall into their own trailing
+  // "Undated" bucket rather than disappearing. Same collapsible pill
+  // heading as the Shoots screen's status groups, nested one level for
+  // months — collapse state persists per year and per year+month.
   function renderArchive() {
     renderArchiveSlideshow();
     renderCategoryFilterChips('archiveFilters', 'archiveFilterToggle', archiveFilter);
@@ -1093,7 +1105,82 @@
 
     list.innerHTML = '';
     document.getElementById('archiveEmpty').hidden = items.length !== 0;
-    items.forEach(s => renderShootRow(list, s, { showStatus: true }));
+
+    const years = new Map();
+    items.forEach(s => {
+      const year = s.date ? s.date.slice(0, 4) : 'Undated';
+      const month = s.date ? s.date.slice(5, 7) : '00';
+      if (!years.has(year)) years.set(year, new Map());
+      const months = years.get(year);
+      if (!months.has(month)) months.set(month, []);
+      months.get(month).push(s);
+    });
+
+    const sortedYears = [...years.keys()].sort((a, b) => {
+      if (a === 'Undated') return 1;
+      if (b === 'Undated') return -1;
+      return b.localeCompare(a);
+    });
+
+    let visibleYearIndex = 0;
+    sortedYears.forEach(year => {
+      const months = years.get(year);
+      const sortedMonths = [...months.keys()].sort((a, b) => b.localeCompare(a));
+
+      const yearGroupEl = document.createElement('div');
+      yearGroupEl.className = 'shoot-status-group';
+
+      const yearCollapseKey = `archive:${year}`;
+      const yearCollapsed = isSectionCollapsed(yearCollapseKey);
+      const yearHeading = document.createElement('h2');
+      yearHeading.className = `status-group-heading ${visibleYearIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${yearCollapsed ? ' collapsed' : ''}`;
+      yearHeading.innerHTML = `${escapeHtml(year)}${COLLAPSE_ARROW_SVG}`;
+
+      const yearRowsWrap = document.createElement('div');
+      yearRowsWrap.className = 'shoot-status-rows';
+      yearRowsWrap.hidden = yearCollapsed;
+
+      let visibleMonthIndex = 0;
+      sortedMonths.forEach(month => {
+        const monthGroupEl = document.createElement('div');
+        monthGroupEl.className = 'archive-month-group';
+
+        const monthCollapseKey = `archive:${year}:${month}`;
+        const monthCollapsed = isSectionCollapsed(monthCollapseKey);
+        const monthHeading = document.createElement('h3');
+        monthHeading.className = `status-group-heading archive-month-heading ${visibleMonthIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${monthCollapsed ? ' collapsed' : ''}`;
+        monthHeading.innerHTML = `${escapeHtml(monthLabel(month))}${COLLAPSE_ARROW_SVG}`;
+
+        const monthRowsWrap = document.createElement('div');
+        monthRowsWrap.className = 'shoot-status-rows';
+        monthRowsWrap.hidden = monthCollapsed;
+        months.get(month).forEach(s => renderShootRow(monthRowsWrap, s, { showStatus: true }));
+
+        monthHeading.addEventListener('click', () => {
+          const nowHidden = !monthRowsWrap.hidden;
+          monthRowsWrap.hidden = nowHidden;
+          monthHeading.classList.toggle('collapsed', nowHidden);
+          setSectionCollapsed(monthCollapseKey, nowHidden);
+        });
+
+        monthGroupEl.appendChild(monthHeading);
+        monthGroupEl.appendChild(monthRowsWrap);
+        yearRowsWrap.appendChild(monthGroupEl);
+        visibleMonthIndex++;
+      });
+
+      yearHeading.addEventListener('click', () => {
+        const nowHidden = !yearRowsWrap.hidden;
+        yearRowsWrap.hidden = nowHidden;
+        yearHeading.classList.toggle('collapsed', nowHidden);
+        setSectionCollapsed(yearCollapseKey, nowHidden);
+      });
+
+      yearGroupEl.appendChild(yearHeading);
+      yearGroupEl.appendChild(yearRowsWrap);
+      list.appendChild(yearGroupEl);
+      visibleYearIndex++;
+    });
   }
 
   // ---------- Journal ----------

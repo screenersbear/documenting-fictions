@@ -592,7 +592,19 @@ h1, h2, h3 {
   cursor: pointer;
 }
 
-.shoot-status-group:first-child .status-group-heading {
+.shoot-status-group:first-child > .status-group-heading {
+  margin-top: 0;
+}
+
+/* Archive's month pills nest inside a year's rows — same pill style as the
+   Shoots screen's status groups, just indented a touch and one size down so
+   the year/month hierarchy still reads at a glance. */
+.archive-month-heading {
+  margin-left: 20px;
+  font-size: 13px;
+}
+
+.archive-month-group:first-child > .archive-month-heading {
   margin-top: 0;
 }
 
