@@ -607,24 +607,30 @@ h1, h2, h3 {
 }
 
 /* Decorative "file folder tab" — sits right above each top-level section
-   pill in the shoot form, like the pill's edge steps up out of a line that
-   runs the width of the screen. The line starts low on the left, rises once
-   over the pill, then stays elevated the rest of the way to the right edge
-   (no dropping back down). Stretches to the modal's full width
-   (preserveAspectRatio none) so the same simple path works at any screen
-   size; the negative margin pulls it down to meet the pill instead of
-   leaving a gap. Purely decorative, so it's hidden from the a11y tree. */
+   pill in the shoot form, like the pill's edge dips down out of a line that
+   runs the width of the screen. The line starts high on the left (level with
+   the section title), dips down once, then holds that lower level the rest
+   of the way to the right edge. The negative left/right margins bleed it
+   through the modal's own 20px side padding so it reaches the true screen
+   edges (mirroring the same trick .shoot-modal-header::before uses); the
+   negative bottom margin pulls it down to meet the pill instead of leaving a
+   gap. Purely decorative, so it's hidden from the a11y tree. */
 .folder-tab-deco {
   display: block;
-  width: 100%;
+  width: calc(100% + 40px);
   height: 26px;
+  margin-left: -20px;
+  margin-right: -20px;
   margin-bottom: -13px;
   pointer-events: none;
 }
 
 /* Fill sits behind the line, shading the gap above it (between the raised
-   part of the line and whatever's above); only Basic Info's tab has this
-   colored in. */
+   part of the line and whatever's above). Only Basic Info's tab has this
+   colored in — it uses a taller viewBox (see index.html) so the fill bleeds
+   up through the modal's top padding and the sticky header's own bottom
+   margin, reaching all the way to the header instead of just the sliver
+   inside the tab's own 26px box. */
 .folder-tab-fill {
   fill: none;
   stroke: none;
@@ -632,6 +638,11 @@ h1, h2, h3 {
 
 .folder-tab-deco.tab-fill-yellow .folder-tab-fill {
   fill: var(--accent);
+}
+
+.folder-tab-deco.tab-fill-yellow {
+  height: 61px;
+  margin-top: -35px;
 }
 
 .folder-tab-line {
@@ -1646,6 +1657,23 @@ h1, h2, h3 {
   z-index: 2;
   background: var(--surface);
   padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+}
+
+/* The sticky Save bar doesn't span the modal's own full width (it sits
+   inside the modal's normal padding, same as the buttons it holds), but the
+   folder-tab lines above each section now bleed edge-to-edge. Without this,
+   a section's line could peek through the narrow gaps on either side of the
+   bar as it scrolls past — this backfills those gaps with the same
+   background so nothing shows through. */
+#shootModalOverlay .modal-actions::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -20px;
+  right: -20px;
+  bottom: 0;
+  background: var(--surface);
+  z-index: -1;
 }
 
 #journalModalOverlay .modal {
