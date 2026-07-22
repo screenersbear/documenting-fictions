@@ -760,6 +760,21 @@
     document.getElementById('tabIntroOverlay').hidden = true;
   });
 
+  // ---------- First-time status swatch button intro ----------
+  // Shown once, the first time a new shoot is created, so it's clear the
+  // "Status: ..." button up top is tappable rather than just a label.
+  const STATUS_SWATCH_INTRO_KEY = 'dailies_seen_status_swatch_intro_v1';
+
+  function maybeShowStatusSwatchIntro() {
+    if (localStorage.getItem(STATUS_SWATCH_INTRO_KEY)) return;
+    document.getElementById('statusSwatchIntroOverlay').hidden = false;
+    localStorage.setItem(STATUS_SWATCH_INTRO_KEY, '1');
+  }
+
+  document.getElementById('statusSwatchIntroCloseBtn').addEventListener('click', () => {
+    document.getElementById('statusSwatchIntroOverlay').hidden = true;
+  });
+
   // ---------- Overview (home) ----------
   document.getElementById('newShootBtn').addEventListener('click', () => openShootModal(null));
 
@@ -2419,6 +2434,7 @@
     renderMoodboard();
     renderFinalImages();
     shootModalOverlay.hidden = false;
+    if (!s) maybeShowStatusSwatchIntro();
 
     const modalEl = shootModalOverlay.querySelector('.modal');
     const savedScroll = (id && shootScrollPositions[id]) || 0;

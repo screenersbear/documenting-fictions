@@ -633,7 +633,7 @@ h1, h2, h3 {
   height: 26px;
   margin-left: -20px;
   margin-right: -20px;
-  margin-bottom: -13px;
+  margin-bottom: -29px;
   pointer-events: none;
 }
 
@@ -657,23 +657,25 @@ h1, h2, h3 {
   margin-top: -78px;
 }
 
-/* Status swatch button — sits in the yellow space above Basic Info's pill,
-   overlapping the folder-tab-deco decoration behind it (that SVG is
-   unpositioned/static, so this absolutely-positioned button always paints
-   above it regardless of DOM order). The real <select> stays functionally
-   untouched — same id, same change handling — just made invisible and
-   stretched over the visible display span so a tap on the button opens the
-   native status picker; #statusSwatchDisplay is kept in sync via JS. */
+/* Status swatch button — sits right-aligned in the yellow space above Basic
+   Info's pill, snug against the header (~2px of yellow above it) and hugging
+   its own text rather than spanning the full width. It overlaps the
+   folder-tab-deco decoration behind it (that SVG is unpositioned/static, so
+   this absolutely-positioned button always paints above it regardless of DOM
+   order) — the right side of that decoration is where the fold-tab's dip
+   lives, so there's naturally more yellow below the button there, which is
+   fine. The real <select> stays functionally untouched — same id, same
+   change handling — just made invisible and stretched over the visible
+   display span so a tap on the button opens the native status picker;
+   #statusSwatchDisplay is kept in sync via JS. */
 .status-swatch-wrap {
   position: absolute;
-  left: 0;
   right: 0;
-  top: -5px;
+  top: -8px;
 }
 
 .status-swatch-display {
   display: block;
-  width: 100%;
   box-sizing: border-box;
   background: #fff;
   color: var(--text);
@@ -681,9 +683,10 @@ h1, h2, h3 {
   font-weight: 700;
   font-size: 17px;
   text-align: center;
-  padding: 13px;
+  padding: 8px 16px;
   border-radius: 12px;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 .status-swatch-select {
