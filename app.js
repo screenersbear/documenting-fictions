@@ -3178,6 +3178,24 @@
     return start || end || '';
   }
 
+  // Draws "label" in bold immediately followed by "value" in normal weight
+  // on the same line, wrapping the value across further lines (flush left,
+  // normal weight) if it's too long to fit next to the label. Returns the y
+  // position just past whatever it drew, for the caller to continue from.
+  function drawLabeledPdfLine(doc, label, value, x, y, maxWidth, lineHeight) {
+    doc.setFont('courier', 'bold');
+    doc.text(label, x, y);
+    const labelWidth = doc.getTextWidth(label);
+    doc.setFont('courier', 'normal');
+    const lines = doc.splitTextToSize(value, Math.max(10, maxWidth - labelWidth));
+    if (!lines.length) return y;
+    doc.text(lines[0], x + labelWidth, y);
+    for (let i = 1; i < lines.length; i++) {
+      doc.text(lines[i], x, y + lineHeight * i);
+    }
+    return y + lineHeight * lines.length;
+  }
+
   async function buildShootPdf(s) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -3242,20 +3260,12 @@
       doc.setFontSize(18);
       doc.text('Details:', margin, y);
       y += 24;
-      doc.setFont('courier', 'normal');
       doc.setFontSize(11);
-      if (s.date) { doc.text(`Date: ${prettyDate(s.date)}`, margin, y); y += 16; }
-      if (timeRange) { doc.text(`Time: ${timeRange}`, margin, y); y += 16; }
-      if (s.location) {
-        const locLines = doc.splitTextToSize(`Location: ${s.location}`, pageWidth - margin * 2);
-        doc.text(locLines, margin, y);
-        y += locLines.length * 14 + 2;
-      }
-      if (hasText(s.locationDirections)) {
-        const dirLines = doc.splitTextToSize(`Location instructions: ${s.locationDirections}`, pageWidth - margin * 2);
-        doc.text(dirLines, margin, y);
-        y += dirLines.length * 14 + 2;
-      }
+      const detailsMaxWidth = pageWidth - margin * 2;
+      if (s.date) { y = drawLabeledPdfLine(doc, 'Date: ', prettyDate(s.date), margin, y, detailsMaxWidth, 16); }
+      if (timeRange) { y = drawLabeledPdfLine(doc, 'Time: ', timeRange, margin, y, detailsMaxWidth, 16); }
+      if (s.location) { y = drawLabeledPdfLine(doc, 'Location: ', s.location, margin, y, detailsMaxWidth, 14) + 2; }
+      if (hasText(s.locationDirections)) { y = drawLabeledPdfLine(doc, 'Location instructions: ', s.locationDirections, margin, y, detailsMaxWidth, 14) + 2; }
       y += 8;
     }
 
@@ -3363,15 +3373,31 @@
   async function openPdfPreview(id) {
     const s = state.shoots.find(x => x.id === id);
     if (!s) return;
+    // A PDF embedded in an iframe doesn't reliably support scrolling past
+    // page 1 on mobile browsers — their own full PDF viewer (opened as its
+    // own tab) handles multi-page scrolling and pinch-zoom properly, and
+    // usually has its own share icon too. Opening the tab has to happen
+    // synchronously, before the "await" below, or it loses the user-gesture
+    // context and gets popup-blocked — so open it blank first, then point
+    // it at the PDF once it's built.
+    const previewWindow = window.open('', '_blank');
     try {
       const doc = await buildShootPdf(s);
       pdfPreviewBlob = doc.output('blob');
       const safeName = (s.talentName || s.title || 'shoot').replace(/[^\w\- ]+/g, '').trim() || 'shoot';
       pdfPreviewFilename = `${safeName}.pdf`;
       pdfPreviewTitle = s.title || s.talentName || 'Shoot';
-      document.getElementById('pdfPreviewFrame').src = URL.createObjectURL(pdfPreviewBlob);
-      document.getElementById('pdfPreviewOverlay').hidden = false;
+      const url = URL.createObjectURL(pdfPreviewBlob);
+      if (previewWindow) {
+        previewWindow.location.href = url;
+      } else {
+        // Popup blocked (or unsupported, e.g. some installed-PWA contexts)
+        // — fall back to the in-app preview modal instead.
+        document.getElementById('pdfPreviewFrame').src = url;
+        document.getElementById('pdfPreviewOverlay').hidden = false;
+      }
     } catch (err) {
+      if (previewWindow) previewWindow.close();
       console.error('Failed to build shoot PDF', err);
       showToast('Could not create PDF');
     }
