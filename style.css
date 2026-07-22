@@ -607,11 +607,13 @@ h1, h2, h3 {
 }
 
 /* Decorative "file folder tab" — sits right above each top-level section
-   pill in the shoot form, like the pill is the label peeking out of a
-   folder's tab. Stretches to the modal's full width (preserveAspectRatio
-   none) so the same simple path works at any screen size; the negative
-   margin pulls it down to meet the pill instead of leaving a gap. Purely
-   decorative, so it's hidden from the a11y tree. */
+   pill in the shoot form, like the pill's edge steps up out of a line that
+   runs the width of the screen. The line starts low on the left, rises once
+   over the pill, then stays elevated the rest of the way to the right edge
+   (no dropping back down). Stretches to the modal's full width
+   (preserveAspectRatio none) so the same simple path works at any screen
+   size; the negative margin pulls it down to meet the pill instead of
+   leaving a gap. Purely decorative, so it's hidden from the a11y tree. */
 .folder-tab-deco {
   display: block;
   width: 100%;
@@ -620,16 +622,24 @@ h1, h2, h3 {
   pointer-events: none;
 }
 
-.folder-tab-deco path {
+/* Fill sits behind the line, shading the gap above it (between the raised
+   part of the line and whatever's above); only Basic Info's tab has this
+   colored in. */
+.folder-tab-fill {
+  fill: none;
+  stroke: none;
+}
+
+.folder-tab-deco.tab-fill-yellow .folder-tab-fill {
+  fill: var(--accent);
+}
+
+.folder-tab-line {
   fill: none;
   stroke: var(--text);
   stroke-width: 3;
   stroke-linejoin: round;
   stroke-linecap: round;
-}
-
-.folder-tab-deco.tab-fill-yellow path {
-  fill: var(--accent);
 }
 
 .shoot-status-rows {
@@ -903,6 +913,7 @@ h1, h2, h3 {
   width: 100%;
   max-height: 92dvh;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: none;
   border-radius: 20px 20px 0 0;
   padding: 16px 20px calc(env(safe-area-inset-bottom) + 20px);
@@ -1296,6 +1307,9 @@ h1, h2, h3 {
 
 #lightingSetupsBody {
   margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .tag-group {
@@ -1804,6 +1818,8 @@ h1, h2, h3 {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* ---- Form section dividers (Plan / Framework tags / Reflect) ---- */
