@@ -789,13 +789,13 @@
   document.getElementById('newShootBtn').addEventListener('click', () => openShootModal(null));
 
   const STAT_BOX_FILTERS = {
-    ideas: s => !s.archived && s.status === 'idea_phase',
+    ideas: s => !s.archived && (s.status === 'idea_phase' || s.status === 'planning'),
     ready: s => !s.archived && s.status === 'waiting_to_shoot',
     pending: s => !s.archived && shootPendingLabels(s).length > 0,
   };
 
   const STAT_BOX_TITLES = {
-    ideas: 'Ideas',
+    ideas: 'Ideas + Planning',
     ready: 'Ready to shoot',
     pending: 'Teams + mood boards pending',
   };
@@ -867,7 +867,7 @@
     document.getElementById('statsRow').innerHTML = `
       <div class="stat-box" data-stat="ideas">
         <span class="stat-num">${ideasCount}</span>
-        <span class="stat-label">Ideas</span>
+        <span class="stat-label">Ideas + Planning</span>
       </div>
       <div class="stat-box" data-stat="pending">
         <span class="stat-num">${pendingTeamMoodboardCount}</span>
@@ -2183,17 +2183,29 @@
     document.getElementById('postShootPromptOverlay').hidden = false;
   }
 
-  document.getElementById('postShootPromptYesBtn').addEventListener('click', () => {
-    document.getElementById('postShootPromptOverlay').hidden = true;
+  // Reveals the Post-shoot Reflection section and forces it open, overriding
+  // any stale collapse state left over from a different shoot (the collapse
+  // flag isn't per-shoot, so a previously-collapsed shoot shouldn't cause a
+  // newly-appearing section to render pre-collapsed).
+  function showPostShootContentExpanded() {
     const content = document.getElementById('postShootContent');
     content.hidden = false;
+    setSectionCollapsed('shoot:postShoot', false);
+    document.getElementById('postShootBody').hidden = false;
+    document.getElementById('postShootHeading').classList.remove('collapsed');
+    return content;
+  }
+
+  document.getElementById('postShootPromptYesBtn').addEventListener('click', () => {
+    document.getElementById('postShootPromptOverlay').hidden = true;
+    const content = showPostShootContentExpanded();
     updateShootModalJumpMenuVisibility();
     content.scrollIntoView({ behavior: 'smooth', block: 'start' });
     maybeOpenDeadlinePrompt();
   });
 
   document.getElementById('postShootPromptLaterBtn').addEventListener('click', () => {
-    document.getElementById('postShootContent').hidden = false;
+    showPostShootContentExpanded();
     updateShootModalJumpMenuVisibility();
     document.getElementById('postShootPromptText').textContent = "the post-shoot reflection questions will be at the bottom of this shoot whenever you're ready.";
     document.getElementById('postShootPromptActions').hidden = true;
