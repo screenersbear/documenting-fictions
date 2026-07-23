@@ -1815,7 +1815,8 @@
     const indexed = currentShotList.map((item, idx) => ({ ...item, idx }));
     const ordered = indexed.filter(i => !i.checked).concat(indexed.filter(i => i.checked));
     container.innerHTML = ordered.map(item => `
-      <div class="shot-list-row${item.checked ? ' shot-checked' : ''}">
+      <div class="shot-list-row${item.checked ? ' shot-checked' : ''}" data-idx="${item.idx}">
+        <button type="button" class="shot-drag-handle" aria-label="Drag to reorder shot" tabindex="-1">&#8942;</button>
         <input type="checkbox" class="shot-check" data-idx="${item.idx}" ${item.checked ? 'checked' : ''} />
         <textarea class="shot-text" data-idx="${item.idx}" rows="2" placeholder="Describe the shot">${escapeHtml(item.text || '')}</textarea>
         <button type="button" class="delete-shot" data-idx="${item.idx}">&times;</button>
@@ -1850,11 +1851,84 @@
         scheduleShootAutosave();
       });
     });
+    container.querySelectorAll('.shot-drag-handle').forEach(handle => {
+      wireShotDragHandle(handle, container);
+    });
 
     if (focusIdx !== undefined) {
       const focusInput = container.querySelector(`.shot-text[data-idx="${focusIdx}"]`);
       if (focusInput) focusInput.focus();
     }
+  }
+
+  // Press-and-hold reorder for shot rows. Dragging is restricted to rows
+  // within the same checked/unchecked bucket, since renderShotList always
+  // displays unchecked-first/checked-last — letting a drag cross that
+  // boundary would just get silently undone by the next render.
+  function wireShotDragHandle(handle, container) {
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      e.preventDefault();
+      const row = handle.closest('.shot-list-row');
+      if (!row) return;
+      const bucketSelector = row.classList.contains('shot-checked')
+        ? '.shot-list-row.shot-checked'
+        : '.shot-list-row:not(.shot-checked)';
+
+      let baseClientY = e.clientY;
+      let baseTranslateY = 0;
+      row.classList.add('shot-dragging');
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* capture is a nice-to-have, not required */ }
+
+      function onMove(ev) {
+        const dy = baseTranslateY + (ev.clientY - baseClientY);
+        row.style.transform = `translateY(${dy}px)`;
+
+        const rows = Array.from(container.querySelectorAll(bucketSelector));
+        const idx = rows.indexOf(row);
+        const rowRect = row.getBoundingClientRect();
+        const rowCenter = rowRect.top + rowRect.height / 2;
+        const next = rows[idx + 1];
+        const prev = rows[idx - 1];
+
+        let neighbor = null;
+        let insertBeforeRow = false;
+        if (next) {
+          const nextRect = next.getBoundingClientRect();
+          if (rowCenter > nextRect.top + nextRect.height / 2) neighbor = next;
+        }
+        if (!neighbor && prev) {
+          const prevRect = prev.getBoundingClientRect();
+          if (rowCenter < prevRect.top + prevRect.height / 2) { neighbor = prev; insertBeforeRow = true; }
+        }
+        if (!neighbor) return;
+
+        const before = row.getBoundingClientRect();
+        if (insertBeforeRow) container.insertBefore(row, neighbor);
+        else container.insertBefore(neighbor, row);
+        row.style.transform = 'none';
+        const after = row.getBoundingClientRect();
+        baseTranslateY = before.top - after.top;
+        baseClientY = ev.clientY;
+        row.style.transform = `translateY(${baseTranslateY}px)`;
+      }
+
+      function onEnd() {
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', onEnd);
+        handle.removeEventListener('pointercancel', onEnd);
+        row.classList.remove('shot-dragging');
+        row.style.transform = '';
+        const rows = Array.from(container.querySelectorAll('.shot-list-row'));
+        currentShotList = rows.map(r => currentShotList[Number(r.dataset.idx)]);
+        renderShotList();
+        scheduleShootAutosave();
+      }
+
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onEnd);
+      handle.addEventListener('pointercancel', onEnd);
+    });
   }
 
   document.getElementById('addShotBtn').addEventListener('click', () => {
