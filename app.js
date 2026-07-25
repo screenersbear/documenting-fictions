@@ -89,13 +89,15 @@
     portfolio_building: 'Portfolio building',
     test_shoot: 'Test shoot',
     event: 'Event',
+    wedding: 'Wedding',
+    family: 'Family',
     headshot: 'Headshot',
     branding: 'Branding',
     other: 'Other',
     uncategorized: 'Uncategorized',
   };
 
-  const CATEGORY_FILTER_ORDER = ['commercial', 'video', 'editorial', 'lighting_test', 'portfolio_building', 'test_shoot', 'event', 'headshot', 'branding', 'other'];
+  const CATEGORY_FILTER_ORDER = ['commercial', 'video', 'editorial', 'lighting_test', 'portfolio_building', 'test_shoot', 'event', 'wedding', 'family', 'headshot', 'branding', 'other'];
 
   // Grammatical plural form of each category, for use as a countable noun in
   // a sentence (e.g. "more commercial shoots than video shoots") — CATEGORY_LABELS
@@ -109,6 +111,8 @@
     portfolio_building: 'portfolio building shoots',
     test_shoot: 'test shoots',
     event: 'event shoots',
+    wedding: 'wedding shoots',
+    family: 'family shoots',
     headshot: 'headshot shoots',
     branding: 'branding shoots',
     other: 'other shoots',
@@ -1458,6 +1462,7 @@
       card.innerHTML = `
         <div class="card-body">
           <p class="card-title">${escapeHtml(w.label)}</p>
+          <p class="log-section-label">Shoots this week</p>
           <ul class="log-shoots">${shootsHtml}</ul>
           <p class="log-section-label">Takeaways</p>
           ${takeawaysHtml}
