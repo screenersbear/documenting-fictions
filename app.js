@@ -1347,7 +1347,7 @@
     }
 
     const body = parts.join('\n\n');
-    const title = `Post-shoot reflection: ${shootDisplayName(shoot)}`;
+    const title = `Reflection: ${shootDisplayName(shoot)}`;
 
     if (existingIdx !== -1) {
       state.journalEntries[existingIdx] = { ...state.journalEntries[existingIdx], title, body };
@@ -2007,6 +2007,13 @@
       let appliedTransform = 0;
       row.classList.add('shot-dragging');
       if (navigator.vibrate) navigator.vibrate(15);
+      // iOS Safari has no Vibration API at all, so this pulse is the only
+      // "felt" grab feedback that actually reaches an iPhone — a quick
+      // scale/color flash on the handle itself, right under the finger.
+      handle.classList.add('shot-drag-pulse');
+      handle.addEventListener('animationend', () => {
+        handle.classList.remove('shot-drag-pulse');
+      }, { once: true });
       try { handle.setPointerCapture(e.pointerId); } catch (err) { /* capture is a nice-to-have, not required */ }
 
       function onMove(ev) {
@@ -2545,7 +2552,7 @@
     { id: 'visualsHeading', label: 'Visuals' },
     { id: 'teamHeading', label: 'Team' },
     { id: 'shootDayNotesHeading', label: 'Shoot day' },
-    { id: 'postShootHeading', label: 'Post-shoot Reflection' },
+    { id: 'postShootHeading', label: 'Reflection' },
   ];
 
   // The only prominent section dividers in the form. Restoring scroll

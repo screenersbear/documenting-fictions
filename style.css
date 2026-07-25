@@ -1873,6 +1873,19 @@ h1, h2, h3 {
   cursor: grabbing;
 }
 
+/* A stand-in for haptics on the grab: iOS Safari has no Vibration API, so
+   this quick scale/color flash on the handle is the only "felt" acknowledgment
+   that actually reaches an iPhone. */
+@keyframes shot-drag-pulse {
+  0% { transform: scale(1); color: var(--text); }
+  40% { transform: scale(1.4); color: var(--accent); }
+  100% { transform: scale(1); color: var(--text); }
+}
+
+.shot-drag-handle.shot-drag-pulse {
+  animation: shot-drag-pulse 220ms ease-out;
+}
+
 .shot-check {
   width: 20px;
   height: 20px;
