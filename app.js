@@ -1470,9 +1470,10 @@
     list.innerHTML = '';
     document.getElementById('journalLogEmpty').hidden = weeks.length !== 0;
 
-    weeks.forEach(w => {
+    weeks.forEach((w, idx) => {
       const card = document.createElement('div');
       card.className = 'card log-card';
+      const headingColorClass = idx % 2 === 0 ? 'heading-yellow' : 'heading-navy';
       const shootsHtml = w.shoots.map(s => `
         <li>${escapeHtml(shootDisplayName(s))} <span class="log-shoot-category">(${escapeHtml(CATEGORY_LABELS[s.category] || 'Uncategorized')})</span></li>
       `).join('');
@@ -1481,7 +1482,7 @@
         : `<p class="log-no-takeaways">No takeaways logged this week.</p>`;
       card.innerHTML = `
         <div class="card-body">
-          <p class="card-title">${escapeHtml(w.label)}</p>
+          <p class="log-week-heading ${headingColorClass}">${escapeHtml(w.label)}</p>
           <p class="log-section-label">Shoots this week</p>
           <ul class="log-shoots">${shootsHtml}</ul>
           <p class="log-section-label">Takeaways</p>

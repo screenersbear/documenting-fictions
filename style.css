@@ -340,13 +340,29 @@ h1, h2, h3 {
 }
 
 .log-shoots {
-  list-style: none;
+  list-style: disc;
   margin: 8px 0 0;
-  padding: 0;
+  padding-left: 20px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 16px;
+}
+
+.log-week-heading {
+  margin: 0 0 8px;
+  padding-top: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  border-top: 3px solid var(--text);
+}
+
+.log-week-heading.heading-yellow {
+  border-top-color: var(--accent);
+}
+
+.log-week-heading.heading-navy {
+  border-top-color: var(--text);
 }
 
 .log-shoot-category {
@@ -929,6 +945,10 @@ h1, h2, h3 {
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.badge[hidden] {
+  display: none;
 }
 
 .card-concept {
