@@ -245,6 +245,143 @@ h1, h2, h3 {
   flex-shrink: 0;
 }
 
+.icon-btn[hidden] {
+  display: none;
+}
+
+.journal-back-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 28px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.journal-back-btn[hidden] {
+  display: none;
+}
+
+/* ---- Journal notebook picker ---- */
+.notebook-select {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.notebook-select[hidden] {
+  display: none;
+}
+
+.notebook-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--text);
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+}
+
+.notebook-tile:active {
+  opacity: 0.55;
+}
+
+.notebook-cover {
+  width: 140px;
+  height: 175px;
+}
+
+.notebook-cover-navy .notebook-cover-bg { fill: var(--text); }
+.notebook-cover-navy .notebook-cover-border { stroke: var(--text); stroke-width: 3; }
+.notebook-cover-navy .notebook-cover-ring { fill: var(--accent); }
+.notebook-cover-navy .notebook-cover-fold-fill { fill: var(--bg); }
+.notebook-cover-navy .notebook-cover-fold-line { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+
+.notebook-cover-yellow .notebook-cover-bg { fill: var(--accent); }
+.notebook-cover-yellow .notebook-cover-border { stroke: var(--text); stroke-width: 3; }
+.notebook-cover-yellow .notebook-cover-ring { fill: var(--text); }
+.notebook-cover-yellow .notebook-cover-fold-fill { fill: var(--bg); }
+.notebook-cover-yellow .notebook-cover-fold-line { stroke: var(--text); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+
+.notebook-tile-title {
+  font-family: var(--font-title);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.notebook-tile-sub {
+  font-size: 14px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* ---- Journal log notebook (auto weekly recap) ---- */
+.log-card {
+  cursor: default;
+  min-height: 0;
+  padding: 16px;
+}
+
+.log-card:active {
+  opacity: 1;
+}
+
+.log-shoots {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 16px;
+}
+
+.log-shoot-category {
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+.log-section-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 12px 0 4px;
+}
+
+.log-takeaways {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 16px;
+}
+
+.log-no-takeaways {
+  font-size: 15px;
+  color: var(--text-dim);
+  margin: 0;
+}
+
 .shoot-row {
   background: var(--surface);
   border: 1px solid var(--text);

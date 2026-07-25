@@ -93,13 +93,55 @@
   <!-- ============ JOURNAL ============ -->
   <section id="view-journal" class="view" hidden>
     <header class="topbar">
-      <h1>Journal</h1>
-      <button class="icon-btn" id="addJournalBtn" aria-label="Add entry">+</button>
+      <button type="button" class="journal-back-btn" id="journalBackBtn" aria-label="Back to notebooks" hidden>&lsaquo;</button>
+      <h1 id="journalTitle">Journal</h1>
+      <button class="icon-btn" id="addJournalBtn" aria-label="Add entry" hidden>+</button>
     </header>
-    <button type="button" class="filter-toggle" id="journalFilterToggle">Filter: All</button>
-    <div class="filters" id="journalFilters" hidden></div>
-    <div id="journalList" class="card-list"></div>
-    <p class="empty-state" id="journalEmpty" hidden>No journal entries yet.</p>
+
+    <div id="journalNotebookSelect" class="notebook-select">
+      <button type="button" class="notebook-tile" id="openReflectionsNotebookBtn">
+        <svg class="notebook-cover notebook-cover-navy" viewBox="0 0 140 175" aria-hidden="true">
+          <rect x="1.5" y="1.5" width="137" height="172" rx="10" class="notebook-cover-bg notebook-cover-border" />
+          <circle class="notebook-cover-ring" cx="18" cy="26" r="3" />
+          <circle class="notebook-cover-ring" cx="18" cy="50" r="3" />
+          <circle class="notebook-cover-ring" cx="18" cy="74" r="3" />
+          <circle class="notebook-cover-ring" cx="18" cy="98" r="3" />
+          <circle class="notebook-cover-ring" cx="18" cy="122" r="3" />
+          <circle class="notebook-cover-ring" cx="18" cy="146" r="3" />
+          <path d="M120,173.5 L136.5,173.5 L136.5,157 Z" class="notebook-cover-fold-fill" />
+          <path d="M120,173.5 L136.5,157" class="notebook-cover-fold-line" />
+        </svg>
+        <span class="notebook-tile-title">Reflections</span>
+        <span class="notebook-tile-sub">Your shoot reflections &amp; notes</span>
+      </button>
+      <button type="button" class="notebook-tile" id="openLogNotebookBtn">
+        <svg class="notebook-cover notebook-cover-yellow" viewBox="0 0 140 175" aria-hidden="true">
+          <rect x="1.5" y="1.5" width="137" height="172" rx="10" class="notebook-cover-bg notebook-cover-border" />
+          <circle class="notebook-cover-ring" cx="18" cy="26" r="3" />
+          <circle class="notebook-cover-ring" cx="18" cy="50" r="3" />
+          <circle class="notebook-cover-ring" cx="18" cy="74" r="3" />
+          <circle class="notebook-cover-ring" cx="18" cy="98" r="3" />
+          <circle class="notebook-cover-ring" cx="18" cy="122" r="3" />
+          <circle class="notebook-cover-ring" cx="18" cy="146" r="3" />
+          <path d="M120,173.5 L136.5,173.5 L136.5,157 Z" class="notebook-cover-fold-fill" />
+          <path d="M120,173.5 L136.5,157" class="notebook-cover-fold-line" />
+        </svg>
+        <span class="notebook-tile-title">Log</span>
+        <span class="notebook-tile-sub">Automatic weekly recap</span>
+      </button>
+    </div>
+
+    <div id="journalReflectionsView" hidden>
+      <button type="button" class="filter-toggle" id="journalFilterToggle">Filter: All</button>
+      <div class="filters" id="journalFilters" hidden></div>
+      <div id="journalList" class="card-list"></div>
+      <p class="empty-state" id="journalEmpty" hidden>No journal entries yet.</p>
+    </div>
+
+    <div id="journalLogView" hidden>
+      <div id="journalLogList" class="card-list"></div>
+      <p class="empty-state" id="journalLogEmpty" hidden>No shoots logged yet — the log fills in automatically once you've marked a shoot captured or further along.</p>
+    </div>
   </section>
 
   <!-- ============ STATS ============ -->

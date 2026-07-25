@@ -716,6 +716,7 @@
       Object.entries(views).forEach(([key, el]) => { el.hidden = key !== view; });
       window.scrollTo(0, 0);
       renderAll();
+      if (view === 'journal') showJournalView('select');
       showTabIntro(view);
     });
   });
@@ -1219,6 +1220,28 @@
   let journalSaveTimer = null;
   let journalHasImages = false;
 
+  // Which of the two Journal "notebooks" is open: 'select' (the cover
+  // picker), 'reflections' (the existing freeform entries, unchanged), or
+  // 'log' (the new read-only, auto-generated weekly recap).
+  let journalView = 'select';
+
+  function showJournalView(view) {
+    journalView = view;
+    document.getElementById('journalNotebookSelect').hidden = view !== 'select';
+    document.getElementById('journalReflectionsView').hidden = view !== 'reflections';
+    document.getElementById('journalLogView').hidden = view !== 'log';
+    document.getElementById('journalBackBtn').hidden = view === 'select';
+    document.getElementById('addJournalBtn').hidden = view !== 'reflections';
+    document.getElementById('journalTitle').textContent =
+      view === 'reflections' ? 'Reflections' : view === 'log' ? 'Log' : 'Journal';
+    if (view === 'reflections') renderJournal();
+    if (view === 'log') renderJournalLog();
+  }
+
+  document.getElementById('openReflectionsNotebookBtn').addEventListener('click', () => showJournalView('reflections'));
+  document.getElementById('openLogNotebookBtn').addEventListener('click', () => showJournalView('log'));
+  document.getElementById('journalBackBtn').addEventListener('click', () => showJournalView('select'));
+
   // Linked entries (auto-compiled from a shoot's post-shoot reflection)
   // share the shoot's own final-images store instead of getting a separate
   // copy — same files, no duplicated storage. Standalone entries get their
@@ -1372,6 +1395,75 @@
           if (thumb) thumb.outerHTML = journalThumbHtml(images[0].src);
         }).catch(() => {});
       }
+    });
+  }
+
+  // ---------- Journal "Log" notebook (auto-generated weekly recap) ----------
+  // Fully derived from state.shoots — nothing here is persisted, so editing
+  // a shoot's category or lessons-learned later just updates the log the
+  // next time it's opened. Weeks run Sunday-Saturday, matching weekBucket()'s
+  // convention elsewhere in the app.
+  function shootWeekWindow(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    const start = new Date(date);
+    start.setDate(date.getDate() - date.getDay());
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { start, end };
+  }
+
+  function weekRangeLabel(start, end) {
+    const startMonth = MONTH_NAMES[start.getMonth()].slice(0, 3);
+    const endMonth = MONTH_NAMES[end.getMonth()].slice(0, 3);
+    if (start.getMonth() === end.getMonth()) {
+      return `${startMonth} ${start.getDate()}–${end.getDate()}, ${end.getFullYear()}`;
+    }
+    return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${end.getFullYear()}`;
+  }
+
+  function computeWeeklyLog() {
+    const shotShoots = state.shoots.filter(s => s.date && POST_CAPTURE_STATUSES.includes(s.status));
+    const weeks = new Map();
+    shotShoots.forEach(s => {
+      const { start, end } = shootWeekWindow(s.date);
+      const key = formatDate(start);
+      if (!weeks.has(key)) weeks.set(key, { start, end, shoots: [] });
+      weeks.get(key).shoots.push(s);
+    });
+    return Array.from(weeks.values())
+      .sort((a, b) => b.start - a.start)
+      .map(w => ({
+        label: weekRangeLabel(w.start, w.end),
+        shoots: w.shoots.slice().sort((a, b) => a.date.localeCompare(b.date)),
+        takeaways: w.shoots.flatMap(s => (s.lessonsLearned || '').split('\n').map(t => t.trim()).filter(Boolean)),
+      }));
+  }
+
+  function renderJournalLog() {
+    const weeks = computeWeeklyLog();
+    const list = document.getElementById('journalLogList');
+    list.innerHTML = '';
+    document.getElementById('journalLogEmpty').hidden = weeks.length !== 0;
+
+    weeks.forEach(w => {
+      const card = document.createElement('div');
+      card.className = 'card log-card';
+      const shootsHtml = w.shoots.map(s => `
+        <li>${escapeHtml(shootDisplayName(s))} <span class="log-shoot-category">(${escapeHtml(CATEGORY_LABELS[s.category] || 'Uncategorized')})</span></li>
+      `).join('');
+      const takeawaysHtml = w.takeaways.length
+        ? `<ul class="log-takeaways">${w.takeaways.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul>`
+        : `<p class="log-no-takeaways">No takeaways logged this week.</p>`;
+      card.innerHTML = `
+        <div class="card-body">
+          <p class="card-title">${escapeHtml(w.label)}</p>
+          <ul class="log-shoots">${shootsHtml}</ul>
+          <p class="log-section-label">Takeaways</p>
+          ${takeawaysHtml}
+        </div>
+      `;
+      list.appendChild(card);
     });
   }
 
@@ -1875,14 +1967,33 @@
         ? '.shot-list-row.shot-checked'
         : '.shot-list-row:not(.shot-checked)';
 
+      // The bucket's total span stays constant for the whole drag (reordering
+      // same rows doesn't change how much vertical space they occupy), so
+      // these bounds are captured once, before any transform, and used to
+      // keep the dragged row from drifting past its own bucket — e.g. below
+      // the last shot and on top of the "+ Add shot" button.
+      const bucketRects = Array.from(container.querySelectorAll(bucketSelector)).map(r => r.getBoundingClientRect());
+      const bucketTop = Math.min(...bucketRects.map(r => r.top));
+      const bucketBottom = Math.max(...bucketRects.map(r => r.bottom));
+
       let baseClientY = e.clientY;
       let baseTranslateY = 0;
+      let appliedTransform = 0;
       row.classList.add('shot-dragging');
+      if (navigator.vibrate) navigator.vibrate(15);
       try { handle.setPointerCapture(e.pointerId); } catch (err) { /* capture is a nice-to-have, not required */ }
 
       function onMove(ev) {
-        const dy = baseTranslateY + (ev.clientY - baseClientY);
+        const rawRect = row.getBoundingClientRect();
+        const layoutTop = rawRect.top - appliedTransform;
+        const rowHeight = rawRect.height;
+        const minDy = bucketTop - layoutTop;
+        const maxDy = (bucketBottom - rowHeight) - layoutTop;
+        const proposedDy = baseTranslateY + (ev.clientY - baseClientY);
+        const dy = Math.min(maxDy, Math.max(minDy, proposedDy));
+
         row.style.transform = `translateY(${dy}px)`;
+        appliedTransform = dy;
 
         const rows = Array.from(container.querySelectorAll(bucketSelector));
         const idx = rows.indexOf(row);
@@ -1895,11 +2006,14 @@
         let insertBeforeRow = false;
         if (next) {
           const nextRect = next.getBoundingClientRect();
-          if (rowCenter > nextRect.top + nextRect.height / 2) neighbor = next;
+          // >= (not >): the bucket-bounds clamp above can cap the dragged
+          // row's center at exactly the last slot's center, so a strict ">"
+          // would make the final swap unreachable.
+          if (rowCenter >= nextRect.top + nextRect.height / 2) neighbor = next;
         }
         if (!neighbor && prev) {
           const prevRect = prev.getBoundingClientRect();
-          if (rowCenter < prevRect.top + prevRect.height / 2) { neighbor = prev; insertBeforeRow = true; }
+          if (rowCenter <= prevRect.top + prevRect.height / 2) { neighbor = prev; insertBeforeRow = true; }
         }
         if (!neighbor) return;
 
@@ -1911,6 +2025,7 @@
         baseTranslateY = before.top - after.top;
         baseClientY = ev.clientY;
         row.style.transform = `translateY(${baseTranslateY}px)`;
+        appliedTransform = baseTranslateY;
       }
 
       function onEnd() {
@@ -4366,6 +4481,7 @@
     renderShoots();
     renderArchive();
     renderJournal();
+    renderJournalLog();
     renderStats();
   }
 
