@@ -1244,9 +1244,316 @@
   let journalTagFilter = 'all';
   let currentJournalEntry = null;
   let journalIsNew = false;
+  let journalMode = 'view';
   let currentJournalTags = [];
   let journalSaveTimer = null;
   let journalHasImages = false;
+  let journalPromptOffered = null;
+
+  // 300 photography-specific reflection prompts (craft, personal growth,
+  // business growth) offered via the "Need a starting prompt?" button.
+  const JOURNAL_PROMPTS = [
+    'What does the light in your favorite recent image tell you about how your eye has changed this year?',
+    'When you look back at your earliest portraits, what technical habit do you notice yourself repeating that you no longer do?',
+    'Where in your process do you still hesitate, and what would it take to move through that hesitation?',
+    'What is a compositional choice you used to avoid that you now reach for instinctively?',
+    'Describe an image where you let a mistake stay in the frame — what did it end up giving you?',
+    'Which of your recent edits pulled you further from what your camera actually captured, and why did that feel right?',
+    'What have you been quietly practicing behind the scenes that hasn\'t shown up in your published work yet?',
+    'When did you last change your mind mid-shoot about how a story should be told, and what shifted?',
+    'What\'s a piece of gear or software you\'ve been avoiding learning, and what is that avoidance protecting you from?',
+    'Think of a portrait you underexposed on purpose — what were you trying to make the viewer feel?',
+    'What do your color grades keep telling on you about your current mood or mindset?',
+    'Which subject\'s face have you photographed enough times that you\'re starting to see new things in familiar light?',
+    'What is the difference between the photographer you were a year ago and the one editing tonight?',
+    'Where does your eye go first when you walk into a new space, and has that instinct shifted recently?',
+    'What\'s an editing decision you keep un-doing and re-doing on the same image, and what does that back-and-forth reveal?',
+    'Which of your recent images relied on someone else\'s trust more than your own technical skill?',
+    'What is a lighting setup you\'ve stopped using, and what replaced it in your instincts?',
+    'When did a technical limitation — bad light, wrong lens, no time — accidentally push your storytelling somewhere better?',
+    'What\'s the difference between a photo you took to prove something and one you took because you needed to see it?',
+    'Which recurring pose or gesture do you now steer subjects away from, and when did that change?',
+    'What have you started noticing in other photographers\' work that you didn\'t have language for a year ago?',
+    'Where in your editing workflow do you rush, and what would slowing down there cost you?',
+    'What\'s an image you\'re proud of that you almost didn\'t take because it broke one of your own rules?',
+    'Which part of your process still feels like performance rather than instinct?',
+    'What does your default crop ratio say about how you think a story should be framed?',
+    'When did you last choose imperfection over polish in a final image, and how did that sit with you?',
+    'What technical skill are you building right now that has nothing to do with the camera itself?',
+    'Which recent shoot made you realize your composition instincts have outgrown your gear, or the reverse?',
+    'What\'s a visual habit from your early work you\'re trying to unlearn on purpose?',
+    'Where do you still copy another photographer\'s choices instead of trusting your own eye?',
+    'What\'s the boldest editing choice you\'ve made this year that a client or viewer never noticed?',
+    'Which image took the most technical risk, and what would you have lost by playing it safe?',
+    'What do you keep photographing that you haven\'t figured out how to talk about yet?',
+    'When does your work feel most like you, technically speaking — in the shooting or in the editing?',
+    'What\'s a piece of feedback about your style that stung because it was accurate?',
+    'Which shadow, reflection, or blur have you been chasing across several shoots without naming why?',
+    'What story are you telling with your sequencing choices lately, separate from any single image?',
+    'Where has your relationship with sharpness and focus shifted — what used to feel essential that no longer does?',
+    'What\'s an editing preset or look you built for yourself, and what does it protect you from deciding each time?',
+    'Which recent portrait required you to abandon your plan entirely — what did you learn from following the moment instead?',
+    'What technical constraint are you currently working within on purpose, as a way of forcing growth?',
+    'Which of your images do you return to not because it\'s good, but because it\'s unresolved?',
+    'What have you stopped explaining to clients because you trust your instincts on it now?',
+    'Where does your work get quieter — less composed, less controlled — and what happens there?',
+    'What\'s a color, texture, or type of light you avoid because it\'s difficult, not because it\'s wrong for the story?',
+    'Which recent choice in the edit surprised you, as if someone else made it?',
+    'What does the gap between how you shoot and how you were taught to shoot look like right now?',
+    'When did you last let a subject\'s discomfort into the frame instead of directing it away?',
+    'What\'s a narrative device — silence, distance, repetition — you\'ve started borrowing from outside photography?',
+    'Which of your technical strengths has quietly become a crutch?',
+    'What would your work look like if you removed the safety net you always fall back on?',
+    'Where do you sense your next stylistic shift coming from, even if you can\'t see it clearly yet?',
+    'What\'s an image you keep revisiting in your edits months later, and what does it still ask of you?',
+    'Which lighting decision do you make almost without thinking now that used to take real deliberation?',
+    'What have you learned about restraint — pulling back rather than adding — in your recent editing?',
+    'Where in your body do you feel it when a frame is right, before you can explain why?',
+    'What\'s a technical rule you broke recently on purpose, and what did it cost or earn you?',
+    'Which of your images tells a story you didn\'t consciously intend to tell?',
+    'What do you notice yourself avoiding in post-production — a tone, a correction, a truth?',
+    'When did your understanding of composition move from rules to something more like intuition?',
+    'What\'s a risk you took with a client\'s portrait that you wouldn\'t have taken a year ago?',
+    'Which piece of your process have you handed over to trust — in your gear, your instinct, or your subject — that you used to control?',
+    'What does your unedited, unfiltered first look at a shoot tell you that the final selects don\'t?',
+    'Where do you find yourself softening an image\'s harder truths, and is that instinct serving the story?',
+    'What\'s a technique you admire in someone else\'s work that you\'ve tried and deliberately abandoned?',
+    'Which recent shoot asked more of your patience than your technical skill?',
+    'What does the pace of your shutter finger these days say about how you\'re seeing?',
+    'Where has your eye for negative space changed, and what filled that space before?',
+    'What\'s an image that only worked because you let go of your original intention for it?',
+    'Which technical habit are you currently trying to build so it becomes as automatic as breathing?',
+    'What does it feel like in your body when you know a shot is right before you even check the screen?',
+    'When was the last time you trusted your first instinct instead of second-guessing it?',
+    'What would you shoot differently if you were certain no one would judge the result?',
+    'Which of your photographs took the most courage to show someone else, and why?',
+    'When do you feel most like yourself behind the camera?',
+    'What\'s a compliment about your work you still have trouble believing?',
+    'How has the way you carry yourself on a shoot changed since your first paid job?',
+    'What would it look like to direct a session without apologizing for your choices?',
+    'If a stranger only ever saw your portfolio, what would they assume about who you are?',
+    'Which recurring subject or gesture in your photographs says something true about you that you rarely say out loud?',
+    'What part of your personality shows up most clearly in how you pose or direct people?',
+    'How do you introduce yourself as a photographer now compared to how you did five years ago?',
+    'What\'s a story you tell about becoming a photographer that isn\'t quite the whole truth?',
+    'Which photographer you used to want to be like no longer fits who you\'ve become?',
+    'What does your camera let you say that your voice doesn\'t?',
+    'What does a creative block actually feel like for you physically, not just as an idea?',
+    'What\'s the difference between a day you can\'t shoot and a day you won\'t?',
+    'When you\'re stuck, what\'s the first thing you blame, and is it ever actually true?',
+    'What has staring at a blank shot list taught you about what you\'re avoiding?',
+    'Which project have you quietly abandoned, and what does its unfinished state tell you?',
+    'What ritual, if any, actually gets you unstuck, and why do you resist doing it?',
+    'How do you know the difference between needing rest and needing to push through?',
+    'What were you chasing the day you decided to take photography seriously?',
+    'Is the reason you picked up a camera still the reason you keep picking it up?',
+    'What would you photograph this year if income were never part of the decision?',
+    'When did you last shoot something purely because you wanted to, with no client attached?',
+    'What keeps you at this after a shoot that didn\'t go the way you hoped?',
+    'Whose recognition are you actually working for, and have you ever asked yourself that honestly?',
+    'What\'s the last moment you felt like a fraud with a camera in your hands, and what triggered it?',
+    'Which client or peer\'s opinion of your work do you weigh more than your own, and why them?',
+    'What would you need to believe about yourself to stop over-explaining your process to clients?',
+    'When a shoot goes well, do you credit skill or luck first, and what does that say?',
+    'What credential or milestone do you think would finally make you feel legitimate, and would it really?',
+    'How do you talk to yourself in your head during a shoot that isn\'t going well?',
+    'What\'s a body of work you haven\'t started because it feels too big for you yet?',
+    'If you had to describe your ambition honestly, is it about the work, the recognition, or something else?',
+    'What would you have to give up to pursue the kind of photography you actually want to make?',
+    'Where do you want your work to be in five years that it isn\'t right now?',
+    'What\'s the boldest thing you\'d photograph if you stopped waiting for permission?',
+    'Which opportunity have you turned down that you still think about?',
+    'What do the people you\'re drawn to photograph have in common with you?',
+    'What does your instinct to move closer or step back from a subject say about how you relate to people?',
+    'Which of your photographs, looking back, was really about you and not your subject?',
+    'What do you notice about yourself in how you wait for a moment versus how you chase one?',
+    'What does the way you edit, what you keep and what you cut, reveal about what you value?',
+    'When you photograph strangers versus people you love, what changes in you?',
+    'What used to impress you in a photograph that leaves you unmoved now?',
+    'Which of your early favorites would you be embarrassed to shoot the same way today?',
+    'What have you started noticing in light or gesture that you used to walk right past?',
+    'How has your definition of a good portrait changed since you started?',
+    'What photographers or images shaped your eye early on, and do they still?',
+    'What do you find yourself drawn to now that would have bored you a few years ago?',
+    'Which habit in your work do you think you\'ve outgrown but haven\'t fully let go of?',
+    'What\'s the photograph you\'re afraid to take because of what it might say about you?',
+    'When have you played it safe in your work purely to avoid criticism?',
+    'What feedback are you most afraid of hearing about a project you care about?',
+    'What would you shoot if failing publicly didn\'t scare you?',
+    'Which fear has quietly shaped your style more than your taste has?',
+    'What did the last risk you took in your work cost you, and was it worth it?',
+    'When did you last say yes to a shoot that scared you, and what happened?',
+    'What does your relationship with your own reflection in a mirror tell you compared to your reflection in your photographs?',
+    'Which part of the creative process do you rush through because sitting with it is uncomfortable?',
+    'What do you do differently on the days you feel like an artist versus the days you feel like a vendor?',
+    'What would change about your work if you stopped comparing your behind-the-scenes to everyone else\'s highlight reel?',
+    'What\'s a piece of criticism you dismissed too quickly and later realized was right?',
+    'How do you know when a photograph is actually finished versus when you\'re just tired of looking at it?',
+    'What does your camera bag, kept exactly as it is, say about how you think of yourself as an artist?',
+    'When you imagine the photographer you want to become, what is she doing differently than you today?',
+    'What\'s the compliment you wish someone would give your work that no one ever has?',
+    'Which shoot changed how you see yourself, not just how you see your subject?',
+    'What does the pace at which you shoot, rushed or unhurried, say about your state of mind lately?',
+    'What would it take for you to raise your prices without apologizing for it?',
+    'When was the last time you undercharged out of fear rather than strategy, and what did that cost you?',
+    'If you priced your work purely on the value it creates for a client rather than the hours you spend, what would change?',
+    'What story do you tell yourself about what you\'re "allowed" to charge?',
+    'Which package or offering do you keep quietly discounting, and what would happen if you simply stopped?',
+    'How does your body react when a client pushes back on your price?',
+    'Whose pricing do you keep comparing yourself to, and does that comparison actually serve you?',
+    'What\'s the smallest price increase you could make this year that would still feel honest?',
+    'When you say a number out loud to a client, what are you really afraid they\'ll think of you?',
+    'What would your business look like if you charged for your experience instead of just your time?',
+    'Which client relationship taught you the most about what you will and won\'t tolerate?',
+    'What does an ideal client actually feel like to work with, beyond simply paying on time?',
+    'How has the way you speak to clients changed since your first year in business?',
+    'What client interaction are you still turning over in your mind, and why won\'t it settle?',
+    'Who is a past client you\'d work with again without hesitation, and what made that relationship so easy?',
+    'Where do you catch yourself over-explaining or over-apologizing to clients, and where do you think that habit began?',
+    'What do your best clients have in common that you could learn to spot earlier?',
+    'How do you want to be remembered by the people whose stories you\'ve photographed?',
+    'What part of your work are you proudest of that your marketing never actually shows?',
+    'If a stranger scrolled through your portfolio with zero context, what would they assume matters most to you?',
+    'What\'s one marketing habit you keep meaning to build but always let slide?',
+    'Whose work pulls you in enough to study it closely, and what exactly is it that draws you?',
+    'What do you genuinely enjoy about putting yourself out there, if anything?',
+    'When did your brand start to feel like you instead of an echo of someone else\'s?',
+    'What are you avoiding saying publicly about your work, and what\'s underneath that hesitation?',
+    'If you had one breath to explain what makes your photography different, what would you say today?',
+    'Which platform or habit drains you most right now, and what would it take to let it go?',
+    'Where do most of your best clients actually come from, and are you tending that source or neglecting it?',
+    'What would it mean to market from confidence instead of scarcity this season?',
+    'What boundary did you set this year that you\'re genuinely proud of holding?',
+    'When did you last say yes to a job you already knew, somewhere inside, you should decline?',
+    'What does it cost you, physically or emotionally, when you don\'t protect your time off?',
+    'Which kind of request is hardest for you to turn down, and what do you think is underneath that difficulty?',
+    'What would your ideal response to a scope-creep request sound like, if you let yourself practice it?',
+    'Whose approval are you still chasing when you take on work that doesn\'t actually fit you?',
+    'What kind of shoot or client have you decided you\'re finished taking on, and how did you arrive there?',
+    'When a client pushes past a boundary you\'ve set, what usually happens next, and is that outcome acceptable to you?',
+    'What would shift in your business if "no" became a complete sentence for you?',
+    'How do you tell the difference between a boundary and a wall you\'ve built out of fear?',
+    'What\'s the last negotiation where you left something on the table just to avoid conflict?',
+    'How differently do you advocate for your own worth compared to how you\'d advocate for someone else\'s?',
+    'What would you need to believe about yourself to negotiate without flinching?',
+    'When a client asks if you can "do better on price," what\'s your honest first instinct, and do you trust it?',
+    'What negotiation win are you still not giving yourself proper credit for?',
+    'What do you wish you\'d said in a past negotiation that you didn\'t have the words for at the time?',
+    'Looking at your current client base, what pattern do you notice about who finds you and why?',
+    'What kind of client did you dream of working with when you started, and are they the ones actually showing up now?',
+    'Which quiet referral or relationship built more of your business than you\'ve ever fully acknowledged?',
+    'What would it take to attract fewer clients overall but ones who are a far better fit?',
+    'Where have you been fishing for clients who were never going to bite?',
+    'What did a slow season in your business teach you that nothing else could have?',
+    'If you could only keep five clients from your entire history, who would make that list, and why?',
+    'What does financial stability actually look like for you in specific numbers, not vague comfort?',
+    'When you imagine your business earning exactly what you want, what does that version of your daily life look like?',
+    'Which financial habit from your early years in business are you still carrying, whether or not it still serves you?',
+    'What expense do you resent paying that might actually be an investment worth reframing?',
+    'How honest are you with yourself about your numbers each month?',
+    'What would you do differently this year if money stopped being the loudest voice in the room?',
+    'What financial fear have you never said out loud, not even to yourself?',
+    'If your income doubled next year, what would you actually want to spend it on?',
+    'What\'s a mistake you made early on that you\'re quietly grateful for now?',
+    'Which piece of business advice did you follow that turned out to be wrong for you specifically?',
+    'What decision do you keep replaying, and what would you tell the version of you who made it?',
+    'What went badly with a client or a shoot in a way that reshaped how you work now?',
+    'Which old failure are you still faintly ashamed of, and what would it feel like to finally let it go?',
+    'What pattern of mistake keeps resurfacing in different forms throughout your business?',
+    'What does burnout look like in your body before it ever shows up in your work?',
+    'When did you last take a full day off without checking your email, and how did that actually feel?',
+    'What part of running this business no longer feels sustainable the way you\'re currently doing it?',
+    'If you kept working at this exact pace for five more years, what would you gain, and what would you lose?',
+    'What shift in the photography industry over the past few years has most changed how you work?',
+    'When you think about how AI is reshaping image-making, what feeling rises first — curiosity, dread, or something harder to name?',
+    'Which industry norm you once accepted without question now strikes you as worth questioning?',
+    'How has the way clients discover and hire photographers changed since you started, and what do you make of it?',
+    'What part of the business side of photography still catches you off guard, even now?',
+    'If you could freeze one aspect of this industry exactly as it is today, what would it be and why?',
+    'What\'s a trend in the field you\'ve resisted following, and what has that resistance cost or given you?',
+    'How do you talk about the future of your craft with photographers who came up in a different era than you?',
+    'What assumption about "making it" in this industry have you had to unlearn?',
+    'Who in your local photography scene do you wish you knew better, and what\'s stopped you from reaching out?',
+    'Describe a moment when another photographer\'s generosity changed the course of your work.',
+    'What does genuine community among photographers look like to you, versus its performance online?',
+    'When was the last time you felt truly seen by a peer in this field, and what made that possible?',
+    'What role do you play in your photography community — the one who organizes, the one who listens, the one who disappears?',
+    'How has collaborating with another photographer, rather than competing, opened something up for you?',
+    'What would you want to build for the next generation of photographers coming into this community?',
+    'Which relationships in this industry have outlasted the projects that started them?',
+    'How do you show up for other photographers when their work is being celebrated and yours isn\'t?',
+    'What unwritten rule of your craft do you still honor, even when no one would notice if you didn\'t?',
+    'How has your definition of "good work" shifted since you first picked up a camera professionally?',
+    'Which technical habit have you kept out of loyalty rather than necessity?',
+    'What does integrity look like in your practice when no client or audience is watching?',
+    'What\'s a belief about "the right way" to shoot that you\'ve quietly abandoned?',
+    'Where do you draw the line between craft and commerce in your own work?',
+    'What tradition within photography do you feel responsible for carrying forward?',
+    'How has your relationship to the tools of your craft — camera, light, film, software — changed as the culture around them has changed?',
+    'What reliably pulls you out of a creative rut when the industry noise gets too loud?',
+    'When did you last feel pure wonder about making an image, and what brought it on?',
+    'What keeps your love for this work intact on the days the business of it wears you down?',
+    'Which photographer\'s body of work do you return to when you need to remember why you started?',
+    'What non-photography source has quietly been feeding your creative eye lately?',
+    'How do you protect your curiosity from turning into content-production fatigue?',
+    'What would it look like to make one image this month purely for yourself, with no audience in mind?',
+    'When inspiration feels borrowed rather than earned, how do you find your way back to something true?',
+    'Where does your inspiration come from when everyone around you seems to be chasing the same aesthetic?',
+    'Whose career trajectory do you compare yourself to most, and what does that comparison actually reveal about your own desires?',
+    'What does it cost you to scroll through other photographers\' portfolios right before or after a shoot?',
+    'When have you mistaken someone else\'s visibility for your own lack of worth?',
+    'What\'s the difference for you between healthy ambition and corrosive competitiveness?',
+    'How do you metabolize seeing a photographer you admire book the job you wanted?',
+    'What would change in your work if you never learned what your peers were charging or booking?',
+    'Which photographer\'s success has been hardest for you to feel happy about, and why?',
+    'What does "enough" look like for you in a field that rewards constant visible growth?',
+    'When you feel behind, what story are you telling yourself about what that means?',
+    'How has comparison ever secretly served you, even while it hurt?',
+    'Who mentored you without ever calling it that, and what did they give you?',
+    'What do you wish someone had told you plainly when you were starting out?',
+    'Which photographer are you quietly mentoring, even if it hasn\'t been named that way yet?',
+    'What\'s something you learned from a mentor that you\'ve since had to unlearn?',
+    'How do you decide when someone asking for your time deserves your honesty over your encouragement?',
+    'What do you owe the photographers who opened doors for you, and how are you repaying it?',
+    'How has being asked for mentorship changed the way you see your own experience?',
+    'What kind of mentor do you wish existed for you right now, at this stage of your career?',
+    'What does your feed perform that your actual practice doesn\'t reflect?',
+    'How has chasing the algorithm ever pulled you away from the image you actually wanted to make?',
+    'What would you post if you knew no client would ever see it?',
+    'When did visibility online last feel like validation rather than exposure?',
+    'What part of your work do you hide from social media, and why?',
+    'How do you know when you\'re making an image for the platform instead of for the story?',
+    'When a post underperforms, what do you actually believe about the work versus what the algorithm tells you?',
+    'What would your practice look like if visibility were no longer tied to your income?',
+    'Whose work makes you want to put down your camera and just look for a while?',
+    'What quality in another photographer\'s images do you admire but haven\'t found in your own yet?',
+    'Which image by another photographer has stayed with you long after you saw it, and why?',
+    'What do you envy in a peer\'s work, and what might that envy be pointing you toward?',
+    'Whose eye do you trust completely, even when you don\'t understand their choices?',
+    'What\'s a photographer\'s career you admire the shape of, not just the images?',
+    'When you study a photograph you love, what are you actually looking for?',
+    'What do you notice yourself borrowing, consciously or not, from photographers you admire?',
+    'Whose restraint in their work teaches you something your own instincts resist?',
+    'What does it feel like in your body the moment a subject stops performing and starts simply being themselves in front of your lens?',
+    'Think of a client who arrived guarded—what did you do, or not do, that let them soften?',
+    'How do you know, in the middle of a shoot, that you\'ve earned someone\'s trust rather than just their compliance?',
+    'Recall a moment when you had to choose between the shot you wanted and the comfort of the person you were photographing—what did you choose, and how do you feel about it now?',
+    'What\'s a piece of direction you give often that you\'ve never really examined—where did it come from?',
+    'Describe the last time a subject cried in front of your camera, and what you did in that instant.',
+    'When has silence on set told you more than anything either of you said?',
+    'Who is the collaborator—stylist, assistant, agent, makeup artist—who reads a room better than you do, and what have you learned from watching them work?',
+    'What do you do differently when you sense someone has been hurt by a photographer before?',
+    'Think about a shoot where the client\'s vision and your instinct pulled in opposite directions—how did you find the middle, or did you?',
+    'What does trust sound like, specifically — what words or tone do you reach for in the first five minutes with someone new?',
+    'When was the last time you were wrong about someone before the camera even came out, and what taught you that?',
+    'Describe a subject who taught you something about your own way of seeing.',
+    'What\'s the difference between a client who directs you and a client who lets you lead — and which unsettles you more?',
+    'Recall a shoot that felt like a genuine conversation rather than a job — what made it that way?',
+    'How do you handle the moment a client\'s expectations and the person actually standing in front of you don\'t match?',
+    'What have you learned about consent and comfort that no one taught you in school?',
+    'Think of the collaborator you\'ve worked with the longest — how has your shorthand with them changed over the years?',
+    'When has a subject surprised you by trusting you with something vulnerable, on or off camera?',
+  ];
 
   // Which of the two Journal "notebooks" is open: 'select' (the cover
   // picker), 'reflections' (the existing freeform entries, unchanged), or
@@ -1282,37 +1589,52 @@
       : journalImagesKey(currentJournalEntry.id);
   }
 
-  function renderJournalImages() {
-    const grid = document.getElementById('journalImagesGrid');
-    const key = currentJournalImagesKey();
+  // Shared renderer for both the edit-mode grid (add/delete affordances) and
+  // the view-mode grid (read-only gallery) — same images, same image viewer,
+  // just with the mutating controls left out when editable is false.
+  function renderImagesGrid(grid, key, editable, onChanged) {
     grid.innerHTML = '';
-    if (!key) return;
+    if (!key) { journalHasImages = false; return; }
     idbGetImages(key).then(images => {
+      // journalHasImages feeds autosaveJournal()'s "does this entry have any
+      // content" check, so it has to stay accurate in view mode too — not
+      // just while the edit-mode grid (with its add/delete controls) is up.
       journalHasImages = images.length > 0;
-      grid.innerHTML = images.length ? '' : '<p class="empty-hint">No photos yet.</p>';
+      grid.innerHTML = images.length ? '' : (editable ? '<p class="empty-hint">No photos yet.</p>' : '');
       images.forEach((img, idx) => {
         const thumb = document.createElement('div');
         thumb.className = 'moodboard-thumb';
-        thumb.innerHTML = `<img src="${img.src}" alt="" data-idx="${idx}" /><button type="button" class="final-thumb-delete" data-idx="${idx}">&times;</button>`;
+        thumb.innerHTML = `<img src="${img.src}" alt="" data-idx="${idx}" />` +
+          (editable ? `<button type="button" class="final-thumb-delete" data-idx="${idx}">&times;</button>` : '');
         grid.appendChild(thumb);
       });
-      grid.querySelectorAll('.final-thumb-delete').forEach(btn => {
-        btn.addEventListener('click', () => {
-          idbGetImages(key).then(imgs => {
-            imgs.splice(Number(btn.dataset.idx), 1);
-            return idbSetImages(key, imgs);
-          }).then(() => {
-            renderJournalImages();
-            scheduleJournalAutosave();
+      if (editable) {
+        grid.querySelectorAll('.final-thumb-delete').forEach(btn => {
+          btn.addEventListener('click', () => {
+            idbGetImages(key).then(imgs => {
+              imgs.splice(Number(btn.dataset.idx), 1);
+              return idbSetImages(key, imgs);
+            }).then(() => {
+              onChanged();
+              scheduleJournalAutosave();
+            });
           });
         });
-      });
+      }
       grid.querySelectorAll('.moodboard-thumb img').forEach(imgEl => {
         imgEl.addEventListener('click', () => {
-          openImageViewer(images, Number(imgEl.dataset.idx), key, renderJournalImages, false);
+          openImageViewer(images, Number(imgEl.dataset.idx), key, onChanged, false);
         });
       });
     }).catch(() => { grid.innerHTML = ''; });
+  }
+
+  function renderJournalImages() {
+    renderImagesGrid(document.getElementById('journalImagesGrid'), currentJournalImagesKey(), true, renderJournalImages);
+  }
+
+  function renderJournalViewImages() {
+    renderImagesGrid(document.getElementById('journalViewImagesGrid'), currentJournalImagesKey(), false, renderJournalViewImages);
   }
 
   document.getElementById('addJournalPhotos').addEventListener('click', () => {
@@ -1358,7 +1680,7 @@
     }
 
     const body = parts.join('\n\n');
-    const title = `Reflection: ${shootDisplayName(shoot)}`;
+    const title = shoot.title || primaryTalentName(shoot) || 'Untitled shoot';
 
     if (existingIdx !== -1) {
       state.journalEntries[existingIdx] = { ...state.journalEntries[existingIdx], title, body };
@@ -1609,9 +1931,14 @@
 
   function autosaveJournal() {
     if (!currentJournalEntry) return;
-    currentJournalEntry.title = document.getElementById('journalSubject').value;
-    currentJournalEntry.body = document.getElementById('journalBody').value;
-    currentJournalEntry.tags = [...currentJournalTags];
+    // View mode has no editable fields, so there's nothing on the entry to
+    // re-derive from the form — skip straight to the content check below
+    // (the edit-mode form fields may still hold a previous entry's draft).
+    if (journalMode === 'edit') {
+      currentJournalEntry.title = document.getElementById('journalSubject').value;
+      currentJournalEntry.body = document.getElementById('journalBody').value;
+      currentJournalEntry.tags = [...currentJournalTags];
+    }
 
     const hasContent = hasText(currentJournalEntry.title) || hasText(currentJournalEntry.body) || currentJournalEntry.tags.length > 0 || journalHasImages;
     const idx = state.journalEntries.findIndex(x => x.id === currentJournalEntry.id);
@@ -1650,39 +1977,73 @@
     try { localStorage.removeItem(OPEN_JOURNAL_KEY); } catch (e) {}
   }
 
+  // The full typing setup (title/body/hashtags/photos) — reachable directly
+  // for a brand-new entry, or via the Edit button on an existing standalone
+  // one.
+  function showJournalEditMode() {
+    journalMode = 'edit';
+    document.getElementById('journalSubject').value = currentJournalEntry.title;
+    document.getElementById('journalBody').value = currentJournalEntry.body;
+    currentJournalTags = [...currentJournalEntry.tags];
+    renderJournalTagsChips();
+    renderJournalTagsSuggestions();
+    journalTagsInput.value = '';
+    document.getElementById('deleteJournalBtn').hidden = journalIsNew;
+    renderJournalImages();
+    document.getElementById('journalViewMode').hidden = true;
+    document.getElementById('journalForm').hidden = false;
+  }
+
+  // A read-only popup of the saved entry — no textboxes, no editing
+  // mechanics — until the Edit button switches back to edit mode.
+  function showJournalViewMode() {
+    journalMode = 'view';
+    const e = currentJournalEntry;
+    document.getElementById('journalViewTitle').textContent = e.title || 'Untitled entry';
+    document.getElementById('journalViewDate').textContent = prettyDate(e.createdAt);
+    const tagsEl = document.getElementById('journalViewTags');
+    tagsEl.innerHTML = (e.tags || []).map(t => `<span class="beat-chip view-only">${escapeHtml(t)}</span>`).join('');
+    tagsEl.hidden = !(e.tags && e.tags.length);
+    document.getElementById('journalViewBody').textContent = e.body || '';
+    document.getElementById('journalViewLinkedHint').hidden = !e.sourceShootId;
+    document.getElementById('deleteJournalViewBtn').hidden = journalIsNew;
+    renderJournalViewImages();
+    document.getElementById('journalForm').hidden = true;
+    document.getElementById('journalViewMode').hidden = false;
+  }
+
   function openJournalModal(id) {
     const existing = id ? state.journalEntries.find(x => x.id === id) : null;
     journalIsNew = !existing;
     currentJournalEntry = existing || { id: uid(), title: '', body: '', tags: [], createdAt: todayStr() };
     setOpenJournalMarker(currentJournalEntry.id);
-
-    document.getElementById('journalSubject').value = currentJournalEntry.title;
-    document.getElementById('journalBody').value = currentJournalEntry.body;
-    currentJournalTags = [...currentJournalEntry.tags];
-    document.getElementById('deleteJournalBtn').hidden = journalIsNew;
-    renderJournalTagsChips();
-    renderJournalTagsSuggestions();
-    journalTagsInput.value = '';
-
-    const isLinked = !!currentJournalEntry.sourceShootId;
-    document.getElementById('journalBody').readOnly = isLinked;
-    document.getElementById('journalLinkedHint').hidden = !isLinked;
-
     journalHasImages = false;
-    renderJournalImages();
+
+    // A brand-new entry starts in edit mode (nothing to view yet); anything
+    // already saved — including auto-compiled shoot reflections, which never
+    // get their own edit mode here — opens read-only.
+    if (journalIsNew) showJournalEditMode();
+    else showJournalViewMode();
 
     journalModalOverlay.hidden = false;
   }
 
-  // Auto-compiled entries read normally, but tapping into the text hands
-  // off to the shoot's own reflection fields instead of allowing edits here.
-  document.getElementById('journalBody').addEventListener('click', () => {
-    if (!currentJournalEntry || !currentJournalEntry.sourceShootId) return;
+  // Auto-compiled entries never edit in place — "editing" always hands off
+  // to the shoot's own reflection fields instead, so the two stay in sync.
+  function revisitLinkedJournalEntry() {
     const shootId = currentJournalEntry.sourceShootId;
-    document.getElementById('journalBody').blur();
     if (!confirm('Do you want to revisit this shoot and modify the entry?')) return;
     closeJournalModal();
     openPostShootJournalPrompt(shootId);
+  }
+
+  document.getElementById('journalViewBody').addEventListener('click', () => {
+    if (currentJournalEntry && currentJournalEntry.sourceShootId) revisitLinkedJournalEntry();
+  });
+
+  document.getElementById('editJournalBtn').addEventListener('click', () => {
+    if (currentJournalEntry && currentJournalEntry.sourceShootId) revisitLinkedJournalEntry();
+    else showJournalEditMode();
   });
 
   function closeJournalModal() {
@@ -1696,9 +2057,19 @@
 
   document.getElementById('addJournalBtn').addEventListener('click', () => openJournalModal(null));
 
-  document.getElementById('saveJournalBtn').addEventListener('click', closeJournalModal);
+  // Saving no longer closes the modal — it drops back to the read-only view
+  // of what was just written, right in the same popup. An entry that ends
+  // up with no real content (autosave already deletes it) just closes.
+  document.getElementById('saveJournalBtn').addEventListener('click', () => {
+    clearTimeout(journalSaveTimer);
+    autosaveJournal();
+    const e = currentJournalEntry;
+    const hasContent = e && (hasText(e.title) || hasText(e.body) || e.tags.length > 0 || journalHasImages);
+    if (hasContent) showJournalViewMode();
+    else closeJournalModal();
+  });
 
-  document.getElementById('deleteJournalBtn').addEventListener('click', () => {
+  function deleteCurrentJournalEntry() {
     if (!currentJournalEntry) return;
     if (!confirm('Delete this journal entry? This can\'t be undone.')) return;
     // Linked entries share the shoot's own final-images store — only
@@ -1713,10 +2084,47 @@
     journalModalOverlay.hidden = true;
     currentJournalEntry = null;
     renderJournal();
-  });
+  }
+
+  document.getElementById('deleteJournalBtn').addEventListener('click', deleteCurrentJournalEntry);
+  document.getElementById('deleteJournalViewBtn').addEventListener('click', deleteCurrentJournalEntry);
 
   journalModalOverlay.addEventListener('click', (e) => {
     if (e.target === journalModalOverlay) closeJournalModal();
+  });
+
+  // ---------- Journal starting-prompt picker ----------
+  // Offers a random prompt from JOURNAL_PROMPTS; accepting inserts it in
+  // brackets at the top of the entry body for the user to write underneath.
+  function pickRandomJournalPrompt(excludeText) {
+    if (JOURNAL_PROMPTS.length <= 1) return JOURNAL_PROMPTS[0];
+    let p;
+    do { p = JOURNAL_PROMPTS[Math.floor(Math.random() * JOURNAL_PROMPTS.length)]; } while (p === excludeText);
+    return p;
+  }
+
+  function showRandomJournalPrompt() {
+    journalPromptOffered = pickRandomJournalPrompt(journalPromptOffered);
+    document.getElementById('journalPromptText').textContent = journalPromptOffered;
+    document.getElementById('journalPromptOverlay').hidden = false;
+  }
+
+  document.getElementById('journalPromptBtn').addEventListener('click', showRandomJournalPrompt);
+  document.getElementById('journalPromptAnotherBtn').addEventListener('click', showRandomJournalPrompt);
+
+  document.getElementById('journalPromptAcceptBtn').addEventListener('click', () => {
+    document.getElementById('journalPromptOverlay').hidden = true;
+    if (!journalPromptOffered) return;
+    const body = document.getElementById('journalBody');
+    const prefix = `[${journalPromptOffered}]\n\n`;
+    body.value = prefix + body.value;
+    body.focus();
+    body.setSelectionRange(prefix.length, prefix.length);
+    scheduleJournalAutosave();
+  });
+
+  document.getElementById('journalPromptOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.hidden = true;
   });
 
   // ---------- Framework tags (rendered inside the shoot modal) ----------
@@ -4960,7 +5368,7 @@
   // automatic popup already showed) would silently lose items whose flags
   // just got set. Both the automatic popup and the on-demand bell read
   // through this same cache.
-  const DAILY_REPORT_CONTENT_KEY = 'dailies_daily_report_content_v1';
+  const DAILY_REPORT_CONTENT_KEY = 'dailies_daily_report_content_v2';
 
   function loadCachedDailyReportContent() {
     try {

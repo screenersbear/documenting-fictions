@@ -301,7 +301,7 @@ h1, h2, h3 {
 }
 
 .notebook-cover {
-  width: 140px;
+  width: 154px;
   height: 175px;
 }
 
@@ -1360,6 +1360,10 @@ h1, h2, h3 {
   display: none;
 }
 
+#journalForm[hidden] {
+  display: none;
+}
+
 #shootForm,
 #journalForm,
 #formSection2,
@@ -1984,7 +1988,12 @@ h1, h2, h3 {
   bottom: 0;
   z-index: 2;
   background: var(--surface);
-  padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+  /* Extra bottom padding so the bar's own footprint roughly matches the
+     app's persistent tab bar — otherwise the Save button sits right at the
+     modal's bottom edge and content scrolling up from below (e.g. the Add
+     photos button) can visually crowd it as it approaches. */
+  padding-top: 10px;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 34px);
 }
 
 .complete-shoot-btn[hidden] {
@@ -2267,6 +2276,82 @@ h1, h2, h3 {
   font-size: 17px;
   line-height: 1;
   padding: 0 4px;
+}
+
+/* No remove button on a read-only chip, so both sides match instead of the
+   editable version's lopsided padding (built to leave room for the ×). */
+.beat-chip.view-only {
+  padding: 5px 12px;
+}
+
+/* ---- Journal entry view mode (read-only popup) ---- */
+#journalViewMode > * {
+  margin-top: 12px;
+}
+
+#journalViewMode > *:first-child {
+  margin-top: 0;
+}
+
+.journal-view-title {
+  font-family: var(--font-title);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  margin: 0;
+}
+
+.journal-view-tags[hidden] {
+  display: none;
+}
+
+/* Classic lined-notebook paper: blue ruled lines with a red margin line
+   down the left, deliberately real blue/red rather than the app's usual
+   navy/yellow/white — the whole point is to read as actual notebook paper. */
+.journal-paper {
+  position: relative;
+  background-color: #fffdf7;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 27px,
+    #a9c9e8 27px,
+    #a9c9e8 28px
+  );
+  background-position: 0 22px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 14px 14px 44px;
+  line-height: 28px;
+  font-size: 15px;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  min-height: 160px;
+}
+
+.journal-paper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 32px;
+  width: 2px;
+  background: #d9534f;
+}
+
+.journal-block-btn {
+  display: block;
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  letter-spacing: 0.5px;
+  cursor: pointer;
 }
 
 .beats-suggestions {
