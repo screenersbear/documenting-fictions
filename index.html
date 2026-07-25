@@ -105,12 +105,18 @@
       <button type="button" class="notebook-tile" id="openLogNotebookBtn">
         <svg class="notebook-cover notebook-cover-yellow" viewBox="0 0 140 175" aria-hidden="true">
           <rect x="1.5" y="1.5" width="137" height="172" rx="10" class="notebook-cover-bg notebook-cover-border" />
-          <circle class="notebook-cover-ring" cx="18" cy="26" r="4" />
-          <circle class="notebook-cover-ring" cx="18" cy="50" r="4" />
-          <circle class="notebook-cover-ring" cx="18" cy="74" r="4" />
-          <circle class="notebook-cover-ring" cx="18" cy="98" r="4" />
-          <circle class="notebook-cover-ring" cx="18" cy="122" r="4" />
-          <circle class="notebook-cover-ring" cx="18" cy="146" r="4" />
+          <ellipse class="notebook-cover-ring" cx="18" cy="26" rx="7" ry="3.5" />
+          <circle class="notebook-cover-hole" cx="18" cy="26" r="1.8" />
+          <ellipse class="notebook-cover-ring" cx="18" cy="50" rx="7" ry="3.5" />
+          <circle class="notebook-cover-hole" cx="18" cy="50" r="1.8" />
+          <ellipse class="notebook-cover-ring" cx="18" cy="74" rx="7" ry="3.5" />
+          <circle class="notebook-cover-hole" cx="18" cy="74" r="1.8" />
+          <ellipse class="notebook-cover-ring" cx="18" cy="98" rx="7" ry="3.5" />
+          <circle class="notebook-cover-hole" cx="18" cy="98" r="1.8" />
+          <ellipse class="notebook-cover-ring" cx="18" cy="122" rx="7" ry="3.5" />
+          <circle class="notebook-cover-hole" cx="18" cy="122" r="1.8" />
+          <ellipse class="notebook-cover-ring" cx="18" cy="146" rx="7" ry="3.5" />
+          <circle class="notebook-cover-hole" cx="18" cy="146" r="1.8" />
         </svg>
         <span class="notebook-tile-title">Log</span>
         <span class="notebook-tile-sub">Automatic weekly recap</span>
@@ -118,12 +124,18 @@
       <button type="button" class="notebook-tile" id="openReflectionsNotebookBtn">
         <svg class="notebook-cover notebook-cover-navy" viewBox="0 0 140 175" aria-hidden="true">
           <rect x="1.5" y="1.5" width="137" height="172" rx="10" class="notebook-cover-bg notebook-cover-border" />
-          <circle class="notebook-cover-ring" cx="18" cy="26" r="4" />
-          <circle class="notebook-cover-ring" cx="18" cy="50" r="4" />
-          <circle class="notebook-cover-ring" cx="18" cy="74" r="4" />
-          <circle class="notebook-cover-ring" cx="18" cy="98" r="4" />
-          <circle class="notebook-cover-ring" cx="18" cy="122" r="4" />
-          <circle class="notebook-cover-ring" cx="18" cy="146" r="4" />
+          <ellipse class="notebook-cover-ring" cx="18" cy="26" rx="7" ry="3.5" />
+          <circle class="notebook-cover-hole" cx="18" cy="26" r="1.8" />
+          <ellipse class="notebook-cover-ring" cx="18" cy="50" rx="7" ry="3.5" />
+          <circle class="notebook-cover-hole" cx="18" cy="50" r="1.8" />
+          <ellipse class="notebook-cover-ring" cx="18" cy="74" rx="7" ry="3.5" />
+          <circle class="notebook-cover-hole" cx="18" cy="74" r="1.8" />
+          <ellipse class="notebook-cover-ring" cx="18" cy="98" rx="7" ry="3.5" />
+          <circle class="notebook-cover-hole" cx="18" cy="98" r="1.8" />
+          <ellipse class="notebook-cover-ring" cx="18" cy="122" rx="7" ry="3.5" />
+          <circle class="notebook-cover-hole" cx="18" cy="122" r="1.8" />
+          <ellipse class="notebook-cover-ring" cx="18" cy="146" rx="7" ry="3.5" />
+          <circle class="notebook-cover-hole" cx="18" cy="146" r="1.8" />
         </svg>
         <span class="notebook-tile-title">Reflections</span>
         <span class="notebook-tile-sub">Your shoot reflections &amp; notes</span>
@@ -251,11 +263,9 @@
             <option value="family">Family</option>
             <option value="headshot">Headshot</option>
             <option value="branding">Branding</option>
+            <option value="publicity">Publicity</option>
             <option value="other">Other</option>
           </select>
-        </label>
-        <label>Deadline
-          <input type="date" id="shootDeadline" />
         </label>
       </div>
       <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
@@ -263,6 +273,9 @@
       <div id="logisticsBody">
         <label>Shoot date
           <input type="date" id="shootDate" />
+        </label>
+        <label>Deadline
+          <input type="date" id="shootDeadline" />
         </label>
         <div class="time-range-row">
           <label>Start time
@@ -332,6 +345,7 @@
         <div class="lighting-setups-section" id="lightingSetupsSection">
           <h4 class="subsection-heading" id="lightingSetupsHeading">Lighting setups<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h4>
           <div id="lightingSetupsBody">
+            <p class="field-hint">Log your specific setups for reference on the day of, as well as to review what worked in each image.</p>
             <div id="lightingSetupsItems" class="shot-list-items"></div>
             <button type="button" id="addLightingSetupBtn" class="primary small-btn">+ Add lighting setup</button>
           </div>
@@ -571,6 +585,8 @@
       </div>
       <div class="options-pane">
         <button type="button" class="options-item options-back" id="projectPhotoBackBtn">&larr; Back</button>
+        <button type="button" id="addProjectPhotoFromDeviceBtn" class="primary small-btn">+ Add from phone</button>
+        <input type="file" id="projectPhotoFileInput" accept="image/*" hidden />
         <div id="projectPhotoPickerGrid" class="moodboard-grid project-photo-picker-grid"></div>
       </div>
       <div class="options-pane">

@@ -93,11 +93,12 @@
     family: 'Family',
     headshot: 'Headshot',
     branding: 'Branding',
+    publicity: 'Publicity',
     other: 'Other',
     uncategorized: 'Uncategorized',
   };
 
-  const CATEGORY_FILTER_ORDER = ['commercial', 'video', 'editorial', 'lighting_test', 'portfolio_building', 'test_shoot', 'event', 'wedding', 'family', 'headshot', 'branding', 'other'];
+  const CATEGORY_FILTER_ORDER = ['commercial', 'video', 'editorial', 'lighting_test', 'portfolio_building', 'test_shoot', 'event', 'wedding', 'family', 'headshot', 'branding', 'publicity', 'other'];
 
   // Grammatical plural form of each category, for use as a countable noun in
   // a sentence (e.g. "more commercial shoots than video shoots") — CATEGORY_LABELS
@@ -115,6 +116,7 @@
     family: 'family shoots',
     headshot: 'headshot shoots',
     branding: 'branding shoots',
+    publicity: 'publicity shoots',
     other: 'other shoots',
   };
 
@@ -761,6 +763,14 @@
       title: 'Stats',
       text: 'swipe between breakdowns of your visual languages, categories, team members, statuses, and locations. tap any slice to see exactly which shoots are behind it.',
     },
+    'journal:log': {
+      title: 'Log',
+      text: "this notebook fills itself in automatically — no writing required. Each week you actually shoot something gets its own entry listing which shoots happened, their categories, and your lessons learned pulled straight from each shoot's reflection.",
+    },
+    'journal:reflections': {
+      title: 'Reflections',
+      text: "this is your freeform journal. Every shoot's post-shoot reflection is automatically logged here too, right alongside anything you write yourself. Tap '+' to add your own entry, or tap any entry to reopen and edit it.",
+    },
   };
 
   const TAB_INTRO_KEY = 'dailies_seen_tab_intros_v1';
@@ -1254,6 +1264,7 @@
       view === 'reflections' ? 'Reflections' : view === 'log' ? 'Log' : 'Journal';
     if (view === 'reflections') renderJournal();
     if (view === 'log') renderJournalLog();
+    if (view === 'reflections' || view === 'log') showTabIntro(`journal:${view}`);
   }
 
   document.getElementById('openReflectionsNotebookBtn').addEventListener('click', () => showJournalView('reflections'));
@@ -1772,6 +1783,45 @@
     if (next) next.focus();
   });
 
+  // ---------- Known-contact handle lookup (talents + team members) ----------
+  // Scans every shoot's talents/team members for a name match and returns
+  // whatever handle(s) were saved for them last time — so a returning
+  // client or a repeat team member's handle doesn't have to be retyped.
+  // Rebuilt fresh on every lookup (simple over clever: this app's shoot
+  // count never gets remotely large enough for that to matter).
+  function buildContactHandleRegistry() {
+    const registry = new Map(); // name (trimmed, lowercased) -> Map(platform -> handle)
+    function record(name, platform, handle) {
+      const key = (name || '').trim().toLowerCase();
+      if (!key || !hasText(handle)) return;
+      if (!registry.has(key)) registry.set(key, new Map());
+      registry.get(key).set(platform || 'instagram', handle.trim());
+    }
+    state.shoots.forEach(s => {
+      (s.talents || []).forEach(t => {
+        (t.socialHandles || []).forEach(sh => record(t.name, sh.platform, sh.handle));
+      });
+      (s.teamMembers || []).forEach(tm => record(tm.name, tm.socialPlatform, tm.socialHandle));
+    });
+    return registry;
+  }
+
+  function lookupContactHandles(name) {
+    const key = (name || '').trim().toLowerCase();
+    if (!key) return [];
+    const entry = buildContactHandleRegistry().get(key);
+    if (!entry) return [];
+    return Array.from(entry.entries()).map(([platform, handle]) => ({ platform, handle }));
+  }
+
+  // Team members only have room for one handle — prefer instagram (the
+  // default platform) if the contact has one, otherwise whatever's on file.
+  function lookupBestContactHandle(name) {
+    const matches = lookupContactHandles(name);
+    if (!matches.length) return null;
+    return matches.find(m => m.platform === 'instagram') || matches[0];
+  }
+
   // ---------- Talents (dynamic list of talent cards, right under Title) ----------
   // Each talent is its own outlined card (mirrors .team-member-card) with a
   // name field and its own nested social-handles sub-list, so a shoot with
@@ -1812,6 +1862,15 @@
     container.querySelectorAll('.talent-name').forEach(input => {
       input.addEventListener('input', () => {
         currentTalents[Number(input.dataset.idx)].name = input.value;
+      });
+      input.addEventListener('blur', () => {
+        const talent = currentTalents[Number(input.dataset.idx)];
+        if (!talent || (talent.socialHandles || []).some(sh => hasText(sh.handle))) return;
+        const matches = lookupContactHandles(talent.name);
+        if (!matches.length) return;
+        talent.socialHandles = matches;
+        renderTalents();
+        scheduleShootAutosave();
       });
     });
     container.querySelectorAll('.add-talent-handle-btn').forEach(btn => {
@@ -1878,6 +1937,16 @@
     container.querySelectorAll('.team-member-name').forEach(input => {
       input.addEventListener('input', () => {
         currentTeamMembers[Number(input.dataset.idx)].name = input.value;
+      });
+      input.addEventListener('blur', () => {
+        const tm = currentTeamMembers[Number(input.dataset.idx)];
+        if (!tm || hasText(tm.socialHandle)) return;
+        const match = lookupBestContactHandle(tm.name);
+        if (!match) return;
+        tm.socialPlatform = match.platform;
+        tm.socialHandle = match.handle;
+        renderTeamMembers();
+        scheduleShootAutosave();
       });
     });
     container.querySelectorAll('.team-member-social-platform').forEach(sel => {
@@ -3397,6 +3466,22 @@
     shootOptionsPaneTrack.classList.remove('show-fourth');
   });
 
+  document.getElementById('addProjectPhotoFromDeviceBtn').addEventListener('click', () => {
+    document.getElementById('projectPhotoFileInput').click();
+  });
+
+  document.getElementById('projectPhotoFileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const id = optionsShootId;
+    if (!id) return;
+    resizeImageFile(file, 1280, 0.72).then(dataUrl => {
+      cropTargetShootId = id;
+      openProjectPhotoCrop(dataUrl);
+    }).catch(() => {});
+  });
+
   // ---------- Change deadline (kebab menu slide-over) ----------
   document.getElementById('changeDeadlineOptionBtn').addEventListener('click', () => {
     const s = state.shoots.find(x => x.id === optionsShootId);
@@ -4842,7 +4927,7 @@
     else if (moodboardPendingCount > 2) nudges.push(`${moodboardPendingCount} shoots still need mood boards!`);
 
     const teamPendingCount = activeShoots.filter(s => s.teamRequired === 'yes' && !s.teamFinalized).length;
-    if (teamPendingCount === 1) nudges.push("Is your team set for that shoot?");
+    if (teamPendingCount === 1) nudges.push("There's teams yet to be assembled!");
     else if (teamPendingCount > 1) nudges.push('Are all your teams set?');
 
     if (finalImagesMissingCount === 1) nudges.push('A delivered shoot is still missing its final images!');
