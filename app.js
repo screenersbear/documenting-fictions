@@ -550,7 +550,11 @@
     // Proofs are only "pending" for the captured step itself — once a shoot
     // moves to waiting_for_selects, proofs have already gone out.
     const proofsPendingText = (showBadge && s.status === 'captured') ? 'Pending: Proofs' : '';
-    const badgeParts = [statusLabel, pendingText, proofsPendingText].filter(Boolean);
+    // Archived shoots have nothing left to do except look back on — flag it
+    // if that reflection was never written, same idea as missing final images.
+    const hasReflection = hasText(s.whatWentRight) || hasText(s.couldBeBetter) || hasText(s.lessonsLearned);
+    const reflectionPendingText = (showBadge && s.archived && !hasReflection) ? 'Pending: Reflection' : '';
+    const badgeParts = [statusLabel, pendingText, proofsPendingText, reflectionPendingText].filter(Boolean);
     const badgeHtml = badgeParts.join('<br>');
     // Once archived there's nothing left to deliver, so the deadline no
     // longer means anything — don't show it. Otherwise, an overdue deadline
@@ -1681,15 +1685,19 @@
 
     const body = parts.join('\n\n');
     const title = shoot.title || primaryTalentName(shoot) || 'Untitled shoot';
+    // Tagged with the shoot's category — a linked entry has no hashtag input
+    // of its own (editing always routes back to the shoot), so this is the
+    // only source of its tags and can just stay fully in sync with it.
+    const tags = CATEGORY_LABELS[shoot.category] ? [CATEGORY_LABELS[shoot.category]] : [];
 
     if (existingIdx !== -1) {
-      state.journalEntries[existingIdx] = { ...state.journalEntries[existingIdx], title, body };
+      state.journalEntries[existingIdx] = { ...state.journalEntries[existingIdx], title, body, tags };
     } else {
       state.journalEntries.push({
         id: uid(),
         title,
         body,
-        tags: [],
+        tags,
         createdAt: todayStr(),
         sourceShootId: shoot.id,
       });
@@ -5506,7 +5514,12 @@
   }
 
   // ---------- service worker (offline caching) ----------
-  if ('serviceWorker' in navigator) {
+  // Skipped inside a native wrapper (Capacitor injects window.Capacitor) —
+  // a native build already bundles every file locally, so the service
+  // worker's own caching layer is redundant there and can conflict with how
+  // the native shell serves local assets. No-op today since window.Capacitor
+  // doesn't exist in a plain browser/PWA context.
+  if (!window.Capacitor && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     });
