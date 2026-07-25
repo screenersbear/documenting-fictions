@@ -307,15 +307,11 @@ h1, h2, h3 {
 
 .notebook-cover-navy .notebook-cover-bg { fill: var(--text); }
 .notebook-cover-navy .notebook-cover-border { stroke: var(--text); stroke-width: 3; }
-.notebook-cover-navy .notebook-cover-ring { fill: var(--accent); }
-.notebook-cover-navy .notebook-cover-fold-fill { fill: var(--bg); }
-.notebook-cover-navy .notebook-cover-fold-line { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+.notebook-cover-navy .notebook-cover-ring { fill: none; stroke: var(--accent); stroke-width: 1.5; }
 
 .notebook-cover-yellow .notebook-cover-bg { fill: var(--accent); }
 .notebook-cover-yellow .notebook-cover-border { stroke: var(--text); stroke-width: 3; }
-.notebook-cover-yellow .notebook-cover-ring { fill: var(--text); }
-.notebook-cover-yellow .notebook-cover-fold-fill { fill: var(--bg); }
-.notebook-cover-yellow .notebook-cover-fold-line { stroke: var(--text); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+.notebook-cover-yellow .notebook-cover-ring { fill: none; stroke: var(--text); stroke-width: 1.5; }
 
 .notebook-tile-title {
   font-family: var(--font-title);
@@ -2697,6 +2693,25 @@ h1, h2, h3 {
   text-align: left;
 }
 
+/* ---- App menu (hamburger) — anchored near the top of the screen with
+   the same outlined-card look as the intro/prompt popups, instead of the
+   bottom-sheet drawer the per-shoot options menu uses. ---- */
+.app-menu-overlay {
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 24px;
+  padding-top: calc(env(safe-area-inset-top) + 24px);
+}
+
+.app-menu-modal {
+  width: 100%;
+  max-width: 380px;
+  border: 3px solid var(--text);
+  border-radius: 20px;
+}
+
 #tabIntroCloseBtn,
 #postShootPromptDismissBtn,
 #dayAfterOkBtn,
@@ -2751,6 +2766,12 @@ h1, h2, h3 {
   font-size: 18px;
   font-family: var(--font-body);
   margin-bottom: 18px;
+  /* Without this, iOS Safari renders native date inputs with its own OS
+     chrome instead of the custom background/border/radius above — on this
+     popup's dark modal background that shows up as a stark, unstyled white
+     box that looks like it's stretching edge-to-edge. */
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 /* The native calendar icon doesn't reliably respect padding-right on its

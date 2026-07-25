@@ -537,13 +537,19 @@
     // on every row there is redundant. Today/Upcoming shoots mix several
     // statuses together, so the badge still earns its place there.
     const showBadge = !opts || opts.showBadge !== false;
-    const statusLabel = (showBadge && opts && opts.showStatus) ? (STATUS_LABELS[s.status] || '') : '';
+    // Archive opts this in: a delivered shoot doesn't need its own status
+    // re-stated there (it's implied by being in Archive), but if it's
+    // missing final images that's worth flagging — resolved async below
+    // since it requires an IndexedDB lookup, unlike every other badge part.
+    const checkFinalImages = !!(showBadge && opts && opts.checkFinalImages && s.status === 'delivered');
+    const statusLabel = (showBadge && opts && opts.showStatus && !checkFinalImages) ? (STATUS_LABELS[s.status] || '') : '';
     const pendingLabels = (showBadge && opts && opts.showPending) ? shootPendingLabels(s) : [];
     const pendingText = pendingLabels.length ? `Pending: ${escapeHtml(pendingLabels.join(', '))}` : '';
     // Proofs are only "pending" for the captured step itself — once a shoot
     // moves to waiting_for_selects, proofs have already gone out.
     const proofsPendingText = (showBadge && s.status === 'captured') ? 'Pending: Proofs' : '';
-    const badgeHtml = [statusLabel, pendingText, proofsPendingText].filter(Boolean).join('<br>');
+    const badgeParts = [statusLabel, pendingText, proofsPendingText].filter(Boolean);
+    const badgeHtml = badgeParts.join('<br>');
     // Once archived there's nothing left to deliver, so the deadline no
     // longer means anything — don't show it. Otherwise, an overdue deadline
     // still shows (until the shoot's delivered or archived), just in red.
@@ -563,7 +569,7 @@
             ${dueHtml}
           </div>
         </div>
-        ${badgeHtml ? `<span class="badge">${badgeHtml}</span>` : ''}
+        <span class="badge"${badgeHtml ? '' : ' hidden'}>${badgeHtml}</span>
       </div>
       <button type="button" class="row-options-btn" aria-label="Options">&#8942;</button>
     `;
@@ -575,6 +581,14 @@
       e.stopPropagation();
       openShootOptions(s.id);
     });
+    if (checkFinalImages) {
+      idbGetImages(finalImagesKey(s.id)).then(images => {
+        if (images.length) return;
+        const badgeEl = div.querySelector('.badge');
+        badgeEl.innerHTML = [...badgeParts, 'Pending: Final images'].join('<br>');
+        badgeEl.hidden = false;
+      }).catch(() => {});
+    }
     container.appendChild(div);
   }
 
@@ -1187,7 +1201,7 @@
         const monthRowsWrap = document.createElement('div');
         monthRowsWrap.className = 'shoot-status-rows';
         monthRowsWrap.hidden = monthCollapsed;
-        months.get(month).forEach(s => renderShootRow(monthRowsWrap, s, { showStatus: true }));
+        months.get(month).forEach(s => renderShootRow(monthRowsWrap, s, { showStatus: true, checkFinalImages: true }));
 
         monthHeading.addEventListener('click', () => {
           const nowHidden = !monthRowsWrap.hidden;
@@ -1367,35 +1381,41 @@
     document.getElementById('journalEmpty').hidden = items.length !== 0;
 
     items.forEach(e => {
-      const card = document.createElement('div');
-      card.className = 'card';
+      const row = document.createElement('div');
+      // Same row style as a shoot bubble (Overview/Shoots/Archive) — the
+      // cover photo fills the left side of the frame instead of sitting in
+      // a small square thumb.
+      row.className = 'shoot-row';
       // A linked entry's cover photo is the shoot's own project photo — same
       // picture you'd see on that shoot's bubble. Otherwise, fall back to
       // this entry's own uploaded photos, fetched async since IDB has no
       // synchronous read.
       const linkedShoot = e.sourceShootId ? state.shoots.find(s => s.id === e.sourceShootId) : null;
       const initialThumbSrc = (linkedShoot && linkedShoot.projectPhoto) || null;
-      card.innerHTML = `
+      const tagsText = (e.tags && e.tags.length) ? e.tags.map(t => `#${escapeHtml(t)}`).join(' ') : '';
+      row.innerHTML = `
         ${journalThumbHtml(initialThumbSrc)}
-        <div class="card-body">
-          <p class="card-title">${escapeHtml(e.title || 'Untitled entry')}</p>
-          <div class="card-meta">
-            <span class="badge">${prettyDate(e.createdAt)}</span>
+        <div class="shoot-row-body">
+          <div class="shoot-row-top">
+            <span class="shoot-row-title"><strong>${escapeHtml(e.title || 'Untitled entry')}</strong></span>
+            <div class="shoot-row-dates">
+              <span class="mi-sub">${prettyDate(e.createdAt)}</span>
+            </div>
           </div>
-          ${(e.tags && e.tags.length) ? `<div class="card-beats">${e.tags.map(t => `<span class="beat-badge">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+          <span class="badge"${tagsText ? '' : ' hidden'}>${tagsText}</span>
         </div>
-        <button type="button" class="card-options-btn" aria-label="Options">&#8942;</button>
+        <button type="button" class="row-options-btn" aria-label="Options">&#8942;</button>
       `;
-      card.addEventListener('click', () => openJournalModal(e.id));
-      card.querySelector('.card-options-btn').addEventListener('click', (ev) => {
+      row.addEventListener('click', () => openJournalModal(e.id));
+      row.querySelector('.row-options-btn').addEventListener('click', (ev) => {
         ev.stopPropagation();
         openJournalOptions(e.id);
       });
-      list.appendChild(card);
+      list.appendChild(row);
       if (!initialThumbSrc) {
         idbGetImages(journalEntryImagesKey(e)).then(images => {
           if (!images.length) return;
-          const thumb = card.querySelector('.shoot-thumb');
+          const thumb = row.querySelector('.shoot-thumb');
           if (thumb) thumb.outerHTML = journalThumbHtml(images[0].src);
         }).catch(() => {});
       }
@@ -4048,6 +4068,10 @@
     appMenuOverlay.hidden = false;
   });
 
+  document.getElementById('notificationBellBtn').addEventListener('click', () => {
+    openNotificationsBell();
+  });
+
   document.getElementById('appMenuCancelBtn').addEventListener('click', closeAppMenu);
 
   appMenuOverlay.addEventListener('click', (e) => {
@@ -4800,7 +4824,7 @@
   // scheduled, once-per-shoot items in computeDailyReportItems() above.
   // Recomputed fresh every time the report shows (like the fun fact), so it
   // always reflects today's real pending state rather than a one-time flag.
-  function computeDailyReportNudges() {
+  function computeDailyReportNudges(finalImagesMissingCount) {
     const nudges = [];
     const activeShoots = state.shoots.filter(s => !s.archived);
 
@@ -4813,31 +4837,67 @@
     if (teamPendingCount === 1) nudges.push("Is your team set for that shoot?");
     else if (teamPendingCount > 1) nudges.push('Are all your teams set?');
 
+    if (finalImagesMissingCount === 1) nudges.push('A delivered shoot is still missing its final images!');
+    else if (finalImagesMissingCount > 1) nudges.push(`${finalImagesMissingCount} delivered shoots are still missing final images!`);
+
     return nudges;
   }
 
-  function pickDailyReportNudge() {
-    const nudges = computeDailyReportNudges();
+  function pickDailyReportNudge(finalImagesMissingCount) {
+    const nudges = computeDailyReportNudges(finalImagesMissingCount);
     if (!nudges.length) return null;
     return nudges[Math.floor(Math.random() * nudges.length)];
   }
 
-  function checkDailyReportPrompt() {
-    const today = effectiveReportDateStr();
-    let lastShown;
-    try { lastShown = localStorage.getItem(DAILY_REPORT_SHOWN_KEY); } catch (e) { lastShown = null; }
-    if (lastShown === today) return;
+  // Counts active (not-yet-archived) delivered shoots with no final images
+  // uploaded yet — the one piece of Daily report content that needs an
+  // IndexedDB lookup, so it's resolved async and awaited before the report
+  // gets assembled.
+  function countActiveDeliveredShootsMissingFinalImages() {
+    const deliveredShoots = state.shoots.filter(s => !s.archived && s.status === 'delivered');
+    if (!deliveredShoots.length) return Promise.resolve(0);
+    return Promise.all(deliveredShoots.map(s => idbGetImages(finalImagesKey(s.id)).then(images => images.length === 0)))
+      .then(flags => flags.filter(Boolean).length);
+  }
 
+  // The Daily report's content (items/nudge/fact) is built at most once a
+  // day and cached — computeDailyReportItems() mutates one-time reminder
+  // flags on each shoot as a side effect, so recomputing it a second time
+  // the same day (e.g. reopening via the notifications bell after the
+  // automatic popup already showed) would silently lose items whose flags
+  // just got set. Both the automatic popup and the on-demand bell read
+  // through this same cache.
+  const DAILY_REPORT_CONTENT_KEY = 'dailies_daily_report_content_v1';
+
+  function loadCachedDailyReportContent() {
+    try {
+      const raw = localStorage.getItem(DAILY_REPORT_CONTENT_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      return (parsed && parsed.date === effectiveReportDateStr()) ? parsed : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function buildTodaysDailyReportContent() {
     const items = computeDailyReportItems();
-    const nudge = pickDailyReportNudge();
     const fact = pickRandomFunFact();
-    // Always show once a day — if nothing is pending, it's just the fact.
-    // Only truly skip if there's none of the three (a brand-new, empty app).
-    if (!items.length && !nudge && !fact) return;
+    return countActiveDeliveredShootsMissingFinalImages().then(finalImagesMissingCount => {
+      const nudge = pickDailyReportNudge(finalImagesMissingCount);
+      const content = { date: effectiveReportDateStr(), items, nudge, fact };
+      try { localStorage.setItem(DAILY_REPORT_CONTENT_KEY, JSON.stringify(content)); } catch (e) { /* ignore */ }
+      saveState();
+      return content;
+    });
+  }
 
-    try { localStorage.setItem(DAILY_REPORT_SHOWN_KEY, today); } catch (e) { /* ignore */ }
-    saveState();
+  function getTodaysDailyReportContent() {
+    const cached = loadCachedDailyReportContent();
+    return cached ? Promise.resolve(cached) : buildTodaysDailyReportContent();
+  }
 
+  function renderDailyReportOverlay(content) {
+    const { items, nudge, fact } = content;
     const list = document.getElementById('dailyReportList');
     list.innerHTML = '';
     items.forEach(item => {
@@ -4866,7 +4926,39 @@
       list.appendChild(row);
     }
 
+    // Only reachable via the on-demand bell — the automatic popup never
+    // calls this when everything's empty (see checkDailyReportPrompt).
+    if (!items.length && !nudge && !fact) {
+      const row = document.createElement('div');
+      row.className = 'daily-report-item daily-report-fact';
+      row.textContent = 'Nothing to report today.';
+      list.appendChild(row);
+    }
+
     document.getElementById('dailyReportOverlay').hidden = false;
+  }
+
+  function checkDailyReportPrompt() {
+    const today = effectiveReportDateStr();
+    let lastShown;
+    try { lastShown = localStorage.getItem(DAILY_REPORT_SHOWN_KEY); } catch (e) { lastShown = null; }
+    if (lastShown === today) return;
+
+    getTodaysDailyReportContent().then(content => {
+      // Always show once a day — if nothing is pending, it's just the fact.
+      // Only truly skip if there's none of the three (a brand-new, empty app).
+      if (!content.items.length && !content.nudge && !content.fact) return;
+      try { localStorage.setItem(DAILY_REPORT_SHOWN_KEY, today); } catch (e) { /* ignore */ }
+      renderDailyReportOverlay(content);
+    });
+  }
+
+  // Notifications bell — same content as the Daily report, shown on demand
+  // instead of gated to once a day. Unlike the automatic popup, this always
+  // shows something (a "nothing to report" line if today's report is
+  // genuinely empty), since it's an explicit tap rather than a background check.
+  function openNotificationsBell() {
+    getTodaysDailyReportContent().then(renderDailyReportOverlay);
   }
 
   document.getElementById('dailyReportCloseBtn').addEventListener('click', () => {
@@ -4900,6 +4992,17 @@
   }
   updateTabbarHeightVar();
   window.addEventListener('resize', updateTabbarHeightVar);
+
+  // iOS Safari has a known quirk where position:fixed elements (like the
+  // bottom tab bar) can visually drift or leave a stale frame on screen
+  // after the on-screen keyboard or Safari's own collapsing toolbar resizes
+  // the visual viewport, since that resize doesn't always trigger a full
+  // reflow. Re-running the tabbar height recalculation on every
+  // visualViewport change forces exactly that reflow as a lightweight fix.
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateTabbarHeightVar);
+    window.visualViewport.addEventListener('scroll', updateTabbarHeightVar);
+  }
 
   // ---------- service worker (offline caching) ----------
   if ('serviceWorker' in navigator) {
@@ -4964,6 +5067,19 @@
         setTransform(HIDDEN_Y);
         setTimeout(() => { if (!refreshing) indicator.hidden = true; }, 200);
       }
+      pullDistance = 0;
+    });
+
+    // A real touchcancel (incoming call/notification, Control Center swipe,
+    // app switch) should never trigger a refresh — just reset the visuals,
+    // same as an under-threshold touchend. Without this, an interrupted
+    // gesture could leave the indicator's inline transform/transition stuck.
+    document.addEventListener('touchcancel', () => {
+      if (!active) return;
+      active = false;
+      indicator.style.transition = 'transform 0.2s ease';
+      setTransform(HIDDEN_Y);
+      setTimeout(() => { if (!refreshing) indicator.hidden = true; }, 200);
       pullDistance = 0;
     });
 
