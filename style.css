@@ -104,6 +104,7 @@ h1, h2, h3 {
   margin-top: calc(-1 * env(safe-area-inset-top));
   margin-bottom: 20px;
   padding: env(safe-area-inset-top) 16px 20px;
+  border-bottom: 4px solid var(--accent);
 }
 
 .topbar {
@@ -215,6 +216,7 @@ h1, h2, h3 {
   font-weight: 700;
   font-family: var(--font-title);
   letter-spacing: 0.5px;
+  text-transform: uppercase;
   cursor: pointer;
   margin-bottom: 0;
 }
@@ -229,6 +231,7 @@ h1, h2, h3 {
 .stat-box {
   background: var(--ink);
   border: 2px solid var(--ink);
+  border-top: 4px solid var(--accent);
   border-radius: var(--radius-2xl);
   padding: 14px 8px;
   text-align: center;
@@ -606,14 +609,23 @@ h1, h2, h3 {
    in app.js) rather than each section owning a fixed color — which one
    lands on yellow vs navy shifts depending on whether Today has any shoots
    to show, so it's assigned by class instead of by section ID. */
-.section-block h2.heading-yellow {
+/* A stripe in the opposite color from the heading's own fill — same accent
+   treatment the mockup used, applied to both Overview's section headings
+   and the Shoots page's status-group headings (matched by tag so the Edit
+   Shoot modal's own h3 section headings, which share these same class
+   names for their folder-tab look, are left untouched). */
+.section-block h2.heading-yellow,
+h2.status-group-heading.heading-yellow {
   background: var(--accent);
   color: var(--text);
+  border-left: 6px solid var(--ink);
 }
 
-.section-block h2.heading-navy {
+.section-block h2.heading-navy,
+h2.status-group-heading.heading-navy {
   background: var(--ink);
   color: #fff;
+  border-left: 6px solid var(--accent);
 }
 
 .collapse-arrow {
@@ -718,6 +730,32 @@ h1, h2, h3 {
   text-transform: uppercase;
   cursor: pointer;
   margin-bottom: 16px;
+}
+
+.reflections-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.reflections-tab {
+  flex: 1;
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-lg);
+  padding: 10px 8px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.reflections-tab.active {
+  background: var(--ink);
+  color: #fff;
 }
 
 .filters {
@@ -894,6 +932,7 @@ h1, h2, h3 {
   font-weight: 700;
   font-size: 17px;
   text-align: center;
+  text-transform: uppercase;
   padding: 13px;
   border-radius: var(--radius-xl);
   pointer-events: none;
@@ -1365,7 +1404,7 @@ h1, h2, h3 {
 }
 
 .shoot-modal-header .close-btn,
-.shoot-modal-header .share-shoot-btn {
+.shoot-modal-header .icon-btn {
   background: rgba(255, 255, 255, 0.15);
   color: #fff;
   width: 40px;
@@ -1374,6 +1413,11 @@ h1, h2, h3 {
 
 .shoot-modal-header .close-btn {
   font-size: 28px;
+}
+
+.shoot-modal-header #shootTourBtn {
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .shoot-modal-header .share-shoot-btn svg {
@@ -2352,6 +2396,13 @@ h1, h2, h3 {
 
 #journalViewMode > *:first-child {
   margin-top: 0;
+}
+
+.journal-view-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .journal-view-title {

@@ -73,8 +73,12 @@
       <h1>Shoots</h1>
       <button class="icon-btn" id="addShootBtn" aria-label="Add shoot">+</button>
     </header>
-    <button type="button" class="filter-toggle" id="shootFilterToggle">Filter: All</button>
-    <div class="filters" id="shootFilters" hidden></div>
+    <button type="button" class="filter-toggle" id="shootSortToggle">Sort: Status</button>
+    <div class="filters" id="shootSortOptions" hidden>
+      <button type="button" class="chip active" data-sort="status">Status</button>
+      <button type="button" class="chip" data-sort="readiness">Readiness</button>
+      <button type="button" class="chip" data-sort="shoot_date">Shoot date</button>
+    </div>
     <div id="shootList" class="mini-list"></div>
     <p class="empty-state" id="shootEmpty" hidden>No shoots logged yet.</p>
   </section>
@@ -155,6 +159,10 @@
     </div>
 
     <div id="journalReflectionsView" hidden>
+      <div class="reflections-tabs" id="reflectionsTabs">
+        <button type="button" class="reflections-tab active" data-reflections-tab="shoots">From shoots</button>
+        <button type="button" class="reflections-tab" data-reflections-tab="thoughts">Thoughts</button>
+      </div>
       <button type="button" class="filter-toggle" id="journalFilterToggle">Filter: All</button>
       <div class="filters" id="journalFilters" hidden></div>
       <div id="journalList" class="card-list"></div>
@@ -229,6 +237,7 @@
         </div>
       </h2>
       <div class="modal-header-actions">
+        <button type="button" class="icon-btn" id="shootTourBtn" aria-label="Guide me through this shoot">?</button>
         <button type="button" class="icon-btn share-shoot-btn" id="shareShootBtn" aria-label="Share as PDF" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
         </button>
@@ -276,6 +285,8 @@
             <option value="headshot">Headshot</option>
             <option value="branding">Branding</option>
             <option value="publicity">Publicity</option>
+            <option value="maternity">Maternity</option>
+            <option value="boudoir">Boudoir</option>
             <option value="other">Other</option>
           </select>
         </label>
@@ -336,6 +347,10 @@
               <textarea id="shootGoals" rows="6" maxlength="1000" placeholder="What this shoot needs to accomplish" readonly></textarea>
             </label>
           </div>
+
+          <label>Elevator pitch
+            <textarea id="shootElevatorPitch" rows="2" maxlength="150" placeholder="One line description of your story." readonly></textarea>
+          </label>
         </div>
       </div>
 
@@ -667,6 +682,20 @@
   </div>
 </div>
 
+<!-- ============ SHOOT PAGE GUIDED TOUR ============ -->
+<div id="shootTourOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal">
+    <p class="mi-sub" id="shootTourStep"></p>
+    <h2 id="shootTourTitle"></h2>
+    <p id="shootTourText"></p>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="shootTourBackBtn">Back</button>
+      <button type="button" class="primary" id="shootTourNextBtn">Next</button>
+    </div>
+    <button type="button" class="secondary journal-block-btn pre-save-divider" id="shootTourSkipBtn">Skip tour</button>
+  </div>
+</div>
+
 <!-- ============ STATS DETAIL PANEL ============ -->
 <div id="statsDetailOverlay" class="stats-detail-overlay" hidden>
   <div class="stats-detail-panel">
@@ -789,13 +818,16 @@
     </div>
 
     <div id="journalViewMode" hidden>
-      <h3 class="journal-view-title" id="journalViewTitle"></h3>
+      <div class="journal-view-header">
+        <h3 class="journal-view-title" id="journalViewTitle"></h3>
+        <button type="button" class="primary small-btn" id="editJournalBtn">Edit</button>
+      </div>
       <p class="mi-sub" id="journalViewDate"></p>
-      <div class="beats-chips journal-view-tags" id="journalViewTags"></div>
       <p class="field-hint" id="journalViewLinkedHint" hidden>Tap the text below to revisit and edit this shoot's reflection.</p>
       <div class="journal-paper" id="journalViewBody"></div>
       <div id="journalViewImagesGrid" class="moodboard-grid"></div>
-      <button type="button" class="primary journal-block-btn pre-save-divider" id="editJournalBtn">Edit</button>
+      <div class="beats-chips journal-view-tags" id="journalViewTags"></div>
+      <button type="button" class="primary journal-block-btn pre-save-divider" id="journalViewDoneBtn"></button>
       <button type="button" class="plain-delete-btn" id="deleteJournalViewBtn" hidden>Delete</button>
     </div>
 
@@ -807,17 +839,17 @@
         <textarea id="journalBody" rows="12" placeholder="Write freely…"></textarea>
       </label>
       <button type="button" class="primary journal-block-btn" id="journalPromptBtn">Need a starting prompt?</button>
-      <div class="beats-block">
-        <label class="beats-label">Hashtags</label>
-        <div class="beats-chips" id="journalTagsChips"></div>
-        <input type="text" id="journalTagsInput" placeholder="Type a hashtag, press Enter" />
-        <div class="beats-suggestions" id="journalTagsSuggestions"></div>
-      </div>
       <div class="moodboard-section">
         <span class="moodboard-label">Photos</span>
         <button type="button" id="addJournalPhotos" class="primary small-btn">+ Add photos</button>
         <input type="file" id="journalImagesFileInput" accept="image/*" multiple hidden />
         <div id="journalImagesGrid" class="moodboard-grid"></div>
+      </div>
+      <div class="beats-block">
+        <label class="beats-label">Hashtags</label>
+        <div class="beats-chips" id="journalTagsChips"></div>
+        <input type="text" id="journalTagsInput" placeholder="Type a hashtag, press Enter" />
+        <div class="beats-suggestions" id="journalTagsSuggestions"></div>
       </div>
       <button type="button" class="plain-delete-btn pre-save-divider" id="deleteJournalBtn" hidden>Delete</button>
       <div class="modal-actions">

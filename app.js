@@ -94,11 +94,13 @@
     headshot: 'Headshot',
     branding: 'Branding',
     publicity: 'Publicity',
+    maternity: 'Maternity',
+    boudoir: 'Boudoir',
     other: 'Other',
     uncategorized: 'Uncategorized',
   };
 
-  const CATEGORY_FILTER_ORDER = ['commercial', 'video', 'editorial', 'lighting_test', 'portfolio_building', 'test_shoot', 'event', 'wedding', 'family', 'headshot', 'branding', 'publicity', 'other'];
+  const CATEGORY_FILTER_ORDER = ['commercial', 'video', 'editorial', 'lighting_test', 'portfolio_building', 'test_shoot', 'event', 'wedding', 'family', 'headshot', 'branding', 'publicity', 'maternity', 'boudoir', 'other'];
 
   // Grammatical plural form of each category, for use as a countable noun in
   // a sentence (e.g. "more commercial shoots than video shoots") — CATEGORY_LABELS
@@ -117,8 +119,25 @@
     headshot: 'headshot shoots',
     branding: 'branding shoots',
     publicity: 'publicity shoots',
+    maternity: 'maternity shoots',
+    boudoir: 'boudoir shoots',
     other: 'other shoots',
   };
+
+  // Shared by every "I'm done here" button that used to just say "Save"
+  // (Edit Shoot, and the Journal view's closing button) — everything here
+  // already autosaves as you go, so these are really just a satisfying
+  // confirmation tap, not a literal save action.
+  const SAVE_MESSAGES = [
+    "I guess that's good for now", 'yup, yup', "that's good", 'okay', 'yes',
+    "let's goooo", 'incredible', "I'm a genius", 'so good', 'good work',
+    'affirm here', "I know it auto saves everything I do but I need a button to hit",
+    "I'm a visionary",
+  ];
+
+  function pickRandomSaveMessage() {
+    return SAVE_MESSAGES[Math.floor(Math.random() * SAVE_MESSAGES.length)];
+  }
 
   // Shared by the Shoots and Archive tabs: which category chips a user
   // actually wants cluttering their filter row. Missing entries default to
@@ -289,6 +308,7 @@
       premise: s.premise !== undefined ? s.premise : (s.concept || ''),
       character: s.character || '',
       shootGoals: s.shootGoals || '',
+      elevatorPitch: s.elevatorPitch || '',
       emotionalBeats: s.emotionalBeats || [],
       worldNotes: s.worldNotes || '',
       lightingNotes: s.lightingNotes || '',
@@ -555,10 +575,12 @@
     // Proofs are only "pending" for the captured step itself — once a shoot
     // moves to waiting_for_selects, proofs have already gone out.
     const proofsPendingText = (showBadge && s.status === 'captured') ? 'Pending: Proofs' : '';
-    // Archived shoots have nothing left to do except look back on — flag it
-    // if that reflection was never written, same idea as missing final images.
+    // Once a shoot's captured there's a reflection worth writing eventually —
+    // flag it if that's never happened yet, same idea as missing final images.
+    // Applies on the Shoots page too, not just Archive, now that reflections
+    // are expected any time from captured onward rather than only once archived.
     const hasReflection = hasText(s.whatWentRight) || hasText(s.couldBeBetter) || hasText(s.lessonsLearned);
-    const reflectionPendingText = (showBadge && s.archived && !hasReflection) ? 'Pending: Reflection' : '';
+    const reflectionPendingText = (showBadge && POST_CAPTURE_STATUSES.includes(s.status) && !hasReflection) ? 'Pending: Reflection' : '';
     const badgeParts = [statusLabel, pendingText, proofsPendingText, reflectionPendingText].filter(Boolean);
     const badgeHtml = badgeParts.join('<br>');
     // Once archived there's nothing left to deliver, so the deadline no
@@ -1005,7 +1027,66 @@
   });
 
   // ---------- Shoot Log view ----------
-  let shootFilter = 'all';
+  // The Shoots page is organized by status group only (no category filter,
+  // unlike Archive) — instead it offers a sort mode that controls the order
+  // of shoots *within* each status group. The nested status-group headings
+  // stay exactly as they are across every mode; only the within-group order
+  // changes.
+  let shootSort = 'status';
+
+  const SHOOT_SORT_LABELS = { status: 'Status', readiness: 'Readiness', shoot_date: 'Shoot date' };
+
+  // How "ready" a shoot is — a rough completeness score across the fields
+  // that matter most for planning one, not tied to any single form section.
+  // Used only to order the Readiness sort (most complete first); never shown
+  // as a number anywhere.
+  function shootReadinessScore(s) {
+    const checks = [
+      Array.isArray(s.talents) && s.talents.some(t => hasText(t.name)),
+      hasText(s.location),
+      !!s.date,
+      hasText(s.premise) || hasText(s.shootGoals),
+      Array.isArray(s.shotList) && s.shotList.length > 0,
+      !!s.teamRequired,
+    ];
+    return checks.filter(Boolean).length;
+  }
+
+  function sortShootGroup(group, statusKey) {
+    if (shootSort === 'readiness') {
+      return [...group].sort((a, b) => shootReadinessScore(b) - shootReadinessScore(a)
+        || dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+    }
+    if (shootSort === 'shoot_date') {
+      return [...group].sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+    }
+    // 'status' (default) — same as always: every group orders by shoot date
+    // except Editing, which orders by deadline since that's the date that
+    // actually matters once a shoot's already been captured.
+    return [...group].sort((a, b) => statusKey === 'editing'
+      ? dateSortKey(a.deadline).localeCompare(dateSortKey(b.deadline))
+      : dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+  }
+
+  function renderShootSortOptions() {
+    document.getElementById('shootSortToggle').textContent = `Sort: ${SHOOT_SORT_LABELS[shootSort]}`;
+    document.querySelectorAll('#shootSortOptions .chip').forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.sort === shootSort);
+    });
+  }
+
+  document.getElementById('shootSortToggle').addEventListener('click', () => {
+    const options = document.getElementById('shootSortOptions');
+    options.hidden = !options.hidden;
+  });
+
+  document.getElementById('shootSortOptions').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip || !chip.dataset.sort) return;
+    shootSort = chip.dataset.sort;
+    document.getElementById('shootSortOptions').hidden = true;
+    renderShoots();
+  });
 
   function renderCategoryFilterChips(containerId, toggleId, activeFilter) {
     const container = document.getElementById(containerId);
@@ -1018,41 +1099,17 @@
     document.getElementById(toggleId).textContent = `Filter: ${activeFilter === 'all' ? 'All' : (CATEGORY_LABELS[activeFilter] || 'All')}`;
   }
 
-  document.getElementById('shootFilterToggle').addEventListener('click', () => {
-    const filters = document.getElementById('shootFilters');
-    filters.hidden = !filters.hidden;
-  });
-
-  document.getElementById('shootFilters').addEventListener('click', (e) => {
-    if (e.target.closest('.chip-manage')) {
-      document.getElementById('shootFilters').hidden = true;
-      openCategoryVisibilityModal();
-      return;
-    }
-    const chip = e.target.closest('.chip');
-    if (!chip || !chip.dataset.filter) return;
-    shootFilter = chip.dataset.filter;
-    document.getElementById('shootFilters').hidden = true;
-    renderShoots();
-  });
-
   function renderShoots() {
-    renderCategoryFilterChips('shootFilters', 'shootFilterToggle', shootFilter);
+    renderShootSortOptions();
     const list = document.getElementById('shootList');
-    let items = state.shoots.filter(s => !s.archived);
-    if (shootFilter !== 'all') items = items.filter(s => s.category === shootFilter);
+    const items = state.shoots.filter(s => !s.archived);
 
     list.innerHTML = '';
     document.getElementById('shootEmpty').hidden = items.length !== 0;
 
     let visibleGroupIndex = 0;
     Object.keys(STATUS_LABELS).forEach(statusKey => {
-      // The Editing group orders by deadline instead of shoot date — that's
-      // the date that actually matters once a shoot's already been captured.
-      const group = items.filter(s => (s.status || 'idea_phase') === statusKey)
-        .sort((a, b) => statusKey === 'editing'
-          ? dateSortKey(a.deadline).localeCompare(dateSortKey(b.deadline))
-          : dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+      const group = sortShootGroup(items.filter(s => (s.status || 'idea_phase') === statusKey), statusKey);
       if (!group.length) return;
 
       const groupEl = document.createElement('div');
@@ -1583,6 +1640,21 @@
     if (view === 'reflections' || view === 'log') showTabIntro(`journal:${view}`);
   }
 
+  // Reflections splits into two tabs: entries auto-compiled from a shoot's
+  // post-shoot reflection ("From shoots") vs. ones the user writes on their
+  // own ("Thoughts", the default home for anything newly created here).
+  let journalReflectionsTab = 'shoots';
+
+  document.getElementById('reflectionsTabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.reflections-tab');
+    if (!btn) return;
+    journalReflectionsTab = btn.dataset.reflectionsTab;
+    document.querySelectorAll('#reflectionsTabs .reflections-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.reflectionsTab === journalReflectionsTab);
+    });
+    renderJournal();
+  });
+
   document.getElementById('openReflectionsNotebookBtn').addEventListener('click', () => showJournalView('reflections'));
   document.getElementById('openLogNotebookBtn').addEventListener('click', () => showJournalView('log'));
   document.getElementById('journalBackBtn').addEventListener('click', () => showJournalView('select'));
@@ -1718,7 +1790,7 @@
       tags.map(t => `<button class="chip${journalTagFilter === t ? ' active' : ''}" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</button>`).join('');
     document.getElementById('journalFilterToggle').textContent = `Filter: ${journalTagFilter === 'all' ? 'All' : '#' + journalTagFilter}`;
 
-    let items = [...state.journalEntries];
+    let items = state.journalEntries.filter(e => journalReflectionsTab === 'shoots' ? !!e.sourceShootId : !e.sourceShootId);
     if (journalTagFilter !== 'all') items = items.filter(e => (e.tags || []).includes(journalTagFilter));
     items.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
@@ -2056,6 +2128,7 @@
     document.getElementById('journalViewBody').textContent = e.body || '';
     document.getElementById('journalViewLinkedHint').hidden = !e.sourceShootId;
     document.getElementById('deleteJournalViewBtn').hidden = journalIsNew;
+    document.getElementById('journalViewDoneBtn').textContent = pickRandomSaveMessage();
     renderJournalViewImages();
     document.getElementById('journalForm').hidden = true;
     document.getElementById('journalViewMode').hidden = false;
@@ -2104,7 +2177,17 @@
     renderJournal();
   }
 
-  document.getElementById('addJournalBtn').addEventListener('click', () => openJournalModal(null));
+  document.getElementById('addJournalBtn').addEventListener('click', () => {
+    // A manually-created entry always lands in Thoughts — switch there first
+    // so it's visible in the list the moment the modal closes.
+    if (journalReflectionsTab !== 'thoughts') {
+      journalReflectionsTab = 'thoughts';
+      document.querySelectorAll('#reflectionsTabs .reflections-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.reflectionsTab === 'thoughts');
+      });
+    }
+    openJournalModal(null);
+  });
 
   // Saving no longer closes the modal — it drops back to the read-only view
   // of what was just written, right in the same popup. An entry that ends
@@ -2137,6 +2220,7 @@
 
   document.getElementById('deleteJournalBtn').addEventListener('click', deleteCurrentJournalEntry);
   document.getElementById('deleteJournalViewBtn').addEventListener('click', deleteCurrentJournalEntry);
+  document.getElementById('journalViewDoneBtn').addEventListener('click', closeJournalModal);
 
   journalModalOverlay.addEventListener('click', (e) => {
     if (e.target === journalModalOverlay) closeJournalModal();
@@ -2860,6 +2944,7 @@
     shootWorldNotes: 'World-building notes',
     shootGoals: 'Shoot goals',
     shootGeneralNotes: 'General direction notes',
+    shootElevatorPitch: 'Elevator pitch',
     shootWentRight: 'What went right',
     shootCouldBeBetter: "What could've gone better",
     shootLessonsLearned: 'Lessons for next time',
@@ -2906,7 +2991,7 @@
 
   [
     'shootPremise', 'shootCharacter', 'shootWorldNotes', 'shootGoals',
-    'shootGeneralNotes',
+    'shootGeneralNotes', 'shootElevatorPitch',
     'shootWentRight', 'shootCouldBeBetter', 'shootLessonsLearned',
     'shootTalentDirections', 'shootTeamDirections', 'shootLocationDirections',
   ].forEach(fieldId => {
@@ -3152,6 +3237,56 @@
     }
   });
 
+  // ---------- Guided tour of the shoot page ----------
+  // Steps through the same sections as the title jump-menu, one at a time,
+  // scrolling to each and explaining what it's for.
+  const SHOOT_TOUR_STEPS = [
+    { id: 'basicInfoHeading', title: 'Basic Info', text: "Title, talent, status, and category — the foundation of the shoot." },
+    { id: 'logisticsHeading', title: 'Logistics', text: 'Shoot date, deadline, time, and location — the when and where.' },
+    { id: 'directionHeading', title: 'Direction', text: "Concept, character, and creative direction — the story you're telling." },
+    { id: 'visualsHeading', title: 'Visuals', text: 'Mood board, references, and frameworks — the visual language for the shoot.' },
+    { id: 'teamHeading', title: 'Team', text: "Who's on the shoot and how to reach them." },
+    { id: 'shootDayNotesHeading', title: 'Shoot day', text: 'Shot list, lighting setups, and any day-of notes.' },
+    { id: 'postShootHeading', title: 'Reflection', text: 'What went right, what could be better, and lessons for next time — filled in after the shoot.' },
+  ];
+  let shootTourStepIndex = 0;
+
+  function renderShootTourStep() {
+    const step = SHOOT_TOUR_STEPS[shootTourStepIndex];
+    document.getElementById('shootTourStep').textContent = `Step ${shootTourStepIndex + 1} of ${SHOOT_TOUR_STEPS.length}`;
+    document.getElementById('shootTourTitle').textContent = step.title;
+    document.getElementById('shootTourText').textContent = step.text;
+    document.getElementById('shootTourBackBtn').hidden = shootTourStepIndex === 0;
+    document.getElementById('shootTourNextBtn').textContent = shootTourStepIndex === SHOOT_TOUR_STEPS.length - 1 ? 'Done' : 'Next';
+    const target = document.getElementById(step.id);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function closeShootTour() {
+    document.getElementById('shootTourOverlay').hidden = true;
+  }
+
+  document.getElementById('shootTourBtn').addEventListener('click', () => {
+    closeShootModalJumpMenu();
+    shootTourStepIndex = 0;
+    document.getElementById('shootTourOverlay').hidden = false;
+    renderShootTourStep();
+  });
+
+  document.getElementById('shootTourBackBtn').addEventListener('click', () => {
+    if (shootTourStepIndex === 0) return;
+    shootTourStepIndex--;
+    renderShootTourStep();
+  });
+
+  document.getElementById('shootTourNextBtn').addEventListener('click', () => {
+    if (shootTourStepIndex === SHOOT_TOUR_STEPS.length - 1) { closeShootTour(); return; }
+    shootTourStepIndex++;
+    renderShootTourStep();
+  });
+
+  document.getElementById('shootTourSkipBtn').addEventListener('click', closeShootTour);
+
   // Updates the sticky title to name whichever section has scrolled past
   // the header, so it always reads as "where am I" rather than a static
   // label — falls back to the original Edit/Log-a-Shoot title at the very
@@ -3189,6 +3324,7 @@
     document.getElementById('shareShootBtn').hidden = !s;
     const isArchived = s ? !!s.archived : false;
     document.getElementById('saveShootBtn').hidden = isArchived;
+    document.getElementById('saveShootBtn').textContent = pickRandomSaveMessage();
     document.getElementById('unarchiveShootBtn').hidden = !isArchived;
     document.getElementById('completeShootBtn').hidden = !s || isArchived || s.status !== 'delivered';
 
@@ -3212,6 +3348,7 @@
     document.getElementById('shootCharacter').value = s ? (s.character || '') : '';
     document.getElementById('shootWorldNotes').value = s ? (s.worldNotes || '') : '';
     document.getElementById('shootGoals').value = s ? (s.shootGoals || '') : '';
+    document.getElementById('shootElevatorPitch').value = s ? (s.elevatorPitch || '') : '';
     initProgressiveReveal(s);
     document.getElementById('shootMoodboardComplete').checked = s ? !!s.moodboardComplete : false;
     updateMoodboardCompleteLabel();
@@ -3715,6 +3852,7 @@
       premise: document.getElementById('shootPremise').value.trim(),
       character: document.getElementById('shootCharacter').value.trim(),
       shootGoals: document.getElementById('shootGoals').value.trim(),
+      elevatorPitch: document.getElementById('shootElevatorPitch').value.trim(),
       worldNotes: document.getElementById('shootWorldNotes').value.trim(),
       moodboardComplete: document.getElementById('shootMoodboardComplete').checked,
       teamRequired,
@@ -3738,7 +3876,7 @@
   // A brand-new, never-touched shoot draft shouldn't get written to state
   // just because the modal was opened — only once it actually has content.
   function isShootDataBlank(data) {
-    return !hasText(data.title) && !hasText(data.location) && !hasText(data.startTime) && !hasText(data.endTime) && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals)
+    return !hasText(data.title) && !hasText(data.location) && !hasText(data.startTime) && !hasText(data.endTime) && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals) && !hasText(data.elevatorPitch)
       && !hasText(data.worldNotes) && !hasText(data.generalNotes) && !hasText(data.deadline)
       && !hasText(data.whatWentRight) && !hasText(data.couldBeBetter) && !hasText(data.lessonsLearned)
       && !hasText(data.talentDirections) && !hasText(data.teamDirections) && !hasText(data.locationDirections) && data.shotList.length === 0
@@ -3807,6 +3945,43 @@
   }
 
   document.getElementById('saveShootBtn').addEventListener('click', closeShootModal);
+
+  // ---------- Swipe down from the header to dismiss the shoot modal ----------
+  // Scoped to the sticky header (not the scrollable body) so it never fights
+  // with normal scrolling — a tap still works fine since it's ~0px of
+  // vertical movement. closeShootModal() already autosaves, same as Save/X.
+  (function setupShootModalSwipeDismiss() {
+    const header = document.querySelector('.shoot-modal-header');
+    const modalEl = shootModalOverlay.querySelector('.modal');
+    const DISMISS_THRESHOLD = 90;
+    let startY = null;
+
+    header.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      startY = e.touches[0].clientY;
+      modalEl.style.transition = 'none';
+    }, { passive: true });
+
+    header.addEventListener('touchmove', (e) => {
+      if (startY === null) return;
+      const deltaY = e.touches[0].clientY - startY;
+      modalEl.style.transform = deltaY > 0 ? `translateY(${deltaY}px)` : '';
+    }, { passive: true });
+
+    header.addEventListener('touchend', (e) => {
+      if (startY === null) return;
+      const deltaY = e.changedTouches[0].clientY - startY;
+      startY = null;
+      if (deltaY > DISMISS_THRESHOLD) {
+        modalEl.style.transition = '';
+        modalEl.style.transform = '';
+        closeShootModal();
+        return;
+      }
+      modalEl.style.transition = 'transform 0.2s ease';
+      modalEl.style.transform = '';
+    });
+  })();
 
   function deleteShootById(id) {
     state.shoots = state.shoots.filter(x => x.id !== id);
@@ -4567,7 +4742,6 @@
     if (e.target.type !== 'checkbox') return;
     categoryVisibility[e.target.dataset.cat] = e.target.checked;
     saveCategoryVisibility();
-    if (shootFilter !== 'all' && !isCategoryVisible(shootFilter)) shootFilter = 'all';
     if (archiveFilter !== 'all' && !isCategoryVisible(archiveFilter)) archiveFilter = 'all';
     renderShoots();
     renderArchive();
