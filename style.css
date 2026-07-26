@@ -185,6 +185,10 @@ h1, h2, h3 {
   text-transform: uppercase;
   letter-spacing: 1px;
   margin: 0;
+  /* Yellow-on-navy always had contrast, but the color themes swap that navy
+     hero-band for pastels close in lightness to the yellow itself — this
+     outline keeps the wordmark readable no matter which theme is active. */
+  -webkit-text-stroke: 1.2px #fff;
 }
 
 .new-shoot-cta {
