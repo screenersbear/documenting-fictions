@@ -81,6 +81,266 @@
     ['other', 'Other'],
   ];
 
+  // Every region the world map (world-map.svg) can highlight — id matches
+  // that SVG's element id exactly, label is what shows in the picker.
+  // Sourced from the map itself (Wikimedia Commons BlankMap-World-Compact.svg,
+  // public domain), so it includes some disputed/micro-territories the map
+  // draws as their own shape.
+  const REGION_OPTIONS = [
+    ['xa', "Abkhazia"],
+    ['af', "Afghanistan"],
+    ['al', "Albania"],
+    ['dz', "Algeria"],
+    ['as', "American Samoa"],
+    ['ad', "Andorra"],
+    ['ao', "Angola"],
+    ['ai', "Anguilla"],
+    ['ag', "Antigua and Barbuda"],
+    ['ar', "Argentina"],
+    ['am', "Armenia"],
+    ['aw', "Aruba"],
+    ['au', "Australia"],
+    ['at', "Austria"],
+    ['qm', "Azad Kashmir"],
+    ['az', "Azerbaijan"],
+    ['bs', "Bahamas"],
+    ['bh', "Bahrain"],
+    ['bd', "Bangladesh"],
+    ['bb', "Barbados"],
+    ['by', "Belarus"],
+    ['be', "Belgium"],
+    ['bz', "Belize"],
+    ['bj', "Benin"],
+    ['bm', "Bermuda"],
+    ['bt', "Bhutan"],
+    ['bo', "Bolivia"],
+    ['bq', "Bonaire, Sint Eustatius and Saba"],
+    ['ba', "Bosnia and Herzegovina"],
+    ['bw', "Botswana"],
+    ['br', "Brazil"],
+    ['bn', "Brunei"],
+    ['bg', "Bulgaria"],
+    ['bf', "Burkina Faso"],
+    ['bi', "Burundi"],
+    ['kh', "Cambodia"],
+    ['cm', "Cameroon"],
+    ['ca', "Canada"],
+    ['cv', "Cape Verde"],
+    ['ky', "Cayman Islands"],
+    ['cf', "Central African Republic"],
+    ['td', "Chad"],
+    ['cl', "Chile"],
+    ['cn', "China"],
+    ['co', "Colombia"],
+    ['km', "Comoros"],
+    ['cg', "Congo"],
+    ['ck', "Cook Islands"],
+    ['cr', "Costa Rica"],
+    ['ci', "Cote d'Ivoire"],
+    ['qr', "Crimea"],
+    ['hr', "Croatia"],
+    ['cu', "Cuba"],
+    ['cw', "Curacao"],
+    ['cy', "Cyprus"],
+    ['cz', "Czech Republic"],
+    ['cd', "DR Congo"],
+    ['dk', "Denmark"],
+    ['dj', "Djibouti"],
+    ['dm', "Dominica"],
+    ['do', "Dominican Republic"],
+    ['xd', "Donetsk People's Republic"],
+    ['ec', "Ecuador"],
+    ['eg', "Egypt"],
+    ['sv', "El Salvador"],
+    ['gq', "Equatorial Guinea"],
+    ['er', "Eritrea"],
+    ['ee', "Estonia"],
+    ['sz', "Eswatini"],
+    ['et', "Ethiopia"],
+    ['fk', "Falkland Islands (Malvinas)"],
+    ['fo', "Faroe Islands"],
+    ['fj', "Fiji"],
+    ['fi', "Finland"],
+    ['fr', "France"],
+    ['gf', "French Guiana"],
+    ['pf', "French Polynesia"],
+    ['tf', "French Southern Territories"],
+    ['ga', "Gabon"],
+    ['gm', "Gambia"],
+    ['gaza_strip', "Gaza Strip (State of Palestine)"],
+    ['ge', "Georgia"],
+    ['de', "Germany"],
+    ['gh', "Ghana"],
+    ['gi', "Gibraltar"],
+    ['gr', "Greece"],
+    ['gl', "Greenland"],
+    ['gd', "Grenada"],
+    ['gp', "Guadeloupe"],
+    ['gu', "Guam"],
+    ['gt', "Guatemala"],
+    ['gg', "Guernsey"],
+    ['gn', "Guinea"],
+    ['gw', "Guinea-Bissau"],
+    ['gy', "Guyana"],
+    ['ht', "Haiti"],
+    ['hn', "Honduras"],
+    ['hk', "Hong Kong"],
+    ['hu', "Hungary"],
+    ['is', "Iceland"],
+    ['in', "India"],
+    ['id', "Indonesia"],
+    ['ir', "Iran"],
+    ['iq', "Iraq"],
+    ['ie', "Ireland"],
+    ['im', "Isle of Man"],
+    ['il', "Israel"],
+    ['it', "Italy"],
+    ['jm', "Jamaica"],
+    ['jp', "Japan"],
+    ['je', "Jersey"],
+    ['jo', "Jordan"],
+    ['kz', "Kazakhstan"],
+    ['ke', "Kenya"],
+    ['ki', "Kiribati"],
+    ['xk', "Kosovo"],
+    ['kw', "Kuwait"],
+    ['kg', "Kyrgyzstan"],
+    ['la', "Laos"],
+    ['lv', "Latvia"],
+    ['lb', "Lebanon"],
+    ['ls', "Lesotho"],
+    ['lr', "Liberia"],
+    ['ly', "Libya"],
+    ['li', "Liechtenstein"],
+    ['lt', "Lithuania"],
+    ['xl', "Luhansk People's Republic"],
+    ['lu', "Luxembourg"],
+    ['mo', "Macao"],
+    ['mg', "Madagascar"],
+    ['mw', "Malawi"],
+    ['my', "Malaysia"],
+    ['mv', "Maldives"],
+    ['ml', "Mali"],
+    ['mt', "Malta"],
+    ['mh', "Marshall Islands"],
+    ['mq', "Martinique"],
+    ['mr', "Mauritania"],
+    ['mu', "Mauritius"],
+    ['yt', "Mayotte"],
+    ['mx', "Mexico"],
+    ['fm', "Micronesia"],
+    ['md', "Moldova"],
+    ['mc', "Monaco"],
+    ['mn', "Mongolia"],
+    ['me', "Montenegro"],
+    ['ms', "Montserrat"],
+    ['ma-', "Morocco"],
+    ['mz', "Mozambique"],
+    ['mm', "Myanmar"],
+    ['na', "Namibia"],
+    ['nr', "Nauru"],
+    ['np', "Nepal"],
+    ['nl', "Netherlands"],
+    ['nc', "New Caledonia"],
+    ['nz', "New Zealand"],
+    ['ni', "Nicaragua"],
+    ['ne', "Niger"],
+    ['ng', "Nigeria"],
+    ['nu', "Niue"],
+    ['nf', "Norfolk Island"],
+    ['kp', "North Korea"],
+    ['mk', "North Macedonia"],
+    ['xc', "Northern Cyprus"],
+    ['mp', "Northern Mariana Islands"],
+    ['no', "Norway"],
+    ['om', "Oman"],
+    ['pk', "Pakistan"],
+    ['pw', "Palau"],
+    ['pa', "Panama"],
+    ['pg', "Papua New Guinea"],
+    ['py', "Paraguay"],
+    ['pe', "Peru"],
+    ['ph', "Philippines"],
+    ['pn', "Pitcairn"],
+    ['pl', "Poland"],
+    ['pt', "Portugal"],
+    ['pr', "Puerto Rico"],
+    ['qa', "Qatar"],
+    ['re', "Reunion"],
+    ['ro', "Romania"],
+    ['ru', "Russia"],
+    ['rw', "Rwanda"],
+    ['xz', "Sahrawi Arab Democratic Republic (Free Zone)"],
+    ['bl', "Saint Barthelemy"],
+    ['sh', "Saint Helena, Ascension and Tristan Da Cunha"],
+    ['kn', "Saint Kitts and Nevis"],
+    ['lc', "Saint Lucia"],
+    ['mf', "Saint Martin (French Part)"],
+    ['pm', "Saint Pierre and Miquelon"],
+    ['vc', "Saint Vincent and the Grenadines"],
+    ['ws', "Samoa"],
+    ['sm', "San Marino"],
+    ['st', "Sao Tome and Principe"],
+    ['sa', "Saudi Arabia"],
+    ['sn', "Senegal"],
+    ['rs', "Serbia"],
+    ['sc', "Seychelles"],
+    ['sl', "Sierra Leone"],
+    ['sg', "Singapore"],
+    ['sx', "Sint Maarten (Dutch Part)"],
+    ['sk', "Slovakia"],
+    ['si', "Slovenia"],
+    ['sb', "Solomon Islands"],
+    ['so', "Somalia"],
+    ['xs', "Somaliland"],
+    ['za', "South Africa"],
+    ['gs', "South Georgia and the South Sandwich Islands"],
+    ['kr', "South Korea"],
+    ['xo', "South Ossetia"],
+    ['ss', "South Sudan"],
+    ['es', "Spain"],
+    ['lk', "Sri Lanka"],
+    ['sd', "Sudan"],
+    ['sr', "Suriname"],
+    ['se', "Sweden"],
+    ['ch', "Switzerland"],
+    ['sy', "Syria"],
+    ['tw', "Taiwan"],
+    ['tj', "Tajikistan"],
+    ['tz', "Tanzania"],
+    ['th', "Thailand"],
+    ['tl', "Timor-Leste"],
+    ['tg', "Togo"],
+    ['tk', "Tokelau"],
+    ['to', "Tonga"],
+    ['xp', "Transnistria"],
+    ['tt', "Trinidad and Tobago"],
+    ['tn', "Tunisia"],
+    ['tr', "Turkey"],
+    ['tm', "Turkmenistan"],
+    ['tc', "Turks and Caicos Islands"],
+    ['tv', "Tuvalu"],
+    ['ug', "Uganda"],
+    ['ua', "Ukraine"],
+    ['ae', "United Arab Emirates"],
+    ['gb', "United Kingdom"],
+    ['us', "United States of America"],
+    ['uy', "Uruguay"],
+    ['uz', "Uzbekistan"],
+    ['vu', "Vanuatu"],
+    ['va', "Vatican City"],
+    ['ve', "Venezuela"],
+    ['vn', "Vietnam"],
+    ['vg', "Virgin Islands, British"],
+    ['vi', "Virgin Islands, U.S."],
+    ['wf', "Wallis and Futuna"],
+    ['west_bank', "West Bank (State of Palestine)"],
+    ['eh-', "Western Sahara"],
+    ['ye', "Yemen"],
+    ['zm', "Zambia"],
+    ['zw', "Zimbabwe"],
+  ];
+
   const CATEGORY_LABELS = {
     commercial: 'Commercial',
     video: 'Video',
@@ -128,11 +388,16 @@
   // (Edit Shoot, and the Journal view's closing button) — everything here
   // already autosaves as you go, so these are really just a satisfying
   // confirmation tap, not a literal save action.
+  // "I know it auto saves everything I do but I need a button to hit" is
+  // held out for now — measured against the Save button's real width, it
+  // wraps to 2 lines everywhere except when a delivered-but-not-archived
+  // shoot puts Save side by side with Complete Shoot, where it needs ~5
+  // lines and would force the button to grow. Left out until it's
+  // shortened or swapped for something that fits at that narrower width.
   const SAVE_MESSAGES = [
     "I guess that's good for now", 'yup, yup', "that's good", 'okay', 'yes',
     "let's goooo", 'incredible', "I'm a genius", 'so good', 'good work',
-    'affirm here', "I know it auto saves everything I do but I need a button to hit",
-    "I'm a visionary",
+    'affirm here', "I'm a visionary",
   ];
 
   function pickRandomSaveMessage() {
@@ -303,6 +568,7 @@
       title: s.title || '',
       status,
       location: s.location || '',
+      region: s.region || '',
       startTime: s.startTime || s.time || '',
       endTime: s.endTime || '',
       premise: s.premise !== undefined ? s.premise : (s.concept || ''),
@@ -1027,45 +1293,56 @@
   });
 
   // ---------- Shoot Log view ----------
-  // The Shoots page is organized by status group only (no category filter,
-  // unlike Archive) — instead it offers a sort mode that controls the order
-  // of shoots *within* each status group. The nested status-group headings
-  // stay exactly as they are across every mode; only the within-group order
-  // changes.
+  // The Shoots page has three sort modes, each with its own nested-heading
+  // scheme:
+  //  - 'status' (default): grouped by status, same as always.
+  //  - 'shoot_date': ignores status entirely and reorganizes every shoot by
+  //    how soon it happens.
+  //  - 'category': grouped by shoot category, only showing categories that
+  //    actually have a shoot in them.
   let shootSort = 'status';
 
-  const SHOOT_SORT_LABELS = { status: 'Status', readiness: 'Readiness', shoot_date: 'Shoot date' };
+  const SHOOT_SORT_LABELS = { status: 'Status', shoot_date: 'Shoot date', category: 'Category' };
 
-  // How "ready" a shoot is — a rough completeness score across the fields
-  // that matter most for planning one, not tied to any single form section.
-  // Used only to order the Readiness sort (most complete first); never shown
-  // as a number anywhere.
-  function shootReadinessScore(s) {
-    const checks = [
-      Array.isArray(s.talents) && s.talents.some(t => hasText(t.name)),
-      hasText(s.location),
-      !!s.date,
-      hasText(s.premise) || hasText(s.shootGoals),
-      Array.isArray(s.shotList) && s.shotList.length > 0,
-      !!s.teamRequired,
-    ];
-    return checks.filter(Boolean).length;
-  }
+  const SHOOT_DATE_BUCKET_ORDER = ['past', 'this_week', 'next_week', 'later_this_month', 'next_month', 'future', 'undated'];
+  const SHOOT_DATE_BUCKET_LABELS = {
+    past: 'Past',
+    this_week: 'This week',
+    next_week: 'Next week',
+    later_this_month: 'Later this month',
+    next_month: 'Next month',
+    future: 'In the future',
+    undated: 'Undated',
+  };
 
-  function sortShootGroup(group, statusKey) {
-    if (shootSort === 'readiness') {
-      return [...group].sort((a, b) => shootReadinessScore(b) - shootReadinessScore(a)
-        || dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
-    }
-    if (shootSort === 'shoot_date') {
-      return [...group].sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
-    }
-    // 'status' (default) — same as always: every group orders by shoot date
-    // except Editing, which orders by deadline since that's the date that
-    // actually matters once a shoot's already been captured.
-    return [...group].sort((a, b) => statusKey === 'editing'
-      ? dateSortKey(a.deadline).localeCompare(dateSortKey(b.deadline))
-      : dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+  // Buckets a shoot date by proximity for the 'shoot_date' sort — a finer
+  // breakdown than weekBucket() (which only serves Overview's this/next/later
+  // split), since this needs to separate "later this month" from "next month"
+  // from "further out," and also has to account for dates already in the
+  // past (weekBucket() is only ever used for upcoming, not-yet-shot dates).
+  function shootDateBucket(dateStr) {
+    if (!dateStr) return 'undated';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfThisWeek = new Date(today);
+    startOfThisWeek.setDate(today.getDate() - today.getDay());
+    const endOfThisWeek = new Date(startOfThisWeek);
+    endOfThisWeek.setDate(startOfThisWeek.getDate() + 6);
+    const startOfNextWeek = new Date(endOfThisWeek);
+    startOfNextWeek.setDate(endOfThisWeek.getDate() + 1);
+    const endOfNextWeek = new Date(startOfNextWeek);
+    endOfNextWeek.setDate(startOfNextWeek.getDate() + 6);
+    const endOfThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const endOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+
+    if (date < startOfThisWeek) return 'past';
+    if (date <= endOfThisWeek) return 'this_week';
+    if (date <= endOfNextWeek) return 'next_week';
+    if (date <= endOfThisMonth) return 'later_this_month';
+    if (date <= endOfNextMonth) return 'next_month';
+    return 'future';
   }
 
   function renderShootSortOptions() {
@@ -1099,6 +1376,91 @@
     document.getElementById(toggleId).textContent = `Filter: ${activeFilter === 'all' ? 'All' : (CATEGORY_LABELS[activeFilter] || 'All')}`;
   }
 
+  // Shared renderer for one nested group (status / date bucket / category)
+  // on the Shoots page — same collapsible pill-heading + rows-wrap structure
+  // regardless of which sort mode built the group.
+  function renderShootGroup(list, groupKey, label, shoots, visibleIndex) {
+    const groupEl = document.createElement('div');
+    groupEl.className = 'shoot-status-group';
+
+    const collapseKey = `shoots:${groupKey}`;
+    const collapsed = isSectionCollapsed(collapseKey);
+    const heading = document.createElement('h2');
+    heading.className = `status-group-heading ${visibleIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${collapsed ? ' collapsed' : ''}`;
+    heading.innerHTML = `${escapeHtml(label)}${COLLAPSE_ARROW_SVG}`;
+
+    const rowsWrap = document.createElement('div');
+    rowsWrap.className = 'shoot-status-rows';
+    rowsWrap.hidden = collapsed;
+    shoots.forEach(s => renderShootRow(rowsWrap, s, { showPending: true }));
+
+    heading.addEventListener('click', () => {
+      const nowHidden = !rowsWrap.hidden;
+      rowsWrap.hidden = nowHidden;
+      heading.classList.toggle('collapsed', nowHidden);
+      setSectionCollapsed(collapseKey, nowHidden);
+    });
+
+    groupEl.appendChild(heading);
+    groupEl.appendChild(rowsWrap);
+    list.appendChild(groupEl);
+  }
+
+  // Default — grouped by status, same as always: every group orders by
+  // shoot date except Editing, which orders by deadline since that's the
+  // date that actually matters once a shoot's already been captured.
+  function renderShootsByStatus(list, items) {
+    let visibleIndex = 0;
+    Object.keys(STATUS_LABELS).forEach(statusKey => {
+      const group = items.filter(s => (s.status || 'idea_phase') === statusKey)
+        .sort((a, b) => statusKey === 'editing'
+          ? dateSortKey(a.deadline).localeCompare(dateSortKey(b.deadline))
+          : dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+      if (!group.length) return;
+      renderShootGroup(list, statusKey, STATUS_LABELS[statusKey], group, visibleIndex);
+      visibleIndex++;
+    });
+  }
+
+  // Ignores status entirely — every shoot lands in one bucket by how soon
+  // (or how long ago) its shoot date is.
+  function renderShootsByDate(list, items) {
+    const buckets = new Map();
+    items.forEach(s => {
+      const bucket = shootDateBucket(s.date);
+      if (!buckets.has(bucket)) buckets.set(bucket, []);
+      buckets.get(bucket).push(s);
+    });
+    let visibleIndex = 0;
+    SHOOT_DATE_BUCKET_ORDER.forEach(bucketKey => {
+      const group = buckets.get(bucketKey);
+      if (!group || !group.length) return;
+      group.sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+      renderShootGroup(list, `date:${bucketKey}`, SHOOT_DATE_BUCKET_LABELS[bucketKey], group, visibleIndex);
+      visibleIndex++;
+    });
+  }
+
+  // Grouped by category — only categories with at least one shoot show up,
+  // in the app's usual category order (not alphabetical; that's just for
+  // the Edit Shoot category dropdown).
+  function renderShootsByCategory(list, items) {
+    const buckets = new Map();
+    items.forEach(s => {
+      const cat = s.category || 'other';
+      if (!buckets.has(cat)) buckets.set(cat, []);
+      buckets.get(cat).push(s);
+    });
+    let visibleIndex = 0;
+    CATEGORY_FILTER_ORDER.forEach(cat => {
+      const group = buckets.get(cat);
+      if (!group || !group.length) return;
+      group.sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+      renderShootGroup(list, `cat:${cat}`, CATEGORY_LABELS[cat] || 'Other', group, visibleIndex);
+      visibleIndex++;
+    });
+  }
+
   function renderShoots() {
     renderShootSortOptions();
     const list = document.getElementById('shootList');
@@ -1107,37 +1469,9 @@
     list.innerHTML = '';
     document.getElementById('shootEmpty').hidden = items.length !== 0;
 
-    let visibleGroupIndex = 0;
-    Object.keys(STATUS_LABELS).forEach(statusKey => {
-      const group = sortShootGroup(items.filter(s => (s.status || 'idea_phase') === statusKey), statusKey);
-      if (!group.length) return;
-
-      const groupEl = document.createElement('div');
-      groupEl.className = 'shoot-status-group';
-
-      const collapseKey = `shoots:${statusKey}`;
-      const collapsed = isSectionCollapsed(collapseKey);
-      const heading = document.createElement('h2');
-      heading.className = `status-group-heading ${visibleGroupIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${collapsed ? ' collapsed' : ''}`;
-      heading.innerHTML = `${escapeHtml(STATUS_LABELS[statusKey])}${COLLAPSE_ARROW_SVG}`;
-
-      const rowsWrap = document.createElement('div');
-      rowsWrap.className = 'shoot-status-rows';
-      rowsWrap.hidden = collapsed;
-      group.forEach(s => renderShootRow(rowsWrap, s, { showPending: true }));
-
-      heading.addEventListener('click', () => {
-        const nowHidden = !rowsWrap.hidden;
-        rowsWrap.hidden = nowHidden;
-        heading.classList.toggle('collapsed', nowHidden);
-        setSectionCollapsed(collapseKey, nowHidden);
-      });
-
-      groupEl.appendChild(heading);
-      groupEl.appendChild(rowsWrap);
-      list.appendChild(groupEl);
-      visibleGroupIndex++;
-    });
+    if (shootSort === 'shoot_date') renderShootsByDate(list, items);
+    else if (shootSort === 'category') renderShootsByCategory(list, items);
+    else renderShootsByStatus(list, items);
   }
 
   // ---------- Archive view ----------
@@ -1640,21 +1974,6 @@
     if (view === 'reflections' || view === 'log') showTabIntro(`journal:${view}`);
   }
 
-  // Reflections splits into two tabs: entries auto-compiled from a shoot's
-  // post-shoot reflection ("From shoots") vs. ones the user writes on their
-  // own ("Thoughts", the default home for anything newly created here).
-  let journalReflectionsTab = 'shoots';
-
-  document.getElementById('reflectionsTabs').addEventListener('click', (e) => {
-    const btn = e.target.closest('.reflections-tab');
-    if (!btn) return;
-    journalReflectionsTab = btn.dataset.reflectionsTab;
-    document.querySelectorAll('#reflectionsTabs .reflections-tab').forEach(t => {
-      t.classList.toggle('active', t.dataset.reflectionsTab === journalReflectionsTab);
-    });
-    renderJournal();
-  });
-
   document.getElementById('openReflectionsNotebookBtn').addEventListener('click', () => showJournalView('reflections'));
   document.getElementById('openLogNotebookBtn').addEventListener('click', () => showJournalView('log'));
   document.getElementById('journalBackBtn').addEventListener('click', () => showJournalView('select'));
@@ -1781,6 +2100,50 @@
     }
   }
 
+  // Same row style as a shoot bubble (Overview/Shoots/Archive) — the cover
+  // photo fills the left side of the frame instead of sitting in a small
+  // square thumb.
+  function renderJournalEntryRow(container, e) {
+    const row = document.createElement('div');
+    row.className = 'shoot-row';
+    // A linked entry's cover photo is the shoot's own project photo — same
+    // picture you'd see on that shoot's bubble. Otherwise, fall back to
+    // this entry's own uploaded photos, fetched async since IDB has no
+    // synchronous read.
+    const linkedShoot = e.sourceShootId ? state.shoots.find(s => s.id === e.sourceShootId) : null;
+    const initialThumbSrc = (linkedShoot && linkedShoot.projectPhoto) || null;
+    const tagsText = (e.tags && e.tags.length) ? e.tags.map(t => `#${escapeHtml(t)}`).join(' ') : '';
+    row.innerHTML = `
+      ${journalThumbHtml(initialThumbSrc)}
+      <div class="shoot-row-body">
+        <div class="shoot-row-top">
+          <span class="shoot-row-title"><strong>${escapeHtml(e.title || 'Untitled entry')}</strong></span>
+          <div class="shoot-row-dates">
+            <span class="mi-sub">${prettyDate(e.createdAt)}</span>
+          </div>
+        </div>
+        <span class="badge"${tagsText ? '' : ' hidden'}>${tagsText}</span>
+      </div>
+      <button type="button" class="row-options-btn" aria-label="Options">&#8942;</button>
+    `;
+    row.addEventListener('click', () => openJournalModal(e.id));
+    row.querySelector('.row-options-btn').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      openJournalOptions(e.id);
+    });
+    container.appendChild(row);
+    if (!initialThumbSrc) {
+      idbGetImages(journalEntryImagesKey(e)).then(images => {
+        if (!images.length) return;
+        const thumb = row.querySelector('.shoot-thumb');
+        if (thumb) thumb.outerHTML = journalThumbHtml(images[0].src);
+      }).catch(() => {});
+    }
+  }
+
+  // Nested by year > month of each entry's own createdAt (when it was
+  // actually written) — same grouping structure Archive uses for shoots,
+  // just keyed off the journal entry's date rather than a shoot's date.
   function renderJournal() {
     const tags = getAllUsedJournalTags();
     if (journalTagFilter !== 'all' && !tags.includes(journalTagFilter)) journalTagFilter = 'all';
@@ -1790,53 +2153,89 @@
       tags.map(t => `<button class="chip${journalTagFilter === t ? ' active' : ''}" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</button>`).join('');
     document.getElementById('journalFilterToggle').textContent = `Filter: ${journalTagFilter === 'all' ? 'All' : '#' + journalTagFilter}`;
 
-    let items = state.journalEntries.filter(e => journalReflectionsTab === 'shoots' ? !!e.sourceShootId : !e.sourceShootId);
+    let items = [...state.journalEntries];
     if (journalTagFilter !== 'all') items = items.filter(e => (e.tags || []).includes(journalTagFilter));
-    items.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
     const list = document.getElementById('journalList');
     list.innerHTML = '';
     document.getElementById('journalEmpty').hidden = items.length !== 0;
 
+    const years = new Map();
     items.forEach(e => {
-      const row = document.createElement('div');
-      // Same row style as a shoot bubble (Overview/Shoots/Archive) — the
-      // cover photo fills the left side of the frame instead of sitting in
-      // a small square thumb.
-      row.className = 'shoot-row';
-      // A linked entry's cover photo is the shoot's own project photo — same
-      // picture you'd see on that shoot's bubble. Otherwise, fall back to
-      // this entry's own uploaded photos, fetched async since IDB has no
-      // synchronous read.
-      const linkedShoot = e.sourceShootId ? state.shoots.find(s => s.id === e.sourceShootId) : null;
-      const initialThumbSrc = (linkedShoot && linkedShoot.projectPhoto) || null;
-      const tagsText = (e.tags && e.tags.length) ? e.tags.map(t => `#${escapeHtml(t)}`).join(' ') : '';
-      row.innerHTML = `
-        ${journalThumbHtml(initialThumbSrc)}
-        <div class="shoot-row-body">
-          <div class="shoot-row-top">
-            <span class="shoot-row-title"><strong>${escapeHtml(e.title || 'Untitled entry')}</strong></span>
-            <div class="shoot-row-dates">
-              <span class="mi-sub">${prettyDate(e.createdAt)}</span>
-            </div>
-          </div>
-          <span class="badge"${tagsText ? '' : ' hidden'}>${tagsText}</span>
-        </div>
-        <button type="button" class="row-options-btn" aria-label="Options">&#8942;</button>
-      `;
-      row.addEventListener('click', () => openJournalModal(e.id));
-      row.querySelector('.row-options-btn').addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        openJournalOptions(e.id);
+      const year = e.createdAt ? e.createdAt.slice(0, 4) : 'Undated';
+      const month = e.createdAt ? e.createdAt.slice(5, 7) : '00';
+      if (!years.has(year)) years.set(year, new Map());
+      const months = years.get(year);
+      if (!months.has(month)) months.set(month, []);
+      months.get(month).push(e);
+    });
+
+    const sortedYears = [...years.keys()].sort((a, b) => {
+      if (a === 'Undated') return 1;
+      if (b === 'Undated') return -1;
+      return b.localeCompare(a);
+    });
+
+    let visibleYearIndex = 0;
+    sortedYears.forEach(year => {
+      const months = years.get(year);
+      const sortedMonths = [...months.keys()].sort((a, b) => b.localeCompare(a));
+
+      const yearGroupEl = document.createElement('div');
+      yearGroupEl.className = 'shoot-status-group';
+
+      const yearCollapseKey = `journal:${year}`;
+      const yearCollapsed = isSectionCollapsed(yearCollapseKey);
+      const yearHeading = document.createElement('h2');
+      yearHeading.className = `status-group-heading ${visibleYearIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${yearCollapsed ? ' collapsed' : ''}`;
+      yearHeading.innerHTML = `${escapeHtml(year)}${COLLAPSE_ARROW_SVG}`;
+
+      const yearRowsWrap = document.createElement('div');
+      yearRowsWrap.className = 'shoot-status-rows';
+      yearRowsWrap.hidden = yearCollapsed;
+
+      let visibleMonthIndex = 0;
+      sortedMonths.forEach(month => {
+        const monthGroupEl = document.createElement('div');
+        monthGroupEl.className = 'archive-month-group';
+
+        const monthCollapseKey = `journal:${year}:${month}`;
+        const monthCollapsed = isSectionCollapsed(monthCollapseKey);
+        const monthHeading = document.createElement('h3');
+        monthHeading.className = `status-group-heading archive-month-heading ${visibleMonthIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${monthCollapsed ? ' collapsed' : ''}`;
+        monthHeading.innerHTML = `${escapeHtml(monthLabel(month))}${COLLAPSE_ARROW_SVG}`;
+
+        const monthRowsWrap = document.createElement('div');
+        monthRowsWrap.className = 'shoot-status-rows';
+        monthRowsWrap.hidden = monthCollapsed;
+        months.get(month)
+          .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+          .forEach(e => renderJournalEntryRow(monthRowsWrap, e));
+
+        monthHeading.addEventListener('click', () => {
+          const nowHidden = !monthRowsWrap.hidden;
+          monthRowsWrap.hidden = nowHidden;
+          monthHeading.classList.toggle('collapsed', nowHidden);
+          setSectionCollapsed(monthCollapseKey, nowHidden);
+        });
+
+        monthGroupEl.appendChild(monthHeading);
+        monthGroupEl.appendChild(monthRowsWrap);
+        yearRowsWrap.appendChild(monthGroupEl);
+        visibleMonthIndex++;
       });
-      list.appendChild(row);
-      if (!initialThumbSrc) {
-        idbGetImages(journalEntryImagesKey(e)).then(images => {
-          if (!images.length) return;
-          const thumb = row.querySelector('.shoot-thumb');
-          if (thumb) thumb.outerHTML = journalThumbHtml(images[0].src);
-        }).catch(() => {});
-      }
+
+      yearHeading.addEventListener('click', () => {
+        const nowHidden = !yearRowsWrap.hidden;
+        yearRowsWrap.hidden = nowHidden;
+        yearHeading.classList.toggle('collapsed', nowHidden);
+        setSectionCollapsed(yearCollapseKey, nowHidden);
+      });
+
+      yearGroupEl.appendChild(yearHeading);
+      yearGroupEl.appendChild(yearRowsWrap);
+      list.appendChild(yearGroupEl);
+      visibleYearIndex++;
     });
   }
 
@@ -2177,17 +2576,7 @@
     renderJournal();
   }
 
-  document.getElementById('addJournalBtn').addEventListener('click', () => {
-    // A manually-created entry always lands in Thoughts — switch there first
-    // so it's visible in the list the moment the modal closes.
-    if (journalReflectionsTab !== 'thoughts') {
-      journalReflectionsTab = 'thoughts';
-      document.querySelectorAll('#reflectionsTabs .reflections-tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.reflectionsTab === 'thoughts');
-      });
-    }
-    openJournalModal(null);
-  });
+  document.getElementById('addJournalBtn').addEventListener('click', () => openJournalModal(null));
 
   // Saving no longer closes the modal — it drops back to the read-only view
   // of what was just written, right in the same popup. An entry that ends
@@ -3244,12 +3633,27 @@
     { id: 'basicInfoHeading', title: 'Basic Info', text: "Title, talent, status, and category — the foundation of the shoot." },
     { id: 'logisticsHeading', title: 'Logistics', text: 'Shoot date, deadline, time, and location — the when and where.' },
     { id: 'directionHeading', title: 'Direction', text: "Concept, character, and creative direction — the story you're telling." },
-    { id: 'visualsHeading', title: 'Visuals', text: 'Mood board, references, and frameworks — the visual language for the shoot.' },
+    { id: 'visualsHeading', title: 'Visuals', text: 'Mood board, references, and frameworks — the visual language for the shoot.', nestedIds: ['lightingSetupsHeading'] },
     { id: 'teamHeading', title: 'Team', text: "Who's on the shoot and how to reach them." },
-    { id: 'shootDayNotesHeading', title: 'Shoot day', text: 'Shot list, lighting setups, and any day-of notes.' },
+    { id: 'shootDayNotesHeading', title: 'Shoot day', text: 'Shot list, lighting setups, and any day-of notes.', nestedIds: ['shotListHeading'] },
     { id: 'postShootHeading', title: 'Reflection', text: 'What went right, what could be better, and lessons for next time — filled in after the shoot.' },
   ];
   let shootTourStepIndex = 0;
+
+  // Force-expands a collapsed section (and any of its nested sub-sections)
+  // so the tour's explanation always has real content visible above it
+  // instead of describing something the user can't currently see.
+  function expandShootFormSection(headingId) {
+    const entry = SHOOT_FORM_COLLAPSE_SECTIONS.find(([, headingSelector]) => headingSelector === `#${headingId}`);
+    if (!entry) return;
+    const [key, headingSelector, bodyId] = entry;
+    const heading = document.querySelector(headingSelector);
+    const body = document.getElementById(bodyId);
+    if (!heading || !body) return;
+    setSectionCollapsed(key, false);
+    body.hidden = false;
+    heading.classList.remove('collapsed');
+  }
 
   function renderShootTourStep() {
     const step = SHOOT_TOUR_STEPS[shootTourStepIndex];
@@ -3258,6 +3662,8 @@
     document.getElementById('shootTourText').textContent = step.text;
     document.getElementById('shootTourBackBtn').hidden = shootTourStepIndex === 0;
     document.getElementById('shootTourNextBtn').textContent = shootTourStepIndex === SHOOT_TOUR_STEPS.length - 1 ? 'Done' : 'Next';
+    expandShootFormSection(step.id);
+    (step.nestedIds || []).forEach(expandShootFormSection);
     const target = document.getElementById(step.id);
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -3338,6 +3744,7 @@
     document.getElementById('shootEndTime').value = s ? (s.endTime || '') : '';
     document.getElementById('shootLocation').value = s ? (s.location || '') : '';
     updateLocationBtnDisplay();
+    document.getElementById('shootRegion').value = s ? (s.region || '') : '';
     currentTalents = s && Array.isArray(s.talents)
       ? s.talents.map(t => ({ name: t.name || '', socialHandles: (t.socialHandles || []).map(sh => ({ ...sh })) }))
       : [];
@@ -3847,6 +4254,7 @@
       startTime: document.getElementById('shootStartTime').value,
       endTime: document.getElementById('shootEndTime').value,
       location: document.getElementById('shootLocation').value.trim(),
+      region: document.getElementById('shootRegion').value,
       talents: currentTalents.map(t => ({ name: t.name.trim(), socialHandles: [...t.socialHandles] })),
       category: document.getElementById('shootCategory').value,
       premise: document.getElementById('shootPremise').value.trim(),
@@ -3876,7 +4284,7 @@
   // A brand-new, never-touched shoot draft shouldn't get written to state
   // just because the modal was opened — only once it actually has content.
   function isShootDataBlank(data) {
-    return !hasText(data.title) && !hasText(data.location) && !hasText(data.startTime) && !hasText(data.endTime) && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals) && !hasText(data.elevatorPitch)
+    return !hasText(data.title) && !hasText(data.location) && !hasText(data.region) && !hasText(data.startTime) && !hasText(data.endTime) && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals) && !hasText(data.elevatorPitch)
       && !hasText(data.worldNotes) && !hasText(data.generalNotes) && !hasText(data.deadline)
       && !hasText(data.whatWentRight) && !hasText(data.couldBeBetter) && !hasText(data.lessonsLearned)
       && !hasText(data.talentDirections) && !hasText(data.teamDirections) && !hasText(data.locationDirections) && data.shotList.length === 0
@@ -5176,7 +5584,60 @@
     { key: 'teamMembers', title: 'Team Members', build: buildTeamStats },
     { key: 'status', title: 'Status', build: buildStatusStats },
     { key: 'location', title: 'Locations', build: buildLocationStats },
+    { key: 'regions', title: 'Regions', custom: true },
   ];
+
+  // ---------- Regions map (world-map.svg, fetched once and cached) ----------
+  let worldMapSvgText = null;
+  let worldMapFetchPromise = null;
+
+  function regionsPageHtml() {
+    return `
+      <div class="stats-page stats-page-regions" data-key="regions">
+        <h2 class="stats-page-title">Regions</h2>
+        <div class="world-map-scroll" id="worldMapScroll">
+          <div id="worldMapContainer"><p class="empty-hint">Loading map…</p></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function applyRegionsHighlight() {
+    const container = document.getElementById('worldMapContainer');
+    if (!container) return;
+    const svg = container.querySelector('svg');
+    if (!svg) return;
+    const shotRegions = new Set(getStatsShoots().map(s => s.region).filter(Boolean));
+    svg.querySelectorAll('.region-shot').forEach(el => el.classList.remove('region-shot'));
+    shotRegions.forEach(code => {
+      const el = svg.getElementById ? svg.getElementById(code) : null;
+      const target = el || svg.querySelector(`#${CSS.escape(code)}`);
+      if (target) target.classList.add('region-shot');
+    });
+  }
+
+  function renderRegionsMap() {
+    const container = document.getElementById('worldMapContainer');
+    if (!container) return;
+    if (worldMapSvgText) {
+      container.innerHTML = worldMapSvgText;
+      applyRegionsHighlight();
+      return;
+    }
+    if (!worldMapFetchPromise) {
+      worldMapFetchPromise = fetch('world-map.svg').then(r => r.text());
+    }
+    worldMapFetchPromise.then(svgText => {
+      worldMapSvgText = svgText;
+      const el = document.getElementById('worldMapContainer');
+      if (!el) return;
+      el.innerHTML = svgText;
+      applyRegionsHighlight();
+    }).catch(() => {
+      const el = document.getElementById('worldMapContainer');
+      if (el) el.innerHTML = '<p class="empty-hint">Couldn\'t load the map.</p>';
+    });
+  }
 
   function renderStatsPage(page, data) {
     const total = data.reduce((sum, d) => sum + d.value, 0);
@@ -5253,7 +5714,9 @@
     const fact = pickRandomFunFact();
     funFactEl.textContent = fact || '';
     funFactEl.hidden = !fact;
-    const pages = STATS_PAGES.map(page => renderStatsPage(page, page.build()));
+    const pages = STATS_PAGES.map(page => page.custom
+      ? { html: regionsPageHtml(), slices: null }
+      : renderStatsPage(page, page.build()));
     statsCarousel.innerHTML = pages.map(p => p.html).join('');
     statsCarousel.scrollLeft = prevScrollLeft;
     statsCarousel.querySelectorAll('.pie-slice, .stats-legend-row').forEach(el => {
@@ -5267,6 +5730,7 @@
       if (!slices) return;
       animatePieSlices([...pageEl.querySelectorAll('.pie-slice')], slices);
     });
+    if (STATS_PAGES.some(p => p.custom)) renderRegionsMap();
     renderStatsDots();
   }
 

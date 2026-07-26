@@ -51,6 +51,15 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Pull-to-refresh's rubber-band overscroll reveals whatever sits behind the
+   page, above the header — that's <html>'s own background, not <body>'s
+   (which stays var(--bg) for the actual page content). Matching it to the
+   header's ink color means that overscroll gap reads as more of the theme
+   instead of flashing white. */
+html {
+  background: var(--ink);
+}
+
 /* Form controls don't inherit page font by default in most browsers —
    catch any that a more specific rule hasn't already set to Courier. */
 button, input, select, textarea {
@@ -732,32 +741,6 @@ h2.status-group-heading.heading-navy {
   margin-bottom: 16px;
 }
 
-.reflections-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.reflections-tab {
-  flex: 1;
-  background: var(--surface);
-  color: var(--text);
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-lg);
-  padding: 10px 8px;
-  font-size: 14px;
-  font-weight: 700;
-  font-family: var(--font-title);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.reflections-tab.active {
-  background: var(--ink);
-  color: #fff;
-}
-
 .filters {
   display: flex;
   gap: 8px;
@@ -926,7 +909,7 @@ h2.status-group-heading.heading-navy {
   width: 100%;
   box-sizing: border-box;
   background: var(--ink);
-  border: 2px solid var(--ink);
+  border: 2px solid var(--accent);
   color: #fff;
   font-family: var(--font-title);
   font-weight: 700;
@@ -2168,6 +2151,22 @@ h2.status-group-heading.heading-navy {
   font-weight: 700;
 }
 
+/* The Save button's text is randomized (see SAVE_MESSAGES) and some
+   messages are much longer than others — fixed height plus centered,
+   wrapping text means the button always reads the same size no matter
+   which message lands, instead of growing/shrinking per message. */
+#saveShootBtn {
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.15;
+  font-size: 19px;
+  border: 2px solid var(--ink);
+}
+
 .primary {
   background: var(--accent);
   color: var(--text);
@@ -2905,6 +2904,24 @@ h2.status-group-heading.heading-navy {
   padding: 24px;
 }
 
+/* Anchored toward the bottom instead of centered — the tour is pointing at
+   a section scrolled into view above it, so the popup itself shouldn't
+   cover the middle of the screen where that section sits. */
+#shootTourOverlay {
+  align-items: flex-end;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
+}
+
+.shoot-tour-skip-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.shoot-tour-skip-row .journal-block-btn {
+  margin-bottom: 0;
+}
+
 .intro-modal {
   width: 100%;
   max-width: 380px;
@@ -3403,6 +3420,45 @@ h2.status-group-heading.heading-navy {
 .stats-page .empty-hint {
   text-align: center;
   padding-top: 40px;
+}
+
+/* ---- Regions map ---- */
+.world-map-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+#worldMapContainer {
+  width: max-content;
+  padding: 8px;
+}
+
+#worldMapContainer svg {
+  display: block;
+  width: 900px;
+  height: auto;
+}
+
+/* Every country/territory shape defaults to white with a thin ink outline
+   — .region-shot (toggled per shoot's Region field) fills it with the
+   accent color instead. */
+#worldMapContainer svg g,
+#worldMapContainer svg path {
+  fill: #fff;
+  stroke: var(--ink);
+  stroke-width: 0.4;
+}
+
+/* A country's id can sit on a <path> directly (single-landmass countries)
+   or on a wrapping <g> (multi-part ones, e.g. islands) — cover both, and
+   both the shape itself and any child paths under a matched <g>. */
+#worldMapContainer svg .region-shot,
+#worldMapContainer svg .region-shot path {
+  fill: var(--accent);
 }
 
 /* ---- Stats detail slide-over ---- */

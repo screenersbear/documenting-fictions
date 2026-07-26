@@ -1,4 +1,4 @@
-const CACHE_NAME = 'starky-v5';
+const CACHE_NAME = 'starky-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const ASSETS = [
   './icon-180.png',
   './icon-512.png',
   './logo.png',
+  './world-map.svg',
 ];
 
 self.addEventListener('install', (event) => {
