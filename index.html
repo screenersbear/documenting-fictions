@@ -305,12 +305,189 @@
           </label>
         </div>
         <label>Location
-          <input type="hidden" id="shootLocation" />
           <button type="button" id="shootLocationBtn" class="location-field-btn">Tap to add location</button>
         </label>
-        <label>Region
-          <select id="shootRegion" class="bold-select">
-            <option value="">Not set</option>
+        <label>Location directions
+          <textarea id="shootLocationDirections" rows="3" maxlength="1000" placeholder="What floor the studio is on, where to park, etc." readonly></textarea>
+        </label>
+      </div>
+
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
+      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="directionHeading">Direction<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <div id="directionBody">
+        <p class="continue-prompt" id="categoryContinuePrompt">select a category to continue</p>
+
+        <div id="formSection2" hidden>
+          <label><span id="shootPremiseLabelText">Concept</span>
+            <textarea id="shootPremise" rows="6" maxlength="200" placeholder="visual narrative or message" readonly></textarea>
+          </label>
+
+          <div id="narrativeFieldsBlock">
+            <label>Character/Personality
+              <textarea id="shootCharacter" rows="6" maxlength="1000" placeholder="Who the talent is being, even loosely" readonly></textarea>
+            </label>
+
+            <label>World-building notes
+              <textarea id="shootWorldNotes" rows="6" maxlength="1000" placeholder="Setting, implied time or backstory, what's just happened or about to" readonly></textarea>
+            </label>
+
+            <label>General direction notes
+              <textarea id="shootGeneralNotes" rows="6" maxlength="1000" placeholder="Anything else worth remembering about this shoot" readonly></textarea>
+            </label>
+          </div>
+
+          <div id="commercialFieldsBlock" hidden>
+            <label>Shoot goals
+              <textarea id="shootGoals" rows="6" maxlength="1000" placeholder="What this shoot needs to accomplish" readonly></textarea>
+            </label>
+          </div>
+
+          <label>Elevator pitch
+            <textarea id="shootElevatorPitch" rows="2" maxlength="150" placeholder="One line description of your story." readonly></textarea>
+          </label>
+        </div>
+      </div>
+
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
+      <h3 class="shoot-section-heading status-group-heading heading-navy" id="visualsHeading">Visuals<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <div id="visualsBody">
+        <div class="moodboard-section">
+          <span class="moodboard-label">Mood board</span>
+          <button type="button" id="addMoodboardPhotos" class="primary small-btn">+ Add photos</button>
+          <input type="file" id="moodboardFileInput" accept="image/*" multiple hidden />
+          <div id="moodboardGrid" class="moodboard-grid"></div>
+          <label class="checkbox-row" id="moodboardCompleteRow"><input type="checkbox" id="shootMoodboardComplete" /> <span id="moodboardCompleteLabel">Mood board complete?</span></label>
+        </div>
+
+        <div class="form-section-label-row">
+          <button type="button" class="manage-link inline-manage-link" id="manageFrameworksBtn">Manage</button>
+        </div>
+        <div id="frameworkTagsContainer"></div>
+        <div class="lighting-setups-section" id="lightingSetupsSection">
+          <h4 class="subsection-heading" id="lightingSetupsHeading">Lighting setups<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h4>
+          <div id="lightingSetupsBody">
+            <p class="field-hint">Log your specific setups for reference on the day of, as well as to review what worked in each image.</p>
+            <div id="lightingSetupsItems" class="shot-list-items"></div>
+            <button type="button" id="addLightingSetupBtn" class="primary small-btn">+ Add lighting setup</button>
+          </div>
+        </div>
+
+        <div class="references-block">
+          <label class="beats-label">References</label>
+          <p class="field-hint">Links to webpages, articles, YouTube videos, other inspiration</p>
+          <div id="referencesList" class="references-list"></div>
+          <button type="button" id="addReferenceBtn" class="primary small-btn">+ Add link</button>
+        </div>
+      </div>
+
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
+      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="teamHeading">Team<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <div id="teamBody">
+        <p class="team-question">Requires team?</p>
+        <div class="team-yesno-row">
+          <label class="checkbox-row"><input type="checkbox" id="teamRequiredYes" /> Yes</label>
+          <label class="checkbox-row"><input type="checkbox" id="teamRequiredNo" /> No</label>
+        </div>
+        <p class="field-hint team-finalized-note" id="teamFinalizedNote" hidden>Team finalized</p>
+        <div id="teamDetailsBlock" hidden>
+          <button type="button" id="addTeamMemberBtn" class="primary small-btn">+ Add team member</button>
+          <div id="teamMembersList" class="team-members-list"></div>
+          <label class="checkbox-row"><input type="checkbox" id="shootTeamFinalized" /> <span id="teamFinalizedLabel">Team finalized?</span></label>
+        </div>
+      </div>
+
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
+      <h3 class="shoot-section-heading status-group-heading heading-navy" id="shootDayNotesHeading">Shoot day<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <div id="shootDayNotesBody">
+        <label>Directions for talent
+          <textarea id="shootTalentDirections" rows="6" maxlength="1000" readonly></textarea>
+        </label>
+        <label>Directions for team
+          <textarea id="shootTeamDirections" rows="6" maxlength="1000" readonly></textarea>
+        </label>
+
+        <div class="shot-list-section">
+          <h4 class="subsection-heading" id="shotListHeading">Shot list<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h4>
+          <div id="shotListBody">
+            <div id="shotListItems" class="shot-list-items"></div>
+            <button type="button" id="addShotBtn" class="primary small-btn">+ Add shot</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="postShootContent" hidden>
+        <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
+        <h3 class="shoot-section-heading status-group-heading heading-yellow" id="postShootHeading">Reflection<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+        <div id="postShootBody">
+          <label>What went right
+            <textarea id="shootWentRight" rows="3" maxlength="1000" readonly></textarea>
+          </label>
+          <label>What could've gone better
+            <textarea id="shootCouldBeBetter" rows="3" maxlength="1000" readonly></textarea>
+          </label>
+          <label>Lessons for next time
+            <textarea id="shootLessonsLearned" rows="3" maxlength="1000" readonly></textarea>
+          </label>
+
+          <div class="moodboard-section">
+            <span class="moodboard-label">Final images</span>
+            <button type="button" id="addFinalPhotos" class="post-shoot-toggle">+ Add photos</button>
+            <input type="file" id="finalImagesFileInput" accept="image/*" multiple hidden />
+            <div id="finalImagesGrid" class="moodboard-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="plain-delete-btn pre-save-divider" id="deleteShootBtn" hidden>Delete shoot</button>
+      <div class="modal-actions post-shoot-divider">
+        <button type="button" class="primary" id="saveShootBtn">Save</button>
+        <button type="button" class="primary" id="unarchiveShootBtn" hidden>Unarchive</button>
+        <button type="button" class="complete-shoot-btn" id="completeShootBtn" hidden>Complete Shoot</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ EXPAND FIELD MODAL ============ -->
+<div id="expandFieldOverlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="expandFieldTitle"></h2>
+      <button class="icon-btn close-btn" id="expandFieldCloseBtn">&times;</button>
+    </div>
+    <textarea id="expandFieldTextarea" rows="12"></textarea>
+    <button type="button" class="primary" id="expandFieldOkBtn">Okay</button>
+  </div>
+</div>
+
+<!-- ============ LOCATION MODAL ============ -->
+<div id="locationModalOverlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Location</h2>
+      <button class="icon-btn close-btn" data-close="location">&times;</button>
+    </div>
+    <div id="locationForm">
+      <label>Past locations
+        <select id="pastLocationsSelect">
+          <option value="">Select a past location…</option>
+        </select>
+      </label>
+      <label>Address name
+        <input type="text" id="locationNameInput" maxlength="120" placeholder="e.g. Studio A" />
+      </label>
+      <label>Street
+        <input type="text" id="locationStreetInput" maxlength="150" placeholder="123 Main St" />
+      </label>
+      <label>City
+        <input type="text" id="locationCityInput" maxlength="100" placeholder="City" />
+      </label>
+      <label>Zip code
+        <input type="text" id="locationZipInput" maxlength="20" placeholder="Zip / postal code" />
+      </label>
+      <label>Country
+        <select id="locationCountryInput" class="bold-select">
+            <option value="">Select a country…</option>
             <option value="xa">Abkhazia</option>
             <option value="af">Afghanistan</option>
             <option value="al">Albania</option>
@@ -563,176 +740,6 @@
             <option value="ye">Yemen</option>
             <option value="zm">Zambia</option>
             <option value="zw">Zimbabwe</option>
-          </select>
-        </label>
-
-        <label>Location directions
-          <textarea id="shootLocationDirections" rows="3" maxlength="1000" placeholder="What floor the studio is on, where to park, etc." readonly></textarea>
-        </label>
-      </div>
-
-      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
-      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="directionHeading">Direction<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
-      <div id="directionBody">
-        <p class="continue-prompt" id="categoryContinuePrompt">select a category to continue</p>
-
-        <div id="formSection2" hidden>
-          <label><span id="shootPremiseLabelText">Concept</span>
-            <textarea id="shootPremise" rows="6" maxlength="200" placeholder="visual narrative or message" readonly></textarea>
-          </label>
-
-          <div id="narrativeFieldsBlock">
-            <label>Character/Personality
-              <textarea id="shootCharacter" rows="6" maxlength="1000" placeholder="Who the talent is being, even loosely" readonly></textarea>
-            </label>
-
-            <label>World-building notes
-              <textarea id="shootWorldNotes" rows="6" maxlength="1000" placeholder="Setting, implied time or backstory, what's just happened or about to" readonly></textarea>
-            </label>
-
-            <label>General direction notes
-              <textarea id="shootGeneralNotes" rows="6" maxlength="1000" placeholder="Anything else worth remembering about this shoot" readonly></textarea>
-            </label>
-          </div>
-
-          <div id="commercialFieldsBlock" hidden>
-            <label>Shoot goals
-              <textarea id="shootGoals" rows="6" maxlength="1000" placeholder="What this shoot needs to accomplish" readonly></textarea>
-            </label>
-          </div>
-
-          <label>Elevator pitch
-            <textarea id="shootElevatorPitch" rows="2" maxlength="150" placeholder="One line description of your story." readonly></textarea>
-          </label>
-        </div>
-      </div>
-
-      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
-      <h3 class="shoot-section-heading status-group-heading heading-navy" id="visualsHeading">Visuals<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
-      <div id="visualsBody">
-        <div class="moodboard-section">
-          <span class="moodboard-label">Mood board</span>
-          <button type="button" id="addMoodboardPhotos" class="primary small-btn">+ Add photos</button>
-          <input type="file" id="moodboardFileInput" accept="image/*" multiple hidden />
-          <div id="moodboardGrid" class="moodboard-grid"></div>
-          <label class="checkbox-row" id="moodboardCompleteRow"><input type="checkbox" id="shootMoodboardComplete" /> <span id="moodboardCompleteLabel">Mood board complete?</span></label>
-        </div>
-
-        <div class="form-section-label-row">
-          <button type="button" class="manage-link inline-manage-link" id="manageFrameworksBtn">Manage</button>
-        </div>
-        <div id="frameworkTagsContainer"></div>
-        <div class="lighting-setups-section" id="lightingSetupsSection">
-          <h4 class="subsection-heading" id="lightingSetupsHeading">Lighting setups<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h4>
-          <div id="lightingSetupsBody">
-            <p class="field-hint">Log your specific setups for reference on the day of, as well as to review what worked in each image.</p>
-            <div id="lightingSetupsItems" class="shot-list-items"></div>
-            <button type="button" id="addLightingSetupBtn" class="primary small-btn">+ Add lighting setup</button>
-          </div>
-        </div>
-
-        <div class="references-block">
-          <label class="beats-label">References</label>
-          <p class="field-hint">Links to webpages, articles, YouTube videos, other inspiration</p>
-          <div id="referencesList" class="references-list"></div>
-          <button type="button" id="addReferenceBtn" class="primary small-btn">+ Add link</button>
-        </div>
-      </div>
-
-      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
-      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="teamHeading">Team<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
-      <div id="teamBody">
-        <p class="team-question">Requires team?</p>
-        <div class="team-yesno-row">
-          <label class="checkbox-row"><input type="checkbox" id="teamRequiredYes" /> Yes</label>
-          <label class="checkbox-row"><input type="checkbox" id="teamRequiredNo" /> No</label>
-        </div>
-        <p class="field-hint team-finalized-note" id="teamFinalizedNote" hidden>Team finalized</p>
-        <div id="teamDetailsBlock" hidden>
-          <button type="button" id="addTeamMemberBtn" class="primary small-btn">+ Add team member</button>
-          <div id="teamMembersList" class="team-members-list"></div>
-          <label class="checkbox-row"><input type="checkbox" id="shootTeamFinalized" /> <span id="teamFinalizedLabel">Team finalized?</span></label>
-        </div>
-      </div>
-
-      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
-      <h3 class="shoot-section-heading status-group-heading heading-navy" id="shootDayNotesHeading">Shoot day<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
-      <div id="shootDayNotesBody">
-        <label>Directions for talent
-          <textarea id="shootTalentDirections" rows="6" maxlength="1000" readonly></textarea>
-        </label>
-        <label>Directions for team
-          <textarea id="shootTeamDirections" rows="6" maxlength="1000" readonly></textarea>
-        </label>
-
-        <div class="shot-list-section">
-          <h4 class="subsection-heading" id="shotListHeading">Shot list<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h4>
-          <div id="shotListBody">
-            <div id="shotListItems" class="shot-list-items"></div>
-            <button type="button" id="addShotBtn" class="primary small-btn">+ Add shot</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="postShootContent" hidden>
-        <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
-        <h3 class="shoot-section-heading status-group-heading heading-yellow" id="postShootHeading">Reflection<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
-        <div id="postShootBody">
-          <label>What went right
-            <textarea id="shootWentRight" rows="3" maxlength="1000" readonly></textarea>
-          </label>
-          <label>What could've gone better
-            <textarea id="shootCouldBeBetter" rows="3" maxlength="1000" readonly></textarea>
-          </label>
-          <label>Lessons for next time
-            <textarea id="shootLessonsLearned" rows="3" maxlength="1000" readonly></textarea>
-          </label>
-
-          <div class="moodboard-section">
-            <span class="moodboard-label">Final images</span>
-            <button type="button" id="addFinalPhotos" class="post-shoot-toggle">+ Add photos</button>
-            <input type="file" id="finalImagesFileInput" accept="image/*" multiple hidden />
-            <div id="finalImagesGrid" class="moodboard-grid"></div>
-          </div>
-        </div>
-      </div>
-
-      <button type="button" class="plain-delete-btn pre-save-divider" id="deleteShootBtn" hidden>Delete shoot</button>
-      <div class="modal-actions post-shoot-divider">
-        <button type="button" class="primary" id="saveShootBtn">Save</button>
-        <button type="button" class="primary" id="unarchiveShootBtn" hidden>Unarchive</button>
-        <button type="button" class="complete-shoot-btn" id="completeShootBtn" hidden>Complete Shoot</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ============ EXPAND FIELD MODAL ============ -->
-<div id="expandFieldOverlay" class="modal-overlay" hidden>
-  <div class="modal">
-    <div class="modal-header">
-      <h2 id="expandFieldTitle"></h2>
-      <button class="icon-btn close-btn" id="expandFieldCloseBtn">&times;</button>
-    </div>
-    <textarea id="expandFieldTextarea" rows="12"></textarea>
-    <button type="button" class="primary" id="expandFieldOkBtn">Okay</button>
-  </div>
-</div>
-
-<!-- ============ LOCATION MODAL ============ -->
-<div id="locationModalOverlay" class="modal-overlay" hidden>
-  <div class="modal">
-    <div class="modal-header">
-      <h2>Location</h2>
-      <button class="icon-btn close-btn" data-close="location">&times;</button>
-    </div>
-    <div id="locationForm">
-      <label>Location name &amp; address
-        <input type="text" id="locationTextInput" maxlength="200" placeholder="e.g. Studio A, 123 Main St" />
-      </label>
-      <label>Past locations
-        <select id="pastLocationsSelect">
-          <option value="">Select a past location…</option>
         </select>
       </label>
       <button type="button" class="primary" id="saveLocationBtn">Save</button>

@@ -3423,13 +3423,38 @@ h2.status-group-heading.heading-navy {
 }
 
 /* ---- Regions map ---- */
+.world-map-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.map-zoom-btn {
+  width: 36px;
+  height: 36px;
+  background: var(--ink);
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  font-family: var(--font-title);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .world-map-scroll {
   width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
+  max-height: 60vh;
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  margin-bottom: 16px;
 }
 
 #worldMapContainer {
@@ -3441,11 +3466,12 @@ h2.status-group-heading.heading-navy {
   display: block;
   width: 900px;
   height: auto;
+  transition: width 0.2s ease;
 }
 
 /* Every country/territory shape defaults to white with a thin ink outline
-   — .region-shot (toggled per shoot's Region field) fills it with the
-   accent color instead. */
+   — .region-shot (toggled per shoot's Region field) fills it with that
+   region's assigned pie-slice color via --region-color instead. */
 #worldMapContainer svg g,
 #worldMapContainer svg path {
   fill: #fff;
@@ -3458,7 +3484,21 @@ h2.status-group-heading.heading-navy {
    both the shape itself and any child paths under a matched <g>. */
 #worldMapContainer svg .region-shot,
 #worldMapContainer svg .region-shot path {
-  fill: var(--accent);
+  fill: var(--region-color, var(--accent));
+}
+
+/* Brief pulse when a legend row is tapped, so the reader can actually find
+   the region on the map instead of hunting for a same-colored country. */
+#worldMapContainer svg .region-focus-pulse,
+#worldMapContainer svg .region-focus-pulse path {
+  animation: region-focus-pulse 1.2s ease-out;
+}
+
+@keyframes region-focus-pulse {
+  0%, 100% { stroke-width: 0.4; stroke: var(--ink); }
+  25% { stroke-width: 3; stroke: var(--text); }
+  50% { stroke-width: 0.4; stroke: var(--ink); }
+  75% { stroke-width: 3; stroke: var(--text); }
 }
 
 /* ---- Stats detail slide-over ---- */

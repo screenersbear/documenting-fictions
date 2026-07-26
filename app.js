@@ -341,6 +341,46 @@
     ['zw', "Zimbabwe"],
   ];
 
+  const REGION_LABELS = Object.fromEntries(REGION_OPTIONS);
+
+  // Normalizes a shoot's location into the structured shape (name/street/
+  // city/zip/country). Handles both a legacy plain-string location (folded
+  // into `name`) and the old separate `region` field (folded into `country`)
+  // so existing saved shoots keep their data after this schema change.
+  function normalizeLocation(loc, legacyRegion) {
+    if (loc && typeof loc === 'object') {
+      return {
+        name: loc.name || '',
+        street: loc.street || '',
+        city: loc.city || '',
+        zip: loc.zip || '',
+        country: loc.country || legacyRegion || '',
+      };
+    }
+    return { name: loc || '', street: '', city: '', zip: '', country: legacyRegion || '' };
+  }
+
+  function isLocationBlank(loc) {
+    return !loc || (!hasText(loc.name) && !hasText(loc.street) && !hasText(loc.city) && !hasText(loc.zip) && !hasText(loc.country));
+  }
+
+  // Composes a location into one display line: "name — street, city, zip, Country".
+  function formatLocationDisplay(loc) {
+    if (!loc) return '';
+    const parts = [];
+    if (hasText(loc.name)) parts.push(loc.name.trim());
+    const addressLine = [loc.street, loc.city, loc.zip].filter(hasText).map(v => v.trim()).join(', ');
+    if (addressLine) parts.push(addressLine);
+    if (loc.country) parts.push(REGION_LABELS[loc.country] || loc.country);
+    return parts.join(' — ');
+  }
+
+  // Case/whitespace-insensitive identity key for deduping/matching locations
+  // (e.g. recognizing a past location was picked again for directions reuse).
+  function locationKey(loc) {
+    return ['name', 'street', 'city', 'zip', 'country'].map(k => ((loc && loc[k]) || '').trim().toLowerCase()).join('|');
+  }
+
   const CATEGORY_LABELS = {
     commercial: 'Commercial',
     video: 'Video',
@@ -482,6 +522,7 @@
       journalEntries: [],
       titleDisplayMode: 'talent',
       colorTheme: 'default',
+      defaultCountry: '',
     };
   }
 
@@ -554,7 +595,7 @@
   // (the closest of the new three reflection boxes, since a clean 3-way
   // split of old freeform text isn't possible).
   function migrateShoot(s, frameworks) {
-    if (s.frameworkTags && s.category && s.status !== undefined && s.moodboardComplete !== undefined && Array.isArray(s.references) && s.teamRequired !== undefined && Array.isArray(s.talents)) return s;
+    if (s.frameworkTags && s.category && s.status !== undefined && s.moodboardComplete !== undefined && Array.isArray(s.references) && s.teamRequired !== undefined && Array.isArray(s.talents) && s.location && typeof s.location === 'object') return s;
     const dfp = frameworks.find(f => f.name === 'Documenting Fictions Principles');
     const vl = frameworks.find(f => f.name === 'Visual Language');
     const frameworkTags = s.frameworkTags || [];
@@ -567,8 +608,7 @@
       ...s,
       title: s.title || '',
       status,
-      location: s.location || '',
-      region: s.region || '',
+      location: normalizeLocation(s.location, s.region),
       startTime: s.startTime || s.time || '',
       endTime: s.endTime || '',
       premise: s.premise !== undefined ? s.premise : (s.concept || ''),
@@ -611,6 +651,7 @@
         journalEntries,
         titleDisplayMode: parsed.titleDisplayMode === 'title' ? 'title' : 'talent',
         colorTheme: THEME_KEYS.includes(parsed.colorTheme) ? parsed.colorTheme : 'default',
+        defaultCountry: typeof parsed.defaultCountry === 'string' ? parsed.defaultCountry : '',
       };
     } catch (e) {
       console.error('Failed to load state, starting fresh', e);
@@ -1304,7 +1345,7 @@
 
   const SHOOT_SORT_LABELS = { status: 'Status', shoot_date: 'Shoot date', category: 'Category' };
 
-  const SHOOT_DATE_BUCKET_ORDER = ['past', 'this_week', 'next_week', 'later_this_month', 'next_month', 'future', 'undated'];
+  const SHOOT_DATE_BUCKET_ORDER = ['this_week', 'next_week', 'later_this_month', 'next_month', 'future', 'past', 'undated'];
   const SHOOT_DATE_BUCKET_LABELS = {
     past: 'Past',
     this_week: 'This week',
@@ -1597,34 +1638,43 @@
       yearRowsWrap.className = 'shoot-status-rows';
       yearRowsWrap.hidden = yearCollapsed;
 
-      let visibleMonthIndex = 0;
-      sortedMonths.forEach(month => {
-        const monthGroupEl = document.createElement('div');
-        monthGroupEl.className = 'archive-month-group';
-
-        const monthCollapseKey = `archive:${year}:${month}`;
-        const monthCollapsed = isSectionCollapsed(monthCollapseKey);
-        const monthHeading = document.createElement('h3');
-        monthHeading.className = `status-group-heading archive-month-heading ${visibleMonthIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${monthCollapsed ? ' collapsed' : ''}`;
-        monthHeading.innerHTML = `${escapeHtml(monthLabel(month))}${COLLAPSE_ARROW_SVG}`;
-
-        const monthRowsWrap = document.createElement('div');
-        monthRowsWrap.className = 'shoot-status-rows';
-        monthRowsWrap.hidden = monthCollapsed;
-        months.get(month).forEach(s => renderShootRow(monthRowsWrap, s, { showStatus: true, checkFinalImages: true }));
-
-        monthHeading.addEventListener('click', () => {
-          const nowHidden = !monthRowsWrap.hidden;
-          monthRowsWrap.hidden = nowHidden;
-          monthHeading.classList.toggle('collapsed', nowHidden);
-          setSectionCollapsed(monthCollapseKey, nowHidden);
+      if (year === 'Undated') {
+        // Undated only ever has the one '00' month bucket anyway — a
+        // second "Undated" sub-heading under the "Undated" year heading
+        // is pure redundancy, so just list the shoots directly.
+        sortedMonths.forEach(month => {
+          months.get(month).forEach(s => renderShootRow(yearRowsWrap, s, { showStatus: true, checkFinalImages: true }));
         });
+      } else {
+        let visibleMonthIndex = 0;
+        sortedMonths.forEach(month => {
+          const monthGroupEl = document.createElement('div');
+          monthGroupEl.className = 'archive-month-group';
 
-        monthGroupEl.appendChild(monthHeading);
-        monthGroupEl.appendChild(monthRowsWrap);
-        yearRowsWrap.appendChild(monthGroupEl);
-        visibleMonthIndex++;
-      });
+          const monthCollapseKey = `archive:${year}:${month}`;
+          const monthCollapsed = isSectionCollapsed(monthCollapseKey);
+          const monthHeading = document.createElement('h3');
+          monthHeading.className = `status-group-heading archive-month-heading ${visibleMonthIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${monthCollapsed ? ' collapsed' : ''}`;
+          monthHeading.innerHTML = `${escapeHtml(monthLabel(month))}${COLLAPSE_ARROW_SVG}`;
+
+          const monthRowsWrap = document.createElement('div');
+          monthRowsWrap.className = 'shoot-status-rows';
+          monthRowsWrap.hidden = monthCollapsed;
+          months.get(month).forEach(s => renderShootRow(monthRowsWrap, s, { showStatus: true, checkFinalImages: true }));
+
+          monthHeading.addEventListener('click', () => {
+            const nowHidden = !monthRowsWrap.hidden;
+            monthRowsWrap.hidden = nowHidden;
+            monthHeading.classList.toggle('collapsed', nowHidden);
+            setSectionCollapsed(monthCollapseKey, nowHidden);
+          });
+
+          monthGroupEl.appendChild(monthHeading);
+          monthGroupEl.appendChild(monthRowsWrap);
+          yearRowsWrap.appendChild(monthGroupEl);
+          visibleMonthIndex++;
+        });
+      }
 
       yearHeading.addEventListener('click', () => {
         const nowHidden = !yearRowsWrap.hidden;
@@ -2194,36 +2244,47 @@
       yearRowsWrap.className = 'shoot-status-rows';
       yearRowsWrap.hidden = yearCollapsed;
 
-      let visibleMonthIndex = 0;
-      sortedMonths.forEach(month => {
-        const monthGroupEl = document.createElement('div');
-        monthGroupEl.className = 'archive-month-group';
-
-        const monthCollapseKey = `journal:${year}:${month}`;
-        const monthCollapsed = isSectionCollapsed(monthCollapseKey);
-        const monthHeading = document.createElement('h3');
-        monthHeading.className = `status-group-heading archive-month-heading ${visibleMonthIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${monthCollapsed ? ' collapsed' : ''}`;
-        monthHeading.innerHTML = `${escapeHtml(monthLabel(month))}${COLLAPSE_ARROW_SVG}`;
-
-        const monthRowsWrap = document.createElement('div');
-        monthRowsWrap.className = 'shoot-status-rows';
-        monthRowsWrap.hidden = monthCollapsed;
-        months.get(month)
-          .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
-          .forEach(e => renderJournalEntryRow(monthRowsWrap, e));
-
-        monthHeading.addEventListener('click', () => {
-          const nowHidden = !monthRowsWrap.hidden;
-          monthRowsWrap.hidden = nowHidden;
-          monthHeading.classList.toggle('collapsed', nowHidden);
-          setSectionCollapsed(monthCollapseKey, nowHidden);
+      if (year === 'Undated') {
+        // Undated only ever has the one '00' month bucket anyway — a
+        // second "Undated" sub-heading under the "Undated" year heading
+        // is pure redundancy, so just list the entries directly.
+        sortedMonths.forEach(month => {
+          months.get(month)
+            .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+            .forEach(e => renderJournalEntryRow(yearRowsWrap, e));
         });
+      } else {
+        let visibleMonthIndex = 0;
+        sortedMonths.forEach(month => {
+          const monthGroupEl = document.createElement('div');
+          monthGroupEl.className = 'archive-month-group';
 
-        monthGroupEl.appendChild(monthHeading);
-        monthGroupEl.appendChild(monthRowsWrap);
-        yearRowsWrap.appendChild(monthGroupEl);
-        visibleMonthIndex++;
-      });
+          const monthCollapseKey = `journal:${year}:${month}`;
+          const monthCollapsed = isSectionCollapsed(monthCollapseKey);
+          const monthHeading = document.createElement('h3');
+          monthHeading.className = `status-group-heading archive-month-heading ${visibleMonthIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${monthCollapsed ? ' collapsed' : ''}`;
+          monthHeading.innerHTML = `${escapeHtml(monthLabel(month))}${COLLAPSE_ARROW_SVG}`;
+
+          const monthRowsWrap = document.createElement('div');
+          monthRowsWrap.className = 'shoot-status-rows';
+          monthRowsWrap.hidden = monthCollapsed;
+          months.get(month)
+            .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+            .forEach(e => renderJournalEntryRow(monthRowsWrap, e));
+
+          monthHeading.addEventListener('click', () => {
+            const nowHidden = !monthRowsWrap.hidden;
+            monthRowsWrap.hidden = nowHidden;
+            monthHeading.classList.toggle('collapsed', nowHidden);
+            setSectionCollapsed(monthCollapseKey, nowHidden);
+          });
+
+          monthGroupEl.appendChild(monthHeading);
+          monthGroupEl.appendChild(monthRowsWrap);
+          yearRowsWrap.appendChild(monthGroupEl);
+          visibleMonthIndex++;
+        });
+      }
 
       yearHeading.addEventListener('click', () => {
         const nowHidden = !yearRowsWrap.hidden;
@@ -3142,12 +3203,15 @@
     scheduleShootAutosave();
   });
 
-  // ---------- Location (popup with free text + past locations) ----------
+  // ---------- Location (popup with name/street/city/zip/country + past locations) ----------
+  let currentShootLocation = { name: '', street: '', city: '', zip: '', country: '' };
+  let pastLocationSamples = [];
+
   function updateLocationBtnDisplay() {
-    const value = document.getElementById('shootLocation').value;
     const btn = document.getElementById('shootLocationBtn');
-    btn.textContent = value || 'Tap to add location';
-    btn.classList.toggle('has-value', !!value);
+    const display = formatLocationDisplay(currentShootLocation);
+    btn.textContent = display || 'Tap to add location';
+    btn.classList.toggle('has-value', !!display);
   }
 
   // Most-selected locations first (a repeatedly-booked studio should surface
@@ -3155,51 +3219,77 @@
   // the order stays stable rather than reflecting shoot-creation order.
   function getAllPastLocations() {
     const counts = {};
+    const samples = {};
     state.shoots.forEach(s => {
-      const loc = s.location && s.location.trim();
-      if (loc) counts[loc] = (counts[loc] || 0) + 1;
+      if (isLocationBlank(s.location)) return;
+      const key = locationKey(s.location);
+      counts[key] = (counts[key] || 0) + 1;
+      samples[key] = s.location;
     });
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([loc]) => loc);
+    return Object.keys(counts)
+      .sort((a, b) => counts[b] - counts[a] || formatLocationDisplay(samples[a]).localeCompare(formatLocationDisplay(samples[b])))
+      .map(key => samples[key]);
   }
 
   // Whatever directions were entered the most recent time this exact
   // location was shot at (by shoot date; undated shoots sort last so they
   // only win if nothing else has directions on file) — lets picking a
   // known location bring its directions along automatically.
-  function getLastLocationDirections(location) {
-    const matches = state.shoots.filter(s => (s.location || '').trim() === location && hasText(s.locationDirections));
+  function getLastLocationDirections(loc) {
+    const key = locationKey(loc);
+    const matches = state.shoots.filter(s => s.location && locationKey(s.location) === key && hasText(s.locationDirections));
     if (!matches.length) return '';
     matches.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     return matches[0].locationDirections;
   }
 
+  function fillLocationForm(loc) {
+    document.getElementById('locationNameInput').value = loc.name || '';
+    document.getElementById('locationStreetInput').value = loc.street || '';
+    document.getElementById('locationCityInput').value = loc.city || '';
+    document.getElementById('locationZipInput').value = loc.zip || '';
+    document.getElementById('locationCountryInput').value = loc.country || '';
+  }
+
   function openLocationModal() {
-    document.getElementById('locationTextInput').value = document.getElementById('shootLocation').value;
+    fillLocationForm(currentShootLocation);
+    pastLocationSamples = getAllPastLocations();
     const select = document.getElementById('pastLocationsSelect');
     select.innerHTML = '<option value="">Select a past location…</option>'
-      + getAllPastLocations().map(loc => `<option value="${escapeHtml(loc)}">${escapeHtml(loc)}</option>`).join('');
+      + pastLocationSamples.map((loc, i) => `<option value="${i}">${escapeHtml(formatLocationDisplay(loc))}</option>`).join('');
     document.getElementById('locationModalOverlay').hidden = false;
   }
 
   document.getElementById('shootLocationBtn').addEventListener('click', openLocationModal);
 
   document.getElementById('pastLocationsSelect').addEventListener('change', (e) => {
-    if (e.target.value) document.getElementById('locationTextInput').value = e.target.value;
+    if (e.target.value === '') return;
+    const loc = pastLocationSamples[Number(e.target.value)];
+    if (loc) fillLocationForm(loc);
   });
 
   document.getElementById('saveLocationBtn').addEventListener('click', () => {
-    const newLocation = document.getElementById('locationTextInput').value.trim();
-    const oldLocation = document.getElementById('shootLocation').value;
-    document.getElementById('shootLocation').value = newLocation;
+    const newLocation = {
+      name: document.getElementById('locationNameInput').value.trim(),
+      street: document.getElementById('locationStreetInput').value.trim(),
+      city: document.getElementById('locationCityInput').value.trim(),
+      zip: document.getElementById('locationZipInput').value.trim(),
+      country: document.getElementById('locationCountryInput').value,
+    };
+    const oldKey = locationKey(currentShootLocation);
+    const isChange = locationKey(newLocation) !== oldKey;
+    currentShootLocation = newLocation;
     updateLocationBtnDisplay();
     // Only autofill on an actual change — re-saving the same location
     // shouldn't clobber directions the user may have just edited by hand.
-    if (newLocation && newLocation !== oldLocation) {
+    if (isChange && !isLocationBlank(newLocation)) {
       const lastDirections = getLastLocationDirections(newLocation);
       if (lastDirections) document.getElementById('shootLocationDirections').value = lastDirections;
     }
+    // Remember whichever country gets set the first time ever — most
+    // photographers mostly work in one country, so pre-filling it for every
+    // new shoot going forward saves a repetitive pick.
+    if (newLocation.country && !state.defaultCountry) state.defaultCountry = newLocation.country;
     document.getElementById('locationModalOverlay').hidden = true;
     scheduleShootAutosave();
   });
@@ -3742,9 +3832,8 @@
     document.getElementById('shootDeadline').value = s ? (s.deadline || '') : '';
     document.getElementById('shootStartTime').value = s ? (s.startTime || '') : '';
     document.getElementById('shootEndTime').value = s ? (s.endTime || '') : '';
-    document.getElementById('shootLocation').value = s ? (s.location || '') : '';
+    currentShootLocation = s ? normalizeLocation(s.location) : { name: '', street: '', city: '', zip: '', country: state.defaultCountry || '' };
     updateLocationBtnDisplay();
-    document.getElementById('shootRegion').value = s ? (s.region || '') : '';
     currentTalents = s && Array.isArray(s.talents)
       ? s.talents.map(t => ({ name: t.name || '', socialHandles: (t.socialHandles || []).map(sh => ({ ...sh })) }))
       : [];
@@ -4253,8 +4342,7 @@
       deadline: document.getElementById('shootDeadline').value,
       startTime: document.getElementById('shootStartTime').value,
       endTime: document.getElementById('shootEndTime').value,
-      location: document.getElementById('shootLocation').value.trim(),
-      region: document.getElementById('shootRegion').value,
+      location: { ...currentShootLocation },
       talents: currentTalents.map(t => ({ name: t.name.trim(), socialHandles: [...t.socialHandles] })),
       category: document.getElementById('shootCategory').value,
       premise: document.getElementById('shootPremise').value.trim(),
@@ -4284,7 +4372,12 @@
   // A brand-new, never-touched shoot draft shouldn't get written to state
   // just because the modal was opened — only once it actually has content.
   function isShootDataBlank(data) {
-    return !hasText(data.title) && !hasText(data.location) && !hasText(data.region) && !hasText(data.startTime) && !hasText(data.endTime) && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals) && !hasText(data.elevatorPitch)
+    // The country field pre-fills itself from state.defaultCountry on every
+    // brand-new shoot draft, so it can't count as "the user entered
+    // something" here or every untouched New Shoot would silently save.
+    const loc = data.location;
+    const locationEffectivelyBlank = !hasText(loc.name) && !hasText(loc.street) && !hasText(loc.city) && !hasText(loc.zip);
+    return !hasText(data.title) && locationEffectivelyBlank && !hasText(data.startTime) && !hasText(data.endTime) && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals) && !hasText(data.elevatorPitch)
       && !hasText(data.worldNotes) && !hasText(data.generalNotes) && !hasText(data.deadline)
       && !hasText(data.whatWentRight) && !hasText(data.couldBeBetter) && !hasText(data.lessonsLearned)
       && !hasText(data.talentDirections) && !hasText(data.teamDirections) && !hasText(data.locationDirections) && data.shotList.length === 0
@@ -4765,7 +4858,8 @@
     }
 
     const timeRange = shootTimeRange(s);
-    if ((s.date || timeRange || s.location) && sections.details) {
+    const locationDisplay = formatLocationDisplay(s.location);
+    if ((s.date || timeRange || locationDisplay) && sections.details) {
       doc.setTextColor(...navy);
       doc.setFont('courier', 'bold');
       doc.setFontSize(18);
@@ -4775,7 +4869,7 @@
       const detailsMaxWidth = pageWidth - margin * 2;
       if (s.date) { y = drawLabeledPdfLine(doc, 'Date: ', prettyDate(s.date), margin, y, detailsMaxWidth, 16); }
       if (timeRange) { y = drawLabeledPdfLine(doc, 'Time: ', timeRange, margin, y, detailsMaxWidth, 16); }
-      if (s.location) { y = drawLabeledPdfLine(doc, 'Location: ', s.location, margin, y, detailsMaxWidth, 14) + 2; }
+      if (locationDisplay) { y = drawLabeledPdfLine(doc, 'Location: ', locationDisplay, margin, y, detailsMaxWidth, 14) + 2; }
       if (hasText(s.locationDirections)) { y = drawLabeledPdfLine(doc, 'Location instructions: ', s.locationDirections, margin, y, detailsMaxWidth, 14) + 2; }
       y += 8;
     }
@@ -5406,6 +5500,7 @@
         journalEntries: Array.isArray(payload.state.journalEntries) ? payload.state.journalEntries : [],
         titleDisplayMode: payload.state.titleDisplayMode === 'title' ? 'title' : 'talent',
         colorTheme: THEME_KEYS.includes(payload.state.colorTheme) ? payload.state.colorTheme : 'default',
+        defaultCountry: typeof payload.state.defaultCountry === 'string' ? payload.state.defaultCountry : '',
       };
       saveState();
       applyColorTheme(state.colorTheme);
@@ -5554,26 +5649,32 @@
     return data;
   }
 
+  function statsLocationKey(s) {
+    return isLocationBlank(s.location) ? 'No location set' : locationKey(s.location);
+  }
+
   function buildLocationStats() {
     const counts = {};
+    const labels = {};
     getStatsShoots().forEach(s => {
-      const key = (s.location || '').trim() || 'No location set';
+      const key = statsLocationKey(s);
       counts[key] = (counts[key] || 0) + 1;
+      if (key !== 'No location set') labels[key] = formatLocationDisplay(s.location);
     });
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     const TOP_N = 6;
     const top = sorted.slice(0, TOP_N);
     const rest = sorted.slice(TOP_N);
-    const data = top.map(([key, value]) => ({ key, label: key, value }));
+    const data = top.map(([key, value]) => ({ key, label: labels[key] || 'No location set', value }));
     statsSliceFilters.location = {};
     data.forEach(d => {
-      statsSliceFilters.location[d.key] = (s) => ((s.location || '').trim() || 'No location set') === d.key;
+      statsSliceFilters.location[d.key] = (s) => statsLocationKey(s) === d.key;
     });
     if (rest.length) {
       const otherKeys = new Set(rest.map(([k]) => k));
       const otherValue = rest.reduce((sum, [, v]) => sum + v, 0);
       data.push({ key: '__other_locations__', label: 'Other', value: otherValue });
-      statsSliceFilters.location.__other_locations__ = (s) => otherKeys.has((s.location || '').trim() || 'No location set');
+      statsSliceFilters.location.__other_locations__ = (s) => otherKeys.has(statsLocationKey(s));
     }
     return data;
   }
@@ -5590,16 +5691,67 @@
   // ---------- Regions map (world-map.svg, fetched once and cached) ----------
   let worldMapSvgText = null;
   let worldMapFetchPromise = null;
+  let regionsSliceColors = {};
+  let mapZoomLevel = 1;
+  const MAP_ZOOM_MIN = 1;
+  const MAP_ZOOM_MAX = 4;
+  const MAP_ZOOM_STEP = 0.5;
+  const MAP_BASE_WIDTH = 900;
 
-  function regionsPageHtml() {
-    return `
-      <div class="stats-page stats-page-regions" data-key="regions">
-        <h2 class="stats-page-title">Regions</h2>
-        <div class="world-map-scroll" id="worldMapScroll">
-          <div id="worldMapContainer"><p class="empty-hint">Loading map…</p></div>
+  function buildRegionsStats() {
+    const counts = {};
+    getStatsShoots().forEach(s => {
+      const code = s.location && s.location.country;
+      if (code) counts[code] = (counts[code] || 0) + 1;
+    });
+    const data = Object.entries(counts)
+      .map(([key, value]) => ({ key, label: REGION_LABELS[key] || key, value }))
+      .sort((a, b) => b.value - a.value);
+    statsSliceFilters.regions = {};
+    data.forEach(d => {
+      statsSliceFilters.regions[d.key] = (s) => !!(s.location && s.location.country === d.key);
+    });
+    return data;
+  }
+
+  function regionsPageHtml(data) {
+    if (!data.length) {
+      regionsSliceColors = {};
+      return {
+        html: `
+          <div class="stats-page stats-page-regions" data-key="regions">
+            <h2 class="stats-page-title">Regions</h2>
+            <p class="empty-hint">Not enough data yet.</p>
+          </div>
+        `,
+        slices: null,
+      };
+    }
+    const { slices } = buildPieSVG(data);
+    regionsSliceColors = Object.fromEntries(slices.map(s => [s.key, s.color]));
+    const legendHtml = slices.map(s => `
+      <button type="button" class="stats-legend-row" data-key="${escapeHtml(String(s.key))}">
+        <span class="legend-swatch" style="background:${s.color}"></span>
+        <span class="legend-label">${escapeHtml(s.label)}</span>
+        <span class="legend-pct">${s.pct}%</span>
+      </button>
+    `).join('');
+    return {
+      html: `
+        <div class="stats-page stats-page-regions" data-key="regions">
+          <h2 class="stats-page-title">Regions</h2>
+          <div class="world-map-toolbar">
+            <button type="button" class="map-zoom-btn" id="worldMapZoomOutBtn" aria-label="Zoom out">&minus;</button>
+            <button type="button" class="map-zoom-btn" id="worldMapZoomInBtn" aria-label="Zoom in">+</button>
+          </div>
+          <div class="world-map-scroll" id="worldMapScroll">
+            <div id="worldMapContainer"><p class="empty-hint">Loading map…</p></div>
+          </div>
+          <div class="stats-legend">${legendHtml}</div>
         </div>
-      </div>
-    `;
+      `,
+      slices,
+    };
   }
 
   function applyRegionsHighlight() {
@@ -5607,18 +5759,63 @@
     if (!container) return;
     const svg = container.querySelector('svg');
     if (!svg) return;
-    const shotRegions = new Set(getStatsShoots().map(s => s.region).filter(Boolean));
-    svg.querySelectorAll('.region-shot').forEach(el => el.classList.remove('region-shot'));
-    shotRegions.forEach(code => {
+    svg.querySelectorAll('.region-shot').forEach(el => {
+      el.classList.remove('region-shot');
+      el.style.removeProperty('--region-color');
+    });
+    Object.entries(regionsSliceColors).forEach(([code, color]) => {
       const el = svg.getElementById ? svg.getElementById(code) : null;
       const target = el || svg.querySelector(`#${CSS.escape(code)}`);
-      if (target) target.classList.add('region-shot');
+      if (target) {
+        target.classList.add('region-shot');
+        target.style.setProperty('--region-color', color);
+      }
     });
+  }
+
+  function setMapZoom(level) {
+    mapZoomLevel = Math.min(MAP_ZOOM_MAX, Math.max(MAP_ZOOM_MIN, level));
+    const svg = document.querySelector('#worldMapContainer svg');
+    if (svg) svg.style.width = `${MAP_BASE_WIDTH * mapZoomLevel}px`;
+  }
+
+  // Zooms in a touch and scrolls/pulses a specific region into view — tapping
+  // a legend row shouldn't just open the shoot list, it should also help the
+  // reader actually find that country on the map.
+  function focusRegionOnMap(code) {
+    const container = document.getElementById('worldMapContainer');
+    const scrollWrap = document.getElementById('worldMapScroll');
+    if (!container || !scrollWrap) return;
+    const svg = container.querySelector('svg');
+    if (!svg) return;
+    const el = svg.getElementById ? svg.getElementById(code) : null;
+    const target = el || svg.querySelector(`#${CSS.escape(code)}`);
+    if (!target) return;
+    setMapZoom(Math.max(mapZoomLevel, 2));
+    // scrollIntoView on an SVG child is unreliable across engines, so the
+    // scroll position is computed by hand from getBoundingClientRect once
+    // the zoom's width transition has settled (matches its 0.2s duration).
+    setTimeout(() => {
+      const targetRect = target.getBoundingClientRect();
+      const wrapRect = scrollWrap.getBoundingClientRect();
+      const centerX = targetRect.left + targetRect.width / 2 - wrapRect.left + scrollWrap.scrollLeft;
+      const centerY = targetRect.top + targetRect.height / 2 - wrapRect.top + scrollWrap.scrollTop;
+      scrollWrap.scrollTo({
+        left: Math.max(0, centerX - scrollWrap.clientWidth / 2),
+        top: Math.max(0, centerY - scrollWrap.clientHeight / 2),
+        behavior: 'smooth',
+      });
+    }, 220);
+    target.classList.remove('region-focus-pulse');
+    void target.offsetWidth;
+    target.classList.add('region-focus-pulse');
+    setTimeout(() => target.classList.remove('region-focus-pulse'), 1200);
   }
 
   function renderRegionsMap() {
     const container = document.getElementById('worldMapContainer');
     if (!container) return;
+    mapZoomLevel = 1;
     if (worldMapSvgText) {
       container.innerHTML = worldMapSvgText;
       applyRegionsHighlight();
@@ -5683,6 +5880,13 @@
 
   statsCarousel.addEventListener('scroll', () => renderStatsDots(), { passive: true });
 
+  // Delegated (survives renderStats() rebuilding the carousel's innerHTML on
+  // every year-filter change) so it doesn't need re-binding per render.
+  statsCarousel.addEventListener('click', (e) => {
+    if (e.target.closest('#worldMapZoomInBtn')) setMapZoom(mapZoomLevel + MAP_ZOOM_STEP);
+    else if (e.target.closest('#worldMapZoomOutBtn')) setMapZoom(mapZoomLevel - MAP_ZOOM_STEP);
+  });
+
   function renderStatsYearFilters() {
     const currentYear = String(new Date().getFullYear());
     const years = new Set([currentYear]);
@@ -5715,13 +5919,14 @@
     funFactEl.textContent = fact || '';
     funFactEl.hidden = !fact;
     const pages = STATS_PAGES.map(page => page.custom
-      ? { html: regionsPageHtml(), slices: null }
+      ? regionsPageHtml(buildRegionsStats())
       : renderStatsPage(page, page.build()));
     statsCarousel.innerHTML = pages.map(p => p.html).join('');
     statsCarousel.scrollLeft = prevScrollLeft;
     statsCarousel.querySelectorAll('.pie-slice, .stats-legend-row').forEach(el => {
       el.addEventListener('click', () => {
         const pageKey = el.closest('.stats-page').dataset.key;
+        if (pageKey === 'regions') focusRegionOnMap(el.dataset.key);
         openStatsDetail(pageKey, el.dataset.key);
       });
     });
@@ -6046,12 +6251,18 @@
     }
 
     const locCounts = {};
-    shoots.forEach(s => { const l = (s.location || '').trim(); if (l) locCounts[l] = (locCounts[l] || 0) + 1; });
+    const locLabels = {};
+    shoots.forEach(s => {
+      if (isLocationBlank(s.location)) return;
+      const key = locationKey(s.location);
+      locCounts[key] = (locCounts[key] || 0) + 1;
+      locLabels[key] = formatLocationDisplay(s.location);
+    });
     const locEntries = Object.entries(locCounts);
     if (locEntries.length) {
       facts.push(`You've shot in ${locEntries.length} different location${locEntries.length === 1 ? '' : 's'}.`);
-      const [topLoc, topLocN] = locEntries.sort((a, b) => b[1] - a[1])[0];
-      if (topLocN > 1) facts.push(`${topLoc} is your most-used location, shot there ${topLocN} times.`);
+      const [topLocKey, topLocN] = locEntries.sort((a, b) => b[1] - a[1])[0];
+      if (topLocN > 1) facts.push(`${locLabels[topLocKey]} is your most-used location, shot there ${topLocN} times.`);
     }
 
     const totalShots = shoots.reduce((sum, s) => sum + (s.shotList || []).length, 0);
