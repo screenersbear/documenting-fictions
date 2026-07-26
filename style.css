@@ -17,19 +17,21 @@
   --font-title: "Arial Black", "Helvetica Neue", Arial, sans-serif;
   --font-body: "Courier New", Courier, monospace;
 
-  /* Shared corner-radius scale — every border-radius in the file now
-     references one of these instead of a repeated magic number. Values
-     were pulled straight from what was already in use (unchanged), just
-     named, so this is a pure standardization pass with no visual change. */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
-  --radius-2xl: 14px;
-  --radius-3xl: 16px;
-  --radius-4xl: 20px;
-  --radius-pill: 999px;
+  /* Shared corner-radius scale — every border-radius in the file
+     references one of these instead of a repeated magic number. Flipped to
+     0 for the sharp-cornered, logo-matched look (mockup direction); circular
+     elements (50%) and the couple of already-flat 0 cases aren't tokenized
+     here since they were never part of the rounded-corner scale to begin
+     with. */
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+  --radius-pill: 0;
 }
 
 :root[data-theme="pink"] { --ink: #f1b1f4; }
@@ -575,7 +577,7 @@ h1, h2, h3 {
 }
 
 .section-block h2 {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
   font-size: 19px;
@@ -588,8 +590,16 @@ h1, h2, h3 {
   color: #fff;
   padding: 8px 18px;
   border-radius: var(--radius-pill);
-  margin: 0 0 10px 4px;
+  margin: 0 0 10px;
   cursor: pointer;
+}
+
+/* Pins the collapse arrow to the header's right edge now that the header
+   is a full-width bar (matching the shoot bubbles below it) instead of a
+   content-sized pill — a plain flex row would otherwise leave it sitting
+   right up against the count. */
+.section-block h2 .collapse-arrow {
+  margin-left: auto;
 }
 
 /* Overview section headings alternate color dynamically (see renderOverview
