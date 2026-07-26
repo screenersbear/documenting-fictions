@@ -22,7 +22,7 @@
 :root[data-theme="purple"] { --ink: #a990e4; }
 :root[data-theme="red"] { --ink: #fa6265; }
 :root[data-theme="blue"] { --ink: #50a2ff; }
-:root[data-theme="green"] { --ink: #98e896; }
+:root[data-theme="green"] { --ink: #40b23d; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -1341,6 +1341,17 @@ h1, h2, h3 {
 .shoot-modal-header .share-shoot-btn {
   background: rgba(255, 255, 255, 0.15);
   color: #fff;
+  width: 40px;
+  height: 40px;
+}
+
+.shoot-modal-header .close-btn {
+  font-size: 28px;
+}
+
+.shoot-modal-header .share-shoot-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
 .close-btn {
@@ -2834,6 +2845,19 @@ h1, h2, h3 {
   letter-spacing: 1px;
 }
 
+/* Delete-all-data's 2nd confirmation step — reuses the standard
+   .intro-modal card but flips to a red warning look while it's asking
+   "are you SURE sure"; .danger-state is removed again once the delete
+   actually happens so the follow-up success message reads normal. */
+#deleteAllConfirmModal.danger-state {
+  border-color: var(--red);
+  background: rgba(192, 57, 43, 0.12);
+}
+
+#deleteAllConfirmModal.danger-state h2 {
+  color: var(--red);
+}
+
 .intro-modal p {
   margin: 0 0 18px;
   font-size: 16px;
@@ -2842,16 +2866,15 @@ h1, h2, h3 {
   text-align: left;
 }
 
-/* ---- App menu (hamburger) — anchored near the top of the screen with
-   the same outlined-card look as the intro/prompt popups, instead of the
-   bottom-sheet drawer the per-shoot options menu uses. ---- */
+/* ---- App menu (hamburger) — centered on screen with the same outlined-
+   card look as the intro/prompt popups, instead of the bottom-sheet drawer
+   the per-shoot options menu uses. ---- */
 .app-menu-overlay {
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   z-index: 30;
   background: rgba(0, 0, 0, 0.6);
   padding: 24px;
-  padding-top: calc(env(safe-area-inset-top) + 24px);
 }
 
 .app-menu-modal {

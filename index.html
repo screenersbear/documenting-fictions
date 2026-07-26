@@ -240,7 +240,7 @@
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="basicInfoHeading">Basic Info<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="basicInfoBody">
         <div class="status-swatch-wrap">
-          <span class="status-swatch-display" id="statusSwatchDisplay" aria-hidden="true">Status: Early idea</span>
+          <span class="status-swatch-display shine-sweep" id="statusSwatchDisplay" aria-hidden="true">Status: Early idea</span>
           <select id="shootStatus" class="status-swatch-select" aria-label="Status">
             <option value="idea_phase">Early idea</option>
             <option value="planning">Active planning</option>
@@ -647,10 +647,23 @@
         <button type="button" class="options-item choice-item" id="themePurpleBtn" data-theme="purple"><span class="theme-swatch" style="background:#a990e4"></span>Purple</button>
         <button type="button" class="options-item choice-item" id="themeRedBtn" data-theme="red"><span class="theme-swatch" style="background:#fa6265"></span>Red</button>
         <button type="button" class="options-item choice-item" id="themeBlueBtn" data-theme="blue"><span class="theme-swatch" style="background:#50a2ff"></span>Blue</button>
-        <button type="button" class="options-item choice-item" id="themeGreenBtn" data-theme="green"><span class="theme-swatch" style="background:#98e896"></span>Green</button>
+        <button type="button" class="options-item choice-item" id="themeGreenBtn" data-theme="green"><span class="theme-swatch" style="background:#40b23d"></span>Green</button>
       </div>
     </div>
     <input type="file" id="importFileInput" accept="application/json" hidden />
+  </div>
+</div>
+
+<!-- ============ DELETE ALL SHOOT DATA CONFIRM ============ -->
+<div id="deleteAllConfirmOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal delete-all-confirm-modal" id="deleteAllConfirmModal">
+    <h2 id="deleteAllConfirmTitle">Are you SURE sure, my guy?</h2>
+    <p id="deleteAllConfirmText">This permanently removes every shoot, mood board photo, and reference. This can't be undone.</p>
+    <div class="modal-actions" id="deleteAllConfirmActions">
+      <button type="button" class="secondary" id="deleteAllConfirmCancelBtn">Cancel</button>
+      <button type="button" class="danger" id="deleteAllConfirmYesBtn">Yes, delete everything</button>
+    </div>
+    <button type="button" class="primary" id="deleteAllConfirmOkBtn" hidden>OK</button>
   </div>
 </div>
 

@@ -4705,15 +4705,43 @@
     }));
   }
 
+  const deleteAllConfirmOverlay = document.getElementById('deleteAllConfirmOverlay');
+  const deleteAllConfirmModal = document.getElementById('deleteAllConfirmModal');
+  const deleteAllConfirmTitle = document.getElementById('deleteAllConfirmTitle');
+  const deleteAllConfirmText = document.getElementById('deleteAllConfirmText');
+  const deleteAllConfirmActions = document.getElementById('deleteAllConfirmActions');
+  const deleteAllConfirmOkBtn = document.getElementById('deleteAllConfirmOkBtn');
+
   document.getElementById('deleteAllShootDataBtn').addEventListener('click', () => {
     closeAppMenu();
     const confirmed = confirm('Delete ALL shoot data? This permanently removes every shoot, mood board photo, and reference. This can\'t be undone.');
     if (!confirmed) return;
+    deleteAllConfirmModal.classList.add('danger-state');
+    deleteAllConfirmTitle.textContent = 'Are you SURE sure, my guy?';
+    deleteAllConfirmText.textContent = 'This permanently removes every shoot, mood board photo, and reference. This can\'t be undone.';
+    deleteAllConfirmActions.hidden = false;
+    deleteAllConfirmOkBtn.hidden = true;
+    deleteAllConfirmOverlay.hidden = false;
+  });
+
+  document.getElementById('deleteAllConfirmCancelBtn').addEventListener('click', () => {
+    deleteAllConfirmOverlay.hidden = true;
+  });
+
+  document.getElementById('deleteAllConfirmYesBtn').addEventListener('click', () => {
     state.shoots = [];
     saveState();
     idbClearAllImages().catch(() => {});
     renderAll();
-    showToast('All shoot data deleted.');
+    deleteAllConfirmModal.classList.remove('danger-state');
+    deleteAllConfirmTitle.textContent = 'All shoot data deleted.';
+    deleteAllConfirmText.textContent = 'Good luck on your next shoots!';
+    deleteAllConfirmActions.hidden = true;
+    deleteAllConfirmOkBtn.hidden = false;
+  });
+
+  deleteAllConfirmOkBtn.addEventListener('click', () => {
+    deleteAllConfirmOverlay.hidden = true;
   });
 
   // ---------- Export / Import (backup) ----------
