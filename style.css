@@ -34,9 +34,9 @@
   --radius-pill: 0;
 }
 
-:root[data-theme="pink"] { --ink: #f1b1f4; }
-:root[data-theme="purple"] { --ink: #a990e4; }
-:root[data-theme="red"] { --ink: #fa6265; }
+:root[data-theme="pink"] { --ink: #f3a6e6; }
+:root[data-theme="purple"] { --ink: #9779dc; }
+:root[data-theme="red"] { --ink: #ff5356; }
 :root[data-theme="blue"] { --ink: #50a2ff; }
 :root[data-theme="green"] { --ink: #40b23d; }
 
@@ -647,7 +647,8 @@ h2.status-group-heading.heading-navy {
 .section-block h2.collapsed .collapse-arrow,
 .status-group-heading.collapsed .collapse-arrow,
 .subsection-heading.collapsed .collapse-arrow,
-.upcoming-subheading.collapsed .collapse-arrow {
+.upcoming-subheading.collapsed .collapse-arrow,
+.stats-region-heading.collapsed .collapse-arrow {
   transform: rotate(-90deg);
 }
 
@@ -1613,6 +1614,16 @@ h2.status-group-heading.heading-navy {
   font-weight: 700;
 }
 
+#locationForm input.field-invalid {
+  border-color: var(--red);
+}
+
+.field-error-hint {
+  font-size: 13px;
+  color: var(--red);
+  margin: -8px 0 0;
+}
+
 .pdf-sections-list {
   display: flex;
   flex-direction: column;
@@ -1882,7 +1893,8 @@ h2.status-group-heading.heading-navy {
 }
 
 .reference-open,
-.delete-reference {
+.delete-reference,
+.delete-manage-location {
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -1897,9 +1909,19 @@ h2.status-group-heading.heading-navy {
   color: var(--text);
 }
 
-.delete-reference {
+.delete-reference,
+.delete-manage-location {
   color: var(--red);
   font-size: 16px;
+}
+
+.manage-location-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
 }
 
 .delete-team-member,
@@ -2163,7 +2185,8 @@ h2.status-group-heading.heading-navy {
   text-align: center;
   white-space: normal;
   line-height: 1.15;
-  font-size: 19px;
+  font-size: 21px;
+  text-transform: uppercase;
   border: 2px solid var(--ink);
 }
 
@@ -3397,6 +3420,22 @@ h2.status-group-heading.heading-navy {
   font-weight: 700;
 }
 
+.stats-region-cities {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 0 16px;
+}
+
+.stats-region-cities[hidden] {
+  display: none;
+}
+
+.stats-legend-row-nested {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
 .stats-dots {
   display: flex;
   justify-content: center;
@@ -3423,30 +3462,6 @@ h2.status-group-heading.heading-navy {
 }
 
 /* ---- Regions map ---- */
-.world-map-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.map-zoom-btn {
-  width: 36px;
-  height: 36px;
-  background: var(--ink);
-  color: var(--accent);
-  border: 2px solid var(--accent);
-  font-family: var(--font-title);
-  font-size: 20px;
-  font-weight: 900;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
 .world-map-scroll {
   width: 100%;
   max-height: 60vh;
@@ -3455,6 +3470,7 @@ h2.status-group-heading.heading-navy {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   margin-bottom: 16px;
+  touch-action: pan-x pan-y;
 }
 
 #worldMapContainer {

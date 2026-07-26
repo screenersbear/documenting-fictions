@@ -482,6 +482,10 @@
       <label>City
         <input type="text" id="locationCityInput" maxlength="100" placeholder="City" />
       </label>
+      <label>State
+        <input type="text" id="locationStateInput" maxlength="100" placeholder="State" />
+      </label>
+      <p class="field-error-hint" id="locationStateError" hidden>State is required.</p>
       <label>Zip code
         <input type="text" id="locationZipInput" maxlength="20" placeholder="Zip / postal code" />
       </label>
@@ -747,6 +751,18 @@
   </div>
 </div>
 
+<!-- ============ MANAGE LOCATIONS MODAL ============ -->
+<div id="manageLocationsOverlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Manage Locations</h2>
+      <button class="icon-btn close-btn" data-close="manageLocations">&times;</button>
+    </div>
+    <p class="field-hint">Remove a location to stop it from showing up as a quick pick — it won't change any shoot that already used it.</p>
+    <div id="manageLocationsList"></div>
+  </div>
+</div>
+
 <!-- ============ MANAGE FRAMEWORKS MODAL ============ -->
 <div id="frameworksModalOverlay" class="modal-overlay" hidden>
   <div class="modal">
@@ -918,9 +934,9 @@
       <div class="options-pane">
         <button type="button" class="options-item options-back" id="themeOptionsBackBtn">&larr; Back</button>
         <button type="button" class="options-item choice-item" id="themeDefaultBtn" data-theme="default"><span class="theme-swatch" style="background:#313d45"></span>Default</button>
-        <button type="button" class="options-item choice-item" id="themePinkBtn" data-theme="pink"><span class="theme-swatch" style="background:#f1b1f4"></span>Pink</button>
-        <button type="button" class="options-item choice-item" id="themePurpleBtn" data-theme="purple"><span class="theme-swatch" style="background:#a990e4"></span>Purple</button>
-        <button type="button" class="options-item choice-item" id="themeRedBtn" data-theme="red"><span class="theme-swatch" style="background:#fa6265"></span>Red</button>
+        <button type="button" class="options-item choice-item" id="themePinkBtn" data-theme="pink"><span class="theme-swatch" style="background:#f3a6e6"></span>Pink</button>
+        <button type="button" class="options-item choice-item" id="themePurpleBtn" data-theme="purple"><span class="theme-swatch" style="background:#9779dc"></span>Purple</button>
+        <button type="button" class="options-item choice-item" id="themeRedBtn" data-theme="red"><span class="theme-swatch" style="background:#ff5356"></span>Red</button>
         <button type="button" class="options-item choice-item" id="themeBlueBtn" data-theme="blue"><span class="theme-swatch" style="background:#50a2ff"></span>Blue</button>
         <button type="button" class="options-item choice-item" id="themeGreenBtn" data-theme="green"><span class="theme-swatch" style="background:#40b23d"></span>Green</button>
       </div>

@@ -353,23 +353,25 @@
         name: loc.name || '',
         street: loc.street || '',
         city: loc.city || '',
+        state: loc.state || '',
         zip: loc.zip || '',
         country: loc.country || legacyRegion || '',
       };
     }
-    return { name: loc || '', street: '', city: '', zip: '', country: legacyRegion || '' };
+    return { name: loc || '', street: '', city: '', state: '', zip: '', country: legacyRegion || '' };
   }
 
   function isLocationBlank(loc) {
-    return !loc || (!hasText(loc.name) && !hasText(loc.street) && !hasText(loc.city) && !hasText(loc.zip) && !hasText(loc.country));
+    return !loc || (!hasText(loc.name) && !hasText(loc.street) && !hasText(loc.city) && !hasText(loc.state) && !hasText(loc.zip) && !hasText(loc.country));
   }
 
-  // Composes a location into one display line: "name — street, city, zip, Country".
+  // Composes a location into one display line: "name — street, city, state zip, Country".
   function formatLocationDisplay(loc) {
     if (!loc) return '';
     const parts = [];
     if (hasText(loc.name)) parts.push(loc.name.trim());
-    const addressLine = [loc.street, loc.city, loc.zip].filter(hasText).map(v => v.trim()).join(', ');
+    const cityStateZip = [loc.state, loc.zip].filter(hasText).map(v => v.trim()).join(' ');
+    const addressLine = [loc.street, loc.city, cityStateZip].filter(hasText).join(', ');
     if (addressLine) parts.push(addressLine);
     if (loc.country) parts.push(REGION_LABELS[loc.country] || loc.country);
     return parts.join(' — ');
@@ -378,7 +380,7 @@
   // Case/whitespace-insensitive identity key for deduping/matching locations
   // (e.g. recognizing a past location was picked again for directions reuse).
   function locationKey(loc) {
-    return ['name', 'street', 'city', 'zip', 'country'].map(k => ((loc && loc[k]) || '').trim().toLowerCase()).join('|');
+    return ['name', 'street', 'city', 'state', 'zip', 'country'].map(k => ((loc && loc[k]) || '').trim().toLowerCase()).join('|');
   }
 
   const CATEGORY_LABELS = {
@@ -435,7 +437,7 @@
   // lines and would force the button to grow. Left out until it's
   // shortened or swapped for something that fits at that narrower width.
   const SAVE_MESSAGES = [
-    "I guess that's good for now", 'yup, yup', "that's good", 'okay', 'yes',
+    'I guess so', 'yup, yup', "that's good", 'okay', 'yes',
     "let's goooo", 'incredible', "I'm a genius", 'so good', 'good work',
     'affirm here', "I'm a visionary",
   ];
@@ -523,6 +525,7 @@
       titleDisplayMode: 'talent',
       colorTheme: 'default',
       defaultCountry: '',
+      dismissedLocationKeys: [],
     };
   }
 
@@ -652,6 +655,7 @@
         titleDisplayMode: parsed.titleDisplayMode === 'title' ? 'title' : 'talent',
         colorTheme: THEME_KEYS.includes(parsed.colorTheme) ? parsed.colorTheme : 'default',
         defaultCountry: typeof parsed.defaultCountry === 'string' ? parsed.defaultCountry : '',
+        dismissedLocationKeys: Array.isArray(parsed.dismissedLocationKeys) ? parsed.dismissedLocationKeys : [],
       };
     } catch (e) {
       console.error('Failed to load state, starting fresh', e);
@@ -3204,7 +3208,7 @@
   });
 
   // ---------- Location (popup with name/street/city/zip/country + past locations) ----------
-  let currentShootLocation = { name: '', street: '', city: '', zip: '', country: '' };
+  let currentShootLocation = { name: '', street: '', city: '', state: '', zip: '', country: '' };
   let pastLocationSamples = [];
 
   function updateLocationBtnDisplay() {
@@ -3220,9 +3224,11 @@
   function getAllPastLocations() {
     const counts = {};
     const samples = {};
+    const dismissed = new Set(state.dismissedLocationKeys);
     state.shoots.forEach(s => {
       if (isLocationBlank(s.location)) return;
       const key = locationKey(s.location);
+      if (dismissed.has(key)) return;
       counts[key] = (counts[key] || 0) + 1;
       samples[key] = s.location;
     });
@@ -3247,32 +3253,57 @@
     document.getElementById('locationNameInput').value = loc.name || '';
     document.getElementById('locationStreetInput').value = loc.street || '';
     document.getElementById('locationCityInput').value = loc.city || '';
+    document.getElementById('locationStateInput').value = loc.state || '';
     document.getElementById('locationZipInput').value = loc.zip || '';
     document.getElementById('locationCountryInput').value = loc.country || '';
   }
 
   function openLocationModal() {
     fillLocationForm(currentShootLocation);
+    document.getElementById('locationStateInput').classList.remove('field-invalid');
+    document.getElementById('locationStateError').hidden = true;
     pastLocationSamples = getAllPastLocations();
     const select = document.getElementById('pastLocationsSelect');
     select.innerHTML = '<option value="">Select a past location…</option>'
-      + pastLocationSamples.map((loc, i) => `<option value="${i}">${escapeHtml(formatLocationDisplay(loc))}</option>`).join('');
+      + pastLocationSamples.map((loc, i) => `<option value="${i}">${escapeHtml(formatLocationDisplay(loc))}</option>`).join('')
+      + '<option value="__manage__">Manage locations…</option>';
     document.getElementById('locationModalOverlay').hidden = false;
   }
 
   document.getElementById('shootLocationBtn').addEventListener('click', openLocationModal);
 
   document.getElementById('pastLocationsSelect').addEventListener('change', (e) => {
+    if (e.target.value === '__manage__') {
+      e.target.value = '';
+      openManageLocationsModal();
+      return;
+    }
     if (e.target.value === '') return;
     const loc = pastLocationSamples[Number(e.target.value)];
     if (loc) fillLocationForm(loc);
   });
 
+  document.getElementById('locationStateInput').addEventListener('input', (e) => {
+    if (hasText(e.target.value)) {
+      e.target.classList.remove('field-invalid');
+      document.getElementById('locationStateError').hidden = true;
+    }
+  });
+
   document.getElementById('saveLocationBtn').addEventListener('click', () => {
+    const stateInput = document.getElementById('locationStateInput');
+    if (!hasText(stateInput.value)) {
+      stateInput.classList.add('field-invalid');
+      document.getElementById('locationStateError').hidden = false;
+      return;
+    }
+    stateInput.classList.remove('field-invalid');
+    document.getElementById('locationStateError').hidden = true;
     const newLocation = {
       name: document.getElementById('locationNameInput').value.trim(),
       street: document.getElementById('locationStreetInput').value.trim(),
       city: document.getElementById('locationCityInput').value.trim(),
+      state: stateInput.value.trim(),
       zip: document.getElementById('locationZipInput').value.trim(),
       country: document.getElementById('locationCountryInput').value,
     };
@@ -3293,6 +3324,36 @@
     document.getElementById('locationModalOverlay').hidden = true;
     scheduleShootAutosave();
   });
+
+  function renderManageLocationsList() {
+    const samples = getAllPastLocations();
+    const container = document.getElementById('manageLocationsList');
+    if (!samples.length) {
+      container.innerHTML = '<p class="empty-hint">No saved locations yet.</p>';
+      return;
+    }
+    container.innerHTML = samples.map((loc, idx) => `
+      <div class="manage-location-row">
+        <span>${escapeHtml(formatLocationDisplay(loc))}</span>
+        <button type="button" class="delete-manage-location" data-idx="${idx}">&times;</button>
+      </div>
+    `).join('');
+    container.querySelectorAll('.delete-manage-location').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const loc = samples[Number(btn.dataset.idx)];
+        if (!loc) return;
+        const key = locationKey(loc);
+        if (!state.dismissedLocationKeys.includes(key)) state.dismissedLocationKeys.push(key);
+        saveState();
+        renderManageLocationsList();
+      });
+    });
+  }
+
+  function openManageLocationsModal() {
+    renderManageLocationsList();
+    document.getElementById('manageLocationsOverlay').hidden = false;
+  }
 
   // ---------- References (dynamic list of external links) ----------
   let currentReferences = [];
@@ -3832,7 +3893,7 @@
     document.getElementById('shootDeadline').value = s ? (s.deadline || '') : '';
     document.getElementById('shootStartTime').value = s ? (s.startTime || '') : '';
     document.getElementById('shootEndTime').value = s ? (s.endTime || '') : '';
-    currentShootLocation = s ? normalizeLocation(s.location) : { name: '', street: '', city: '', zip: '', country: state.defaultCountry || '' };
+    currentShootLocation = s ? normalizeLocation(s.location) : { name: '', street: '', city: '', state: '', zip: '', country: state.defaultCountry || '' };
     updateLocationBtnDisplay();
     currentTalents = s && Array.isArray(s.talents)
       ? s.talents.map(t => ({ name: t.name || '', socialHandles: (t.socialHandles || []).map(sh => ({ ...sh })) }))
@@ -4376,7 +4437,7 @@
     // brand-new shoot draft, so it can't count as "the user entered
     // something" here or every untouched New Shoot would silently save.
     const loc = data.location;
-    const locationEffectivelyBlank = !hasText(loc.name) && !hasText(loc.street) && !hasText(loc.city) && !hasText(loc.zip);
+    const locationEffectivelyBlank = !hasText(loc.name) && !hasText(loc.street) && !hasText(loc.city) && !hasText(loc.zip) && !hasText(loc.state);
     return !hasText(data.title) && locationEffectivelyBlank && !hasText(data.startTime) && !hasText(data.endTime) && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals) && !hasText(data.elevatorPitch)
       && !hasText(data.worldNotes) && !hasText(data.generalNotes) && !hasText(data.deadline)
       && !hasText(data.whatWentRight) && !hasText(data.couldBeBetter) && !hasText(data.lessonsLearned)
@@ -5269,13 +5330,14 @@
       if (btn.dataset.close === 'journal') closeJournalModal();
       if (btn.dataset.close === 'location') document.getElementById('locationModalOverlay').hidden = true;
       if (btn.dataset.close === 'categoryVisibility') closeCategoryVisibilityModal();
+      if (btn.dataset.close === 'manageLocations') document.getElementById('manageLocationsOverlay').hidden = true;
     });
   });
 
   shootModalOverlay.addEventListener('click', (e) => {
     if (e.target === shootModalOverlay) closeShootModal();
   });
-  [frameworksModalOverlay, document.getElementById('locationModalOverlay'), document.getElementById('tabIntroOverlay'), categoryVisibilityOverlay].forEach(overlay => {
+  [frameworksModalOverlay, document.getElementById('locationModalOverlay'), document.getElementById('tabIntroOverlay'), categoryVisibilityOverlay, document.getElementById('manageLocationsOverlay')].forEach(overlay => {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) overlay.hidden = true;
     });
@@ -5501,6 +5563,7 @@
         titleDisplayMode: payload.state.titleDisplayMode === 'title' ? 'title' : 'talent',
         colorTheme: THEME_KEYS.includes(payload.state.colorTheme) ? payload.state.colorTheme : 'default',
         defaultCountry: typeof payload.state.defaultCountry === 'string' ? payload.state.defaultCountry : '',
+        dismissedLocationKeys: Array.isArray(payload.state.dismissedLocationKeys) ? payload.state.dismissedLocationKeys : [],
       };
       saveState();
       applyColorTheme(state.colorTheme);
@@ -5699,18 +5762,36 @@
   const MAP_BASE_WIDTH = 900;
 
   function buildRegionsStats() {
-    const counts = {};
+    const countryGroups = {};
     getStatsShoots().forEach(s => {
       const code = s.location && s.location.country;
-      if (code) counts[code] = (counts[code] || 0) + 1;
+      if (!code) return;
+      if (!countryGroups[code]) countryGroups[code] = { count: 0, cities: {} };
+      countryGroups[code].count++;
+      const cityLabel = (s.location.city || '').trim() || 'No city set';
+      const cityKey = cityLabel.toLowerCase();
+      if (!countryGroups[code].cities[cityKey]) countryGroups[code].cities[cityKey] = { label: cityLabel, count: 0 };
+      countryGroups[code].cities[cityKey].count++;
     });
-    const data = Object.entries(counts)
-      .map(([key, value]) => ({ key, label: REGION_LABELS[key] || key, value }))
-      .sort((a, b) => b.value - a.value);
+
     statsSliceFilters.regions = {};
-    data.forEach(d => {
-      statsSliceFilters.regions[d.key] = (s) => !!(s.location && s.location.country === d.key);
-    });
+    const data = Object.entries(countryGroups)
+      .map(([code, group]) => {
+        statsSliceFilters.regions[code] = (s) => !!(s.location && s.location.country === code);
+        const cities = Object.entries(group.cities)
+          .map(([cityKey, c]) => {
+            const compositeKey = `${code}__${cityKey}`;
+            statsSliceFilters.regions[compositeKey] = (s) => {
+              if (!s.location || s.location.country !== code) return false;
+              const label = (s.location.city || '').trim() || 'No city set';
+              return label.toLowerCase() === cityKey;
+            };
+            return { key: compositeKey, label: c.label, value: c.count, pct: Math.round((c.count / group.count) * 100) };
+          })
+          .sort((a, b) => b.value - a.value);
+        return { key: code, label: REGION_LABELS[code] || code, value: group.count, cities };
+      })
+      .sort((a, b) => b.value - a.value);
     return data;
   }
 
@@ -5729,25 +5810,37 @@
     }
     const { slices } = buildPieSVG(data);
     regionsSliceColors = Object.fromEntries(slices.map(s => [s.key, s.color]));
-    const legendHtml = slices.map(s => `
-      <button type="button" class="stats-legend-row" data-key="${escapeHtml(String(s.key))}">
-        <span class="legend-swatch" style="background:${s.color}"></span>
-        <span class="legend-label">${escapeHtml(s.label)}</span>
-        <span class="legend-pct">${s.pct}%</span>
-      </button>
-    `).join('');
+    const groupsHtml = data.map((d, i) => {
+      const collapseKey = `stats:regions:${d.key}`;
+      const collapsed = isSectionCollapsed(collapseKey);
+      const cityColors = buildPieSVG(d.cities).slices.map(cs => cs.color);
+      const cityRowsHtml = d.cities.map((c, ci) => `
+        <button type="button" class="stats-legend-row stats-legend-row-nested" data-key="${escapeHtml(c.key)}">
+          <span class="legend-swatch" style="background:${cityColors[ci]}"></span>
+          <span class="legend-label">${escapeHtml(c.label)}</span>
+          <span class="legend-pct">${c.pct}%</span>
+        </button>
+      `).join('');
+      return `
+        <div class="stats-region-group">
+          <button type="button" class="stats-legend-row stats-region-heading${collapsed ? ' collapsed' : ''}" data-key="${escapeHtml(d.key)}">
+            <span class="legend-swatch" style="background:${slices[i].color}"></span>
+            <span class="legend-label">${escapeHtml(d.label)}</span>
+            <span class="legend-pct">${slices[i].pct}%</span>
+            ${COLLAPSE_ARROW_SVG}
+          </button>
+          <div class="stats-region-cities"${collapsed ? ' hidden' : ''}>${cityRowsHtml}</div>
+        </div>
+      `;
+    }).join('');
     return {
       html: `
         <div class="stats-page stats-page-regions" data-key="regions">
           <h2 class="stats-page-title">Regions</h2>
-          <div class="world-map-toolbar">
-            <button type="button" class="map-zoom-btn" id="worldMapZoomOutBtn" aria-label="Zoom out">&minus;</button>
-            <button type="button" class="map-zoom-btn" id="worldMapZoomInBtn" aria-label="Zoom in">+</button>
-          </div>
           <div class="world-map-scroll" id="worldMapScroll">
             <div id="worldMapContainer"><p class="empty-hint">Loading map…</p></div>
           </div>
-          <div class="stats-legend">${legendHtml}</div>
+          <div class="stats-legend">${groupsHtml}</div>
         </div>
       `,
       slices,
@@ -5881,10 +5974,57 @@
   statsCarousel.addEventListener('scroll', () => renderStatsDots(), { passive: true });
 
   // Delegated (survives renderStats() rebuilding the carousel's innerHTML on
-  // every year-filter change) so it doesn't need re-binding per render.
-  statsCarousel.addEventListener('click', (e) => {
-    if (e.target.closest('#worldMapZoomInBtn')) setMapZoom(mapZoomLevel + MAP_ZOOM_STEP);
-    else if (e.target.closest('#worldMapZoomOutBtn')) setMapZoom(mapZoomLevel - MAP_ZOOM_STEP);
+  // every year-filter change, which destroys and recreates #worldMapScroll)
+  // so pinch-to-zoom doesn't need re-binding per render.
+  let mapPinch = null;
+
+  function touchDistance(t0, t1) {
+    const dx = t1.clientX - t0.clientX;
+    const dy = t1.clientY - t0.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  statsCarousel.addEventListener('touchstart', (e) => {
+    const wrap = e.target.closest('#worldMapScroll');
+    if (!wrap || e.touches.length !== 2) { mapPinch = null; return; }
+    const svg = wrap.querySelector('svg');
+    const [t0, t1] = e.touches;
+    const wrapRect = wrap.getBoundingClientRect();
+    mapPinch = {
+      wrap,
+      svg,
+      startDist: touchDistance(t0, t1),
+      startZoom: mapZoomLevel,
+      startScrollLeft: wrap.scrollLeft,
+      startScrollTop: wrap.scrollTop,
+      midClientX: (t0.clientX + t1.clientX) / 2 - wrapRect.left,
+      midClientY: (t0.clientY + t1.clientY) / 2 - wrapRect.top,
+    };
+    if (svg) svg.style.transition = 'none';
+  }, { passive: true });
+
+  statsCarousel.addEventListener('touchmove', (e) => {
+    if (!mapPinch || e.touches.length !== 2) return;
+    e.preventDefault();
+    const [t0, t1] = e.touches;
+    const dist = touchDistance(t0, t1);
+    const scale = dist / mapPinch.startDist;
+    const newZoom = Math.min(MAP_ZOOM_MAX, Math.max(MAP_ZOOM_MIN, mapPinch.startZoom * scale));
+    const zoomRatio = newZoom / mapPinch.startZoom;
+    mapZoomLevel = newZoom;
+    if (mapPinch.svg) mapPinch.svg.style.width = `${MAP_BASE_WIDTH * mapZoomLevel}px`;
+    const anchorX = mapPinch.startScrollLeft + mapPinch.midClientX;
+    const anchorY = mapPinch.startScrollTop + mapPinch.midClientY;
+    mapPinch.wrap.scrollLeft = anchorX * zoomRatio - mapPinch.midClientX;
+    mapPinch.wrap.scrollTop = anchorY * zoomRatio - mapPinch.midClientY;
+  }, { passive: false });
+
+  statsCarousel.addEventListener('touchend', (e) => {
+    if (!mapPinch) return;
+    if (e.touches.length < 2) {
+      if (mapPinch.svg) mapPinch.svg.style.transition = '';
+      mapPinch = null;
+    }
   });
 
   function renderStatsYearFilters() {
@@ -5926,7 +6066,15 @@
     statsCarousel.querySelectorAll('.pie-slice, .stats-legend-row').forEach(el => {
       el.addEventListener('click', () => {
         const pageKey = el.closest('.stats-page').dataset.key;
-        if (pageKey === 'regions') focusRegionOnMap(el.dataset.key);
+        if (el.classList.contains('stats-region-heading')) {
+          const citiesWrap = el.parentElement.querySelector('.stats-region-cities');
+          const nowCollapsed = !citiesWrap.hidden;
+          citiesWrap.hidden = nowCollapsed;
+          el.classList.toggle('collapsed', nowCollapsed);
+          setSectionCollapsed(`stats:regions:${el.dataset.key}`, nowCollapsed);
+          focusRegionOnMap(el.dataset.key);
+          return;
+        }
         openStatsDetail(pageKey, el.dataset.key);
       });
     });
