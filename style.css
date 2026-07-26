@@ -3068,6 +3068,13 @@ h1, h2, h3 {
   transform: translateX(-66.6667%);
 }
 
+.menu-divider {
+  height: 1px;
+  flex-shrink: 0;
+  margin: 0 4px;
+  background: var(--ink);
+}
+
 .theme-swatch {
   display: inline-block;
   width: 18px;
