@@ -323,8 +323,8 @@ h1, h2, h3 {
 
 .notebook-cover-yellow .notebook-cover-bg { fill: var(--accent); }
 .notebook-cover-yellow .notebook-cover-border { stroke: var(--ink); stroke-width: 3; }
-.notebook-cover-yellow .notebook-cover-ring { fill: none; stroke: var(--ink); stroke-width: 1.5; }
-.notebook-cover-yellow .notebook-cover-hole { fill: var(--ink); }
+.notebook-cover-yellow .notebook-cover-ring { fill: none; stroke: var(--ink); stroke-width: 1.9; }
+.notebook-cover-yellow .notebook-cover-hole { fill: var(--ink); r: 2.7; }
 
 .notebook-tile-title {
   font-family: var(--font-title);
