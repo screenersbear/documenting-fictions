@@ -189,12 +189,15 @@
     ];
   }
 
+  const THEME_KEYS = ['default', 'pink', 'purple', 'red', 'blue', 'green'];
+
   function defaultState() {
     return {
       shoots: [],
       frameworks: seedFrameworks(),
       journalEntries: [],
       titleDisplayMode: 'talent',
+      colorTheme: 'default',
     };
   }
 
@@ -321,6 +324,7 @@
         frameworks,
         journalEntries,
         titleDisplayMode: parsed.titleDisplayMode === 'title' ? 'title' : 'talent',
+        colorTheme: THEME_KEYS.includes(parsed.colorTheme) ? parsed.colorTheme : 'default',
       };
     } catch (e) {
       console.error('Failed to load state, starting fresh', e);
@@ -333,6 +337,7 @@
   }
 
   let state = loadState();
+  applyColorTheme(state.colorTheme);
 
   // ---------- helpers ----------
   function todayStr() {
@@ -1801,9 +1806,42 @@
       .map(w => ({
         label: weekRangeLabel(w.start, w.end),
         shoots: w.shoots.slice().sort((a, b) => a.date.localeCompare(b.date)),
-        takeaways: w.shoots.flatMap(s => (s.lessonsLearned || '').split('\n').map(t => t.trim()).filter(Boolean)),
+        // Keeps each takeaway tied to the shoot it came from (rather than a
+        // flat list of strings) so tapping one can open that same shoot.
+        takeaways: w.shoots.flatMap(s => (s.lessonsLearned || '').split('\n').map(t => t.trim()).filter(Boolean).map(text => ({ text, shootId: s.id }))),
       }));
   }
+
+  // Tapping a shoot or takeaway in the Log opens a small "this refers to"
+  // popup rather than jumping straight to the shoot modal — the Log is a
+  // read-only recap, so a confirm step avoids an accidental jump away from it.
+  let logShootRefId = null;
+
+  function showLogShootRef(shootId) {
+    const s = state.shoots.find(x => x.id === shootId);
+    if (!s) return;
+    logShootRefId = shootId;
+    document.getElementById('logShootRefName').textContent = shootDisplayName(s);
+    document.getElementById('logShootRefOverlay').hidden = false;
+  }
+
+  document.getElementById('logShootRefCancelBtn').addEventListener('click', () => {
+    document.getElementById('logShootRefOverlay').hidden = true;
+  });
+
+  document.getElementById('logShootRefViewBtn').addEventListener('click', () => {
+    document.getElementById('logShootRefOverlay').hidden = true;
+    const shootId = logShootRefId;
+    if (!shootId) return;
+    const s = state.shoots.find(x => x.id === shootId);
+    if (!s) return;
+    document.querySelector(`.tab[data-view="${s.archived ? 'archive' : 'shoots'}"]`).click();
+    openShootModal(shootId);
+  });
+
+  document.getElementById('logShootRefOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.hidden = true;
+  });
 
   function renderJournalLog() {
     const weeks = computeWeeklyLog();
@@ -1816,10 +1854,10 @@
       card.className = 'card log-card';
       const headingColorClass = idx % 2 === 0 ? 'heading-yellow' : 'heading-navy';
       const shootsHtml = w.shoots.map(s => `
-        <li>${escapeHtml(shootDisplayName(s))} <span class="log-shoot-category">(${escapeHtml(CATEGORY_LABELS[s.category] || 'Uncategorized')})</span></li>
+        <li data-shoot-id="${s.id}">${escapeHtml(shootDisplayName(s))} <span class="log-shoot-category">(${escapeHtml(CATEGORY_LABELS[s.category] || 'Uncategorized')})</span></li>
       `).join('');
       const takeawaysHtml = w.takeaways.length
-        ? `<ul class="log-takeaways">${w.takeaways.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul>`
+        ? `<ul class="log-takeaways">${w.takeaways.map(t => `<li data-shoot-id="${t.shootId}">${escapeHtml(t.text)}</li>`).join('')}</ul>`
         : `<p class="log-no-takeaways">No takeaways logged this week.</p>`;
       card.innerHTML = `
         <div class="card-body">
@@ -1830,6 +1868,9 @@
           ${takeawaysHtml}
         </div>
       `;
+      card.querySelectorAll('.log-shoots li[data-shoot-id], .log-takeaways li[data-shoot-id]').forEach(li => {
+        li.addEventListener('click', () => showLogShootRef(li.dataset.shootId));
+      });
       list.appendChild(card);
     });
   }
@@ -4571,6 +4612,7 @@
   function closeAppMenu() {
     appMenuOverlay.hidden = true;
     appMenuPaneTrack.classList.remove('show-second');
+    appMenuPaneTrack.classList.remove('show-third');
   }
 
   document.getElementById('appMenuBtn').addEventListener('click', () => {
@@ -4596,6 +4638,7 @@
 
   document.getElementById('shootDisplayOptionsBtn').addEventListener('click', () => {
     updateDisplayChoiceHighlight();
+    appMenuPaneTrack.classList.remove('show-third');
     appMenuPaneTrack.classList.add('show-second');
   });
 
@@ -4615,6 +4658,42 @@
     saveState();
     renderAll();
     updateDisplayChoiceHighlight();
+  });
+
+  // ---------- Color theme (restyles background/border/fill chrome only —
+  // actual text color never changes, see --ink vs --text in style.css) ----------
+  function applyColorTheme(theme) {
+    if (theme && theme !== 'default') {
+      document.documentElement.setAttribute('data-theme', theme);
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+  }
+
+  function updateThemeChoiceHighlight() {
+    THEME_KEYS.forEach(key => {
+      const btn = document.getElementById(`theme${key[0].toUpperCase()}${key.slice(1)}Btn`);
+      if (btn) btn.classList.toggle('active', state.colorTheme === key);
+    });
+  }
+
+  document.getElementById('changeThemeBtn').addEventListener('click', () => {
+    updateThemeChoiceHighlight();
+    appMenuPaneTrack.classList.remove('show-second');
+    appMenuPaneTrack.classList.add('show-third');
+  });
+
+  document.getElementById('themeOptionsBackBtn').addEventListener('click', () => {
+    appMenuPaneTrack.classList.remove('show-third');
+  });
+
+  document.querySelectorAll('#appMenuPaneTrack .choice-item[data-theme]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.colorTheme = btn.dataset.theme;
+      saveState();
+      applyColorTheme(state.colorTheme);
+      updateThemeChoiceHighlight();
+    });
   });
 
   function idbClearAllImages() {
@@ -4715,8 +4794,11 @@
         shoots: payload.state.shoots || [],
         frameworks: (Array.isArray(payload.state.frameworks) && payload.state.frameworks.length) ? payload.state.frameworks : seedFrameworks(),
         journalEntries: Array.isArray(payload.state.journalEntries) ? payload.state.journalEntries : [],
+        titleDisplayMode: payload.state.titleDisplayMode === 'title' ? 'title' : 'talent',
+        colorTheme: THEME_KEYS.includes(payload.state.colorTheme) ? payload.state.colorTheme : 'default',
       };
       saveState();
+      applyColorTheme(state.colorTheme);
       renderAll();
     });
   });

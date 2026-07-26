@@ -624,6 +624,7 @@
     <div class="options-pane-track" id="appMenuPaneTrack">
       <div class="options-pane">
         <button type="button" class="options-item" id="shootDisplayOptionsBtn">Shoot display options</button>
+        <button type="button" class="options-item" id="changeThemeBtn">Change theme</button>
         <button type="button" class="options-item" id="importDataBtn">Import shoot data</button>
         <button type="button" class="options-item" id="exportDataBtn">Export shoot data</button>
         <button type="button" class="options-item options-delete" id="deleteAllShootDataBtn">Delete all shoot data</button>
@@ -633,6 +634,15 @@
         <button type="button" class="options-item options-back" id="displayOptionsBackBtn">&larr; Back</button>
         <button type="button" class="options-item choice-item" id="displayModeTalentBtn">Display talent name</button>
         <button type="button" class="options-item choice-item" id="displayModeTitleBtn">Display shoot title</button>
+      </div>
+      <div class="options-pane">
+        <button type="button" class="options-item options-back" id="themeOptionsBackBtn">&larr; Back</button>
+        <button type="button" class="options-item choice-item" id="themeDefaultBtn" data-theme="default"><span class="theme-swatch" style="background:#313d45"></span>Default</button>
+        <button type="button" class="options-item choice-item" id="themePinkBtn" data-theme="pink"><span class="theme-swatch" style="background:#f1b1f4"></span>Pink</button>
+        <button type="button" class="options-item choice-item" id="themePurpleBtn" data-theme="purple"><span class="theme-swatch" style="background:#a990e4"></span>Purple</button>
+        <button type="button" class="options-item choice-item" id="themeRedBtn" data-theme="red"><span class="theme-swatch" style="background:#fa6265"></span>Red</button>
+        <button type="button" class="options-item choice-item" id="themeBlueBtn" data-theme="blue"><span class="theme-swatch" style="background:#50a2ff"></span>Blue</button>
+        <button type="button" class="options-item choice-item" id="themeGreenBtn" data-theme="green"><span class="theme-swatch" style="background:#98e896"></span>Green</button>
       </div>
     </div>
     <input type="file" id="importFileInput" accept="application/json" hidden />
@@ -807,6 +817,18 @@
     <div class="modal-actions">
       <button type="button" class="secondary" id="journalPromptAnotherBtn">Try another one</button>
       <button type="button" class="primary" id="journalPromptAcceptBtn">Accept</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LOG SHOOT REFERENCE ============ -->
+<div id="logShootRefOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal daily-report-modal">
+    <h2>Referring to</h2>
+    <p id="logShootRefName"></p>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="logShootRefCancelBtn">Close</button>
+      <button type="button" class="primary" id="logShootRefViewBtn">View shoot</button>
     </div>
   </div>
 </div>
