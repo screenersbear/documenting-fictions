@@ -180,15 +180,11 @@ h1, h2, h3 {
 
 .brand-title {
   font-size: 19px;
-  font-weight: 700;
+  font-weight: 900;
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 1px;
   margin: 0;
-  /* Yellow-on-navy always had contrast, but the color themes swap that navy
-     hero-band for pastels close in lightness to the yellow itself — this
-     outline keeps the wordmark readable no matter which theme is active. */
-  -webkit-text-stroke: 1.2px #fff;
 }
 
 .new-shoot-cta {
@@ -1118,6 +1114,13 @@ h1, h2, h3 {
   padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
   max-width: 560px;
   margin: 0 auto;
+  /* iOS Safari has a known bug where position:fixed elements can visually
+     detach and scroll with the page (the "bottom nav sliding up" glitch) —
+     forcing this onto its own GPU-composited layer is the standard fix,
+     on top of the existing visualViewport-driven reflow in app.js. */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 
