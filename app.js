@@ -5881,6 +5881,30 @@
   // Zooms in a touch and scrolls/pulses a specific region into view — tapping
   // a legend row shouldn't just open the shoot list, it should also help the
   // reader actually find that country on the map.
+  // A country's shape can be dozens of separate <path>s (each state/province
+  // plus outlying territories like Puerto Rico or Guam, all under one <g>) —
+  // a plain bounding box over the whole group gets dragged toward whichever
+  // territory sits farthest out, landing nowhere near the country's actual
+  // landmass (e.g. the US: a naive box centers somewhere in the Atlantic).
+  // Weighting each path's center by its own area instead lets the large,
+  // contiguous mainland dominate over small, far-flung outliers.
+  function regionCenterPoint(target) {
+    const paths = target.tagName.toLowerCase() === 'g' ? [...target.querySelectorAll('path')] : [target];
+    let totalArea = 0, sumX = 0, sumY = 0;
+    paths.forEach(p => {
+      const r = p.getBoundingClientRect();
+      const area = r.width * r.height;
+      totalArea += area;
+      sumX += (r.left + r.width / 2) * area;
+      sumY += (r.top + r.height / 2) * area;
+    });
+    if (!totalArea) {
+      const r = target.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }
+    return { x: sumX / totalArea, y: sumY / totalArea };
+  }
+
   function focusRegionOnMap(code) {
     const container = document.getElementById('worldMapContainer');
     const scrollWrap = document.getElementById('worldMapScroll');
@@ -5895,10 +5919,10 @@
     // scroll position is computed by hand from getBoundingClientRect once
     // the zoom's width transition has settled (matches its 0.2s duration).
     setTimeout(() => {
-      const targetRect = target.getBoundingClientRect();
+      const point = regionCenterPoint(target);
       const wrapRect = scrollWrap.getBoundingClientRect();
-      const centerX = targetRect.left + targetRect.width / 2 - wrapRect.left + scrollWrap.scrollLeft;
-      const centerY = targetRect.top + targetRect.height / 2 - wrapRect.top + scrollWrap.scrollTop;
+      const centerX = point.x - wrapRect.left + scrollWrap.scrollLeft;
+      const centerY = point.y - wrapRect.top + scrollWrap.scrollTop;
       scrollWrap.scrollTo({
         left: Math.max(0, centerX - scrollWrap.clientWidth / 2),
         top: Math.max(0, centerY - scrollWrap.clientHeight / 2),

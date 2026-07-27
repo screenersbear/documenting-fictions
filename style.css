@@ -2984,6 +2984,19 @@ h2.status-group-heading.heading-navy {
   text-align: left;
 }
 
+/* Tapping a country on the Regions map — a centered outlined card (same
+   look as the app menu/intro popups) instead of the bottom-sheet .modal
+   default, since this is a quick lookup, not a form. */
+.region-country-popup-modal {
+  width: 100%;
+  max-width: 380px;
+  max-height: 70vh;
+  overflow-y: auto;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-4xl);
+  padding: 20px;
+}
+
 /* ---- App menu (hamburger) — centered on screen with the same outlined-
    card look as the intro/prompt popups, instead of the bottom-sheet drawer
    the per-shoot options menu uses. ---- */
