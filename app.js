@@ -397,12 +397,11 @@
     branding: 'Branding',
     publicity: 'Publicity',
     maternity: 'Maternity',
-    boudoir: 'Boudoir',
     other: 'Other',
     uncategorized: 'Uncategorized',
   };
 
-  const CATEGORY_FILTER_ORDER = ['commercial', 'video', 'editorial', 'lighting_test', 'portfolio_building', 'test_shoot', 'event', 'wedding', 'family', 'headshot', 'branding', 'publicity', 'maternity', 'boudoir', 'other'];
+  const CATEGORY_FILTER_ORDER = ['commercial', 'video', 'editorial', 'lighting_test', 'portfolio_building', 'test_shoot', 'event', 'wedding', 'family', 'headshot', 'branding', 'publicity', 'maternity', 'other'];
 
   // Grammatical plural form of each category, for use as a countable noun in
   // a sentence (e.g. "more commercial shoots than video shoots") — CATEGORY_LABELS
@@ -422,7 +421,6 @@
     branding: 'branding shoots',
     publicity: 'publicity shoots',
     maternity: 'maternity shoots',
-    boudoir: 'boudoir shoots',
     other: 'other shoots',
   };
 
@@ -3213,7 +3211,12 @@
 
   function updateLocationBtnDisplay() {
     const btn = document.getElementById('shootLocationBtn');
-    const display = formatLocationDisplay(currentShootLocation);
+    const loc = currentShootLocation;
+    // Country alone doesn't count as real content — it's just the
+    // pre-filled default (see state.defaultCountry), not something the
+    // user actually entered, so it shouldn't show up as a location preview.
+    const hasRealContent = hasText(loc.name) || hasText(loc.street) || hasText(loc.city) || hasText(loc.state) || hasText(loc.zip);
+    const display = hasRealContent ? formatLocationDisplay(loc) : '';
     btn.textContent = display || 'Tap to add location';
     btn.classList.toggle('has-value', !!display);
   }
