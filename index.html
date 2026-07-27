@@ -956,6 +956,10 @@
         <button type="button" class="options-item choice-item" id="themePinkBtn" data-theme="pink"><span class="theme-swatch" style="background:#f3a6e6"></span>Pink</button>
         <button type="button" class="options-item choice-item" id="themePurpleBtn" data-theme="purple"><span class="theme-swatch" style="background:#9779dc"></span>Purple</button>
         <button type="button" class="options-item choice-item" id="themeRedBtn" data-theme="red"><span class="theme-swatch" style="background:#ff5356"></span>Red</button>
+        <!-- Picking a theme applies it live and leaves this pane open so you can
+             compare; this is the "done looking" confirm. Same .options-item
+             primary treatment as the Save buttons in the shoot options panes. -->
+        <button type="button" class="options-item primary" id="themeOkayBtn">Okay</button>
       </div>
     </div>
     <input type="file" id="importFileInput" accept="application/json" hidden />

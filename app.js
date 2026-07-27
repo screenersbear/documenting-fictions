@@ -5819,6 +5819,10 @@
     appMenuPaneTrack.classList.remove('show-third');
   });
 
+  // The theme is already saved and applied the moment it's tapped, so this just
+  // dismisses the menu — there's nothing left to commit.
+  document.getElementById('themeOkayBtn').addEventListener('click', closeAppMenu);
+
   document.querySelectorAll('#appMenuPaneTrack .choice-item[data-theme]').forEach(btn => {
     btn.addEventListener('click', () => {
       state.colorTheme = btn.dataset.theme;
