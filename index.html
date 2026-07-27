@@ -264,6 +264,7 @@
         <div class="talents-section">
           <p class="team-question">Talent name(s)</p>
           <button type="button" id="addTalentBtn" class="primary small-btn">+ Add talent</button>
+          <input type="file" id="talentPhotoFileInput" accept="image/*" hidden />
           <div id="talentsList" class="team-members-list"></div>
         </div>
         <label>Category
@@ -826,7 +827,7 @@
 <div id="projectPhotoCropOverlay" class="modal-overlay crop-overlay" hidden>
   <div class="modal crop-modal">
     <div class="modal-header">
-      <h2>Set project photo</h2>
+      <h2 id="cropModalTitle">Set project photo</h2>
       <button type="button" class="icon-btn close-btn" id="cropCloseBtn">&times;</button>
     </div>
     <p class="field-hint">Drag to reposition, pinch or use the slider to zoom</p>
@@ -852,12 +853,13 @@
     <p class="field-hint">Choose which sections to include.</p>
     <div class="pdf-sections-list">
       <label class="checkbox-row"><input type="checkbox" id="pdfSectionTalent" checked /> Talent</label>
-      <label class="checkbox-row"><input type="checkbox" id="pdfSectionDetails" checked /> Details</label>
-      <label class="checkbox-row"><input type="checkbox" id="pdfSectionReferences" checked /> References</label>
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionLogistics" checked /> Logistics</label>
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionDirection" /> Direction</label>
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionReferences" /> References</label>
       <label class="checkbox-row"><input type="checkbox" id="pdfSectionTeam" checked /> Team</label>
       <label class="checkbox-row"><input type="checkbox" id="pdfSectionMoodboard" checked /> Mood board</label>
     </div>
-    <button type="button" class="primary" id="pdfSectionsBuildBtn">Build PDF</button>
+    <button type="button" class="primary modal-cta" id="pdfSectionsBuildBtn">Build PDF</button>
   </div>
 </div>
 

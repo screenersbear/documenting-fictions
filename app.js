@@ -2820,31 +2820,91 @@
   // name field and its own nested social-handles sub-list, so a shoot with
   // multiple people in front of the camera can track each one separately.
   let currentTalents = [];
+  // Which talent cards are folded shut, by talent id. Purely transient view
+  // state (reset whenever the shoot modal opens), so it deliberately isn't
+  // part of the saved shoot the way collapsedSections is.
+  let collapsedTalents = new Set();
 
   function renderTalents() {
     const container = document.getElementById('talentsList');
-    container.innerHTML = currentTalents.map((talent, idx) => `
-      <div class="team-member-card">
-        <button type="button" class="delete-talent" data-idx="${idx}">&times;</button>
-        <input type="text" class="talent-name" data-idx="${idx}" placeholder="Talent name" value="${escapeHtml(talent.name || '')}" />
-        <div class="talent-social-section">
-          <p class="team-question talent-social-heading">Social media handle(s)</p>
-          <div class="social-handles-list">
-            ${(talent.socialHandles || []).map((sh, shIdx) => `
-              <div class="social-handle-row">
-                <select class="social-handle-platform" data-talent-idx="${idx}" data-handle-idx="${shIdx}">
-                  ${SOCIAL_PLATFORM_OPTIONS.map(([val, label]) => `<option value="${val}" ${sh.platform === val ? 'selected' : ''}>${label}</option>`).join('')}
-                </select>
-                <input type="text" class="social-handle-input" data-talent-idx="${idx}" data-handle-idx="${shIdx}" placeholder="@handle" value="${escapeHtml(sh.handle || '')}" />
-                <button type="button" class="delete-social-handle" data-talent-idx="${idx}" data-handle-idx="${shIdx}">&times;</button>
-              </div>
-            `).join('')}
+    container.innerHTML = currentTalents.map((talent, idx) => {
+      const collapsed = collapsedTalents.has(talent.id);
+      const barLabel = hasText(talent.name) ? talent.name.trim() : `Talent ${idx + 1}`;
+      return `
+      <div class="team-member-card talent-card${collapsed ? ' talent-card-collapsed' : ''}">
+        <div class="talent-card-bar">
+          <button type="button" class="talent-collapse-toggle" data-idx="${idx}" aria-expanded="${collapsed ? 'false' : 'true'}">
+            <span class="talent-collapse-name">${escapeHtml(barLabel)}</span>
+            ${COLLAPSE_ARROW_SVG}
+          </button>
+          <button type="button" class="delete-talent" data-idx="${idx}">&times;</button>
+        </div>
+        <div class="talent-card-body"${collapsed ? ' hidden' : ''}>
+          <input type="text" class="talent-name" data-idx="${idx}" placeholder="Talent name" value="${escapeHtml(talent.name || '')}" />
+          <button type="button" class="secondary small-btn add-talent-photo-btn" data-idx="${idx}">${talent.photo ? 'Change talent photo' : '+ Add talent photo'}</button>
+          <div class="talent-social-section">
+            <p class="team-question talent-social-heading">Social media handle(s)</p>
+            <div class="social-handles-list">
+              ${(talent.socialHandles || []).map((sh, shIdx) => `
+                <div class="social-handle-row">
+                  <select class="social-handle-platform" data-talent-idx="${idx}" data-handle-idx="${shIdx}">
+                    ${SOCIAL_PLATFORM_OPTIONS.map(([val, label]) => `<option value="${val}" ${sh.platform === val ? 'selected' : ''}>${label}</option>`).join('')}
+                  </select>
+                  <input type="text" class="social-handle-input" data-talent-idx="${idx}" data-handle-idx="${shIdx}" placeholder="@handle" value="${escapeHtml(sh.handle || '')}" />
+                  <button type="button" class="delete-social-handle" data-talent-idx="${idx}" data-handle-idx="${shIdx}">&times;</button>
+                </div>
+              `).join('')}
+            </div>
+            <button type="button" class="secondary small-btn add-talent-handle-btn" data-talent-idx="${idx}">+ Add handle</button>
           </div>
-          <button type="button" class="primary small-btn add-talent-handle-btn" data-talent-idx="${idx}">+ Add handle</button>
+          ${talent.photo ? `
+            <div class="talent-photo-wrap">
+              <div class="moodboard-thumb talent-photo-thumb">
+                <img src="${talent.photo}" alt="" class="talent-photo-img" data-idx="${idx}" />
+              </div>
+              <button type="button" class="manage-link talent-photo-remove" data-idx="${idx}">Remove photo</button>
+            </div>
+          ` : ''}
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
+    container.querySelectorAll('.talent-collapse-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const talent = currentTalents[Number(btn.dataset.idx)];
+        if (!talent) return;
+        if (collapsedTalents.has(talent.id)) collapsedTalents.delete(talent.id);
+        else collapsedTalents.add(talent.id);
+        renderTalents();
+      });
+    });
+    container.querySelectorAll('.add-talent-photo-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        talentPhotoTargetIdx = Number(btn.dataset.idx);
+        document.getElementById('talentPhotoFileInput').click();
+      });
+    });
+    container.querySelectorAll('.talent-photo-img').forEach(imgEl => {
+      imgEl.addEventListener('click', () => {
+        const talent = currentTalents[Number(imgEl.dataset.idx)];
+        if (!talent || !talent.photo) return;
+        // Same full-screen viewer the mood board uses, as a one-image gallery.
+        // allowProjectPhoto:false hides "Set as project photo" — a talent
+        // portrait isn't a shoot cover, and there's no IDB collection behind
+        // this image for the viewer's delete/caption actions to write to.
+        openImageViewer([{ src: talent.photo, caption: '' }], 0, null, null, false);
+      });
+    });
+    container.querySelectorAll('.talent-photo-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const talent = currentTalents[Number(btn.dataset.idx)];
+        if (!talent) return;
+        talent.photo = '';
+        renderTalents();
+        scheduleShootAutosave();
+      });
+    });
     container.querySelectorAll('.delete-talent').forEach(btn => {
       btn.addEventListener('click', () => {
         currentTalents.splice(Number(btn.dataset.idx), 1);
@@ -2854,7 +2914,12 @@
     });
     container.querySelectorAll('.talent-name').forEach(input => {
       input.addEventListener('input', () => {
-        currentTalents[Number(input.dataset.idx)].name = input.value;
+        const idx = Number(input.dataset.idx);
+        currentTalents[idx].name = input.value;
+        // Keep the collapse bar's label in step as you type, so folding a card
+        // shut right after naming it doesn't show a stale "Talent 1".
+        const label = input.closest('.talent-card').querySelector('.talent-collapse-name');
+        if (label) label.textContent = hasText(input.value) ? input.value.trim() : `Talent ${idx + 1}`;
       });
       input.addEventListener('blur', () => {
         const talent = currentTalents[Number(input.dataset.idx)];
@@ -2893,9 +2958,23 @@
   }
 
   document.getElementById('addTalentBtn').addEventListener('click', () => {
-    currentTalents.push({ name: '', socialHandles: [] });
+    currentTalents.push({ id: uid(), name: '', socialHandles: [], photo: '' });
     renderTalents();
     scheduleShootAutosave();
+  });
+
+  // Which talent card the file picker was opened for. Read once the crop is
+  // confirmed (see cropConfirmBtn) — index rather than id is safe here because
+  // the talent list can't be reordered or deleted while the crop is on screen.
+  let talentPhotoTargetIdx = null;
+
+  document.getElementById('talentPhotoFileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file || talentPhotoTargetIdx === null) return;
+    resizeImageFile(file, 1280, 0.72).then(dataUrl => {
+      openProjectPhotoCrop(dataUrl, 'talent');
+    }).catch(() => {});
   });
 
   // ---------- Team members (dynamic list inside the shoot modal) ----------
@@ -3898,9 +3977,12 @@
     document.getElementById('shootEndTime').value = s ? (s.endTime || '') : '';
     currentShootLocation = s ? normalizeLocation(s.location) : { name: '', street: '', city: '', state: '', zip: '', country: state.defaultCountry || '' };
     updateLocationBtnDisplay();
+    // Talents saved before they had ids get one assigned on load, so the
+    // collapse state below always has a stable key to hang off.
     currentTalents = s && Array.isArray(s.talents)
-      ? s.talents.map(t => ({ name: t.name || '', socialHandles: (t.socialHandles || []).map(sh => ({ ...sh })) }))
+      ? s.talents.map(t => ({ id: t.id || uid(), name: t.name || '', socialHandles: (t.socialHandles || []).map(sh => ({ ...sh })), photo: t.photo || '' }))
       : [];
+    collapsedTalents = new Set();
     renderTalents();
     document.getElementById('shootCategory').value = s ? (s.category || '') : '';
     updateCategoryTierUI();
@@ -4040,7 +4122,10 @@
     imageViewerCaptionOverlay.classList.remove('caption-faded');
     imageViewerCaptionText.textContent = caption;
     imageViewerAddCaptionBtn.textContent = caption ? 'Edit caption' : '+ Add caption';
-    imageViewerAddCaptionBtn.hidden = false;
+    // Captions live in the IndexedDB collection the viewer was opened from, so
+    // an image with no collection behind it (a talent photo, stored on the
+    // talent object) can't offer them.
+    imageViewerAddCaptionBtn.hidden = !viewerStorageKey;
     imageViewerCaptionInput.hidden = true;
   }
 
@@ -4069,6 +4154,8 @@
   }
 
   function saveViewerCaption(newCaption) {
+    // No collection key means nothing to write back to (see renderViewerCaption).
+    if (!viewerStorageKey) return;
     idbGetImages(viewerStorageKey).then(imgs => {
       if (imgs[viewerIndex]) imgs[viewerIndex].caption = newCaption;
       viewerImages = imgs;
@@ -4159,7 +4246,21 @@
     cropImg.style.transform = `translate(${cropOffsetX}px, ${cropOffsetY}px) scale(${cropBaseScale * cropZoom})`;
   }
 
-  function openProjectPhotoCrop(src) {
+  // 'project' crops to the shoot bubble's 31:44 thumbnail; 'talent' crops to
+  // the 4:5 talent card photo box. The stage's own ratio comes from CSS, and
+  // the base-scale math below measures the live box, so switching modes is
+  // just a class swap plus the matching output canvas size.
+  let cropMode = 'project';
+  const CROP_OUTPUT = {
+    project: { width: 124, height: 176 },
+    talent: { width: 240, height: 300 },
+  };
+
+  function openProjectPhotoCrop(src, mode) {
+    cropMode = mode === 'talent' ? 'talent' : 'project';
+    cropStage.classList.toggle('crop-stage-talent', cropMode === 'talent');
+    document.getElementById('cropModalTitle').textContent =
+      cropMode === 'talent' ? 'Crop talent photo' : 'Set project photo';
     cropZoom = 1;
     cropZoomSlider.value = '1';
     cropActivePointers.clear();
@@ -4183,6 +4284,7 @@
   function closeProjectPhotoCrop() {
     cropOverlay.hidden = true;
     cropTargetShootId = null;
+    talentPhotoTargetIdx = null;
   }
 
   cropZoomSlider.addEventListener('input', () => {
@@ -4268,17 +4370,27 @@
     const sHeight = cropStageHeight / scale;
     const sx = -cropOffsetX / scale;
     const sy = -cropOffsetY / scale;
-    // Output at the same 31:44 ratio as the crop stage (and the shoot
-    // bubble thumbnail), just at a higher resolution than the on-screen box.
-    const outputWidth = 124;
-    const outputHeight = 176;
+    // Output at the same ratio as the crop stage for the current mode, just at
+    // a higher resolution than the on-screen box.
+    const { width: outputWidth, height: outputHeight } = CROP_OUTPUT[cropMode];
     const canvas = document.createElement('canvas');
     canvas.width = outputWidth;
     canvas.height = outputHeight;
     canvas.getContext('2d').drawImage(cropImg, sx, sy, sWidth, sHeight, 0, 0, outputWidth, outputHeight);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+    const talentIdx = talentPhotoTargetIdx;
     const targetId = cropTargetShootId;
-    if (targetId) {
+    if (cropMode === 'talent') {
+      // Stored on the talent object itself (like the shoot's own projectPhoto)
+      // rather than in IndexedDB, so it rides along with the shoot through
+      // autosave and the settings export/import without extra plumbing.
+      if (talentIdx !== null && currentTalents[talentIdx]) {
+        currentTalents[talentIdx].photo = dataUrl;
+        renderTalents();
+        scheduleShootAutosave();
+      }
+      closeProjectPhotoCrop();
+    } else if (targetId) {
       const idx = state.shoots.findIndex(x => x.id === targetId);
       if (idx !== -1) {
         state.shoots[idx] = { ...state.shoots[idx], projectPhoto: dataUrl };
@@ -4407,7 +4519,7 @@
       startTime: document.getElementById('shootStartTime').value,
       endTime: document.getElementById('shootEndTime').value,
       location: { ...currentShootLocation },
-      talents: currentTalents.map(t => ({ name: t.name.trim(), socialHandles: [...t.socialHandles] })),
+      talents: currentTalents.map(t => ({ id: t.id, name: t.name.trim(), socialHandles: [...t.socialHandles], photo: t.photo || '' })),
       category: document.getElementById('shootCategory').value,
       premise: document.getElementById('shootPremise').value.trim(),
       character: document.getElementById('shootCharacter').value.trim(),
@@ -4441,7 +4553,7 @@
     // something" here or every untouched New Shoot would silently save.
     const loc = data.location;
     const locationEffectivelyBlank = !hasText(loc.name) && !hasText(loc.street) && !hasText(loc.city) && !hasText(loc.zip) && !hasText(loc.state);
-    return !hasText(data.title) && locationEffectivelyBlank && !hasText(data.startTime) && !hasText(data.endTime) && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals) && !hasText(data.elevatorPitch)
+    return !hasText(data.title) && locationEffectivelyBlank && !hasText(data.startTime) && !hasText(data.endTime) && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0 && !hasText(t.photo)) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals) && !hasText(data.elevatorPitch)
       && !hasText(data.worldNotes) && !hasText(data.generalNotes) && !hasText(data.deadline)
       && !hasText(data.whatWentRight) && !hasText(data.couldBeBetter) && !hasText(data.lessonsLearned)
       && !hasText(data.talentDirections) && !hasText(data.teamDirections) && !hasText(data.locationDirections) && data.shotList.length === 0
@@ -4861,7 +4973,7 @@
   }
 
   async function buildShootPdf(s, chosenSections) {
-    const sections = chosenSections || { talent: true, details: true, references: true, team: true, moodboard: true };
+    const sections = chosenSections || { talent: true, logistics: true, direction: false, references: false, team: true, moodboard: true };
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -4923,18 +5035,46 @@
 
     const timeRange = shootTimeRange(s);
     const locationDisplay = formatLocationDisplay(s.location);
-    if ((s.date || timeRange || locationDisplay) && sections.details) {
+    if ((s.date || timeRange || locationDisplay) && sections.logistics) {
       doc.setTextColor(...navy);
       doc.setFont('courier', 'bold');
       doc.setFontSize(18);
-      doc.text('Details:', margin, y);
+      doc.text('Logistics:', margin, y);
       y += 24;
       doc.setFontSize(11);
-      const detailsMaxWidth = pageWidth - margin * 2;
-      if (s.date) { y = drawLabeledPdfLine(doc, 'Date: ', prettyDate(s.date), margin, y, detailsMaxWidth, 16); }
-      if (timeRange) { y = drawLabeledPdfLine(doc, 'Time: ', timeRange, margin, y, detailsMaxWidth, 16); }
-      if (locationDisplay) { y = drawLabeledPdfLine(doc, 'Location: ', locationDisplay, margin, y, detailsMaxWidth, 14) + 2; }
-      if (hasText(s.locationDirections)) { y = drawLabeledPdfLine(doc, 'Location instructions: ', s.locationDirections, margin, y, detailsMaxWidth, 14) + 2; }
+      const logisticsMaxWidth = pageWidth - margin * 2;
+      if (s.date) { y = drawLabeledPdfLine(doc, 'Date: ', prettyDate(s.date), margin, y, logisticsMaxWidth, 16); }
+      if (timeRange) { y = drawLabeledPdfLine(doc, 'Time: ', timeRange, margin, y, logisticsMaxWidth, 16); }
+      if (locationDisplay) { y = drawLabeledPdfLine(doc, 'Location: ', locationDisplay, margin, y, logisticsMaxWidth, 14) + 2; }
+      if (hasText(s.locationDirections)) { y = drawLabeledPdfLine(doc, 'Location instructions: ', s.locationDirections, margin, y, logisticsMaxWidth, 14) + 2; }
+      y += 8;
+    }
+
+    // Direction is opt-in (unchecked by default in the sections popup) — it's
+    // internal creative planning, so it only goes out when deliberately chosen.
+    // These fields run long (up to 1000 chars each), hence the page-break
+    // checks the shorter fixed-length blocks above don't need.
+    const directionFields = [
+      ['Concept: ', s.premise],
+      ['Elevator pitch: ', s.elevatorPitch],
+      ['Character/Personality: ', s.character],
+      ['World-building notes: ', s.worldNotes],
+      ['Shoot goals: ', s.shootGoals],
+      ['General direction notes: ', s.generalNotes],
+    ].filter(([, value]) => hasText(value));
+    if (directionFields.length && sections.direction) {
+      if (y > pageHeight - margin - 80) { doc.addPage(); y = margin; }
+      doc.setTextColor(...navy);
+      doc.setFont('courier', 'bold');
+      doc.setFontSize(18);
+      doc.text('Direction:', margin, y);
+      y += 24;
+      doc.setFontSize(11);
+      const directionMaxWidth = pageWidth - margin * 2;
+      directionFields.forEach(([label, value]) => {
+        if (y > pageHeight - margin - 40) { doc.addPage(); y = margin; }
+        y = drawLabeledPdfLine(doc, label, value.trim(), margin, y, directionMaxWidth, 14) + 6;
+      });
       y += 8;
     }
 
@@ -5028,15 +5168,18 @@
   }
 
   // ---------- PDF sections choice (shown before building, so the user can
-  // opt out of sections they don't want in this particular share — every
-  // section that's currently always included stays checked by default). ----------
+  // opt out of sections they don't want in this particular share). Direction
+  // and References default to OFF — Direction is internal creative planning
+  // and References are inspiration links, neither of which usually belongs in
+  // the copy that goes out to a client or talent, so they're opt-in. ----------
   let pdfSectionsShootId = null;
 
   function openPdfSectionsModal(id) {
     pdfSectionsShootId = id;
     document.getElementById('pdfSectionTalent').checked = true;
-    document.getElementById('pdfSectionDetails').checked = true;
-    document.getElementById('pdfSectionReferences').checked = true;
+    document.getElementById('pdfSectionLogistics').checked = true;
+    document.getElementById('pdfSectionDirection').checked = false;
+    document.getElementById('pdfSectionReferences').checked = false;
     document.getElementById('pdfSectionTeam').checked = true;
     document.getElementById('pdfSectionMoodboard').checked = true;
     document.getElementById('pdfSectionsOverlay').hidden = false;
@@ -5059,7 +5202,8 @@
     const id = pdfSectionsShootId;
     const chosenSections = {
       talent: document.getElementById('pdfSectionTalent').checked,
-      details: document.getElementById('pdfSectionDetails').checked,
+      logistics: document.getElementById('pdfSectionLogistics').checked,
+      direction: document.getElementById('pdfSectionDirection').checked,
       references: document.getElementById('pdfSectionReferences').checked,
       team: document.getElementById('pdfSectionTeam').checked,
       moodboard: document.getElementById('pdfSectionMoodboard').checked,

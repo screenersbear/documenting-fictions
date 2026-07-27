@@ -66,6 +66,13 @@ button, input, select, textarea {
   font-family: inherit;
 }
 
+/* Baseline tracking for buttons. Class-level rules that set their own
+   letter-spacing win over this (element selectors lose to classes), so each
+   of those carries its own value already bumped by the same 1px. */
+button {
+  letter-spacing: 1px;
+}
+
 ::placeholder {
   color: var(--text);
   opacity: 0.5;
@@ -224,7 +231,7 @@ h1, h2, h3 {
   font-size: 19px;
   font-weight: 700;
   font-family: var(--font-title);
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
   cursor: pointer;
   margin-bottom: 0;
@@ -736,7 +743,7 @@ h2.status-group-heading.heading-navy {
   font-size: 14px;
   font-weight: 700;
   font-family: var(--font-title);
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
   cursor: pointer;
   margin-bottom: 16px;
@@ -830,16 +837,6 @@ h2.status-group-heading.heading-navy {
   border-radius: 0;
 }
 
-#archiveList .archive-month-heading.heading-yellow {
-  background: none;
-  color: var(--accent);
-}
-
-#archiveList .archive-month-heading.heading-navy {
-  background: none;
-  color: var(--text);
-}
-
 .archive-month-group:first-child > .archive-month-heading {
   margin-top: 0;
 }
@@ -852,6 +849,22 @@ h2.status-group-heading.heading-navy {
 .status-group-heading.heading-navy {
   background: var(--ink);
   color: #fff;
+}
+
+/* Strips the pill fill back off a month heading, leaving just the alternating
+   color as text. Declared after the .status-group-heading colors above rather
+   than before them: both selectors are two classes, so source order is what
+   decides the winner. Applies wherever .archive-month-heading is used — the
+   Archive list and the Journal's Reflections list both nest months under a
+   year this way, and only the year keeps the bubble treatment. */
+.archive-month-heading.heading-yellow {
+  background: none;
+  color: var(--accent);
+}
+
+.archive-month-heading.heading-navy {
+  background: none;
+  color: var(--text);
 }
 
 /* Decorative "file folder tab" — sits right above each top-level section
@@ -1186,7 +1199,7 @@ h2.status-group-heading.heading-navy {
   gap: 3px;
   cursor: pointer;
   padding: 4px;
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
 }
 
 .tab-icon {
@@ -1562,7 +1575,7 @@ h2.status-group-heading.heading-navy {
   font-size: 17px;
   font-weight: 700;
   font-family: var(--font-title);
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
   cursor: pointer;
 }
 
@@ -1574,8 +1587,25 @@ h2.status-group-heading.heading-navy {
   font-size: 17px;
   font-weight: 600;
   cursor: pointer;
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
   margin-top: 4px;
+}
+
+/* The standard full-width "do the thing" button at the bottom of a modal.
+   Same shape the id-specific rules above already use — as a class so new
+   modals can reach for it by name instead of growing another id rule. */
+.modal-cta {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 15px;
+  border: none;
+  border-radius: var(--radius-xl);
+  font-size: 17px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  letter-spacing: 1.5px;
+  cursor: pointer;
 }
 
 .location-field-btn {
@@ -1817,6 +1847,99 @@ h2.status-group-heading.heading-navy {
 .talent-social-heading {
   font-size: 13px;
   margin: 0;
+}
+
+/* A talent card carries a theme-colored bar across its full width holding the
+   talent's name and a collapse arrow, so a shoot with several talents can be
+   folded down instead of becoming one long scroll. The bar is why .talent-card
+   drops .team-member-card's own padding (and its absolutely-positioned delete
+   button): the bar goes edge to edge and the delete × lives inside it, with
+   the padding moved onto .talent-card-body instead. */
+.talent-card {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.talent-card-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ink);
+  padding: 6px 8px 6px 12px;
+}
+
+.talent-collapse-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  color: #fff;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.talent-collapse-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talent-card-collapsed .talent-collapse-toggle .collapse-arrow {
+  transform: rotate(-90deg);
+}
+
+/* Overrides .team-member-card .delete-talent's absolute positioning — inside
+   the bar it's a normal flex sibling of the collapse toggle. */
+.talent-card .talent-card-bar .delete-talent {
+  position: static;
+  top: auto;
+  right: auto;
+}
+
+.talent-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.talent-card-body[hidden] {
+  display: none;
+}
+
+/* The photo sits centered below everything else in the card, at roughly the
+   footprint of one talent card, in 4:5 portrait to match the crop tool's
+   talent aspect ratio (see .crop-stage.crop-stage-talent). */
+.talent-photo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.talent-photo-thumb {
+  width: 156px;
+  height: 195px;
+  flex: none;
+}
+
+.talent-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: pointer;
 }
 
 /* ---- Social media handles (dynamic list, nested inside a talent or
@@ -2121,7 +2244,7 @@ h2.status-group-heading.heading-navy {
   font-size: 17px;
   font-weight: 700;
   font-family: var(--font-title);
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
   color: #fff;
   cursor: pointer;
 }
@@ -2164,7 +2287,7 @@ h2.status-group-heading.heading-navy {
   font-size: 17px;
   font-weight: 600;
   cursor: pointer;
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
 }
 
 #shootModalOverlay .modal-actions button,
@@ -2215,8 +2338,12 @@ h2.status-group-heading.heading-navy {
 
 /* Every "+ Add X" button in the app uses .primary.small-btn together — a
    shared class rule instead of an ID list, so a new one automatically
-   picks up the bold title font without needing to be added here by hand. */
-.primary.small-btn {
+   picks up the bold title font without needing to be added here by hand.
+   .secondary.small-btn is the same button at the same weight, just uncolored:
+   a section's own button is filled yellow (.primary), while a button belonging
+   to a sub-section inside it stays white so the nesting reads at a glance. */
+.primary.small-btn,
+.secondary.small-btn {
   font-family: var(--font-title);
   font-weight: 700;
   font-size: 17px !important;
@@ -2332,7 +2459,7 @@ h2.status-group-heading.heading-navy {
   font-family: var(--font-title);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   color: #fff;
   text-align: left;
 }
@@ -2484,7 +2611,7 @@ h2.status-group-heading.heading-navy {
   font-size: 17px;
   font-weight: 700;
   font-family: var(--font-title);
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
   cursor: pointer;
 }
 
@@ -2832,7 +2959,7 @@ h2.status-group-heading.heading-navy {
   font-size: 17px;
   font-weight: 700;
   font-family: var(--font-title);
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
   cursor: pointer;
 }
 
@@ -2847,6 +2974,14 @@ h2.status-group-heading.heading-navy {
   border-radius: var(--radius-2xl);
   background: #000;
   touch-action: none;
+}
+
+/* Talent photos crop to 4:5 instead — matching .talent-photo-thumb's box, so
+   what gets framed here is what shows on the talent card. openProjectPhotoCrop
+   measures the live stage box, so swapping this class is all it takes to
+   retarget the ratio (the output canvas size is picked in JS to match). */
+.crop-stage.crop-stage-talent {
+  aspect-ratio: 4 / 5;
 }
 
 .crop-stage img {
@@ -2885,7 +3020,7 @@ h2.status-group-heading.heading-navy {
   font-size: 17px;
   font-weight: 700;
   font-family: var(--font-title);
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
   cursor: pointer;
 }
 
@@ -3028,7 +3163,7 @@ h2.status-group-heading.heading-navy {
   font-family: var(--font-title);
   font-weight: 600;
   cursor: pointer;
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
 }
 
 /* A noticeably bigger entrance than the quick 0.15s slideUp shared by other
