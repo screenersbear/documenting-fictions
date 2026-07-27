@@ -2951,22 +2951,21 @@
     const container = document.getElementById('talentsList');
     container.innerHTML = currentTalents.map((talent, idx) => {
       const collapsed = isSectionCollapsed(talentCollapseKey(talent));
-      // Deliberately the position, never the name — the name is already right
-      // there in the card's own field, so repeating it in the bar just says the
-      // same thing twice. The number also gives unnamed talents a stable label
-      // (and it's the one the PDF falls back to).
-      const barLabel = `Talent ${idx + 1}`;
+      // The bar IS the name field — there's no separate name box in the body.
+      // Styled to read as a plain header until you tap it (see .talent-card-bar
+      // .talent-name), so typing a name and pressing Enter leaves the name
+      // sitting there as the card's heading. Empty falls back to the position
+      // via the placeholder, which is also what the PDF prints.
       return `
       <div class="team-member-card talent-card${collapsed ? ' talent-card-collapsed' : ''}">
         <div class="talent-card-bar">
-          <button type="button" class="talent-collapse-toggle" data-idx="${idx}" aria-expanded="${collapsed ? 'false' : 'true'}">
-            <span class="talent-collapse-name">${escapeHtml(barLabel)}</span>
+          <input type="text" class="talent-name" data-idx="${idx}" placeholder="Talent ${idx + 1}" aria-label="Talent ${idx + 1} name" value="${escapeHtml(talent.name || '')}" />
+          <button type="button" class="talent-collapse-toggle" data-idx="${idx}" aria-label="Collapse talent" aria-expanded="${collapsed ? 'false' : 'true'}">
             ${COLLAPSE_ARROW_SVG}
           </button>
           <button type="button" class="delete-talent" data-idx="${idx}">&times;</button>
         </div>
         <div class="talent-card-body"${collapsed ? ' hidden' : ''}>
-          <input type="text" class="talent-name" data-idx="${idx}" placeholder="Talent name" value="${escapeHtml(talent.name || '')}" />
           <button type="button" class="secondary small-btn add-talent-photo-btn" data-idx="${idx}">${talent.photo ? 'Change talent photo' : '+ Add talent photo'}</button>
           <div class="talent-social-section">
             <p class="team-question talent-social-heading">Social media handle(s)</p>
@@ -3051,6 +3050,14 @@
     container.querySelectorAll('.talent-name').forEach(input => {
       input.addEventListener('input', () => {
         currentTalents[Number(input.dataset.idx)].name = input.value;
+      });
+      // Enter commits the name: blurring drops the focused styling so the field
+      // settles back into looking like the card's heading. preventDefault stops
+      // the Enter from trying to submit the surrounding shoot form.
+      input.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        input.blur();
       });
       input.addEventListener('blur', () => {
         const talent = currentTalents[Number(input.dataset.idx)];

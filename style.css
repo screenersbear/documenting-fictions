@@ -1912,29 +1912,55 @@ h2.status-group-heading.heading-navy {
   padding: 6px 8px 6px 12px;
 }
 
-.talent-collapse-toggle {
+/* The name field lives in the bar and is the card's heading. Undecorated by
+   default so a committed name reads as a title rather than a form input; the
+   focus state is what makes it look editable. Padding stays constant between
+   the two states so focusing doesn't nudge the text sideways.
+   The #shootForm prefix is load-bearing: `#shootForm input` (see above) gives
+   every field in this form a white box with a border, and an id outranks any
+   number of classes — so a class-only selector here silently loses. Same
+   pattern as #shootForm .shot-text. */
+#shootForm .talent-card-bar .talent-name {
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
   background: none;
   border: none;
-  padding: 4px 0;
+  border-radius: var(--radius-xs);
+  padding: 5px 6px;
   color: #fff;
   font-family: var(--font-title);
   font-weight: 700;
   font-size: 15px;
-  text-align: left;
-  cursor: pointer;
+  text-transform: none;
+  text-overflow: ellipsis;
 }
 
-.talent-collapse-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* Beats the global ::placeholder rule, which sets a dark colour that would be
+   unreadable on the bar. */
+#shootForm .talent-card-bar .talent-name::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+  opacity: 1;
+}
+
+#shootForm .talent-card-bar .talent-name:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Only the arrow collapses the card now — tapping the name edits it — so the
+   button gets a proper touch target of its own. */
+.talent-collapse-toggle {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  color: #fff;
+  cursor: pointer;
 }
 
 .talent-card-collapsed .talent-collapse-toggle .collapse-arrow {
