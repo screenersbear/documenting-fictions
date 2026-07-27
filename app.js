@@ -661,8 +661,20 @@
     }
   }
 
+  // Photos stay on the in-memory objects so rendering can read them
+  // synchronously, but they're stripped back out on the way to localStorage —
+  // they live in IndexedDB instead (see projectPhotoKey/talentPhotoKey). This
+  // is what keeps a routine autosave a small text-only write instead of
+  // re-serializing every base64 photo in the library.
+  // NOTE: a JSON replacer matches by key name at any depth, so these two names
+  // are reserved for photos — don't reuse them for anything that must persist.
+  function stripPhotos(key, value) {
+    if (key === 'projectPhoto' || key === 'photo') return undefined;
+    return value;
+  }
+
   function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state, stripPhotos));
   }
 
   let state = loadState();
@@ -1015,6 +1027,71 @@
     return e.sourceShootId ? finalImagesKey(e.sourceShootId) : journalImagesKey(e.id);
   }
 
+  // ---------- Photo storage (project + talent photos live in IndexedDB) ----------
+  // These two used to sit inline on the shoot object as base64 data URLs, which
+  // meant every autosave re-serialized all of them into the localStorage blob
+  // just to record a title edit. They're stored as a single-entry
+  // [{src, caption}] array so they use the exact same store shape as every
+  // other image collection here — which also means export/import carries them
+  // with no change to the payload format.
+  function projectPhotoKey(shootId) {
+    return shootId + '__cover';
+  }
+
+  function talentPhotoKey(shootId, talentId) {
+    return shootId + '__talent_' + talentId;
+  }
+
+  function photoFromEntries(entries) {
+    return (entries && entries[0] && entries[0].src) || '';
+  }
+
+  function savePhotoToIdb(key, dataUrl) {
+    return idbSetImages(key, dataUrl ? [{ src: dataUrl, caption: '' }] : []);
+  }
+
+  // Every IDB key a shoot owns, so deleting one doesn't orphan rows.
+  function shootPhotoKeys(shoot) {
+    return [projectPhotoKey(shoot.id)].concat((shoot.talents || []).filter(t => t.id).map(t => talentPhotoKey(shoot.id, t.id)));
+  }
+
+  // Reads every shoot's photos back onto the in-memory state so that all the
+  // render code can keep reading shoot.projectPhoto / talent.photo
+  // synchronously, exactly as it did when they were stored inline.
+  function hydratePhotos() {
+    const jobs = [];
+    state.shoots.forEach(shoot => {
+      jobs.push(idbGetImages(projectPhotoKey(shoot.id)).then(entries => {
+        const src = photoFromEntries(entries);
+        if (src) shoot.projectPhoto = src;
+      }));
+      (shoot.talents || []).forEach(talent => {
+        if (!talent.id) return;
+        jobs.push(idbGetImages(talentPhotoKey(shoot.id, talent.id)).then(entries => {
+          const src = photoFromEntries(entries);
+          if (src) talent.photo = src;
+        }));
+      });
+    });
+    return Promise.all(jobs).catch(() => {});
+  }
+
+  // One-time move for data saved before photos lived in IDB: anything still
+  // inline gets written out to its own key, then dropped from the blob by the
+  // next saveState(). Safe to run on every boot — after the first pass there's
+  // nothing inline left to find.
+  function migrateInlinePhotos() {
+    const jobs = [];
+    state.shoots.forEach(shoot => {
+      if (shoot.projectPhoto) jobs.push(savePhotoToIdb(projectPhotoKey(shoot.id), shoot.projectPhoto));
+      (shoot.talents || []).forEach(talent => {
+        if (talent.id && talent.photo) jobs.push(savePhotoToIdb(talentPhotoKey(shoot.id, talent.id), talent.photo));
+      });
+    });
+    if (!jobs.length) return Promise.resolve();
+    return Promise.all(jobs).then(() => saveState()).catch(() => {});
+  }
+
   function resizeImageFile(file, maxDim, quality) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -1074,6 +1151,9 @@
       const view = btn.dataset.view;
       document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
       Object.entries(views).forEach(([key, el]) => { el.hidden = key !== view; });
+      // Stop the Archive photo rotation the moment you leave it, rather than
+      // waiting on renderArchiveSlideshow's async pass to notice.
+      if (view !== 'archive') stopArchiveSlideshow();
       window.scrollTo(0, 0);
       renderAll();
       if (view === 'journal') showJournalView('select');
@@ -1522,6 +1602,34 @@
   let archiveSlideshowTimer = null;
   let archiveSlideshowSignature = '';
 
+  // The rotation is deliberately split out from the DOM build below. Each tick
+  // cross-fades and scales a full-size photo over 4.2s on a 4.2s interval, so
+  // something is always animating — left running it would keep compositing
+  // large bitmaps while you're on a completely different tab. It's started
+  // only while Archive is actually on screen (see stopArchiveSlideshow's
+  // callers: tab switches and the app going to the background).
+  function startArchiveSlideshow() {
+    stopArchiveSlideshow();
+    const container = document.getElementById('archiveSlideshow');
+    if (!container || views.archive.hidden || document.hidden) return;
+    const imgs = container.querySelectorAll('img');
+    if (imgs.length < 2) return;
+    let idx = Array.prototype.findIndex.call(imgs, im => im.classList.contains('active'));
+    if (idx < 0) idx = 0;
+    archiveSlideshowTimer = setInterval(() => {
+      const current = container.querySelectorAll('img');
+      if (!current.length) return;
+      current[idx].classList.remove('active');
+      idx = (idx + 1) % current.length;
+      current[idx].classList.add('active');
+    }, 4200);
+  }
+
+  function stopArchiveSlideshow() {
+    clearInterval(archiveSlideshowTimer);
+    archiveSlideshowTimer = null;
+  }
+
   // Pulls final images across every shoot (any status) and cycles through
   // them; skips a rebuild if the image set hasn't actually changed so the
   // animation doesn't restart every time renderAll() runs.
@@ -1533,11 +1641,17 @@
         imgs.forEach(img => { if (img.src) images.push({ src: img.src, shootId: shoots[i].id }); });
       });
       const signature = images.map(img => img.src).join('|');
-      if (signature === archiveSlideshowSignature) return;
+      // Unchanged image set: leave the existing <img>s alone, but still
+      // re-evaluate the timer — this is the path taken when you navigate back
+      // to Archive, where the DOM is already built but the rotation is stopped.
+      if (signature === archiveSlideshowSignature) {
+        startArchiveSlideshow();
+        return;
+      }
       archiveSlideshowSignature = signature;
       shuffleArray(images);
 
-      clearInterval(archiveSlideshowTimer);
+      stopArchiveSlideshow();
       const container = document.getElementById('archiveSlideshow');
       container.querySelectorAll('img').forEach(img => img.remove());
       document.getElementById('archiveSlideshowEmpty').hidden = images.length > 0;
@@ -1551,15 +1665,7 @@
         container.appendChild(img);
       });
 
-      if (images.length > 1) {
-        let idx = 0;
-        archiveSlideshowTimer = setInterval(() => {
-          const imgs = container.querySelectorAll('img');
-          imgs[idx].classList.remove('active');
-          idx = (idx + 1) % imgs.length;
-          imgs[idx].classList.add('active');
-        }, 4200);
-      }
+      startArchiveSlideshow();
     });
   }
 
@@ -2543,11 +2649,24 @@
 
   function scheduleJournalAutosave() {
     clearTimeout(journalSaveTimer);
-    journalSaveTimer = setTimeout(autosaveJournal, 500);
+    // Unlike the shoot form's notes fields (which are readonly and edited in
+    // the expand modal), the journal body is typed straight into, so this is
+    // the app's one genuinely long typing session. Same reasoning as
+    // scheduleShootAutosave: a backstop, with blur and backgrounding both
+    // saving immediately.
+    journalSaveTimer = setTimeout(autosaveJournal, 2000);
+  }
+
+  function saveJournalNow() {
+    if (!currentJournalEntry) return;
+    clearTimeout(journalSaveTimer);
+    autosaveJournal();
   }
 
   document.getElementById('journalSubject').addEventListener('input', scheduleJournalAutosave);
   document.getElementById('journalBody').addEventListener('input', scheduleJournalAutosave);
+  document.getElementById('journalSubject').addEventListener('blur', saveJournalNow);
+  document.getElementById('journalBody').addEventListener('blur', saveJournalNow);
 
   const journalModalOverlay = document.getElementById('journalModalOverlay');
   const OPEN_JOURNAL_KEY = 'dailies_open_journal_entry';
@@ -2903,6 +3022,7 @@
         talent.photo = '';
         renderTalents();
         scheduleShootAutosave();
+        if (currentShootId && talent.id) idbDeleteImages(talentPhotoKey(currentShootId, talent.id)).catch(() => {});
       });
     });
     container.querySelectorAll('.delete-talent').forEach(btn => {
@@ -4088,6 +4208,7 @@
           if (shouldAutoSetProjectPhoto) {
             return resizeDataUrlThumb(newImages[0], 200, 0.6).then(thumb => {
               pendingProjectPhoto = thumb;
+              return savePhotoToIdb(projectPhotoKey(currentShootId), thumb);
             });
           }
         });
@@ -4381,13 +4502,15 @@
     const talentIdx = talentPhotoTargetIdx;
     const targetId = cropTargetShootId;
     if (cropMode === 'talent') {
-      // Stored on the talent object itself (like the shoot's own projectPhoto)
-      // rather than in IndexedDB, so it rides along with the shoot through
-      // autosave and the settings export/import without extra plumbing.
+      // Kept on the in-memory talent object so renderTalents can read it
+      // synchronously; the durable copy goes to IndexedDB, keyed by shoot +
+      // talent, since photos are deliberately excluded from the state blob.
       if (talentIdx !== null && currentTalents[talentIdx]) {
-        currentTalents[talentIdx].photo = dataUrl;
+        const talent = currentTalents[talentIdx];
+        talent.photo = dataUrl;
         renderTalents();
         scheduleShootAutosave();
+        if (currentShootId && talent.id) savePhotoToIdb(talentPhotoKey(currentShootId, talent.id), dataUrl).catch(() => {});
       }
       closeProjectPhotoCrop();
     } else if (targetId) {
@@ -4395,6 +4518,7 @@
       if (idx !== -1) {
         state.shoots[idx] = { ...state.shoots[idx], projectPhoto: dataUrl };
         saveState();
+        savePhotoToIdb(projectPhotoKey(targetId), dataUrl).catch(() => {});
         renderAll();
       }
       closeProjectPhotoCrop();
@@ -4402,6 +4526,7 @@
     } else {
       pendingProjectPhoto = dataUrl;
       scheduleShootAutosave();
+      if (currentShootId) savePhotoToIdb(projectPhotoKey(currentShootId), dataUrl).catch(() => {});
       closeProjectPhotoCrop();
       closeImageViewer();
     }
@@ -4491,6 +4616,7 @@
           if (shouldSetCover) {
             return resizeDataUrlThumb(newImages[0], 200, 0.6).then(thumb => {
               pendingProjectPhoto = thumb;
+              return savePhotoToIdb(projectPhotoKey(currentShootId), thumb);
             });
           }
         });
@@ -4599,12 +4725,25 @@
 
   function scheduleShootAutosave() {
     clearTimeout(shootSaveTimer);
-    shootSaveTimer = setTimeout(autosaveShoot, 500);
+    // Only a backstop for text still being typed — leaving the field and
+    // backgrounding the app both save immediately (see below), so this doesn't
+    // need to be eager. It used to be 500ms, which meant a save on every
+    // natural pause mid-sentence.
+    shootSaveTimer = setTimeout(autosaveShoot, 2000);
+  }
+
+  function saveShootNow() {
+    if (shootModalOverlay.hidden || !currentShootId) return;
+    clearTimeout(shootSaveTimer);
+    autosaveShoot();
   }
 
   shootForm.addEventListener('input', scheduleShootAutosave);
   shootForm.addEventListener('change', scheduleShootAutosave);
   shootForm.addEventListener('submit', (e) => e.preventDefault());
+  // Commit as soon as focus leaves a field, so the pending-debounce window is
+  // only ever open while you're actually still in a field typing.
+  shootForm.addEventListener('focusout', saveShootNow);
 
   function closeShootModal() {
     if (currentShootId) {
@@ -4615,6 +4754,11 @@
     if (!state.shoots.some(x => x.id === currentShootId)) {
       idbDeleteImages(currentShootId).catch(() => {});
       idbDeleteImages(finalImagesKey(currentShootId)).catch(() => {});
+      // Abandoned blank shoot — drop any photo rows it managed to create too.
+      idbDeleteImages(projectPhotoKey(currentShootId)).catch(() => {});
+      currentTalents.forEach(t => {
+        if (t.id) idbDeleteImages(talentPhotoKey(currentShootId, t.id)).catch(() => {});
+      });
     }
     shootModalOverlay.hidden = true;
     editingShootId = null;
@@ -4661,10 +4805,14 @@
   })();
 
   function deleteShootById(id) {
+    const doomed = state.shoots.find(x => x.id === id);
     state.shoots = state.shoots.filter(x => x.id !== id);
     state.journalEntries = state.journalEntries.filter(e => e.sourceShootId !== id);
     idbDeleteImages(id).catch(() => {});
     idbDeleteImages(finalImagesKey(id)).catch(() => {});
+    // Cover + per-talent photos live under their own keys, so they need
+    // explicit cleanup or they'd linger as orphaned rows.
+    if (doomed) shootPhotoKeys(doomed).forEach(k => idbDeleteImages(k).catch(() => {}));
     saveState();
   }
 
@@ -5636,6 +5784,9 @@
     state.shoots.forEach(s => {
       keys.push(s.id);
       keys.push(finalImagesKey(s.id));
+      // Cover and talent photos are IDB rows like any other image collection,
+      // so they ride out in the same images map.
+      shootPhotoKeys(s).forEach(k => keys.push(k));
     });
     state.journalEntries.forEach(e => {
       if (!e.sourceShootId) keys.push(journalImagesKey(e.id));
@@ -5716,6 +5867,13 @@
       saveState();
       applyColorTheme(state.colorTheme);
       renderAll();
+      // Backups made before photos moved to IDB still carry them inline on the
+      // shoots, so run the same migration boot does; then pull every photo back
+      // onto the in-memory state so thumbnails appear without a reload.
+      migrateInlinePhotos()
+        .then(hydratePhotos)
+        .then(() => renderAll())
+        .catch(() => {});
     });
   });
 
@@ -5900,7 +6058,7 @@
   ];
 
   // ---------- Regions map (world-map.svg, fetched once and cached) ----------
-  let worldMapSvgText = null;
+  let worldMapSvgEl = null;
   let worldMapFetchPromise = null;
   let regionsSliceColors = {};
   let regionsDataByCountry = {};
@@ -6105,24 +6263,43 @@
     document.getElementById('regionCountryPopupOverlay').hidden = false;
   }
 
+  // Parses the map exactly once and then reuses that same <svg> node forever.
+  // renderStats() rebuilds the whole carousel's innerHTML, which throws away
+  // the container this lives in, so this used to re-run innerHTML with ~900KB
+  // of SVG text on every render — reparsing 2,000+ <path> elements each time
+  // any bit of state changed. Moving the already-parsed node into the fresh
+  // container costs nothing by comparison. Being detached from the document in
+  // between is fine; it keeps its children either way.
+  function mountWorldMap(container) {
+    // The node carries over whatever zoom width and pulse class it had last
+    // time, so reset both to match the zoom level being reset above.
+    worldMapSvgEl.style.width = `${MAP_BASE_WIDTH}px`;
+    worldMapSvgEl.querySelectorAll('.region-focus-pulse').forEach(el => el.classList.remove('region-focus-pulse'));
+    container.replaceChildren(worldMapSvgEl);
+    applyRegionsHighlight();
+  }
+
   function renderRegionsMap() {
     const container = document.getElementById('worldMapContainer');
     if (!container) return;
     mapZoomLevel = 1;
-    if (worldMapSvgText) {
-      container.innerHTML = worldMapSvgText;
-      applyRegionsHighlight();
+    if (worldMapSvgEl) {
+      mountWorldMap(container);
       return;
     }
     if (!worldMapFetchPromise) {
       worldMapFetchPromise = fetch('world-map.svg').then(r => r.text());
     }
     worldMapFetchPromise.then(svgText => {
-      worldMapSvgText = svgText;
       const el = document.getElementById('worldMapContainer');
       if (!el) return;
-      el.innerHTML = svgText;
-      applyRegionsHighlight();
+      if (!worldMapSvgEl) {
+        const holder = document.createElement('div');
+        holder.innerHTML = svgText;
+        worldMapSvgEl = holder.querySelector('svg');
+        if (!worldMapSvgEl) throw new Error('no svg root');
+      }
+      mountWorldMap(el);
     }).catch(() => {
       const el = document.getElementById('worldMapContainer');
       if (el) el.innerHTML = '<p class="empty-hint">Couldn\'t load the map.</p>';
@@ -6213,6 +6390,11 @@
   });
 
   function renderStats() {
+    // Nothing here is observable while the tab is hidden, and it's the most
+    // expensive render in the app (pie geometry for every page, plus the world
+    // map). Switching to Stats always calls renderAll() after un-hiding the
+    // view, so skipping it here just defers the work to the moment it matters.
+    if (views.stats.hidden) return;
     const prevScrollLeft = statsCarousel.scrollLeft;
     statsSliceFilters = {};
     renderStatsYearFilters();
@@ -6743,7 +6925,36 @@
     document.getElementById('dailyReportOverlay').hidden = true;
   });
 
+  // Nothing used to flush pending edits when the app went away, so anything
+  // typed inside the debounce window was lost if iOS discarded the backgrounded
+  // tab — which it does aggressively. visibilitychange is the reliable signal on
+  // mobile Safari (pagehide/beforeunload often never fire when an app is
+  // swiped away), and it doubles as the cue to park the Archive rotation so it
+  // isn't animating photos for a screen nobody's looking at.
+  function flushPendingEdits() {
+    saveShootNow();
+    saveJournalNow();
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      flushPendingEdits();
+      stopArchiveSlideshow();
+    } else if (!views.archive.hidden) {
+      startArchiveSlideshow();
+    }
+  });
+  window.addEventListener('pagehide', flushPendingEdits);
+
   renderAll();
+  // Photos come from IndexedDB, which is async, so the first paint above lands
+  // without thumbnails and this fills them in a moment later. Everything after
+  // boot reads them straight off the in-memory state, so this is the only
+  // moment it's visible.
+  migrateInlinePhotos()
+    .then(hydratePhotos)
+    .then(() => renderAll())
+    .catch(() => {});
   showTabIntro('overview');
   if (document.getElementById('tabIntroOverlay').hidden) {
     checkDayAfterPrompt();

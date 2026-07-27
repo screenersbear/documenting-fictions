@@ -192,23 +192,30 @@ h1, h2, h3 {
   overflow: hidden;
 }
 
+/* The sweep animates transform, never `left`. One of these lives on the header
+   logo, so it runs on every screen for as long as the app is open — animating
+   a layout property there would re-run layout and paint on the main thread
+   every frame, forever. transform is composited on the GPU instead, so the
+   loop costs essentially nothing. translateX is in % of the element's own
+   width (50% of the parent), hence the larger numbers than the old `left`
+   values, which were % of the parent. */
 .shine-sweep::after {
   content: '';
   position: absolute;
   top: 0;
-  left: -75%;
+  left: 0;
   width: 50%;
   height: 100%;
   background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
-  transform: skewX(-20deg);
   animation: shine-sweep-move 8s ease-in-out infinite;
+  will-change: transform;
   pointer-events: none;
 }
 
 @keyframes shine-sweep-move {
-  0% { left: -75%; }
-  12% { left: 130%; }
-  100% { left: 130%; }
+  0% { transform: translateX(-150%) skewX(-20deg); }
+  12% { transform: translateX(260%) skewX(-20deg); }
+  100% { transform: translateX(260%) skewX(-20deg); }
 }
 
 .brand-title {
