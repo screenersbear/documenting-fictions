@@ -171,9 +171,14 @@ h1, h2, h3 {
   height: 26px;
 }
 
+/* Same berry-blade-black outline the New Shoot button carries, so the two
+   yellow blocks in the header band are edged consistently. box-sizing keeps
+   the border inside the 48px box instead of growing it to 52px. */
 .brand-logo-wrap {
   width: 48px;
   height: 48px;
+  box-sizing: border-box;
+  border: 2px solid var(--text);
   border-radius: var(--radius-lg);
   overflow: hidden;
   position: relative;
@@ -254,7 +259,7 @@ h1, h2, h3 {
 .stat-box {
   background: var(--ink);
   border: 2px solid var(--ink);
-  border-top: 4px solid var(--accent);
+  border-top: 8px solid var(--accent);
   border-radius: var(--radius-2xl);
   padding: 6px 4px;
   text-align: center;
@@ -641,14 +646,14 @@ h1, h2, h3 {
 h2.status-group-heading.heading-yellow {
   background: var(--accent);
   color: var(--text);
-  border-left: 6px solid var(--ink);
+  border-left: 11px solid var(--ink);
 }
 
 .section-block h2.heading-navy,
 h2.status-group-heading.heading-navy {
   background: var(--ink);
   color: #fff;
-  border-left: 6px solid var(--accent);
+  border-left: 11px solid var(--accent);
 }
 
 .collapse-arrow {
@@ -1303,6 +1308,12 @@ h2.status-group-heading.heading-navy {
   border-bottom: none;
 }
 
+/* The line along the bottom keeps the header readable as its own band while
+   content scrolls underneath it — without it, a yellow section pill or a navy
+   heading passing just beneath the sticky header blends into the header's own
+   fill. White specifically: it's the only colour that separates from every
+   --ink theme value AND from Basic Info's yellow folder-tab fill, which bleeds
+   up to meet the header (an accent-coloured line vanishes against that). */
 .shoot-modal-header::before {
   content: '';
   position: absolute;
@@ -1311,6 +1322,7 @@ h2.status-group-heading.heading-navy {
   right: -20px;
   bottom: 0;
   background: var(--ink);
+  border-bottom: 3px solid #fff;
   border-radius: var(--radius-4xl) var(--radius-4xl) 0 0;
 }
 
@@ -1906,11 +1918,24 @@ h2.status-group-heading.heading-navy {
 }
 
 /* Overrides .team-member-card .delete-talent's absolute positioning — inside
-   the bar it's a normal flex sibling of the collapse toggle. */
+   the bar it's a normal flex sibling of the collapse toggle. The white-circle
+   badge treatment it inherits is too heavy sitting on the coloured bar, so
+   here it's just the glyph, matching the plain ✕ controls elsewhere. */
 .talent-card .talent-card-bar .delete-talent {
   position: static;
   top: auto;
   right: auto;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .talent-card-body {
@@ -3260,6 +3285,9 @@ h2.status-group-heading.heading-navy {
   padding: 12px;
 }
 
+/* Left-aligned so a column of options reads as a scannable list — with the
+   labels alphabetized (see the panes in index.html), a common left edge is
+   what makes that ordering actually usable. */
 .options-item {
   width: 100%;
   background: var(--surface-2);
@@ -3270,7 +3298,7 @@ h2.status-group-heading.heading-navy {
   font-weight: 600;
   color: var(--text);
   cursor: pointer;
-  text-align: center;
+  text-align: left;
 }
 
 /* .options-item is declared after .primary, so at equal specificity it

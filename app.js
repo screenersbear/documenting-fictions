@@ -2939,16 +2939,23 @@
   // name field and its own nested social-handles sub-list, so a shoot with
   // multiple people in front of the camera can track each one separately.
   let currentTalents = [];
-  // Which talent cards are folded shut, by talent id. Purely transient view
-  // state (reset whenever the shoot modal opens), so it deliberately isn't
-  // part of the saved shoot the way collapsedSections is.
-  let collapsedTalents = new Set();
+
+  // Fold state goes through the same persisted store as every other collapsible
+  // section in the app, so reopening a shoot finds its talent cards exactly as
+  // they were left rather than all expanded again.
+  function talentCollapseKey(talent) {
+    return `shoot:${currentShootId}:talent:${talent.id}`;
+  }
 
   function renderTalents() {
     const container = document.getElementById('talentsList');
     container.innerHTML = currentTalents.map((talent, idx) => {
-      const collapsed = collapsedTalents.has(talent.id);
-      const barLabel = hasText(talent.name) ? talent.name.trim() : `Talent ${idx + 1}`;
+      const collapsed = isSectionCollapsed(talentCollapseKey(talent));
+      // Deliberately the position, never the name — the name is already right
+      // there in the card's own field, so repeating it in the bar just says the
+      // same thing twice. The number also gives unnamed talents a stable label
+      // (and it's the one the PDF falls back to).
+      const barLabel = `Talent ${idx + 1}`;
       return `
       <div class="team-member-card talent-card${collapsed ? ' talent-card-collapsed' : ''}">
         <div class="talent-card-bar">
@@ -2993,8 +3000,8 @@
       btn.addEventListener('click', () => {
         const talent = currentTalents[Number(btn.dataset.idx)];
         if (!talent) return;
-        if (collapsedTalents.has(talent.id)) collapsedTalents.delete(talent.id);
-        else collapsedTalents.add(talent.id);
+        const key = talentCollapseKey(talent);
+        setSectionCollapsed(key, !isSectionCollapsed(key));
         renderTalents();
       });
     });
@@ -3027,19 +3034,23 @@
     });
     container.querySelectorAll('.delete-talent').forEach(btn => {
       btn.addEventListener('click', () => {
-        currentTalents.splice(Number(btn.dataset.idx), 1);
+        const idx = Number(btn.dataset.idx);
+        const talent = currentTalents[idx];
+        if (!talent) return;
+        // Removing a talent also throws away their handles and photo, so it
+        // asks first rather than vanishing on a mis-tap.
+        const who = hasText(talent.name) ? talent.name.trim() : `Talent ${idx + 1}`;
+        if (!confirm(`Remove ${who} from this shoot? Their handles and photo will be removed too.`)) return;
+        setSectionCollapsed(talentCollapseKey(talent), false);
+        if (currentShootId && talent.id) idbDeleteImages(talentPhotoKey(currentShootId, talent.id)).catch(() => {});
+        currentTalents.splice(idx, 1);
         renderTalents();
         scheduleShootAutosave();
       });
     });
     container.querySelectorAll('.talent-name').forEach(input => {
       input.addEventListener('input', () => {
-        const idx = Number(input.dataset.idx);
-        currentTalents[idx].name = input.value;
-        // Keep the collapse bar's label in step as you type, so folding a card
-        // shut right after naming it doesn't show a stale "Talent 1".
-        const label = input.closest('.talent-card').querySelector('.talent-collapse-name');
-        if (label) label.textContent = hasText(input.value) ? input.value.trim() : `Talent ${idx + 1}`;
+        currentTalents[Number(input.dataset.idx)].name = input.value;
       });
       input.addEventListener('blur', () => {
         const talent = currentTalents[Number(input.dataset.idx)];
@@ -3081,6 +3092,15 @@
     currentTalents.push({ id: uid(), name: '', socialHandles: [], photo: '' });
     renderTalents();
     scheduleShootAutosave();
+    // With talents already listed, the new card appears below the fold — focus
+    // its name field so the keyboard opens on the right box and the browser
+    // scrolls it into view, instead of leaving you hunting for where it landed.
+    const cards = document.querySelectorAll('#talentsList .talent-card');
+    const newField = cards.length ? cards[cards.length - 1].querySelector('.talent-name') : null;
+    if (newField) {
+      newField.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      newField.focus();
+    }
   });
 
   // Which talent card the file picker was opened for. Read once the crop is
@@ -4102,7 +4122,6 @@
     currentTalents = s && Array.isArray(s.talents)
       ? s.talents.map(t => ({ id: t.id || uid(), name: t.name || '', socialHandles: (t.socialHandles || []).map(sh => ({ ...sh })), photo: t.photo || '' }))
       : [];
-    collapsedTalents = new Set();
     renderTalents();
     document.getElementById('shootCategory').value = s ? (s.category || '') : '';
     updateCategoryTierUI();
@@ -4511,6 +4530,14 @@
         renderTalents();
         scheduleShootAutosave();
         if (currentShootId && talent.id) savePhotoToIdb(talentPhotoKey(currentShootId, talent.id), dataUrl).catch(() => {});
+        // With no mood board or final images yet, nothing has claimed the cover
+        // (those paths auto-set it from their first photo) — so a talent photo
+        // becomes the shoot's cover rather than leaving the bubble blank. It's
+        // 4:5 against the bubble's 31:44 slot, which object-fit crops to suit.
+        if (!pendingProjectPhoto) {
+          pendingProjectPhoto = dataUrl;
+          if (currentShootId) savePhotoToIdb(projectPhotoKey(currentShootId), dataUrl).catch(() => {});
+        }
       }
       closeProjectPhotoCrop();
     } else if (targetId) {
@@ -5158,13 +5185,21 @@
     doc.setTextColor(...navy);
     let y = headerHeight + 34;
 
-    const talentsWithContent = (s.talents || []).filter(t => hasText(t.name));
-    if (talentsWithContent.length && sections.talent) {
-      talentsWithContent.forEach(talent => {
+    // A talent counts as worth printing if they have a name OR a photo — an
+    // unnamed talent with a portrait used to drop out of the PDF entirely. The
+    // label then falls back to their position, matching the "Talent N" the
+    // editor's own card bar shows. Numbering comes from the index in the full
+    // list so it lines up with the app even when earlier talents are skipped.
+    const talentsForPdf = (s.talents || [])
+      .map((talent, idx) => ({ talent, label: hasText(talent.name) ? talent.name.trim() : `Talent ${idx + 1}` }))
+      .filter(({ talent }) => hasText(talent.name) || hasText(talent.photo));
+    if (talentsForPdf.length && sections.talent) {
+      for (const { talent, label } of talentsForPdf) {
+        if (y > pageHeight - margin - 60) { doc.addPage(); y = margin; }
         doc.setTextColor(...navy);
         doc.setFont('courier', 'bold');
         doc.setFontSize(18);
-        doc.text(`Talent: ${talent.name}`, margin, y);
+        doc.text(`Talent: ${label}`, margin, y);
         y += 24;
         const handles = (talent.socialHandles || []).filter(sh => hasText(sh.handle));
         if (handles.length) {
@@ -5177,8 +5212,16 @@
             y += 15;
           });
         }
+        if (hasText(talent.photo)) {
+          const photoH = 132;
+          if (y + photoH > pageHeight - margin) { doc.addPage(); y = margin; }
+          const dims = await getImageDims(talent.photo);
+          const fitted = fitContain(dims.w, dims.h, photoH, photoH);
+          doc.addImage(talent.photo, 'JPEG', margin, y + 4, fitted.w, fitted.h);
+          y += fitted.h + 12;
+        }
         y += 10;
-      });
+      }
     }
 
     const timeRange = shootTimeRange(s);
@@ -5287,21 +5330,31 @@
         const countOnThisPage = Math.min(maxOnThisPage, images.length - idx);
         const rows = Math.ceil(countOnThisPage / cols);
         const availableHeight = pageHeight - margin - y;
-        const cellH = (availableHeight - gap * (rows - 1)) / rows;
+        // Cap on a single cell, so one row can't lay claim to the whole page.
+        const cellH = Math.min(cellW * 1.3, (availableHeight - gap * (rows - 1)) / rows);
 
-        let col = 0;
-        let rowY = y;
+        // Measure everything up front, then let each row be exactly as tall as
+        // its tallest image. Sizing rows by the cell instead left wide shots
+        // letterboxed inside a much taller box — which is what showed up as a
+        // big band of white between the "Mood board:" heading and the photos.
+        const batch = [];
         for (let i = 0; i < countOnThisPage; i++) {
           const img = images[idx + i];
-          const x = margin + col * (cellW + gap);
           const dims = await getImageDims(img.src);
-          const fitted = fitContain(dims.w, dims.h, cellW, cellH);
-          const offsetX = x + (cellW - fitted.w) / 2;
-          const offsetY = rowY + (cellH - fitted.h) / 2;
-          doc.addImage(img.src, 'JPEG', offsetX, offsetY, fitted.w, fitted.h);
-          col++;
-          if (col >= cols) { col = 0; rowY += cellH + gap; }
+          batch.push({ src: img.src, ...fitContain(dims.w, dims.h, cellW, cellH) });
         }
+
+        let rowY = y;
+        for (let r = 0; r < rows; r++) {
+          const rowItems = batch.slice(r * cols, r * cols + cols);
+          const rowH = Math.max(...rowItems.map(it => it.h));
+          rowItems.forEach((it, c) => {
+            const x = margin + c * (cellW + gap);
+            doc.addImage(it.src, 'JPEG', x + (cellW - it.w) / 2, rowY, it.w, it.h);
+          });
+          rowY += rowH + gap;
+        }
+        y = rowY;
 
         idx += countOnThisPage;
         firstPage = false;

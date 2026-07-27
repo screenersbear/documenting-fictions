@@ -261,12 +261,6 @@
         <label>Title
           <input type="text" id="shootTitle" maxlength="120" placeholder="Name for the shoot if applicable" />
         </label>
-        <div class="talents-section">
-          <p class="team-question">Talent name(s)</p>
-          <button type="button" id="addTalentBtn" class="primary small-btn">+ Add talent</button>
-          <input type="file" id="talentPhotoFileInput" accept="image/*" hidden />
-          <div id="talentsList" class="team-members-list"></div>
-        </div>
         <label>Category
           <select id="shootCategory" class="bold-select" required>
             <option value="" disabled>Tap here to select</option>
@@ -286,6 +280,12 @@
             <option value="wedding">Wedding</option>
           </select>
         </label>
+        <div class="talents-section">
+          <p class="team-question">Talent name(s)</p>
+          <button type="button" id="addTalentBtn" class="primary small-btn">+ Add talent</button>
+          <input type="file" id="talentPhotoFileInput" accept="image/*" hidden />
+          <div id="talentsList" class="team-members-list"></div>
+        </div>
       </div>
       <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
       <h3 class="shoot-section-heading status-group-heading heading-navy" id="logisticsHeading">Logistics<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
@@ -880,12 +880,14 @@
   <div class="modal options-modal options-modal-slider">
     <div class="options-pane-track" id="shootOptionsPaneTrack">
       <div class="options-pane">
-        <button type="button" class="options-item" id="changeTitleOptionBtn">Change shoot title</button>
-        <button type="button" class="options-item" id="changeProjectPhotoOptionBtn">Change project photo</button>
-        <button type="button" class="options-item" id="changeStatusOptionBtn">Change status</button>
-        <button type="button" class="options-item" id="changeDeadlineOptionBtn">Change deadline</button>
-        <button type="button" class="options-item" id="shareShootOptionBtn">Share as PDF</button>
+        <!-- Alphabetical, with Delete and Cancel pinned last (see the app
+             menu's pane for the same reasoning). -->
         <button type="button" class="options-item" id="archiveShootOptionBtn">Archive shoot</button>
+        <button type="button" class="options-item" id="changeDeadlineOptionBtn">Change deadline</button>
+        <button type="button" class="options-item" id="changeProjectPhotoOptionBtn">Change project photo</button>
+        <button type="button" class="options-item" id="changeTitleOptionBtn">Change shoot title</button>
+        <button type="button" class="options-item" id="changeStatusOptionBtn">Change status</button>
+        <button type="button" class="options-item" id="shareShootOptionBtn">Share as PDF</button>
         <button type="button" class="options-item options-delete" id="deleteShootOptionBtn">Delete</button>
         <button type="button" class="options-item options-cancel" id="shootOptionsCancelBtn">Cancel</button>
       </div>
@@ -926,13 +928,16 @@
   <div class="modal options-modal options-modal-slider app-menu-modal">
     <div class="options-pane-track" id="appMenuPaneTrack">
       <div class="options-pane">
-        <button type="button" class="options-item" id="shootDisplayOptionsBtn">Shoot display options</button>
-        <div class="menu-divider" aria-hidden="true"></div>
+        <!-- Options are alphabetical; the destructive one and Cancel stay
+             pinned at the bottom so an irreversible action never lands under
+             your thumb where a routine option used to be. -->
         <button type="button" class="options-item" id="changeThemeBtn">Change theme</button>
+        <div class="menu-divider" aria-hidden="true"></div>
+        <button type="button" class="options-item" id="exportDataBtn">Export shoot data</button>
         <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="importDataBtn">Import shoot data</button>
         <div class="menu-divider" aria-hidden="true"></div>
-        <button type="button" class="options-item" id="exportDataBtn">Export shoot data</button>
+        <button type="button" class="options-item" id="shootDisplayOptionsBtn">Shoot display options</button>
         <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item options-delete" id="deleteAllShootDataBtn">Delete all shoot data</button>
         <div class="menu-divider" aria-hidden="true"></div>
@@ -940,17 +945,17 @@
       </div>
       <div class="options-pane">
         <button type="button" class="options-item options-back" id="displayOptionsBackBtn">&larr; Back</button>
-        <button type="button" class="options-item choice-item" id="displayModeTalentBtn">Display talent name</button>
         <button type="button" class="options-item choice-item" id="displayModeTitleBtn">Display shoot title</button>
+        <button type="button" class="options-item choice-item" id="displayModeTalentBtn">Display talent name</button>
       </div>
       <div class="options-pane">
         <button type="button" class="options-item options-back" id="themeOptionsBackBtn">&larr; Back</button>
+        <button type="button" class="options-item choice-item" id="themeBlueBtn" data-theme="blue"><span class="theme-swatch" style="background:#50a2ff"></span>Blue</button>
         <button type="button" class="options-item choice-item" id="themeDefaultBtn" data-theme="default"><span class="theme-swatch" style="background:#313d45"></span>Default</button>
+        <button type="button" class="options-item choice-item" id="themeGreenBtn" data-theme="green"><span class="theme-swatch" style="background:#40b23d"></span>Green</button>
         <button type="button" class="options-item choice-item" id="themePinkBtn" data-theme="pink"><span class="theme-swatch" style="background:#f3a6e6"></span>Pink</button>
         <button type="button" class="options-item choice-item" id="themePurpleBtn" data-theme="purple"><span class="theme-swatch" style="background:#9779dc"></span>Purple</button>
         <button type="button" class="options-item choice-item" id="themeRedBtn" data-theme="red"><span class="theme-swatch" style="background:#ff5356"></span>Red</button>
-        <button type="button" class="options-item choice-item" id="themeBlueBtn" data-theme="blue"><span class="theme-swatch" style="background:#50a2ff"></span>Blue</button>
-        <button type="button" class="options-item choice-item" id="themeGreenBtn" data-theme="green"><span class="theme-swatch" style="background:#40b23d"></span>Green</button>
       </div>
     </div>
     <input type="file" id="importFileInput" accept="application/json" hidden />
