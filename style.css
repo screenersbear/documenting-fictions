@@ -3410,6 +3410,13 @@ h2.status-group-heading.heading-navy {
   flex-shrink: 0;
 }
 
+/* Cities never get their own color on the map (only countries do) — a
+   plain white/bordered swatch instead of a color keeps that clear. */
+.legend-swatch-blank {
+  background: #fff;
+  border: 1px solid var(--border);
+}
+
 .legend-label {
   flex: 1;
   text-transform: capitalize;
@@ -3462,15 +3469,41 @@ h2.status-group-heading.heading-navy {
 }
 
 /* ---- Regions map ---- */
+.world-map-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.map-zoom-btn {
+  width: 36px;
+  height: 36px;
+  background: var(--ink);
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  font-family: var(--font-title);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Shorter than it used to be so the city/country legend peeks into view
+   right below the map — otherwise it isn't obvious there's a breakdown
+   underneath without scrolling. */
 .world-map-scroll {
   width: 100%;
-  max-height: 60vh;
+  max-height: 38vh;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   margin-bottom: 16px;
-  touch-action: pan-x pan-y;
 }
 
 #worldMapContainer {
@@ -3501,6 +3534,7 @@ h2.status-group-heading.heading-navy {
 #worldMapContainer svg .region-shot,
 #worldMapContainer svg .region-shot path {
   fill: var(--region-color, var(--accent));
+  cursor: pointer;
 }
 
 /* Brief pulse when a legend row is tapped, so the reader can actually find

@@ -5331,13 +5331,14 @@
       if (btn.dataset.close === 'location') document.getElementById('locationModalOverlay').hidden = true;
       if (btn.dataset.close === 'categoryVisibility') closeCategoryVisibilityModal();
       if (btn.dataset.close === 'manageLocations') document.getElementById('manageLocationsOverlay').hidden = true;
+      if (btn.dataset.close === 'regionCountryPopup') document.getElementById('regionCountryPopupOverlay').hidden = true;
     });
   });
 
   shootModalOverlay.addEventListener('click', (e) => {
     if (e.target === shootModalOverlay) closeShootModal();
   });
-  [frameworksModalOverlay, document.getElementById('locationModalOverlay'), document.getElementById('tabIntroOverlay'), categoryVisibilityOverlay, document.getElementById('manageLocationsOverlay')].forEach(overlay => {
+  [frameworksModalOverlay, document.getElementById('locationModalOverlay'), document.getElementById('tabIntroOverlay'), categoryVisibilityOverlay, document.getElementById('manageLocationsOverlay'), document.getElementById('regionCountryPopupOverlay')].forEach(overlay => {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) overlay.hidden = true;
     });
@@ -5722,7 +5723,7 @@
     getStatsShoots().forEach(s => {
       const key = statsLocationKey(s);
       counts[key] = (counts[key] || 0) + 1;
-      if (key !== 'No location set') labels[key] = formatLocationDisplay(s.location);
+      if (key !== 'No location set') labels[key] = hasText(s.location.name) ? s.location.name.trim() : 'Unnamed location';
     });
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     const TOP_N = 6;
@@ -5755,6 +5756,7 @@
   let worldMapSvgText = null;
   let worldMapFetchPromise = null;
   let regionsSliceColors = {};
+  let regionsDataByCountry = {};
   let mapZoomLevel = 1;
   const MAP_ZOOM_MIN = 1;
   const MAP_ZOOM_MAX = 4;
@@ -5796,6 +5798,7 @@
   }
 
   function regionsPageHtml(data) {
+    regionsDataByCountry = Object.fromEntries(data.map(d => [d.key, d]));
     if (!data.length) {
       regionsSliceColors = {};
       return {
@@ -5813,10 +5816,9 @@
     const groupsHtml = data.map((d, i) => {
       const collapseKey = `stats:regions:${d.key}`;
       const collapsed = isSectionCollapsed(collapseKey);
-      const cityColors = buildPieSVG(d.cities).slices.map(cs => cs.color);
-      const cityRowsHtml = d.cities.map((c, ci) => `
+      const cityRowsHtml = d.cities.map(c => `
         <button type="button" class="stats-legend-row stats-legend-row-nested" data-key="${escapeHtml(c.key)}">
-          <span class="legend-swatch" style="background:${cityColors[ci]}"></span>
+          <span class="legend-swatch legend-swatch-blank"></span>
           <span class="legend-label">${escapeHtml(c.label)}</span>
           <span class="legend-pct">${c.pct}%</span>
         </button>
@@ -5837,6 +5839,10 @@
       html: `
         <div class="stats-page stats-page-regions" data-key="regions">
           <h2 class="stats-page-title">Regions</h2>
+          <div class="world-map-toolbar">
+            <button type="button" class="map-zoom-btn" id="worldMapZoomOutBtn" aria-label="Zoom out">&minus;</button>
+            <button type="button" class="map-zoom-btn" id="worldMapZoomInBtn" aria-label="Zoom in">+</button>
+          </div>
           <div class="world-map-scroll" id="worldMapScroll">
             <div id="worldMapContainer"><p class="empty-hint">Loading map…</p></div>
           </div>
@@ -5903,6 +5909,29 @@
     void target.offsetWidth;
     target.classList.add('region-focus-pulse');
     setTimeout(() => target.classList.remove('region-focus-pulse'), 1200);
+  }
+
+  // Tapping a country shape directly on the map shows its city breakdown in
+  // a small popup, without needing to scroll down to the legend for it.
+  function openRegionCountryPopup(code) {
+    const entry = regionsDataByCountry[code];
+    if (!entry) return;
+    document.getElementById('regionCountryPopupTitle').textContent = entry.label;
+    const list = document.getElementById('regionCountryPopupList');
+    list.innerHTML = entry.cities.map(c => `
+      <button type="button" class="stats-legend-row stats-legend-row-nested" data-key="${escapeHtml(c.key)}">
+        <span class="legend-swatch legend-swatch-blank"></span>
+        <span class="legend-label">${escapeHtml(c.label)}</span>
+        <span class="legend-pct">${c.pct}%</span>
+      </button>
+    `).join('');
+    list.querySelectorAll('.stats-legend-row').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('regionCountryPopupOverlay').hidden = true;
+        openStatsDetail('regions', btn.dataset.key);
+      });
+    });
+    document.getElementById('regionCountryPopupOverlay').hidden = false;
   }
 
   function renderRegionsMap() {
@@ -5974,57 +6003,19 @@
   statsCarousel.addEventListener('scroll', () => renderStatsDots(), { passive: true });
 
   // Delegated (survives renderStats() rebuilding the carousel's innerHTML on
-  // every year-filter change, which destroys and recreates #worldMapScroll)
-  // so pinch-to-zoom doesn't need re-binding per render.
-  let mapPinch = null;
+  // every year-filter change, which destroys and recreates the zoom buttons)
+  // so they don't need re-binding per render.
+  statsCarousel.addEventListener('click', (e) => {
+    if (e.target.closest('#worldMapZoomInBtn')) setMapZoom(mapZoomLevel + MAP_ZOOM_STEP);
+    else if (e.target.closest('#worldMapZoomOutBtn')) setMapZoom(mapZoomLevel - MAP_ZOOM_STEP);
+  });
 
-  function touchDistance(t0, t1) {
-    const dx = t1.clientX - t0.clientX;
-    const dy = t1.clientY - t0.clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  statsCarousel.addEventListener('touchstart', (e) => {
-    const wrap = e.target.closest('#worldMapScroll');
-    if (!wrap || e.touches.length !== 2) { mapPinch = null; return; }
-    const svg = wrap.querySelector('svg');
-    const [t0, t1] = e.touches;
-    const wrapRect = wrap.getBoundingClientRect();
-    mapPinch = {
-      wrap,
-      svg,
-      startDist: touchDistance(t0, t1),
-      startZoom: mapZoomLevel,
-      startScrollLeft: wrap.scrollLeft,
-      startScrollTop: wrap.scrollTop,
-      midClientX: (t0.clientX + t1.clientX) / 2 - wrapRect.left,
-      midClientY: (t0.clientY + t1.clientY) / 2 - wrapRect.top,
-    };
-    if (svg) svg.style.transition = 'none';
-  }, { passive: true });
-
-  statsCarousel.addEventListener('touchmove', (e) => {
-    if (!mapPinch || e.touches.length !== 2) return;
-    e.preventDefault();
-    const [t0, t1] = e.touches;
-    const dist = touchDistance(t0, t1);
-    const scale = dist / mapPinch.startDist;
-    const newZoom = Math.min(MAP_ZOOM_MAX, Math.max(MAP_ZOOM_MIN, mapPinch.startZoom * scale));
-    const zoomRatio = newZoom / mapPinch.startZoom;
-    mapZoomLevel = newZoom;
-    if (mapPinch.svg) mapPinch.svg.style.width = `${MAP_BASE_WIDTH * mapZoomLevel}px`;
-    const anchorX = mapPinch.startScrollLeft + mapPinch.midClientX;
-    const anchorY = mapPinch.startScrollTop + mapPinch.midClientY;
-    mapPinch.wrap.scrollLeft = anchorX * zoomRatio - mapPinch.midClientX;
-    mapPinch.wrap.scrollTop = anchorY * zoomRatio - mapPinch.midClientY;
-  }, { passive: false });
-
-  statsCarousel.addEventListener('touchend', (e) => {
-    if (!mapPinch) return;
-    if (e.touches.length < 2) {
-      if (mapPinch.svg) mapPinch.svg.style.transition = '';
-      mapPinch = null;
-    }
+  // Tapping a country shape directly on the map (as opposed to its legend
+  // row below) shows which cities within that country were shot in, without
+  // needing to scroll down to the legend to find out.
+  statsCarousel.addEventListener('click', (e) => {
+    const shotEl = e.target.closest('.region-shot');
+    if (shotEl) openRegionCountryPopup(shotEl.id);
   });
 
   function renderStatsYearFilters() {

@@ -473,7 +473,7 @@
           <option value="">Select a past location…</option>
         </select>
       </label>
-      <label>Address name
+      <label>Location name
         <input type="text" id="locationNameInput" maxlength="120" placeholder="e.g. Studio A" />
       </label>
       <label>Street
@@ -760,6 +760,17 @@
     </div>
     <p class="field-hint">Remove a location to stop it from showing up as a quick pick — it won't change any shoot that already used it.</p>
     <div id="manageLocationsList"></div>
+  </div>
+</div>
+
+<!-- ============ REGION COUNTRY POPUP (tap a country on the map) ============ -->
+<div id="regionCountryPopupOverlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="regionCountryPopupTitle">Country</h2>
+      <button class="icon-btn close-btn" data-close="regionCountryPopup">&times;</button>
+    </div>
+    <div class="stats-legend" id="regionCountryPopupList"></div>
   </div>
 </div>
 
