@@ -5192,6 +5192,46 @@
     doc.setTextColor(...navy);
     let y = headerHeight + 34;
 
+    // Every section below calls this before drawing. Without it a block that
+    // starts near the bottom just draws past the page edge and disappears
+    // instead of continuing overleaf.
+    function ensureSpace(needed) {
+      if (y + needed > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+    }
+
+    // Draws a "Label: value" line, wrapping it and taking a new page first if
+    // the wrapped result wouldn't fit. Measures before reserving so a value that
+    // wraps to five lines is handled as accurately as a one-liner.
+    function drawLabeledLine(label, value, lineHeight) {
+      const maxWidth = pageWidth - margin * 2;
+      doc.setFont('courier', 'bold');
+      const labelWidth = doc.getTextWidth(label);
+      doc.setFont('courier', 'normal');
+      const lines = doc.splitTextToSize(String(value), Math.max(10, maxWidth - labelWidth));
+      ensureSpace(lineHeight * lines.length);
+      y = drawLabeledPdfLine(doc, label, value, margin, y, maxWidth, lineHeight);
+    }
+
+    // firstChunk is how much of the section's own content must fit alongside the
+    // heading, so a heading never lands as the last thing on a page with its
+    // content orphaned overleaf. Grid sections measure their first row and pass
+    // that in; text sections take the default couple of lines.
+    function sectionHeading(text, firstChunk = 34) {
+      ensureSpace(24 + firstChunk);
+      doc.setTextColor(...navy);
+      doc.setFont('courier', 'bold');
+      doc.setFontSize(18);
+      doc.text(text, margin, y);
+      y += 24;
+    }
+
+    // Two columns, shared by the talent grid and the mood board grid.
+    const colGap = 14;
+    const colW = (pageWidth - margin * 2 - colGap) / 2;
+
     // A talent counts as worth printing if they have a name OR a photo — an
     // unnamed talent with a portrait used to drop out of the PDF entirely. The
     // label then falls back to their position, matching the "Talent N" the
@@ -5201,57 +5241,83 @@
       .map((talent, idx) => ({ talent, label: hasText(talent.name) ? talent.name.trim() : `Talent ${idx + 1}` }))
       .filter(({ talent }) => hasText(talent.name) || hasText(talent.photo));
     if (talentsForPdf.length && sections.talent) {
+      // One "Talent:" heading for the section, then each person laid out two per
+      // row — name, handles, photo — so a three- or four-talent shoot doesn't
+      // run down the page repeating the word "Talent".
+      const NAME_SIZE = 13;
+      const NAME_LINE = NAME_SIZE + 4;
+      const HANDLE_SIZE = 10;
+      const HANDLE_LINE = HANDLE_SIZE + 4;
+      const PHOTO_MAX_H = 150;
+      const PHOTO_GAP = 6;
+
+      // Measured up front: a row's height is its taller column, and that has to
+      // be known before anything is drawn so the row can page-break as a unit.
+      const blocks = [];
       for (const { talent, label } of talentsForPdf) {
-        if (y > pageHeight - margin - 60) { doc.addPage(); y = margin; }
-        doc.setTextColor(...navy);
         doc.setFont('courier', 'bold');
-        doc.setFontSize(18);
-        doc.text(`Talent: ${label}`, margin, y);
-        y += 24;
-        const handles = (talent.socialHandles || []).filter(sh => hasText(sh.handle));
-        if (handles.length) {
-          doc.setFont('courier', 'normal');
-          doc.setFontSize(11);
-          handles.forEach(sh => {
-            const platformEntry = SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === sh.platform);
-            const platformLabel = platformEntry ? platformEntry[1] : 'Other';
-            doc.text(`${platformLabel}: ${sh.handle}`, margin, y);
-            y += 15;
+        doc.setFontSize(NAME_SIZE);
+        const nameLines = doc.splitTextToSize(label, colW);
+        const handleTexts = (talent.socialHandles || [])
+          .filter(sh => hasText(sh.handle))
+          .map(sh => {
+            const entry = SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === sh.platform);
+            return `${entry ? entry[1] : 'Other'}: ${sh.handle}`;
           });
-        }
+        doc.setFont('courier', 'normal');
+        doc.setFontSize(HANDLE_SIZE);
+        const handleLines = handleTexts.reduce((acc, t) => acc.concat(doc.splitTextToSize(t, colW)), []);
+        let photo = null;
         if (hasText(talent.photo)) {
-          const photoH = 132;
-          if (y + photoH > pageHeight - margin) { doc.addPage(); y = margin; }
           const dims = await getImageDims(talent.photo);
-          const fitted = fitContain(dims.w, dims.h, photoH, photoH);
-          doc.addImage(talent.photo, 'JPEG', margin, y + 4, fitted.w, fitted.h);
-          y += fitted.h + 12;
+          photo = fitContain(dims.w, dims.h, colW, PHOTO_MAX_H);
         }
-        y += 10;
+        const height = nameLines.length * NAME_LINE
+          + handleLines.length * HANDLE_LINE
+          + (photo ? photo.h + PHOTO_GAP : 0);
+        blocks.push({ nameLines, handleLines, photo, src: talent.photo, height });
       }
+
+      sectionHeading('Talent:', Math.max(...blocks.slice(0, 2).map(b => b.height)));
+
+      for (let i = 0; i < blocks.length; i += 2) {
+        const row = blocks.slice(i, i + 2);
+        const rowH = Math.max(...row.map(b => b.height));
+        ensureSpace(rowH);
+        row.forEach((b, c) => {
+          const x = margin + c * (colW + colGap);
+          let by = y;
+          doc.setTextColor(...navy);
+          doc.setFont('courier', 'bold');
+          doc.setFontSize(NAME_SIZE);
+          b.nameLines.forEach(line => { by += NAME_SIZE; doc.text(line, x, by); by += 4; });
+          doc.setFont('courier', 'normal');
+          doc.setFontSize(HANDLE_SIZE);
+          b.handleLines.forEach(line => { by += HANDLE_SIZE; doc.text(line, x, by); by += 4; });
+          if (b.photo) {
+            by += PHOTO_GAP;
+            doc.addImage(b.src, 'JPEG', x, by, b.photo.w, b.photo.h);
+          }
+        });
+        y += rowH + 16;
+      }
+      y += 4;
     }
 
     const timeRange = shootTimeRange(s);
     const locationDisplay = formatLocationDisplay(s.location);
     if ((s.date || timeRange || locationDisplay) && sections.logistics) {
-      doc.setTextColor(...navy);
-      doc.setFont('courier', 'bold');
-      doc.setFontSize(18);
-      doc.text('Logistics:', margin, y);
-      y += 24;
+      sectionHeading('Logistics:');
       doc.setFontSize(11);
-      const logisticsMaxWidth = pageWidth - margin * 2;
-      if (s.date) { y = drawLabeledPdfLine(doc, 'Date: ', prettyDate(s.date), margin, y, logisticsMaxWidth, 16); }
-      if (timeRange) { y = drawLabeledPdfLine(doc, 'Time: ', timeRange, margin, y, logisticsMaxWidth, 16); }
-      if (locationDisplay) { y = drawLabeledPdfLine(doc, 'Location: ', locationDisplay, margin, y, logisticsMaxWidth, 14) + 2; }
-      if (hasText(s.locationDirections)) { y = drawLabeledPdfLine(doc, 'Location instructions: ', s.locationDirections, margin, y, logisticsMaxWidth, 14) + 2; }
+      if (s.date) drawLabeledLine('Date: ', prettyDate(s.date), 16);
+      if (timeRange) drawLabeledLine('Time: ', timeRange, 16);
+      if (locationDisplay) { drawLabeledLine('Location: ', locationDisplay, 14); y += 2; }
+      if (hasText(s.locationDirections)) { drawLabeledLine('Location instructions: ', s.locationDirections, 14); y += 2; }
       y += 8;
     }
 
     // Direction is opt-in (unchecked by default in the sections popup) — it's
     // internal creative planning, so it only goes out when deliberately chosen.
-    // These fields run long (up to 1000 chars each), hence the page-break
-    // checks the shorter fixed-length blocks above don't need.
     const directionFields = [
       ['Concept: ', s.premise],
       ['Elevator pitch: ', s.elevatorPitch],
@@ -5261,30 +5327,22 @@
       ['General direction notes: ', s.generalNotes],
     ].filter(([, value]) => hasText(value));
     if (directionFields.length && sections.direction) {
-      if (y > pageHeight - margin - 80) { doc.addPage(); y = margin; }
-      doc.setTextColor(...navy);
-      doc.setFont('courier', 'bold');
-      doc.setFontSize(18);
-      doc.text('Direction:', margin, y);
-      y += 24;
+      sectionHeading('Direction:');
       doc.setFontSize(11);
-      const directionMaxWidth = pageWidth - margin * 2;
       directionFields.forEach(([label, value]) => {
-        if (y > pageHeight - margin - 40) { doc.addPage(); y = margin; }
-        y = drawLabeledPdfLine(doc, label, value.trim(), margin, y, directionMaxWidth, 14) + 6;
+        drawLabeledLine(label, value.trim(), 14);
+        y += 6;
       });
       y += 8;
     }
 
     const refs = (s.references || []).map(r => r.trim()).filter(Boolean);
     if (refs.length && sections.references) {
-      doc.setFont('courier', 'bold');
-      doc.setFontSize(18);
-      doc.text('References:', margin, y);
-      y += 24;
+      sectionHeading('References:');
       doc.setFont('courier', 'normal');
       doc.setFontSize(11);
       refs.forEach(r => {
+        ensureSpace(15);
         doc.text(`• ${r}`, margin, y, { maxWidth: pageWidth - margin * 2 });
         y += 15;
       });
@@ -5293,13 +5351,11 @@
 
     const team = s.teamRequired === 'yes' ? (s.teamMembers || []) : [];
     if (team.length && sections.team) {
-      doc.setFont('courier', 'bold');
-      doc.setFontSize(18);
-      doc.text('Team:', margin, y);
-      y += 24;
+      sectionHeading('Team:');
       doc.setFont('courier', 'normal');
       doc.setFontSize(11);
       team.forEach(tm => {
+        ensureSpace(hasText(tm.socialHandle) ? 30 : 15);
         const roleEntry = TEAM_ROLE_OPTIONS.find(([val]) => val === tm.role);
         const roleLabel = roleEntry ? roleEntry[1] : 'Other';
         doc.text(`• ${tm.name ? tm.name : 'Unnamed'} — ${roleLabel}`, margin, y);
@@ -5320,56 +5376,38 @@
 
     const images = sections.moodboard ? await idbGetImages(s.id) : [];
     if (images.length) {
-      if (y > pageHeight - margin - 220) { doc.addPage(); y = margin; }
-      doc.setFont('courier', 'bold');
-      doc.setFontSize(18);
-      doc.text('Mood board:', margin, y);
-      y += 24;
+      // Paginated by the space actually left on the page, one row at a time.
+      // The previous version batched by a fixed count (2 on the first page, 4
+      // after) and forced a new page once the batch was placed — so a page
+      // would take its two images and then break, leaving the whole lower half
+      // blank while the rest of the set carried on overleaf.
+      const cellH = colW * 1.3;
 
-      const cols = 2;
-      const gap = 12;
-      const cellW = (pageWidth - margin * 2 - gap) / cols;
-
-      let idx = 0;
-      let firstPage = true;
-      while (idx < images.length) {
-        const maxOnThisPage = firstPage ? 2 : 4;
-        const countOnThisPage = Math.min(maxOnThisPage, images.length - idx);
-        const rows = Math.ceil(countOnThisPage / cols);
-        const availableHeight = pageHeight - margin - y;
-        // Cap on a single cell, so one row can't lay claim to the whole page.
-        const cellH = Math.min(cellW * 1.3, (availableHeight - gap * (rows - 1)) / rows);
-
-        // Measure everything up front, then let each row be exactly as tall as
-        // its tallest image. Sizing rows by the cell instead left wide shots
-        // letterboxed inside a much taller box — which is what showed up as a
-        // big band of white between the "Mood board:" heading and the photos.
-        const batch = [];
-        for (let i = 0; i < countOnThisPage; i++) {
-          const img = images[idx + i];
+      // Measured into rows first, so the heading can reserve its first row and
+      // the loop can page-break on real heights. Rows are as tall as their
+      // tallest image (capped), so a row of wide shots stays tight rather than
+      // being letterboxed inside a full-height cell.
+      const rows = [];
+      for (let idx = 0; idx < images.length; idx += 2) {
+        const items = [];
+        for (let c = 0; c < 2 && idx + c < images.length; c++) {
+          const img = images[idx + c];
           const dims = await getImageDims(img.src);
-          batch.push({ src: img.src, ...fitContain(dims.w, dims.h, cellW, cellH) });
+          items.push({ src: img.src, ...fitContain(dims.w, dims.h, colW, cellH) });
         }
-
-        let rowY = y;
-        for (let r = 0; r < rows; r++) {
-          const rowItems = batch.slice(r * cols, r * cols + cols);
-          const rowH = Math.max(...rowItems.map(it => it.h));
-          rowItems.forEach((it, c) => {
-            const x = margin + c * (cellW + gap);
-            doc.addImage(it.src, 'JPEG', x + (cellW - it.w) / 2, rowY, it.w, it.h);
-          });
-          rowY += rowH + gap;
-        }
-        y = rowY;
-
-        idx += countOnThisPage;
-        firstPage = false;
-        if (idx < images.length) {
-          doc.addPage();
-          y = margin;
-        }
+        rows.push({ items, height: Math.max(...items.map(it => it.h)) });
       }
+
+      sectionHeading('Mood board:', rows[0].height);
+
+      rows.forEach(row => {
+        ensureSpace(row.height);
+        row.items.forEach((it, c) => {
+          const x = margin + c * (colW + colGap);
+          doc.addImage(it.src, 'JPEG', x + (colW - it.w) / 2, y, it.w, it.h);
+        });
+        y += row.height + colGap;
+      });
     }
 
     return doc;
