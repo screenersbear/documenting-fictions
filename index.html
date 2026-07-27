@@ -461,6 +461,46 @@
 </div>
 
 <!-- ============ LOCATION MODAL ============ -->
+<!-- ============ PHOTOGRAPHER INFORMATION ============ -->
+<!-- One editor serving two entry points: the first-run prompt (which shows the
+     intro line explaining what it's for) and the app menu's "Photographer
+     information" (which doesn't). Every field is optional. -->
+<div id="photographerModalOverlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="photographerModalTitle">Photographer information</h2>
+      <button type="button" class="icon-btn close-btn" id="photographerCloseBtn">&times;</button>
+    </div>
+    <p class="field-hint" id="photographerIntroText" hidden>
+      This gets referenced on your call sheets. Leave anything blank if you'd
+      rather not add it — you can change all of it later from the menu.
+    </p>
+    <div id="photographerForm">
+      <label>Your name
+        <input type="text" id="photographerNameInput" maxlength="120" placeholder="e.g. Starky Morillo" />
+      </label>
+      <label>Business name
+        <input type="text" id="photographerBusinessInput" maxlength="120" placeholder="Optional" />
+      </label>
+      <label>Key social media
+        <div class="social-handle-row">
+          <select id="photographerPlatformSelect" class="social-handle-platform">
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+            <option value="youtube">YouTube</option>
+            <option value="other">Other</option>
+          </select>
+          <input type="text" id="photographerHandleInput" class="social-handle-input" maxlength="80" placeholder="@handle" />
+        </div>
+      </label>
+      <label>Phone number
+        <input type="tel" id="photographerPhoneInput" maxlength="40" placeholder="Optional" />
+      </label>
+      <button type="button" class="primary modal-cta" id="photographerSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
 <div id="locationModalOverlay" class="modal-overlay" hidden>
   <div class="modal">
     <div class="modal-header">
@@ -936,6 +976,8 @@
         <button type="button" class="options-item" id="exportDataBtn">Export shoot data</button>
         <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="importDataBtn">Import shoot data</button>
+        <div class="menu-divider" aria-hidden="true"></div>
+        <button type="button" class="options-item" id="photographerInfoBtn">Photographer information</button>
         <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="shootDisplayOptionsBtn">Shoot display options</button>
         <div class="menu-divider" aria-hidden="true"></div>

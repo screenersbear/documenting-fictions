@@ -524,7 +524,30 @@
       colorTheme: 'default',
       defaultCountry: '',
       dismissedLocationKeys: [],
+      photographer: emptyPhotographer(),
     };
+  }
+
+  // Who's behind the camera — surfaced on call sheets ahead of the rest of the
+  // crew. Every field is optional; the first-run prompt and the app menu both
+  // edit this same object.
+  function emptyPhotographer() {
+    return { name: '', businessName: '', socialPlatform: 'instagram', socialHandle: '', phone: '' };
+  }
+
+  function normalizePhotographer(p) {
+    const src = (p && typeof p === 'object') ? p : {};
+    return {
+      name: src.name || '',
+      businessName: src.businessName || '',
+      socialPlatform: src.socialPlatform || 'instagram',
+      socialHandle: src.socialHandle || '',
+      phone: src.phone || '',
+    };
+  }
+
+  function photographerHasInfo(p) {
+    return !!p && (hasText(p.name) || hasText(p.businessName) || hasText(p.socialHandle) || hasText(p.phone));
   }
 
   function migrateJournalEntry(e) {
@@ -654,6 +677,7 @@
         colorTheme: THEME_KEYS.includes(parsed.colorTheme) ? parsed.colorTheme : 'default',
         defaultCountry: typeof parsed.defaultCountry === 'string' ? parsed.defaultCountry : '',
         dismissedLocationKeys: Array.isArray(parsed.dismissedLocationKeys) ? parsed.dismissedLocationKeys : [],
+        photographer: normalizePhotographer(parsed.photographer),
       };
     } catch (e) {
       console.error('Failed to load state, starting fresh', e);
@@ -1218,6 +1242,58 @@
   document.getElementById('tabIntroCloseBtn').addEventListener('click', () => {
     document.getElementById('tabIntroOverlay').hidden = true;
   });
+
+  // ---------- Photographer information ----------
+  // Asked once on first open, and editable any time from the app menu. The
+  // prompt is marked seen as soon as it's shown (not on save), so declining to
+  // fill it in doesn't mean being asked again every launch.
+  const PHOTOGRAPHER_PROMPT_KEY = 'dailies_seen_photographer_prompt_v1';
+
+  function openPhotographerModal(isFirstRun) {
+    const p = normalizePhotographer(state.photographer);
+    document.getElementById('photographerNameInput').value = p.name;
+    document.getElementById('photographerBusinessInput').value = p.businessName;
+    document.getElementById('photographerPlatformSelect').value = p.socialPlatform;
+    document.getElementById('photographerHandleInput').value = p.socialHandle;
+    document.getElementById('photographerPhoneInput').value = p.phone;
+    document.getElementById('photographerIntroText').hidden = !isFirstRun;
+    document.getElementById('photographerModalTitle').textContent =
+      isFirstRun ? 'Welcome — a bit about you' : 'Photographer information';
+    document.getElementById('photographerModalOverlay').hidden = false;
+  }
+
+  function closePhotographerModal() {
+    document.getElementById('photographerModalOverlay').hidden = true;
+  }
+
+  function savePhotographerFromForm() {
+    state.photographer = normalizePhotographer({
+      name: document.getElementById('photographerNameInput').value.trim(),
+      businessName: document.getElementById('photographerBusinessInput').value.trim(),
+      socialPlatform: document.getElementById('photographerPlatformSelect').value,
+      socialHandle: document.getElementById('photographerHandleInput').value.trim(),
+      phone: document.getElementById('photographerPhoneInput').value.trim(),
+    });
+    saveState();
+    closePhotographerModal();
+  }
+
+  document.getElementById('photographerSaveBtn').addEventListener('click', savePhotographerFromForm);
+  document.getElementById('photographerCloseBtn').addEventListener('click', closePhotographerModal);
+  document.getElementById('photographerModalOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('photographerModalOverlay')) closePhotographerModal();
+  });
+
+  document.getElementById('photographerInfoBtn').addEventListener('click', () => {
+    closeAppMenu();
+    openPhotographerModal(false);
+  });
+
+  function maybeShowPhotographerPrompt() {
+    if (localStorage.getItem(PHOTOGRAPHER_PROMPT_KEY)) return;
+    localStorage.setItem(PHOTOGRAPHER_PROMPT_KEY, '1');
+    openPhotographerModal(true);
+  }
 
   // ---------- First-time status swatch button intro ----------
   // Shown once, the first time a new shoot is created, so it's clear the
@@ -5136,24 +5212,6 @@
     return start || end || '';
   }
 
-  // Draws "label" in bold immediately followed by "value" in normal weight
-  // on the same line, wrapping the value across further lines (flush left,
-  // normal weight) if it's too long to fit next to the label. Returns the y
-  // position just past whatever it drew, for the caller to continue from.
-  function drawLabeledPdfLine(doc, label, value, x, y, maxWidth, lineHeight) {
-    doc.setFont('courier', 'bold');
-    doc.text(label, x, y);
-    const labelWidth = doc.getTextWidth(label);
-    doc.setFont('courier', 'normal');
-    const lines = doc.splitTextToSize(value, Math.max(10, maxWidth - labelWidth));
-    if (!lines.length) return y;
-    doc.text(lines[0], x + labelWidth, y);
-    for (let i = 1; i < lines.length; i++) {
-      doc.text(lines[i], x, y + lineHeight * i);
-    }
-    return y + lineHeight * lines.length;
-  }
-
   async function buildShootPdf(s, chosenSections) {
     const sections = chosenSections || { talent: true, logistics: true, direction: false, references: false, team: true, moodboard: true };
     const { jsPDF } = window.jspdf;
@@ -5202,17 +5260,30 @@
       }
     }
 
-    // Draws a "Label: value" line, wrapping it and taking a new page first if
-    // the wrapped result wouldn't fit. Measures before reserving so a value that
-    // wraps to five lines is handled as accurately as a one-liner.
+    // Draws a "Label: value" line, wrapping the value and letting it flow across
+    // a page break rather than treating the whole block as one unit. Reserving
+    // the full wrapped height up front meant a long value that didn't quite fit
+    // jumped to the next page wholesale — leaving most of a page blank when
+    // there was room for all but the last line or two. Only the label and its
+    // first line are kept together; everything after breaks wherever it lands.
     function drawLabeledLine(label, value, lineHeight) {
       const maxWidth = pageWidth - margin * 2;
       doc.setFont('courier', 'bold');
       const labelWidth = doc.getTextWidth(label);
       doc.setFont('courier', 'normal');
       const lines = doc.splitTextToSize(String(value), Math.max(10, maxWidth - labelWidth));
-      ensureSpace(lineHeight * lines.length);
-      y = drawLabeledPdfLine(doc, label, value, margin, y, maxWidth, lineHeight);
+      if (!lines.length) return;
+      ensureSpace(lineHeight * 2);
+      doc.setFont('courier', 'bold');
+      doc.text(label, margin, y);
+      doc.setFont('courier', 'normal');
+      doc.text(lines[0], margin + labelWidth, y);
+      y += lineHeight;
+      for (let i = 1; i < lines.length; i++) {
+        ensureSpace(lineHeight);
+        doc.text(lines[i], margin, y);
+        y += lineHeight;
+      }
     }
 
     // firstChunk is how much of the section's own content must fit alongside the
@@ -5350,10 +5421,33 @@
     }
 
     const team = s.teamRequired === 'yes' ? (s.teamMembers || []) : [];
-    if (team.length && sections.team) {
+    const photographer = normalizePhotographer(state.photographer);
+    const showPhotographer = photographerHasInfo(photographer);
+    // The photographer leads the crew list — whoever gets this call sheet should
+    // see who's shooting it and how to reach them before the rest of the team.
+    // The section shows even with no team members, as long as there's an entry.
+    if ((team.length || showPhotographer) && sections.team) {
       sectionHeading('Team:');
       doc.setFont('courier', 'normal');
       doc.setFontSize(11);
+      if (showPhotographer) {
+        const who = hasText(photographer.name) ? photographer.name : (photographer.businessName || 'Photographer');
+        const business = hasText(photographer.name) && hasText(photographer.businessName) ? ` (${photographer.businessName})` : '';
+        ensureSpace(15);
+        doc.text(`• ${who}${business} — Photographer`, margin, y);
+        y += 15;
+        if (hasText(photographer.socialHandle)) {
+          const entry = SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === photographer.socialPlatform);
+          ensureSpace(15);
+          doc.text(`   ${entry ? entry[1] : 'Other'}: ${photographer.socialHandle}`, margin, y);
+          y += 15;
+        }
+        if (hasText(photographer.phone)) {
+          ensureSpace(15);
+          doc.text(`   Phone: ${photographer.phone}`, margin, y);
+          y += 15;
+        }
+      }
       team.forEach(tm => {
         ensureSpace(hasText(tm.socialHandle) ? 30 : 15);
         const roleEntry = TEAM_ROLE_OPTIONS.find(([val]) => val === tm.role);
@@ -5965,6 +6059,7 @@
         colorTheme: THEME_KEYS.includes(payload.state.colorTheme) ? payload.state.colorTheme : 'default',
         defaultCountry: typeof payload.state.defaultCountry === 'string' ? payload.state.defaultCountry : '',
         dismissedLocationKeys: Array.isArray(payload.state.dismissedLocationKeys) ? payload.state.dismissedLocationKeys : [],
+        photographer: normalizePhotographer(payload.state.photographer),
       };
       saveState();
       applyColorTheme(state.colorTheme);
@@ -7057,11 +7152,16 @@
     .then(hydratePhotos)
     .then(() => renderAll())
     .catch(() => {});
-  showTabIntro('overview');
-  if (document.getElementById('tabIntroOverlay').hidden) {
-    checkDayAfterPrompt();
-    if (document.getElementById('dayAfterPromptOverlay').hidden) {
-      checkDailyReportPrompt();
+  // Introductions first: on a genuinely first run this is the welcome step, and
+  // the rest of the launch popups defer so they don't stack on top of it.
+  maybeShowPhotographerPrompt();
+  if (document.getElementById('photographerModalOverlay').hidden) {
+    showTabIntro('overview');
+    if (document.getElementById('tabIntroOverlay').hidden) {
+      checkDayAfterPrompt();
+      if (document.getElementById('dayAfterPromptOverlay').hidden) {
+        checkDailyReportPrompt();
+      }
     }
   }
 
