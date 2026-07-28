@@ -377,6 +377,14 @@
     return parts.join(' — ');
   }
 
+  // The same line without the country. The shared PDF goes to talent and crew
+  // who are already turning up at the address, so the country only pads out a
+  // line that's usually wrapping anyway. Blanking the field rather than
+  // reimplementing keeps the two formats from drifting apart.
+  function formatLocationDisplayNoCountry(loc) {
+    return formatLocationDisplay({ ...(loc || {}), country: '' });
+  }
+
   // Case/whitespace-insensitive identity key for deduping/matching locations
   // (e.g. recognizing a past location was picked again for directions reuse).
   function locationKey(loc) {
@@ -5376,7 +5384,7 @@
     }
 
     const timeRange = shootTimeRange(s);
-    const locationDisplay = formatLocationDisplay(s.location);
+    const locationDisplay = formatLocationDisplayNoCountry(s.location);
     if ((s.date || timeRange || locationDisplay) && sections.logistics) {
       sectionHeading('Logistics:');
       doc.setFontSize(11);
