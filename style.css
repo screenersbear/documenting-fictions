@@ -1380,7 +1380,9 @@ h2.status-group-heading.heading-navy {
 
 .modal-title-jump-btn {
   display: inline-flex;
-  align-items: center;
+  /* Top-aligned so the chevron sits beside the title's first line rather than
+     drifting to the vertical middle of a wrapped block. */
+  align-items: flex-start;
   gap: 6px;
   max-width: 100%;
   background: none;
@@ -1393,10 +1395,24 @@ h2.status-group-heading.heading-navy {
   cursor: pointer;
 }
 
+/* Wraps instead of truncating. The randomised new-shoot titles run long, and
+   clipping one mid-word reads as a bug rather than as style — better to keep
+   the type size and let the header grow. The title column is only ~197px on a
+   375px screen, and at 23px that puts half of NEW_SHOOT_TITLES ("oh yeah,
+   booked and blessed", "we're up (planning shoots)") onto three lines, so the
+   clamp has to be 3 or those still get cut. It's a ceiling, not a target —
+   nothing in the list goes past it, and "Edit Shoot" stays on one line. */
 .modal-title-jump-btn span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-align: left;
+}
+
+.modal-title-jump-btn .collapse-arrow,
+.modal-title-jump-btn svg {
+  margin-top: 6px;
 }
 
 .modal-title-jump-arrow {

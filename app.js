@@ -1222,6 +1222,14 @@
       title: 'Log',
       text: "this notebook fills itself in automatically — no writing required. Each week you actually shoot something gets its own entry listing which shoots happened, their categories, and your lessons learned pulled straight from each shoot's reflection. Every shoot and takeaway here is tappable: tap one to see which shoot it came from, then 'View shoot' to jump straight to that shoot's reflection.",
     },
+    // Shown once, right after the first automatic daily report is dismissed —
+    // that's the moment the report exists in your head and "where did that go?"
+    // is the natural next question. Routed through showTabIntro so it reuses
+    // the same popup and seen-once bookkeeping as the tab intros.
+    'report:bell': {
+      title: 'Find this again',
+      text: "that was your daily report — it turns up once a day with anything that needs attention. You can pull it back up whenever you like: tap the bell at the top of the Overview screen.",
+    },
     'journal:reflections': {
       title: 'Reflections',
       text: "this is your freeform journal. Every shoot's post-shoot reflection is automatically logged here too, right alongside anything you write yourself. Tap '+' to add your own entry, or tap any entry to reopen and edit it.",
@@ -6790,6 +6798,10 @@
 
   function computeDailyReportItems() {
     const items = [];
+    // Collected across the loop and emitted as a single line at the end —
+    // four shoots owing reflections used to mean four near-identical rows,
+    // which reads as a wall rather than one thing to go do.
+    const reflectionMissing = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -6814,7 +6826,7 @@
           ? Math.floor((Date.now() - new Date(s.lastReflectionReminderAt).getTime()) / 86400000)
           : Infinity;
         if (daysSinceCaptured >= 3 && daysSinceLastReminder >= 3) {
-          items.push({ shootId: s.id, text: `Post-shoot reflection still missing for ${shootDisplayName(s)}'s shoot` });
+          reflectionMissing.push(s);
           s.lastReflectionReminderAt = new Date().toISOString();
         }
       }
@@ -6831,6 +6843,16 @@
         }
       }
     });
+
+    // Only carries a shootId when there's exactly one to open — with several
+    // named in the line there's no single sensible destination, so that row is
+    // informational and renderDailyReportOverlay leaves it unclickable.
+    if (reflectionMissing.length) {
+      items.push({
+        shootId: reflectionMissing.length === 1 ? reflectionMissing[0].id : null,
+        text: `Post-shoot reflection still missing for ${reflectionMissing.map(shootDisplayName).join(', ')}`,
+      });
+    }
 
     return items;
   }
@@ -7106,13 +7128,18 @@
     list.innerHTML = '';
     items.forEach(item => {
       const row = document.createElement('div');
-      row.className = 'daily-report-item';
+      // daily-report-fact is the app's existing "this row isn't a link" marker
+      // (it's what the nudge and stat lines use), so a grouped item that names
+      // several shoots reuses it rather than inventing a second flavour.
+      row.className = item.shootId ? 'daily-report-item' : 'daily-report-item daily-report-fact';
       row.textContent = item.text;
-      row.addEventListener('click', () => {
-        document.getElementById('dailyReportOverlay').hidden = true;
-        document.querySelector('.tab[data-view="shoots"]').click();
-        openShootModal(item.shootId);
-      });
+      if (item.shootId) {
+        row.addEventListener('click', () => {
+          document.getElementById('dailyReportOverlay').hidden = true;
+          document.querySelector('.tab[data-view="shoots"]').click();
+          openShootModal(item.shootId);
+        });
+      }
       list.appendChild(row);
     });
 
@@ -7142,6 +7169,11 @@
     document.getElementById('dailyReportOverlay').hidden = false;
   }
 
+  // Distinguishes the once-a-day automatic popup from an explicit bell tap, so
+  // the follow-up "here's where to find this again" hint only fires for the
+  // former (see the close handler).
+  let dailyReportWasAutomatic = false;
+
   function checkDailyReportPrompt() {
     const today = effectiveReportDateStr();
     let lastShown;
@@ -7153,6 +7185,7 @@
       // Only truly skip if there's none of the three (a brand-new, empty app).
       if (!content.items.length && !content.nudge && !content.fact) return;
       try { localStorage.setItem(DAILY_REPORT_SHOWN_KEY, today); } catch (e) { /* ignore */ }
+      dailyReportWasAutomatic = true;
       renderDailyReportOverlay(content);
     });
   }
@@ -7162,11 +7195,15 @@
   // shows something (a "nothing to report" line if today's report is
   // genuinely empty), since it's an explicit tap rather than a background check.
   function openNotificationsBell() {
+    dailyReportWasAutomatic = false;
     getTodaysDailyReportContent().then(renderDailyReportOverlay);
   }
 
   document.getElementById('dailyReportCloseBtn').addEventListener('click', () => {
     document.getElementById('dailyReportOverlay').hidden = true;
+    // Only after the report showed up on its own. Pointing out the bell to
+    // someone who just tapped the bell would be telling them what they know.
+    if (dailyReportWasAutomatic) showTabIntro('report:bell');
   });
 
   // Nothing used to flush pending edits when the app went away, so anything
