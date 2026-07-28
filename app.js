@@ -1215,9 +1215,12 @@
       title: 'Stats',
       text: 'swipe between breakdowns of your visual languages, categories, team members, statuses, and locations. tap any slice to see exactly which shoots are behind it.',
     },
-    'journal:log': {
+    // Keyed 'log2' rather than 'log' on purpose: the copy changed to cover
+    // tapping through to a shoot, so anyone who already dismissed the older
+    // version gets shown this one once.
+    'journal:log2': {
       title: 'Log',
-      text: "this notebook fills itself in automatically — no writing required. Each week you actually shoot something gets its own entry listing which shoots happened, their categories, and your lessons learned pulled straight from each shoot's reflection.",
+      text: "this notebook fills itself in automatically — no writing required. Each week you actually shoot something gets its own entry listing which shoots happened, their categories, and your lessons learned pulled straight from each shoot's reflection. Every shoot and takeaway here is tappable: tap one to see which shoot it came from, then 'View shoot' to jump straight to that shoot's reflection.",
     },
     'journal:reflections': {
       title: 'Reflections',
@@ -2213,7 +2216,8 @@
       view === 'reflections' ? 'Reflections' : view === 'log' ? 'Log' : 'Journal';
     if (view === 'reflections') renderJournal();
     if (view === 'log') renderJournalLog();
-    if (view === 'reflections' || view === 'log') showTabIntro(`journal:${view}`);
+    if (view === 'reflections') showTabIntro('journal:reflections');
+    if (view === 'log') showTabIntro('journal:log2');
   }
 
   document.getElementById('openReflectionsNotebookBtn').addEventListener('click', () => showJournalView('reflections'));
@@ -2561,6 +2565,24 @@
     if (!s) return;
     document.querySelector(`.tab[data-view="${s.archived ? 'archive' : 'shoots'}"]`).click();
     openShootModal(shootId);
+    // Land on the Reflection section rather than the top of the shoot — that's
+    // where the takeaway was written, so it's what you came to look at.
+    // openShootModal restores its own saved scroll position on a double-rAF, so
+    // this has to run after that or it gets undone; two frames puts it in the
+    // same tick, ordered after. scrollTop is set directly rather than via
+    // scrollIntoView because a smooth scroll here is both a long animated jump
+    // and easily clobbered by that restore. The header offset keeps the section
+    // heading clear of the sticky modal header.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const content = showPostShootContentExpanded();
+        const modalEl = shootModalOverlay.querySelector('.modal');
+        const header = shootModalOverlay.querySelector('.shoot-modal-header');
+        const headerH = header ? header.getBoundingClientRect().height : 0;
+        modalEl.scrollTop += content.getBoundingClientRect().top - modalEl.getBoundingClientRect().top - headerH;
+        updateShootModalTitleFromScroll();
+      });
+    });
   });
 
   document.getElementById('logShootRefOverlay').addEventListener('click', (e) => {
@@ -2581,7 +2603,13 @@
         <li data-shoot-id="${s.id}">${escapeHtml(shootDisplayName(s))} <span class="log-shoot-category">(${escapeHtml(CATEGORY_LABELS[s.category] || 'Uncategorized')})</span></li>
       `).join('');
       const takeawaysHtml = w.takeaways.length
-        ? `<ul class="log-takeaways">${w.takeaways.map(t => `<li data-shoot-id="${t.shootId}">${escapeHtml(t.text)}</li>`).join('')}</ul>`
+        // Each takeaway is credited to its shoot inline, so the list still reads
+        // as attributed even before you tap through to confirm which one.
+        ? `<ul class="log-takeaways">${w.takeaways.map(t => {
+            const from = shootDisplayName(state.shoots.find(x => x.id === t.shootId) || {});
+            const credit = from ? `<span class="log-takeaway-source"> --- ${escapeHtml(from)}</span>` : '';
+            return `<li data-shoot-id="${t.shootId}">${escapeHtml(t.text)}${credit}</li>`;
+          }).join('')}</ul>`
         : `<p class="log-no-takeaways">No takeaways logged this week.</p>`;
       card.innerHTML = `
         <div class="card-body">
@@ -3571,15 +3599,23 @@
     document.getElementById('locationCountryInput').value = loc.country || '';
   }
 
-  function openLocationModal() {
-    fillLocationForm(currentShootLocation);
-    document.getElementById('locationStateInput').classList.remove('field-invalid');
-    document.getElementById('locationStateError').hidden = true;
+  // Rebuilt rather than built once, because deleting from "Manage locations…"
+  // changes what belongs in this list while the Location modal is still open
+  // behind it. Without a refresh you'd come back to a dropdown still offering
+  // locations you just removed, until you closed and reopened the modal.
+  function refreshPastLocationsSelect() {
     pastLocationSamples = getAllPastLocations();
     const select = document.getElementById('pastLocationsSelect');
     select.innerHTML = '<option value="">Select a past location…</option>'
       + pastLocationSamples.map((loc, i) => `<option value="${i}">${escapeHtml(formatLocationDisplay(loc))}</option>`).join('')
       + '<option value="__manage__">Manage locations…</option>';
+  }
+
+  function openLocationModal() {
+    fillLocationForm(currentShootLocation);
+    document.getElementById('locationStateInput').classList.remove('field-invalid');
+    document.getElementById('locationStateError').hidden = true;
+    refreshPastLocationsSelect();
     document.getElementById('locationModalOverlay').hidden = false;
   }
 
@@ -3659,6 +3695,9 @@
         if (!state.dismissedLocationKeys.includes(key)) state.dismissedLocationKeys.push(key);
         saveState();
         renderManageLocationsList();
+        // The Location modal's dropdown is still sitting open underneath, so it
+        // has to drop the deleted entry now rather than on next open.
+        refreshPastLocationsSelect();
       });
     });
   }

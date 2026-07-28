@@ -483,6 +483,23 @@ h1, h2, h3 {
   cursor: pointer;
 }
 
+/* The shoot credit trailing each takeaway. Opacity rather than a grey: the
+   palette only has the one ink colour (--text-dim is the same value), so
+   fading it is the only way to set the attribution back from the takeaway
+   itself without introducing a colour that isn't in the scheme. */
+.log-takeaway-source {
+  opacity: 0.6;
+}
+
+/* The shoot name is the whole point of this popup, so it gets read as the
+   headline rather than as body copy under "Referring to". */
+#logShootRefName {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  margin: 6px 0 2px;
+}
+
 .log-no-takeaways {
   font-size: 15px;
   color: var(--text-dim);
