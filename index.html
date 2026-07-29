@@ -240,6 +240,7 @@
         <button class="icon-btn close-btn" data-close="shoot">&times;</button>
       </div>
     </div>
+    <button type="button" class="enter-shoot-mode-btn" id="enterShootModeBtn" hidden>shoot mode</button>
     <form id="shootForm">
       <svg class="folder-tab-deco tab-fill-yellow" viewBox="0 -90 400 120" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,-90 L0,-90 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="basicInfoHeading">Basic Info<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
@@ -1060,6 +1061,38 @@
 </div>
 
 <!-- ============ TAB INTRO ============ -->
+<!-- Shoot mode: a stripped-back, full-screen working view for the day of -->
+<div id="shootModeOverlay" class="modal-overlay shoot-mode-overlay" hidden>
+  <div class="modal shoot-mode-modal">
+    <div class="shoot-mode-header">
+      <div class="shoot-mode-heading-wrap">
+        <p class="shoot-mode-eyebrow">Shoot mode</p>
+        <h2 id="shootModeTitle"></h2>
+      </div>
+      <button type="button" class="icon-btn close-btn" id="shootModeExitBtn" aria-label="Exit shoot mode">&times;</button>
+    </div>
+    <div class="shoot-mode-body">
+      <h3 class="shoot-mode-section-heading heading-yellow">Shot list</h3>
+      <div id="shootModeShotList" class="shoot-mode-shots"></div>
+      <p class="shoot-mode-empty" id="shootModeShotsEmpty" hidden>No shots on the list for this shoot.</p>
+
+      <h3 class="shoot-mode-section-heading heading-navy">Mood board</h3>
+      <div id="shootModeMoodboard" class="moodboard-grid"></div>
+      <p class="shoot-mode-empty" id="shootModeMoodEmpty" hidden>No mood board images for this shoot.</p>
+    </div>
+    <button type="button" class="primary modal-cta" id="shootModeDoneBtn">Done shooting</button>
+  </div>
+</div>
+
+<div id="shootModePromptOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2>Shoot day</h2>
+    <p id="shootModePromptText"></p>
+    <button type="button" class="primary" id="shootModeStartBtn">start shoot mode</button>
+    <button type="button" class="secondary shoot-mode-skip" id="shootModeSkipBtn">not now</button>
+  </div>
+</div>
+
 <div id="tabIntroOverlay" class="modal-overlay intro-overlay" hidden>
   <div class="modal intro-modal">
     <h2 id="tabIntroTitle"></h2>

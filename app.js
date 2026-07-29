@@ -1248,6 +1248,12 @@
     // that's the moment the report exists in your head and "where did that go?"
     // is the natural next question. Routed through showTabIntro so it reuses
     // the same popup and seen-once bookkeeping as the tab intros.
+    // Shown once, right after shoot mode is declined — the moment the question
+    // "fine, but how do I get it back?" actually occurs to you.
+    'shootmode:where': {
+      title: 'Whenever you want it',
+      text: "no problem. Shoot mode is always one tap away: open the shoot and hit the 'shoot mode' button at the top of the page.",
+    },
     'report:bell': {
       title: 'Find this again',
       text: "that was your daily report — it turns up once a day with anything that needs attention. You can pull it back up whenever you like: tap the bell at the top of the Overview screen.",
@@ -3312,6 +3318,7 @@
         scheduleShootAutosave();
       });
     });
+    syncAllShootFormFields();
   }
 
   document.getElementById('addTalentBtn').addEventListener('click', () => {
@@ -3404,6 +3411,7 @@
         scheduleShootAutosave();
       });
     });
+    syncAllShootFormFields();
   }
 
   document.getElementById('addTeamMemberBtn').addEventListener('click', () => {
@@ -3447,7 +3455,7 @@
   // scrollHeight is also 0 while the row is hidden (no layout), and assigning
   // that would flatten it to nothing; a zero measurement is skipped so the row
   // keeps its one-line default until something visible re-runs this.
-  function growShotText(el) {
+  function autoSizeTextarea(el) {
     el.style.height = 'auto';
     if (!el.scrollHeight) return;
     const cs = getComputedStyle(el);
@@ -3455,9 +3463,39 @@
     el.style.height = (el.scrollHeight + borders) + 'px';
   }
 
-  function growAllShotTexts() {
+  function autoSizeAllListTextareas() {
     document.querySelectorAll('#shotListItems .shot-text, #lightingSetupsItems .shot-text')
-      .forEach(growShotText);
+      .forEach(autoSizeTextarea);
+  }
+
+  // A field with something in it should read as what you wrote, not as an input
+  // still waiting for you — the same treatment the shot list got. An EMPTY field
+  // keeps its box, because the box is the thing that says "put something here";
+  // a filled one keeps a rule underneath, which is what says "tap to change it".
+  //
+  // Only free-text fields qualify. Date, time and select are pickers: stripping
+  // their frame would read as broken rather than as written-in, and there's no
+  // typing to reveal. The shot and lighting rows are skipped too — they already
+  // carry this look permanently via .shot-text, and their own renderers size them.
+  function isBoxSheddingField(el) {
+    if (el.classList.contains('shot-text')) return false;
+    if (el.tagName === 'TEXTAREA') return true;
+    return el.tagName === 'INPUT' && (!el.type || el.type === 'text');
+  }
+
+  function syncFieldFilledState(el) {
+    if (!el || !el.tagName || !isBoxSheddingField(el)) return;
+    const filled = !!el.value.trim();
+    el.classList.toggle('is-filled', filled);
+    if (el.tagName !== 'TEXTAREA') return;
+    // Filled: shrink to the text, so losing the box doesn't leave a tall band of
+    // empty ruled space. Empty: hand the height back to the rows attribute.
+    if (filled) autoSizeTextarea(el);
+    else el.style.height = '';
+  }
+
+  function syncAllShootFormFields() {
+    document.querySelectorAll('#shootForm input, #shootForm textarea').forEach(syncFieldFilledState);
   }
 
   // Ticking a checkbox re-renders its whole list, because checked items sort to
@@ -3506,10 +3544,10 @@
       });
     });
     container.querySelectorAll('.shot-text').forEach(textarea => {
-      growShotText(textarea);
+      autoSizeTextarea(textarea);
       textarea.addEventListener('input', () => {
         currentShotList[Number(textarea.dataset.idx)].text = textarea.value;
-        growShotText(textarea);
+        autoSizeTextarea(textarea);
         scheduleShootAutosave();
       });
       textarea.addEventListener('keydown', (e) => {
@@ -3673,10 +3711,10 @@
       });
     });
     container.querySelectorAll('.shot-text').forEach(textarea => {
-      growShotText(textarea);
+      autoSizeTextarea(textarea);
       textarea.addEventListener('input', () => {
         currentLightingSetups[Number(textarea.dataset.idx)].text = textarea.value;
-        growShotText(textarea);
+        autoSizeTextarea(textarea);
         scheduleShootAutosave();
       });
       textarea.addEventListener('keydown', (e) => {
@@ -3905,6 +3943,7 @@
         scheduleShootAutosave();
       });
     });
+    syncAllShootFormFields();
   }
 
   document.getElementById('addReferenceBtn').addEventListener('click', () => {
@@ -3980,7 +4019,7 @@
   // that reveals a section runs this so the rows get their real height the
   // moment they're actually on screen. Idempotent, so calling it broadly is fine.
   function onShootSectionRevealed(bodyId) {
-    if (bodyId === 'shotListBody') growAllShotTexts();
+    if (bodyId === 'shotListBody') autoSizeAllListTextareas();
   }
 
   function applyShootFormCollapseState() {
@@ -4151,6 +4190,16 @@
     showToast('You can add a deadline anytime from Basic Info.');
   });
 
+  // Shoot mode only makes sense once a shoot has a shot list and mood board
+  // worth working from and a day it's actually happening — "Shoot ready" is the
+  // one status that means both. Re-run on every status change (not just on
+  // load), since flipping the swatch while the modal is open is the normal way
+  // a shoot reaches that status in the first place.
+  function updateEnterShootModeBtnVisibility() {
+    const status = document.getElementById('shootStatus').value;
+    document.getElementById('enterShootModeBtn').hidden = !editingShootId || status !== 'waiting_to_shoot';
+  }
+
   document.getElementById('shootStatus').addEventListener('change', (e) => {
     const newValue = e.target.value;
 
@@ -4190,6 +4239,7 @@
     document.getElementById('completeShootBtn').hidden = !editingShootId || isArchived || document.getElementById('shootStatus').value !== 'delivered';
     updateMoodboardCompleteVisibility();
     updateStatusSwatchDisplay();
+    updateEnterShootModeBtnVisibility();
   });
 
   function updateMoodboardCompleteLabel() {
@@ -4422,6 +4472,7 @@
     document.getElementById('shootStatus').value = s ? (s.status || 'idea_phase') : 'idea_phase';
     previousStatusValue = document.getElementById('shootStatus').value;
     updateStatusSwatchDisplay();
+    updateEnterShootModeBtnVisibility();
     document.getElementById('shootDate').value = s ? (s.date || '') : '';
     document.getElementById('shootDeadline').value = s ? (s.deadline || '') : '';
     document.getElementById('shootStartTime').value = s ? (s.startTime || '') : '';
@@ -4478,6 +4529,9 @@
 
     renderMoodboard();
     renderFinalImages();
+    // Everything above is populated by now — a saved field should read as
+    // written the instant the modal opens, not only after it's touched again.
+    syncAllShootFormFields();
     shootModalOverlay.hidden = false;
     if (!s) maybeShowStatusSwatchIntro();
 
@@ -4491,7 +4545,7 @@
         // so every row measured zero and kept its one-line default — a saved
         // multi-line shot would open clipped. This is the first frame where the
         // rows actually have layout, so it's the first chance to size them.
-        growAllShotTexts();
+        autoSizeAllListTextareas();
       });
     });
   }
@@ -5085,6 +5139,10 @@
   }
 
   shootForm.addEventListener('input', scheduleShootAutosave);
+  // Delegated at the form level rather than per-field, so it covers inputs
+  // rendered later by the talent/team/references list renderers without
+  // needing its own listener wired up at every render site.
+  shootForm.addEventListener('input', (e) => syncFieldFilledState(e.target));
   shootForm.addEventListener('change', scheduleShootAutosave);
   shootForm.addEventListener('submit', (e) => e.preventDefault());
   // Commit as soon as focus leaves a field, so the pending-debounce window is
@@ -6927,6 +6985,133 @@
     return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
   }
 
+  // ---------- Shoot mode ----------
+  // A stripped-back working view for the day of: just the shot list to tick off
+  // and the mood board to glance at, with none of the planner around it. It's a
+  // mode rather than a screen — once switched on it survives closing the app and
+  // comes straight back on the next launch, until it's explicitly ended.
+  const SHOOT_MODE_KEY = 'dailies_shoot_mode_shoot_v1';
+  const SHOOT_MODE_ASKED_KEY = 'dailies_shoot_mode_asked_v1';
+  const shootModeOverlay = document.getElementById('shootModeOverlay');
+
+  function getShootModeShootId() {
+    try { return localStorage.getItem(SHOOT_MODE_KEY); } catch (e) { return null; }
+  }
+
+  function setShootModeShootId(id) {
+    try {
+      if (id) localStorage.setItem(SHOOT_MODE_KEY, id);
+      else localStorage.removeItem(SHOOT_MODE_KEY);
+    } catch (e) { /* ignore */ }
+  }
+
+  // Ticking a shot here writes straight to state rather than through the edit
+  // form's working copy — shoot mode is the only thing open, and the point is
+  // that a tick survives whatever happens to the phone next.
+  function renderShootModeShots(shoot) {
+    const list = document.getElementById('shootModeShotList');
+    const shots = shoot.shotList || [];
+    list.innerHTML = '';
+    document.getElementById('shootModeShotsEmpty').hidden = shots.length !== 0;
+
+    shots.forEach((item, idx) => {
+      const row = document.createElement('label');
+      row.className = `shoot-mode-shot${item.checked ? ' shot-checked' : ''}`;
+      row.innerHTML = `
+        <input type="checkbox" ${item.checked ? 'checked' : ''} />
+        <span>${escapeHtml(item.text || '')}</span>
+      `;
+      row.querySelector('input').addEventListener('change', (e) => {
+        shoot.shotList[idx].checked = e.target.checked;
+        saveState();
+        row.classList.toggle('shot-checked', e.target.checked);
+        renderAll();
+      });
+      list.appendChild(row);
+    });
+  }
+
+  function renderShootModeMoodboard(shoot) {
+    const grid = document.getElementById('shootModeMoodboard');
+    grid.innerHTML = '';
+    idbGetImages(shoot.id).then(images => {
+      document.getElementById('shootModeMoodEmpty').hidden = images.length !== 0;
+      images.forEach((img, idx) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'moodboard-thumb';
+        thumb.innerHTML = `<img src="${img.src}" alt="" />`;
+        thumb.querySelector('img').addEventListener('click', () => {
+          openImageViewer(images, idx, shoot.id, () => renderShootModeMoodboard(shoot), false);
+        });
+        grid.appendChild(thumb);
+      });
+    }).catch(() => { document.getElementById('shootModeMoodEmpty').hidden = false; });
+  }
+
+  function openShootMode(shootId) {
+    const shoot = state.shoots.find(s => s.id === shootId);
+    if (!shoot) { setShootModeShootId(null); return false; }
+    // The edit form keeps its own working copy of the shot list, so leaving it
+    // open behind shoot mode would let a stale copy overwrite ticks on save.
+    if (!shootModalOverlay.hidden) closeShootModal();
+    setShootModeShootId(shootId);
+    document.getElementById('shootModeTitle').textContent = shootDisplayName(shoot);
+    renderShootModeShots(shoot);
+    renderShootModeMoodboard(shoot);
+    shootModeOverlay.hidden = false;
+    return true;
+  }
+
+  function exitShootMode() {
+    setShootModeShootId(null);
+    shootModeOverlay.hidden = true;
+  }
+
+  document.getElementById('shootModeExitBtn').addEventListener('click', exitShootMode);
+  document.getElementById('shootModeDoneBtn').addEventListener('click', exitShootMode);
+  document.getElementById('enterShootModeBtn').addEventListener('click', () => {
+    if (currentShootId) openShootMode(currentShootId);
+  });
+
+  // Deliberately no backdrop-click dismiss: this is a mode you're working in
+  // with a camera in your other hand, not a popup to swipe away by accident.
+
+  function resumeShootModeIfActive() {
+    const id = getShootModeShootId();
+    return id ? openShootMode(id) : false;
+  }
+
+  document.getElementById('shootModeStartBtn').addEventListener('click', () => {
+    const id = document.getElementById('shootModePromptOverlay').dataset.shootId;
+    document.getElementById('shootModePromptOverlay').hidden = true;
+    if (id) openShootMode(id);
+  });
+
+  document.getElementById('shootModeSkipBtn').addEventListener('click', () => {
+    document.getElementById('shootModePromptOverlay').hidden = true;
+    // Answers the obvious follow-up — "so where did that go?" — once, rather
+    // than re-asking on every shoot day forever.
+    showTabIntro('shootmode:where');
+  });
+
+  function maybeShowShootModePrompt() {
+    if (!shootModeOverlay.hidden) return;
+    const today = todayStr();
+    let asked;
+    try { asked = localStorage.getItem(SHOOT_MODE_ASKED_KEY); } catch (e) { asked = null; }
+    if (asked === today) return;
+
+    const shoot = state.shoots.find(isToday);
+    if (!shoot) return;
+    try { localStorage.setItem(SHOOT_MODE_ASKED_KEY, today); } catch (e) { /* ignore */ }
+
+    const overlay = document.getElementById('shootModePromptOverlay');
+    overlay.dataset.shootId = shoot.id;
+    document.getElementById('shootModePromptText').textContent =
+      `you're shooting ${shootDisplayName(shoot)} today. Shoot mode strips the app back to just your shot list and your mood board, so you can tick shots off as you go without digging through the planner. It stays on until you end it.`;
+    overlay.hidden = false;
+  }
+
   function checkDayAfterPrompt() {
     const today = effectiveReportDateStr();
     let lastShown;
@@ -7421,11 +7606,20 @@
   // the rest of the launch popups defer so they don't stack on top of it.
   maybeShowPhotographerPrompt();
   if (document.getElementById('photographerModalOverlay').hidden) {
-    showTabIntro('overview');
-    if (document.getElementById('tabIntroOverlay').hidden) {
-      checkDayAfterPrompt();
-      if (document.getElementById('dayAfterPromptOverlay').hidden) {
-        checkDailyReportPrompt();
+    // Shoot mode outranks every launch popup. If it's still switched on you're
+    // mid-shoot and want the working view, not a report; and on a shoot day the
+    // offer to enter it is the most time-sensitive thing the app can say, so it
+    // goes ahead of the daily report rather than queueing behind it.
+    if (!resumeShootModeIfActive()) {
+      maybeShowShootModePrompt();
+      if (document.getElementById('shootModePromptOverlay').hidden) {
+        showTabIntro('overview');
+        if (document.getElementById('tabIntroOverlay').hidden) {
+          checkDayAfterPrompt();
+          if (document.getElementById('dayAfterPromptOverlay').hidden) {
+            checkDailyReportPrompt();
+          }
+        }
       }
     }
   }

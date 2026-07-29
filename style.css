@@ -4091,3 +4091,245 @@ h2.status-group-heading.heading-navy {
 .stat-box-detail-modal .empty-state {
   padding: 0 20px 20px;
 }
+
+/* ---------- Shoot mode ---------- */
+
+/* The entry point lives just under the shoot modal's sticky header, in the
+   gap formed by the first section's folder-tab graphic — not among the ?
+   / share / close icons in the header itself, which are already crowded.
+   Positioned relative to the shoot modal's own box (see the
+   #shootModalOverlay .modal rule below) rather than the header, so it scrolls
+   away with the rest of the form instead of following you down the page —
+   this is a landmark near the top, not a persistent control. */
+#shootModalOverlay .modal {
+  position: relative;
+}
+
+.enter-shoot-mode-btn {
+  position: absolute;
+  z-index: 1;
+  /* Measured against the sticky header's actual height (66px for a one-line
+     title) plus its own top offset within the modal, with a small gap so the
+     button clears it rather than kissing the edge. A title that wraps to a
+     second or third line grows the header taller than this accounts for —
+     same known tradeoff as the folder-tab/scroll-margin approximations
+     elsewhere in this modal, not something this fixes generally. */
+  top: 96px;
+  right: 33px;
+  padding: 9px 20px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--text);
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.enter-shoot-mode-btn[hidden] {
+  display: none;
+}
+
+/* The one deliberately rounded, bordered surface in an otherwise square-cornered
+   app (every --radius-* token is 0 under every theme) — shoot mode is a
+   distinct working mode you drop into for the day, and looking different on
+   purpose is the point. border-color is var(--ink), so the outline still
+   follows whichever colour theme is active rather than fighting it. */
+.shoot-mode-overlay {
+  align-items: center;
+  padding: 16px;
+}
+
+.shoot-mode-modal {
+  width: 100%;
+  max-width: 480px;
+  height: min(92dvh, 880px);
+  max-height: 92dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: 3px solid var(--ink);
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.shoot-mode-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 18px 16px 14px 20px;
+  background: var(--ink);
+}
+
+.shoot-mode-heading-wrap {
+  min-width: 0;
+}
+
+.shoot-mode-eyebrow {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+#shootModeTitle {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.shoot-mode-header .close-btn {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.shoot-mode-body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 8px;
+}
+
+.shoot-mode-section-heading {
+  margin: 0;
+  padding: 11px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.shoot-mode-section-heading.heading-yellow {
+  background: var(--accent);
+  color: var(--text);
+}
+
+.shoot-mode-section-heading.heading-navy {
+  background: var(--ink);
+  color: #fff;
+}
+
+.shoot-mode-body .shoot-mode-section-heading:not(:first-child) {
+  margin-top: 14px;
+}
+
+.shoot-mode-shots {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 20px 0;
+}
+
+.shoot-mode-shot {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 17px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.shoot-mode-shot:last-child {
+  border-bottom: 0;
+}
+
+.shoot-mode-shot input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  accent-color: var(--ink);
+}
+
+/* Opacity rather than a grey — the palette has no grey to spend (--text-dim
+   equals --text), so fading is the only way to visually retire a done shot. */
+.shoot-mode-shot.shot-checked span {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.shoot-mode-empty {
+  margin: 0;
+  padding: 4px 20px 14px;
+  font-size: 14px;
+  color: var(--text-dim);
+  opacity: 0.75;
+}
+
+#shootModeMoodboard {
+  padding: 4px 20px 4px;
+}
+
+.shoot-mode-modal #shootModeDoneBtn {
+  flex-shrink: 0;
+  width: 100%;
+  margin: 0;
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  border: none;
+  border-top: 2px solid var(--ink);
+  border-radius: 0;
+  font-size: 18px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+
+#shootModeStartBtn,
+#shootModeSkipBtn {
+  width: 100%;
+  padding: 13px;
+  border-radius: var(--radius-xl);
+  font-size: 17px;
+  font-family: var(--font-title);
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+
+#shootModeSkipBtn {
+  margin-top: 10px;
+  border: none;
+}
+
+/* ---------- Filled shoot-form fields shed their box, same as the shot list ----------
+   Once there's real text in a field, the box that says "put something here"
+   stops being the true statement — this reads it back as written-in prose
+   instead. It never goes bare, though: a rule underneath is what still says
+   "tap this to change it," which matters most for the readonly fields that
+   open the bigger tap-to-expand editor rather than typing in place. */
+#shootForm input.is-filled,
+#shootForm textarea.is-filled {
+  background: none;
+  border: none;
+  border-bottom: 2px dashed var(--border);
+  border-radius: 0;
+  padding: 6px 2px;
+}
+
+#shootForm textarea.is-filled {
+  padding: 4px 2px 8px;
+  resize: none;
+  overflow: hidden;
+}
+
+#shootForm input.is-filled:focus,
+#shootForm textarea.is-filled:focus {
+  outline: none;
+  border-bottom-style: solid;
+  border-bottom-color: var(--accent);
+}
