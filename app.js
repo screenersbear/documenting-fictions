@@ -1211,7 +1211,7 @@
     // version gets shown this one once.
     'journal:log2': {
       title: 'Log',
-      text: "this notebook fills itself in automatically — no writing required. Each week you actually shoot something gets its own entry listing which shoots happened, their categories, and your lessons learned pulled straight from each shoot's reflection. Every shoot and takeaway here is tappable: tap one to see which shoot it came from, then 'View shoot' to jump straight to that shoot's reflection.",
+      text: "this notebook fills itself in automatically — no writing required. Each week you actually shoot something gets its own entry listing which shoots happened, their categories, and your lessons learned pulled straight from each shoot's reflection. Every shoot and takeaway here is tappable: tap one to see which shoot it came from, then 'View shoot' to jump straight to that shoot's reflection. To get back to your notebooks, hit the arrow up top or just swipe right.",
     },
     // Shown once, right after the first automatic daily report is dismissed —
     // that's the moment the report exists in your head and "where did that go?"
@@ -1223,7 +1223,7 @@
     },
     'journal:reflections': {
       title: 'Reflections',
-      text: "this is your freeform journal. Every shoot's post-shoot reflection is automatically logged here too, right alongside anything you write yourself. Tap '+' to add your own entry, or tap any entry to reopen and edit it.",
+      text: "this is your freeform journal. Every shoot's post-shoot reflection is automatically logged here too, right alongside anything you write yourself. Tap '+' to add your own entry, or tap any entry to reopen and edit it. To get back to your notebooks, hit the arrow up top or just swipe right.",
     },
   };
 
@@ -7485,6 +7485,18 @@
 
       const activeTab = document.querySelector('.tab.active');
       if (!activeTab) return;
+
+      // Inside a notebook, swiping right means "back to the notebook picker"
+      // rather than "previous tab". Journal is the one tab with a level below
+      // it, and going up that level is the nearer destination — you'd otherwise
+      // have to reach for the back button to do the thing the gesture already
+      // implies. A second right swipe from the picker then leaves the tab as
+      // usual, so the hierarchy unwinds one step at a time.
+      if (activeTab.dataset.view === 'journal' && journalView !== 'select' && dx > 0) {
+        showJournalView('select');
+        return;
+      }
+
       const currentIndex = TAB_ORDER.indexOf(activeTab.dataset.view);
       if (currentIndex === -1) return;
       const nextIndex = currentIndex + (dx < 0 ? 1 : -1);

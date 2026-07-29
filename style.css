@@ -331,14 +331,17 @@ h1, h2, h3 {
   display: none;
 }
 
+/* Filled rather than a bare glyph, and a size up on the '+' it sits opposite:
+   this is the only way out of a notebook and back to the picker, so it has to
+   read as a button at a glance instead of as punctuation next to the title. */
 .journal-back-btn {
-  width: 40px;
-  height: 40px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   border: none;
-  background: none;
+  background: var(--accent);
   color: var(--text);
-  font-size: 28px;
+  font-size: 36px;
   font-family: var(--font-title);
   font-weight: 700;
   line-height: 1;
@@ -347,6 +350,13 @@ h1, h2, h3 {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+  /* The chevron glyph carries its own trailing sidebearing, so flex centring
+     leaves it visibly right of centre in the circle. */
+  padding-right: 4px;
+}
+
+.journal-back-btn:active {
+  opacity: 0.65;
 }
 
 .journal-back-btn[hidden] {
