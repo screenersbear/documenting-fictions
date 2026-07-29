@@ -901,15 +901,6 @@
       : `<div class="shoot-thumb shoot-thumb-empty">${SHOOT_THUMB_EMPTY_SVG}</div>`;
   }
 
-  // Same thumbnail treatment as a shoot bubble, for a journal entry's cover
-  // photo — src is resolved separately since it isn't a plain stored field
-  // the way a shoot's projectPhoto is (see journalEntryImagesKey() below).
-  function journalThumbHtml(src) {
-    return src
-      ? `<div class="shoot-thumb"><img src="${src}" alt="" /></div>`
-      : `<div class="shoot-thumb shoot-thumb-empty">${SHOOT_THUMB_EMPTY_SVG}</div>`;
-  }
-
   function renderShootRow(container, s, opts) {
     // Lets a section suppress the whole badge outright — e.g. Overview's
     // Proofs pending and Upcoming deadlines sections are each already one
@@ -2354,74 +2345,107 @@
     }
   }
 
-  // Same row style as a shoot bubble (Overview/Shoots/Archive) — the cover
-  // photo fills the left side of the frame instead of sitting in a small
-  // square thumb.
-  function renderJournalEntryRow(container, e) {
-    const row = document.createElement('div');
-    row.className = 'shoot-row';
-    // A linked entry's cover photo is the shoot's own project photo — same
-    // picture you'd see on that shoot's bubble. Otherwise, fall back to
-    // this entry's own uploaded photos, fetched async since IDB has no
-    // synchronous read.
+  // Read-only photo strip for an entry rendered inline in the list.
+  //
+  // Deliberately NOT renderImagesGrid(): that one maintains journalHasImages
+  // for the open editor's autosave "does this entry have any content" check,
+  // and the list redraws while an entry can still be open — sharing it would
+  // let a background list render overwrite the editor's flag with some other
+  // entry's answer.
+  function renderJournalListImages(grid, key) {
+    idbGetImages(key).then(images => {
+      grid.hidden = !images.length;
+      grid.innerHTML = '';
+      images.forEach((img, idx) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'moodboard-thumb';
+        thumb.innerHTML = `<img src="${img.src}" alt="" />`;
+        thumb.querySelector('img').addEventListener('click', (ev) => {
+          // The whole sheet of paper is tappable, so a photo tap has to stop
+          // here or it also fires the edit / jump-to-shoot handler underneath.
+          ev.stopPropagation();
+          openImageViewer(images, idx, key, () => renderJournal(), false);
+        });
+        grid.appendChild(thumb);
+      });
+    }).catch(() => { grid.hidden = true; });
+  }
+
+  // One entry, rendered inline on lined notebook paper under a coloured title
+  // banner — the same card shape the Log uses for a week, so the two notebooks
+  // read as one continuous scrolling page rather than a list of things to open.
+  function renderJournalEntryCard(container, e) {
+    const card = document.createElement('div');
+    card.className = 'card log-card journal-entry-card';
+    // Alternates within the month it lands in, so collapsing a month never
+    // leaves two same-coloured banners stacked against each other.
+    const headingColorClass = container.children.length % 2 === 0 ? 'heading-yellow' : 'heading-navy';
     const linkedShoot = e.sourceShootId ? state.shoots.find(s => s.id === e.sourceShootId) : null;
-    const initialThumbSrc = (linkedShoot && linkedShoot.projectPhoto) || null;
-    const tagsText = (e.tags && e.tags.length) ? e.tags.map(t => `#${escapeHtml(t)}`).join(' ') : '';
-    row.innerHTML = `
-      ${journalThumbHtml(initialThumbSrc)}
-      <div class="shoot-row-body">
-        <div class="shoot-row-top">
-          <span class="shoot-row-title"><strong>${escapeHtml(e.title || 'Untitled entry')}</strong></span>
-          <div class="shoot-row-dates">
-            <span class="mi-sub">${prettyDate(e.createdAt)}</span>
-          </div>
-        </div>
-        <span class="badge"${tagsText ? '' : ' hidden'}>${tagsText}</span>
+    // Same "--- shoot name" credit the Log puts after each takeaway; this entry
+    // was compiled from that shoot's reflection, so it's the same attribution.
+    const credit = linkedShoot
+      ? `<span class="log-takeaway-source"> --- ${escapeHtml(shootDisplayName(linkedShoot))}</span>`
+      : '';
+    const tagsHtml = (e.tags || []).map(t => `<span class="beat-chip view-only">${escapeHtml(t)}</span>`).join('');
+
+    card.innerHTML = `
+      <p class="log-week-heading ${headingColorClass} journal-entry-heading">
+        <span class="journal-entry-title">${escapeHtml(e.title || 'Untitled entry')}</span>
+        <span class="journal-entry-meta">
+          <span class="journal-entry-date">${prettyDate(e.createdAt)}</span>
+          <button type="button" class="journal-entry-options" aria-label="Options">&#8942;</button>
+        </span>
+      </p>
+      <div class="journal-paper log-paper">
+        <div class="journal-entry-body">${escapeHtml(e.body || '')}${credit}</div>
+        <div class="journal-entry-images moodboard-grid" hidden></div>
+        <div class="journal-entry-tags"${tagsHtml ? '' : ' hidden'}>${tagsHtml}</div>
       </div>
-      <button type="button" class="row-options-btn" aria-label="Options">&#8942;</button>
     `;
-    row.addEventListener('click', () => openJournalModal(e.id));
-    row.querySelector('.row-options-btn').addEventListener('click', (ev) => {
+
+    const paper = card.querySelector('.journal-paper');
+    if (linkedShoot) {
+      // Auto-compiled entries are never edited here — they route back to the
+      // shoot's own reflection fields so the two stay in sync. Reuses the Log's
+      // "this refers to" popup rather than a confirm(), so tapping a reflection
+      // behaves exactly like tapping a takeaway one notebook over.
+      paper.addEventListener('click', () => showLogShootRef(e.sourceShootId));
+    } else {
+      // Hand-written entries open straight into the editor: the body is already
+      // fully readable right here, so a read-only stop on the way would be a
+      // popup that shows you what you're already looking at.
+      paper.addEventListener('click', () => openJournalModal(e.id, 'edit'));
+    }
+
+    card.querySelector('.journal-entry-options').addEventListener('click', (ev) => {
       ev.stopPropagation();
       openJournalOptions(e.id);
     });
-    container.appendChild(row);
-    if (!initialThumbSrc) {
-      idbGetImages(journalEntryImagesKey(e)).then(images => {
-        if (!images.length) return;
-        const thumb = row.querySelector('.shoot-thumb');
-        if (thumb) thumb.outerHTML = journalThumbHtml(images[0].src);
-      }).catch(() => {});
-    }
+
+    container.appendChild(card);
+    renderJournalListImages(card.querySelector('.journal-entry-images'), journalEntryImagesKey(e));
   }
 
-  // Nested by year > month of each entry's own createdAt (when it was
-  // actually written) — same grouping structure Archive uses for shoots,
-  // just keyed off the journal entry's date rather than a shoot's date.
-  function renderJournal() {
-    const tags = getAllUsedJournalTags();
-    if (journalTagFilter !== 'all' && !tags.includes(journalTagFilter)) journalTagFilter = 'all';
-
-    const filtersEl = document.getElementById('journalFilters');
-    filtersEl.innerHTML = `<button class="chip${journalTagFilter === 'all' ? ' active' : ''}" data-tag="all">All</button>` +
-      tags.map(t => `<button class="chip${journalTagFilter === t ? ' active' : ''}" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</button>`).join('');
-    document.getElementById('journalFilterToggle').textContent = `Filter: ${journalTagFilter === 'all' ? 'All' : '#' + journalTagFilter}`;
-
-    let items = [...state.journalEntries];
-    if (journalTagFilter !== 'all') items = items.filter(e => (e.tags || []).includes(journalTagFilter));
-
-    const list = document.getElementById('journalList');
-    list.innerHTML = '';
-    document.getElementById('journalEmpty').hidden = items.length !== 0;
+  // Collapsible year > month nesting, shared by both Journal notebooks so the
+  // Log and Reflections fold and scroll identically. Archive grows its own copy
+  // of this shape straight from shoot dates; this one takes the date off each
+  // item via dateOf(), so it can group log weeks and journal entries alike.
+  //
+  // Order within a month is whatever order `items` arrives in — callers sort
+  // first. Headings alternate colour by *visible* index so a fold never leaves
+  // two same-coloured bars stacked.
+  function renderYearMonthGroups(list, items, opts) {
+    const { dateOf, keyPrefix, renderItem } = opts;
 
     const years = new Map();
-    items.forEach(e => {
-      const year = e.createdAt ? e.createdAt.slice(0, 4) : 'Undated';
-      const month = e.createdAt ? e.createdAt.slice(5, 7) : '00';
+    items.forEach(item => {
+      const d = dateOf(item);
+      const year = d ? d.slice(0, 4) : 'Undated';
+      const month = d ? d.slice(5, 7) : '00';
       if (!years.has(year)) years.set(year, new Map());
       const months = years.get(year);
       if (!months.has(month)) months.set(month, []);
-      months.get(month).push(e);
+      months.get(month).push(item);
     });
 
     const sortedYears = [...years.keys()].sort((a, b) => {
@@ -2438,7 +2462,7 @@
       const yearGroupEl = document.createElement('div');
       yearGroupEl.className = 'shoot-status-group';
 
-      const yearCollapseKey = `journal:${year}`;
+      const yearCollapseKey = `${keyPrefix}:${year}`;
       const yearCollapsed = isSectionCollapsed(yearCollapseKey);
       const yearHeading = document.createElement('h2');
       yearHeading.className = `status-group-heading ${visibleYearIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${yearCollapsed ? ' collapsed' : ''}`;
@@ -2449,13 +2473,10 @@
       yearRowsWrap.hidden = yearCollapsed;
 
       if (year === 'Undated') {
-        // Undated only ever has the one '00' month bucket anyway — a
-        // second "Undated" sub-heading under the "Undated" year heading
-        // is pure redundancy, so just list the entries directly.
+        // Undated only ever has the one '00' month bucket, so an "Undated"
+        // sub-heading under the "Undated" year heading is the same word twice.
         sortedMonths.forEach(month => {
-          months.get(month)
-            .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
-            .forEach(e => renderJournalEntryRow(yearRowsWrap, e));
+          months.get(month).forEach(item => renderItem(yearRowsWrap, item));
         });
       } else {
         let visibleMonthIndex = 0;
@@ -2463,7 +2484,7 @@
           const monthGroupEl = document.createElement('div');
           monthGroupEl.className = 'archive-month-group';
 
-          const monthCollapseKey = `journal:${year}:${month}`;
+          const monthCollapseKey = `${keyPrefix}:${year}:${month}`;
           const monthCollapsed = isSectionCollapsed(monthCollapseKey);
           const monthHeading = document.createElement('h3');
           monthHeading.className = `status-group-heading archive-month-heading ${visibleMonthIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${monthCollapsed ? ' collapsed' : ''}`;
@@ -2472,9 +2493,7 @@
           const monthRowsWrap = document.createElement('div');
           monthRowsWrap.className = 'shoot-status-rows';
           monthRowsWrap.hidden = monthCollapsed;
-          months.get(month)
-            .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
-            .forEach(e => renderJournalEntryRow(monthRowsWrap, e));
+          months.get(month).forEach(item => renderItem(monthRowsWrap, item));
 
           monthHeading.addEventListener('click', () => {
             const nowHidden = !monthRowsWrap.hidden;
@@ -2501,6 +2520,36 @@
       yearGroupEl.appendChild(yearRowsWrap);
       list.appendChild(yearGroupEl);
       visibleYearIndex++;
+    });
+  }
+
+  // Nested by year > month of each entry's own createdAt (when it was
+  // actually written) — same grouping structure Archive uses for shoots,
+  // just keyed off the journal entry's date rather than a shoot's date.
+  function renderJournal() {
+    const tags = getAllUsedJournalTags();
+    if (journalTagFilter !== 'all' && !tags.includes(journalTagFilter)) journalTagFilter = 'all';
+
+    const filtersEl = document.getElementById('journalFilters');
+    filtersEl.innerHTML = `<button class="chip${journalTagFilter === 'all' ? ' active' : ''}" data-tag="all">All</button>` +
+      tags.map(t => `<button class="chip${journalTagFilter === t ? ' active' : ''}" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</button>`).join('');
+    document.getElementById('journalFilterToggle').textContent = `Filter: ${journalTagFilter === 'all' ? 'All' : '#' + journalTagFilter}`;
+
+    let items = [...state.journalEntries];
+    if (journalTagFilter !== 'all') items = items.filter(e => (e.tags || []).includes(journalTagFilter));
+
+    const list = document.getElementById('journalList');
+    list.innerHTML = '';
+    document.getElementById('journalEmpty').hidden = items.length !== 0;
+
+    // Sorted here rather than inside each month bucket, because
+    // renderYearMonthGroups keeps whatever order it's handed.
+    items.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
+    renderYearMonthGroups(list, items, {
+      dateOf: e => e.createdAt,
+      keyPrefix: 'journal',
+      renderItem: renderJournalEntryCard,
     });
   }
 
@@ -2540,6 +2589,10 @@
     return Array.from(weeks.values())
       .sort((a, b) => b.start - a.start)
       .map(w => ({
+        // Kept so the list can group weeks by year > month. A week straddling
+        // a month boundary files under the month it *starts* in, matching the
+        // month its label leads with.
+        start: w.start,
         label: weekRangeLabel(w.start, w.end),
         shoots: w.shoots.slice().sort((a, b) => a.date.localeCompare(b.date)),
         // Keeps each takeaway tied to the shoot it came from (rather than a
@@ -2597,41 +2650,54 @@
     if (e.target === e.currentTarget) e.currentTarget.hidden = true;
   });
 
+  // One week of the Log, on the same lined notebook paper the Reflections
+  // entries use — the Log is the other half of the same journal, so it reads
+  // as written on the same pad rather than as a report about it.
+  function renderLogWeekCard(container, w) {
+    const card = document.createElement('div');
+    card.className = 'card log-card';
+    // Alternates within the month it lands in, so collapsing a month never
+    // leaves two same-coloured banners stacked against each other.
+    const headingColorClass = container.children.length % 2 === 0 ? 'heading-yellow' : 'heading-navy';
+    const shootsHtml = w.shoots.map(s =>
+      `<li data-shoot-id="${s.id}">${escapeHtml(shootDisplayName(s))} <span class="log-shoot-category">(${escapeHtml(CATEGORY_LABELS[s.category] || 'Uncategorized')})</span></li>`
+    ).join('');
+    const takeawaysHtml = w.takeaways.length
+      // Each takeaway is credited to its shoot inline, so the list still reads
+      // as attributed even before you tap through to confirm which one.
+      ? `<ul class="log-takeaways">${w.takeaways.map(t => {
+          const from = shootDisplayName(state.shoots.find(x => x.id === t.shootId) || {});
+          const credit = from ? `<span class="log-takeaway-source"> --- ${escapeHtml(from)}</span>` : '';
+          return `<li data-shoot-id="${t.shootId}">${escapeHtml(t.text)}${credit}</li>`;
+        }).join('')}</ul>`
+      : `<p class="log-no-takeaways">No takeaways logged this week.</p>`;
+    card.innerHTML = `
+      <p class="log-week-heading ${headingColorClass}">${escapeHtml(w.label)}</p>
+      <div class="journal-paper log-paper">
+        <p class="log-section-label">Shoots this week</p>
+        <ul class="log-shoots">${shootsHtml}</ul>
+        <p class="log-section-label">Takeaways</p>
+        ${takeawaysHtml}
+      </div>
+    `;
+    card.querySelectorAll('.log-shoots li[data-shoot-id], .log-takeaways li[data-shoot-id]').forEach(li => {
+      li.addEventListener('click', () => showLogShootRef(li.dataset.shootId));
+    });
+    container.appendChild(card);
+  }
+
   function renderJournalLog() {
     const weeks = computeWeeklyLog();
     const list = document.getElementById('journalLogList');
     list.innerHTML = '';
     document.getElementById('journalLogEmpty').hidden = weeks.length !== 0;
 
-    weeks.forEach((w, idx) => {
-      const card = document.createElement('div');
-      card.className = 'card log-card';
-      const headingColorClass = idx % 2 === 0 ? 'heading-yellow' : 'heading-navy';
-      const shootsHtml = w.shoots.map(s => `
-        <li data-shoot-id="${s.id}">${escapeHtml(shootDisplayName(s))} <span class="log-shoot-category">(${escapeHtml(CATEGORY_LABELS[s.category] || 'Uncategorized')})</span></li>
-      `).join('');
-      const takeawaysHtml = w.takeaways.length
-        // Each takeaway is credited to its shoot inline, so the list still reads
-        // as attributed even before you tap through to confirm which one.
-        ? `<ul class="log-takeaways">${w.takeaways.map(t => {
-            const from = shootDisplayName(state.shoots.find(x => x.id === t.shootId) || {});
-            const credit = from ? `<span class="log-takeaway-source"> --- ${escapeHtml(from)}</span>` : '';
-            return `<li data-shoot-id="${t.shootId}">${escapeHtml(t.text)}${credit}</li>`;
-          }).join('')}</ul>`
-        : `<p class="log-no-takeaways">No takeaways logged this week.</p>`;
-      card.innerHTML = `
-        <div class="card-body">
-          <p class="log-week-heading ${headingColorClass}">${escapeHtml(w.label)}</p>
-          <p class="log-section-label">Shoots this week</p>
-          <ul class="log-shoots">${shootsHtml}</ul>
-          <p class="log-section-label">Takeaways</p>
-          ${takeawaysHtml}
-        </div>
-      `;
-      card.querySelectorAll('.log-shoots li[data-shoot-id], .log-takeaways li[data-shoot-id]').forEach(li => {
-        li.addEventListener('click', () => showLogShootRef(li.dataset.shootId));
-      });
-      list.appendChild(card);
+    // computeWeeklyLog already returns newest-first, and renderYearMonthGroups
+    // keeps the order it's handed inside each month.
+    renderYearMonthGroups(list, weeks, {
+      dateOf: w => formatDate(w.start),
+      keyPrefix: 'log',
+      renderItem: renderLogWeekCard,
     });
   }
 
@@ -2835,17 +2901,19 @@
     document.getElementById('journalViewMode').hidden = false;
   }
 
-  function openJournalModal(id) {
+  function openJournalModal(id, mode) {
     const existing = id ? state.journalEntries.find(x => x.id === id) : null;
     journalIsNew = !existing;
     currentJournalEntry = existing || { id: uid(), title: '', body: '', tags: [], createdAt: todayStr() };
     setOpenJournalMarker(currentJournalEntry.id);
     journalHasImages = false;
 
-    // A brand-new entry starts in edit mode (nothing to view yet); anything
-    // already saved — including auto-compiled shoot reflections, which never
-    // get their own edit mode here — opens read-only.
-    if (journalIsNew) showJournalEditMode();
+    // A brand-new entry starts in edit mode (nothing to view yet), as does one
+    // opened straight from the Reflections list, where the body is already read
+    // inline. Everything else opens read-only. Auto-compiled shoot reflections
+    // never get edit mode here at all — editing them routes back to the shoot —
+    // so the sourceShootId guard holds even if a caller asks for it.
+    if (journalIsNew || (mode === 'edit' && !currentJournalEntry.sourceShootId)) showJournalEditMode();
     else showJournalViewMode();
 
     journalModalOverlay.hidden = false;
@@ -7256,7 +7324,11 @@
     if (!id) return;
     if (!state.journalEntries.some(x => x.id === id)) { clearOpenJournalMarker(); return; }
     document.querySelector('.tab[data-view="journal"]').click();
-    openJournalModal(id);
+    // Edit mode: the marker only exists because the app went away mid-write, so
+    // this puts you back where you were. It also has to match the list, which
+    // now opens straight into the editor — an entry restored read-only would be
+    // a view you can no longer reach any other way.
+    openJournalModal(id, 'edit');
   }
   restoreOpenJournalEntry();
 

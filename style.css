@@ -417,10 +417,17 @@ h1, h2, h3 {
    rule's padding/cursor/min-height regardless of source order in this file —
    equal-specificity selectors resolve by whichever is declared later, and
    .card's own rule lives further down. */
+/* The card is only a frame now: a full-bleed colour banner on top and a sheet
+   of lined paper filling everything below it. .card is display:flex, which
+   would stand those two side by side — block stacks them. overflow:hidden lets
+   the banner and the paper run to the card's edge and still be clipped by its
+   rounded corners, so neither needs its own radius. */
 .card.log-card {
   cursor: default;
   min-height: 0;
-  padding: 16px;
+  padding: 0;
+  display: block;
+  overflow: hidden;
 }
 
 .log-card:active {
@@ -438,11 +445,132 @@ h1, h2, h3 {
 }
 
 .log-week-heading {
-  margin: -16px -16px 12px;
+  margin: 0;
   padding: 10px 16px;
   font-size: 18px;
   font-weight: 700;
-  border-radius: var(--radius-3xl) var(--radius-3xl) 0 0;
+}
+
+/* The paper fills the card below the banner, so it drops the standalone
+   popup's own border and corners — the card frame already supplies both.
+   white-space:normal is the important one: .journal-paper sets pre-wrap for
+   plain-text entry bodies, and left on, it would render the indentation of the
+   markup built here as visible whitespace. Entry bodies get pre-wrap back on
+   .journal-entry-body, where it's actually wanted.
+
+   Doubled up as .journal-paper.log-paper rather than plain .log-paper: both are
+   single-class selectors, so on equal specificity the later declaration wins,
+   and .journal-paper is defined further down this file. Naming both makes the
+   override independent of where either rule sits. */
+.journal-paper.log-paper {
+  border: 0;
+  border-radius: 0;
+  min-height: 0;
+  white-space: normal;
+  padding: 14px 14px 20px 44px;
+}
+
+/* Everything on the paper is locked to the 28px ruling. .journal-paper draws a
+   line every 28px, so any margin, gap or line-height that isn't a multiple of
+   it walks the text off the lines a little further with each row. */
+.log-paper .log-section-label,
+.log-paper .log-shoots,
+.log-paper .log-takeaways,
+.log-paper .log-no-takeaways,
+.log-paper .journal-entry-body {
+  line-height: 28px;
+}
+
+.log-paper .log-section-label,
+.log-paper .log-no-takeaways {
+  margin: 0;
+}
+
+.log-paper .log-shoots,
+.log-paper .log-takeaways {
+  margin: 0;
+  gap: 0;
+}
+
+.log-paper > * + .log-section-label {
+  margin-top: 28px;
+}
+
+/* ---- Reflections entries, rendered inline on the same paper as the Log ---- */
+
+/* Title on the left, date and kebab on the right — the banner carries all of
+   an entry's metadata so the paper below holds only what was written. */
+.journal-entry-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.journal-entry-title {
+  font-family: var(--font-title);
+  letter-spacing: 0.5px;
+  min-width: 0;
+}
+
+.journal-entry-meta {
+  display: flex;
+  align-items: center;
+  /* Enough that the date and the kebab read as two things, not one blob. */
+  gap: 8px;
+  flex-shrink: 0;
+  /* Pulls the kebab's padding back out of the banner's 16px inset so the glyph
+     still lines up with the edge despite the wider tap target. */
+  margin-right: -8px;
+}
+
+.journal-entry-date {
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+/* Inherits the banner's colour so it stays legible on both the yellow and the
+   navy variant, rather than picking a fixed ink that vanishes on one of them.
+   Sized to match .row-options-btn's 28px: the glyph itself is only ~13px wide,
+   which is a thumb-missable target on a phone. */
+.journal-entry-options {
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.journal-entry-card .journal-paper {
+  cursor: pointer;
+}
+
+.journal-entry-body {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Photos and hashtags sit a full ruled line clear of the writing above them. */
+.journal-entry-images:not([hidden]),
+.journal-entry-tags:not([hidden]) {
+  margin-top: 28px;
+}
+
+.journal-entry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.journal-entry-images[hidden],
+.journal-entry-tags[hidden] {
+  display: none;
 }
 
 .log-week-heading.heading-yellow {
