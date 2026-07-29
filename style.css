@@ -1670,7 +1670,6 @@ h2.status-group-heading.heading-navy {
 #directionBody[hidden],
 #visualsBody[hidden],
 #teamBody[hidden],
-#shootDayNotesBody[hidden],
 #shotListBody[hidden],
 #lightingSetupsBody[hidden] {
   display: none;
@@ -1693,16 +1692,10 @@ h2.status-group-heading.heading-navy {
 #directionBody,
 #visualsBody,
 #teamBody,
-#shootDayNotesBody {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
 #shotListBody {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 #postShootContent {
@@ -2390,21 +2383,44 @@ h2.status-group-heading.heading-navy {
   flex-shrink: 0;
 }
 
-/* #shootForm-qualified so this beats the generic #shootForm textarea rule
-   (higher specificity) now that .shot-text is itself a textarea — without
-   it, the two-line row would balloon to the standard 18px field size. */
+/* A shot reads as a written line, not a filled-in form field — so no box, no
+   fill, just the text sitting on a rule. The rule is what keeps it obviously
+   typeable: a bare line of text with nothing under it looks like a label, and
+   there'd be no cue that tapping does anything. Dashed rather than solid so it
+   reads as "space to write" instead of as the underline of a real input.
+
+   #shootForm-qualified so this beats the generic `#shootForm textarea` rule,
+   which has an id and would otherwise win on specificity and restore the box.
+   Height is set inline by growShotText(); min-height keeps an empty or
+   not-yet-measured row tappable. */
 #shootForm .shot-text {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 8px 10px;
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed var(--border);
+  border-radius: 0;
+  padding: 2px 2px 4px;
   color: var(--text);
-  font-size: 14px;
+  font-size: 15px;
+  line-height: 20px;
   font-family: var(--font-body);
   flex: 1;
   min-width: 0;
+  min-height: 26px;
   text-transform: none;
   resize: none;
+  overflow: hidden;
+}
+
+/* Focus turns the rule solid and accent-coloured — the row you're writing on
+   is the one that looks like a field. */
+#shootForm .shot-text:focus {
+  outline: none;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 3px;
+}
+
+#shootForm .shot-text::placeholder {
+  opacity: 0.5;
 }
 
 .shot-checked .shot-text {

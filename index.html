@@ -225,10 +225,10 @@
         <div class="modal-title-jump-menu" id="shootModalJumpMenu" hidden>
           <button type="button" class="modal-title-jump-item" data-jump="basicInfoHeading">Basic Info</button>
           <button type="button" class="modal-title-jump-item" data-jump="logisticsHeading">Logistics</button>
+          <button type="button" class="modal-title-jump-item" data-jump="teamHeading">Team</button>
           <button type="button" class="modal-title-jump-item" data-jump="directionHeading">Direction</button>
           <button type="button" class="modal-title-jump-item" data-jump="visualsHeading">Visuals</button>
-          <button type="button" class="modal-title-jump-item" data-jump="teamHeading">Team</button>
-          <button type="button" class="modal-title-jump-item" data-jump="shootDayNotesHeading">Shoot day</button>
+          <button type="button" class="modal-title-jump-item" data-jump="shotListHeading">Shot list</button>
           <button type="button" class="modal-title-jump-item" data-jump="postShootHeading" id="jumpToPostShootItem">Reflection</button>
         </div>
       </h2>
@@ -313,7 +313,23 @@
       </div>
 
       <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
-      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="directionHeading">Direction<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="teamHeading">Team<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <div id="teamBody">
+        <p class="team-question">Requires team?</p>
+        <div class="team-yesno-row">
+          <label class="checkbox-row"><input type="checkbox" id="teamRequiredYes" /> Yes</label>
+          <label class="checkbox-row"><input type="checkbox" id="teamRequiredNo" /> No</label>
+        </div>
+        <p class="field-hint team-finalized-note" id="teamFinalizedNote" hidden>Team finalized</p>
+        <div id="teamDetailsBlock" hidden>
+          <button type="button" id="addTeamMemberBtn" class="primary small-btn">+ Add team member</button>
+          <div id="teamMembersList" class="team-members-list"></div>
+          <label class="checkbox-row"><input type="checkbox" id="shootTeamFinalized" /> <span id="teamFinalizedLabel">Team finalized?</span></label>
+        </div>
+      </div>
+
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
+      <h3 class="shoot-section-heading status-group-heading heading-navy" id="directionHeading">Direction<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="directionBody">
         <p class="continue-prompt" id="categoryContinuePrompt">select a category to continue</p>
 
@@ -345,11 +361,18 @@
           <label>Elevator pitch
             <textarea id="shootElevatorPitch" rows="2" maxlength="150" placeholder="One line description of your story." readonly></textarea>
           </label>
+
+          <label>Directions for talent
+            <textarea id="shootTalentDirections" rows="6" maxlength="1000" readonly></textarea>
+          </label>
+          <label>Directions for team
+            <textarea id="shootTeamDirections" rows="6" maxlength="1000" readonly></textarea>
+          </label>
         </div>
       </div>
 
       <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
-      <h3 class="shoot-section-heading status-group-heading heading-navy" id="visualsHeading">Visuals<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="visualsHeading">Visuals<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="visualsBody">
         <div class="moodboard-section">
           <span class="moodboard-label">Mood board</span>
@@ -381,38 +404,13 @@
       </div>
 
       <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
-      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="teamHeading">Team<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
-      <div id="teamBody">
-        <p class="team-question">Requires team?</p>
-        <div class="team-yesno-row">
-          <label class="checkbox-row"><input type="checkbox" id="teamRequiredYes" /> Yes</label>
-          <label class="checkbox-row"><input type="checkbox" id="teamRequiredNo" /> No</label>
-        </div>
-        <p class="field-hint team-finalized-note" id="teamFinalizedNote" hidden>Team finalized</p>
-        <div id="teamDetailsBlock" hidden>
-          <button type="button" id="addTeamMemberBtn" class="primary small-btn">+ Add team member</button>
-          <div id="teamMembersList" class="team-members-list"></div>
-          <label class="checkbox-row"><input type="checkbox" id="shootTeamFinalized" /> <span id="teamFinalizedLabel">Team finalized?</span></label>
-        </div>
-      </div>
-
-      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
-      <h3 class="shoot-section-heading status-group-heading heading-navy" id="shootDayNotesHeading">Shoot day<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
-      <div id="shootDayNotesBody">
-        <label>Directions for talent
-          <textarea id="shootTalentDirections" rows="6" maxlength="1000" readonly></textarea>
+      <h3 class="shoot-section-heading status-group-heading heading-navy" id="shotListHeading">Shot list<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
+      <div id="shotListBody">
+        <div id="shotListItems" class="shot-list-items"></div>
+        <button type="button" id="addShotBtn" class="primary small-btn">+ Add shot</button>
+        <label>Shooting notes
+          <textarea id="shootShootingNotes" rows="6" maxlength="2000" placeholder="Anything to remember on the day — settings, timings, things to try" readonly></textarea>
         </label>
-        <label>Directions for team
-          <textarea id="shootTeamDirections" rows="6" maxlength="1000" readonly></textarea>
-        </label>
-
-        <div class="shot-list-section">
-          <h4 class="subsection-heading" id="shotListHeading">Shot list<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h4>
-          <div id="shotListBody">
-            <div id="shotListItems" class="shot-list-items"></div>
-            <button type="button" id="addShotBtn" class="primary small-btn">+ Add shot</button>
-          </div>
-        </div>
       </div>
 
       <div id="postShootContent" hidden>

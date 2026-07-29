@@ -3404,6 +3404,22 @@
   // unchecking an item returns it to its original spot automatically.
   let currentShotList = [];
 
+  // Shots read as lines of writing rather than boxes, so each row is sized to
+  // exactly the text in it instead of a fixed two rows of empty field.
+  //
+  // scrollHeight is 0 while the section is collapsed (hidden elements have no
+  // layout), and blindly assigning that would flatten the row to nothing — so a
+  // measurement of 0 is skipped and the row keeps its one-line default until
+  // the section is expanded, which re-runs this via growAllShotTexts().
+  function growShotText(el) {
+    el.style.height = 'auto';
+    if (el.scrollHeight) el.style.height = el.scrollHeight + 'px';
+  }
+
+  function growAllShotTexts() {
+    document.querySelectorAll('#shotListItems .shot-text').forEach(growShotText);
+  }
+
   function renderShotList(focusIdx) {
     const container = document.getElementById('shotListItems');
     const indexed = currentShotList.map((item, idx) => ({ ...item, idx }));
@@ -3412,7 +3428,7 @@
       <div class="shot-list-row${item.checked ? ' shot-checked' : ''}" data-idx="${item.idx}">
         <button type="button" class="shot-drag-handle" aria-label="Drag to reorder shot" tabindex="-1">&#8942;</button>
         <input type="checkbox" class="shot-check" data-idx="${item.idx}" ${item.checked ? 'checked' : ''} />
-        <textarea class="shot-text" data-idx="${item.idx}" rows="2" placeholder="Describe the shot">${escapeHtml(item.text || '')}</textarea>
+        <textarea class="shot-text" data-idx="${item.idx}" rows="1" placeholder="Describe the shot">${escapeHtml(item.text || '')}</textarea>
         <button type="button" class="delete-shot" data-idx="${item.idx}">&times;</button>
       </div>
     `).join('');
@@ -3425,8 +3441,10 @@
       });
     });
     container.querySelectorAll('.shot-text').forEach(textarea => {
+      growShotText(textarea);
       textarea.addEventListener('input', () => {
         currentShotList[Number(textarea.dataset.idx)].text = textarea.value;
+        growShotText(textarea);
         scheduleShootAutosave();
       });
       textarea.addEventListener('keydown', (e) => {
@@ -3874,14 +3892,24 @@
   const SHOOT_FORM_COLLAPSE_SECTIONS = [
     ['shoot:basicInfo', '#basicInfoHeading', 'basicInfoBody'],
     ['shoot:logistics', '#logisticsHeading', 'logisticsBody'],
+    ['shoot:team', '#teamHeading', 'teamBody'],
     ['shoot:direction', '#directionHeading', 'directionBody'],
     ['shoot:visuals', '#visualsHeading', 'visualsBody'],
     ['shoot:lightingSetups', '#lightingSetupsHeading', 'lightingSetupsBody'],
-    ['shoot:team', '#teamHeading', 'teamBody'],
-    ['shoot:shootDayNotes', '#shootDayNotesHeading', 'shootDayNotesBody'],
-    ['shoot:shotList', '#shotListHeading', 'shotListBody'],
+    // Keyed 'shoot:shootDayNotes' rather than 'shoot:shotList': this IS the old
+    // Shoot day section, renamed once its only remaining content was the shot
+    // list. Keeping the key means an existing fold state still applies to it.
+    ['shoot:shootDayNotes', '#shotListHeading', 'shotListBody'],
     ['shoot:postShoot', '#postShootHeading', 'postShootBody'],
   ];
+
+  // Shot rows auto-size to their text, but a row measured while its section was
+  // collapsed reports zero height and keeps the one-line default. Every path
+  // that reveals a section runs this so the rows get their real height the
+  // moment they're actually on screen. Idempotent, so calling it broadly is fine.
+  function onShootSectionRevealed(bodyId) {
+    if (bodyId === 'shotListBody') growAllShotTexts();
+  }
 
   function applyShootFormCollapseState() {
     SHOOT_FORM_COLLAPSE_SECTIONS.forEach(([key, headingSelector, bodyId]) => {
@@ -3890,6 +3918,7 @@
       const collapsed = isSectionCollapsed(key);
       body.hidden = collapsed;
       heading.classList.toggle('collapsed', collapsed);
+      if (!collapsed) onShootSectionRevealed(bodyId);
     });
   }
 
@@ -3901,6 +3930,7 @@
       setSectionCollapsed(key, nowCollapsed);
       body.hidden = nowCollapsed;
       heading.classList.toggle('collapsed', nowCollapsed);
+      if (!nowCollapsed) onShootSectionRevealed(bodyId);
     });
   });
 
@@ -3918,6 +3948,7 @@
     shootLessonsLearned: 'Lessons for next time',
     shootTalentDirections: 'Directions for talent',
     shootTeamDirections: 'Directions for team',
+    shootShootingNotes: 'Shooting notes',
     shootLocationDirections: 'Location directions',
   };
   let expandFieldTargetId = null;
@@ -3962,6 +3993,7 @@
     'shootGeneralNotes', 'shootElevatorPitch',
     'shootWentRight', 'shootCouldBeBetter', 'shootLessonsLearned',
     'shootTalentDirections', 'shootTeamDirections', 'shootLocationDirections',
+    'shootShootingNotes',
   ].forEach(fieldId => {
     document.getElementById(fieldId).addEventListener('click', () => openExpandField(fieldId));
   });
@@ -4127,10 +4159,10 @@
   const SHOOT_MODAL_SECTIONS = [
     { id: 'basicInfoHeading', label: 'Basic Info' },
     { id: 'logisticsHeading', label: 'Logistics' },
+    { id: 'teamHeading', label: 'Team' },
     { id: 'directionHeading', label: 'Direction' },
     { id: 'visualsHeading', label: 'Visuals' },
-    { id: 'teamHeading', label: 'Team' },
-    { id: 'shootDayNotesHeading', label: 'Shoot day' },
+    { id: 'shotListHeading', label: 'Shot list' },
     { id: 'postShootHeading', label: 'Reflection' },
   ];
 
@@ -4211,10 +4243,10 @@
   const SHOOT_TOUR_STEPS = [
     { id: 'basicInfoHeading', title: 'Basic Info', text: "Title, talent, status, and category — the foundation of the shoot." },
     { id: 'logisticsHeading', title: 'Logistics', text: 'Shoot date, deadline, time, and location — the when and where.' },
-    { id: 'directionHeading', title: 'Direction', text: "Concept, character, and creative direction — the story you're telling." },
-    { id: 'visualsHeading', title: 'Visuals', text: 'Mood board, references, and frameworks — the visual language for the shoot.', nestedIds: ['lightingSetupsHeading'] },
     { id: 'teamHeading', title: 'Team', text: "Who's on the shoot and how to reach them." },
-    { id: 'shootDayNotesHeading', title: 'Shoot day', text: 'Shot list, lighting setups, and any day-of notes.', nestedIds: ['shotListHeading'] },
+    { id: 'directionHeading', title: 'Direction', text: "Concept, character, and creative direction — the story you're telling, plus what you'll be asking of the talent and the team on the day." },
+    { id: 'visualsHeading', title: 'Visuals', text: 'Mood board, references, and frameworks — the visual language for the shoot.', nestedIds: ['lightingSetupsHeading'] },
+    { id: 'shotListHeading', title: 'Shot list', text: 'Every shot you want to come away with. Tap a line to write, Enter to start the next one, and tick them off as you go.' },
     { id: 'postShootHeading', title: 'Reflection', text: 'What went right, what could be better, and lessons for next time — filled in after the shoot.' },
   ];
   let shootTourStepIndex = 0;
@@ -4232,6 +4264,7 @@
     setSectionCollapsed(key, false);
     body.hidden = false;
     heading.classList.remove('collapsed');
+    onShootSectionRevealed(bodyId);
   }
 
   function renderShootTourStep() {
@@ -4348,6 +4381,7 @@
     document.getElementById('shootLessonsLearned').value = s ? (s.lessonsLearned || '') : '';
     document.getElementById('shootTalentDirections').value = s ? (s.talentDirections || '') : '';
     document.getElementById('shootTeamDirections').value = s ? (s.teamDirections || '') : '';
+    document.getElementById('shootShootingNotes').value = s ? (s.shootingNotes || '') : '';
     document.getElementById('shootLocationDirections').value = s ? (s.locationDirections || '') : '';
     currentShotList = s && Array.isArray(s.shotList) ? s.shotList.map(item => ({ ...item })) : [];
     renderShotList();
@@ -4381,6 +4415,11 @@
       requestAnimationFrame(() => {
         modalEl.scrollTop = snapScrollTarget(savedScroll, modalEl);
         updateShootModalTitleFromScroll();
+        // renderShotList() ran further up, while the overlay was still hidden,
+        // so every row measured zero and kept its one-line default — a saved
+        // multi-line shot would open clipped. This is the first frame where the
+        // rows actually have layout, so it's the first chance to size them.
+        growAllShotTexts();
       });
     });
   }
@@ -4897,6 +4936,7 @@
       lessonsLearned: document.getElementById('shootLessonsLearned').value.trim(),
       talentDirections: document.getElementById('shootTalentDirections').value.trim(),
       teamDirections: document.getElementById('shootTeamDirections').value.trim(),
+      shootingNotes: document.getElementById('shootShootingNotes').value.trim(),
       locationDirections: document.getElementById('shootLocationDirections').value.trim(),
       shotList: [...currentShotList],
       lightingSetups: [...currentLightingSetups],
@@ -4915,7 +4955,8 @@
     return !hasText(data.title) && locationEffectivelyBlank && !hasText(data.startTime) && !hasText(data.endTime) && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0 && !hasText(t.photo)) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals) && !hasText(data.elevatorPitch)
       && !hasText(data.worldNotes) && !hasText(data.generalNotes) && !hasText(data.deadline)
       && !hasText(data.whatWentRight) && !hasText(data.couldBeBetter) && !hasText(data.lessonsLearned)
-      && !hasText(data.talentDirections) && !hasText(data.teamDirections) && !hasText(data.locationDirections) && data.shotList.length === 0
+      && !hasText(data.talentDirections) && !hasText(data.teamDirections) && !hasText(data.locationDirections)
+      && !hasText(data.shootingNotes) && data.shotList.length === 0
       && data.lightingSetups.length === 0
       && data.frameworkTags.length === 0 && data.references.length === 0
       && data.teamMembers.length === 0 && !data.moodboardComplete && !data.teamRequired && !data.teamFinalized
