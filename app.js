@@ -503,7 +503,12 @@
     return NEW_SHOOT_TITLES[Math.floor(Math.random() * NEW_SHOOT_TITLES.length)];
   }
 
-  const LIGHTING_TAGS = ['Natural light', 'Golden hour', 'Overcast/diffused', 'Hard flash', 'Studio lighting', 'Softbox', 'Ring light', 'Bounced light', 'Backlighting', 'Backlit', 'Silhouette', 'Low key', 'High key', 'Practical lights', 'Colored gels', 'Other'];
+  const LIGHTING_TAGS = ['Natural light', 'Golden hour', 'Overcast/diffused', 'Hard flash', '3-pt lighting', 'Ring light', 'Bounced light', 'Backlighting', 'Backlit', 'Silhouette', 'Low key', 'High key', 'Practical lights', 'Colored gels', 'Other'];
+
+  // Tags dropped from LIGHTING_TAGS. Kept as a named list because the framework
+  // lives in saved state, not in the constant above — an existing install has
+  // its own copy, so retiring a tag takes a migration (see removeFrameworkTags).
+  const RETIRED_LIGHTING_TAGS = ['Studio lighting', 'Softbox'];
   const VISUAL_LANGUAGE_TAGS = ['Lifestyle', 'Documentary', 'Magic realism', 'Surrealism', 'Portrait', 'Fashion', 'Fitness', 'Cinematic', 'Commercial', 'Headshot', 'Beauty', 'Other'];
 
   function seedFrameworks() {
@@ -607,6 +612,31 @@
     return result.length ? result : seedFrameworks();
   }
 
+  // Retires tags from a framework: drops them from the framework's own list and
+  // from every shoot that had one checked. Clearing the shoots matters — a
+  // selection pointing at a tag with no checkbox left is invisible but still
+  // counted, so leaving them behind would quietly skew anything that tallies
+  // tags. Also inserts any newly added tags, positioned to match LIGHTING_TAGS
+  // rather than appended, so the list doesn't reshuffle for existing users.
+  function removeFrameworkTags(shoots, frameworks, frameworkName, retiredTags, canonicalOrder) {
+    const fw = frameworks.find(f => f.name === frameworkName);
+    if (!fw) return;
+    const retired = new Set(retiredTags);
+    if (!fw.tags.some(t => retired.has(t))) return;
+
+    const kept = fw.tags.filter(t => !retired.has(t));
+    const added = canonicalOrder.filter(t => !kept.includes(t));
+    // Rebuild in canonical order, keeping any user-added tags the constant
+    // doesn't know about pinned to the end.
+    const known = canonicalOrder.filter(t => kept.includes(t) || added.includes(t));
+    const custom = kept.filter(t => !canonicalOrder.includes(t));
+    fw.tags = known.concat(custom);
+
+    shoots.forEach(s => {
+      s.frameworkTags = (s.frameworkTags || []).filter(t => !(t.frameworkId === fw.id && retired.has(t.tag)));
+    });
+  }
+
   // Renames a specific tag string within a framework's tag list, and keeps
   // any shoot that already had the old tag checked pointed at the new one
   // (otherwise the checkbox would silently appear unchecked after rename).
@@ -676,6 +706,7 @@
       const frameworks = migrateFrameworks((Array.isArray(parsed.frameworks) && parsed.frameworks.length) ? parsed.frameworks : seedFrameworks());
       const shoots = (parsed.shoots || []).map(s => migrateShoot(s, frameworks));
       renameFrameworkTag(shoots, frameworks, 'Visual Language', 'Surreal', 'Surrealism');
+      removeFrameworkTags(shoots, frameworks, 'Lighting', RETIRED_LIGHTING_TAGS, LIGHTING_TAGS);
       const journalEntries = (Array.isArray(parsed.journalEntries) ? parsed.journalEntries : []).map(migrateJournalEntry);
       return {
         shoots,
@@ -3404,24 +3435,57 @@
   // unchecking an item returns it to its original spot automatically.
   let currentShotList = [];
 
-  // Shots read as lines of writing rather than boxes, so each row is sized to
-  // exactly the text in it instead of a fixed two rows of empty field.
+  // Shots and lighting setups read as lines of writing rather than boxes, so
+  // each row is sized to exactly the text in it instead of a fixed slab of
+  // empty field.
   //
-  // scrollHeight is 0 while the section is collapsed (hidden elements have no
-  // layout), and blindly assigning that would flatten the row to nothing — so a
-  // measurement of 0 is skipped and the row keeps its one-line default until
-  // the section is expanded, which re-runs this via growAllShotTexts().
+  // scrollHeight is content + padding but NOT border, while `* { box-sizing:
+  // border-box }` makes an assigned height cover content + padding + border.
+  // Assigning scrollHeight straight across therefore lands the box short by the
+  // border width and shaves the last line — so the borders get added back.
+  //
+  // scrollHeight is also 0 while the row is hidden (no layout), and assigning
+  // that would flatten it to nothing; a zero measurement is skipped so the row
+  // keeps its one-line default until something visible re-runs this.
   function growShotText(el) {
     el.style.height = 'auto';
-    if (el.scrollHeight) el.style.height = el.scrollHeight + 'px';
+    if (!el.scrollHeight) return;
+    const cs = getComputedStyle(el);
+    const borders = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+    el.style.height = (el.scrollHeight + borders) + 'px';
   }
 
   function growAllShotTexts() {
-    document.querySelectorAll('#shotListItems .shot-text').forEach(growShotText);
+    document.querySelectorAll('#shotListItems .shot-text, #lightingSetupsItems .shot-text')
+      .forEach(growShotText);
   }
 
-  function renderShotList(focusIdx) {
+  // Ticking a checkbox re-renders its whole list, because checked items sort to
+  // the bottom — which destroys the very node that was tapped. Left alone the
+  // browser drops focus and the modal lurches hundreds of pixels: measured at
+  // 3399 -> 2621 on a shoot with a couple of setups.
+  //
+  // Restoring inside the change handler isn't enough on its own — the click's
+  // own default processing runs after the handler and undoes it — so the same
+  // restore is repeated on the next frame, which is the first moment nothing
+  // else is still touching scroll or focus. preventScroll keeps the view still
+  // while focus follows the item down to its new position.
+  function restoreAfterListReorder(container, checkIdx, savedScrollTop) {
+    const apply = () => {
+      const modalEl = shootModalOverlay.querySelector('.modal');
+      if (modalEl && savedScrollTop !== undefined) modalEl.scrollTop = savedScrollTop;
+      if (checkIdx === undefined) return;
+      const cb = container.querySelector(`.shot-check[data-idx="${checkIdx}"]`);
+      if (cb) cb.focus({ preventScroll: true });
+    };
+    apply();
+    requestAnimationFrame(apply);
+  }
+
+  function renderShotList(focusIdx, refocusCheckIdx) {
     const container = document.getElementById('shotListItems');
+    const modalEl = shootModalOverlay.querySelector('.modal');
+    const savedScrollTop = refocusCheckIdx === undefined || !modalEl ? undefined : modalEl.scrollTop;
     const indexed = currentShotList.map((item, idx) => ({ ...item, idx }));
     const ordered = indexed.filter(i => !i.checked).concat(indexed.filter(i => i.checked));
     container.innerHTML = ordered.map(item => `
@@ -3435,8 +3499,9 @@
 
     container.querySelectorAll('.shot-check').forEach(cb => {
       cb.addEventListener('change', () => {
-        currentShotList[Number(cb.dataset.idx)].checked = cb.checked;
-        renderShotList();
+        const idx = Number(cb.dataset.idx);
+        currentShotList[idx].checked = cb.checked;
+        renderShotList(undefined, idx);
         scheduleShootAutosave();
       });
     });
@@ -3471,6 +3536,7 @@
       const focusInput = container.querySelector(`.shot-text[data-idx="${focusIdx}"]`);
       if (focusInput) focusInput.focus();
     }
+    restoreAfterListReorder(container, refocusCheckIdx, savedScrollTop);
   }
 
   // Press-and-hold reorder for shot rows. Dragging is restricted to rows
@@ -3584,28 +3650,33 @@
   // and container so the two lists don't interfere with each other.
   let currentLightingSetups = [];
 
-  function renderLightingSetups(focusIdx) {
+  function renderLightingSetups(focusIdx, refocusCheckIdx) {
     const container = document.getElementById('lightingSetupsItems');
+    const modalEl = shootModalOverlay.querySelector('.modal');
+    const savedScrollTop = refocusCheckIdx === undefined || !modalEl ? undefined : modalEl.scrollTop;
     const indexed = currentLightingSetups.map((item, idx) => ({ ...item, idx }));
     const ordered = indexed.filter(i => !i.checked).concat(indexed.filter(i => i.checked));
     container.innerHTML = ordered.map(item => `
       <div class="shot-list-row${item.checked ? ' shot-checked' : ''}">
         <input type="checkbox" class="shot-check" data-idx="${item.idx}" ${item.checked ? 'checked' : ''} />
-        <textarea class="shot-text" data-idx="${item.idx}" rows="2" placeholder="Describe the lighting setup">${escapeHtml(item.text || '')}</textarea>
+        <textarea class="shot-text" data-idx="${item.idx}" rows="1" placeholder="Describe the lighting setup">${escapeHtml(item.text || '')}</textarea>
         <button type="button" class="delete-shot" data-idx="${item.idx}">&times;</button>
       </div>
     `).join('');
 
     container.querySelectorAll('.shot-check').forEach(cb => {
       cb.addEventListener('change', () => {
-        currentLightingSetups[Number(cb.dataset.idx)].checked = cb.checked;
-        renderLightingSetups();
+        const idx = Number(cb.dataset.idx);
+        currentLightingSetups[idx].checked = cb.checked;
+        renderLightingSetups(undefined, idx);
         scheduleShootAutosave();
       });
     });
     container.querySelectorAll('.shot-text').forEach(textarea => {
+      growShotText(textarea);
       textarea.addEventListener('input', () => {
         currentLightingSetups[Number(textarea.dataset.idx)].text = textarea.value;
+        growShotText(textarea);
         scheduleShootAutosave();
       });
       textarea.addEventListener('keydown', (e) => {
@@ -3629,6 +3700,7 @@
       const focusInput = container.querySelector(`.shot-text[data-idx="${focusIdx}"]`);
       if (focusInput) focusInput.focus();
     }
+    restoreAfterListReorder(container, refocusCheckIdx, savedScrollTop);
   }
 
   document.getElementById('addLightingSetupBtn').addEventListener('click', () => {

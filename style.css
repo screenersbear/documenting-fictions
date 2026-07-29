@@ -2396,7 +2396,7 @@ h2.status-group-heading.heading-navy {
 #shootForm .shot-text {
   background: none;
   border: 0;
-  border-bottom: 1px dashed var(--border);
+  border-bottom: 2px dashed var(--border);
   border-radius: 0;
   padding: 2px 2px 4px;
   color: var(--text);
@@ -2411,12 +2411,14 @@ h2.status-group-heading.heading-navy {
   overflow: hidden;
 }
 
-/* Focus turns the rule solid and accent-coloured — the row you're writing on
-   is the one that looks like a field. */
+/* Focus turns the rule solid and accent-coloured — the row you're writing on is
+   the one that looks like a field. Only the style and colour change: the border
+   width and padding stay put, because growShotText() measures the box once and
+   any geometry change on focus would leave that height wrong and clip a line. */
 #shootForm .shot-text:focus {
   outline: none;
-  border-bottom: 2px solid var(--accent);
-  padding-bottom: 3px;
+  border-bottom-style: solid;
+  border-bottom-color: var(--accent);
 }
 
 #shootForm .shot-text::placeholder {
