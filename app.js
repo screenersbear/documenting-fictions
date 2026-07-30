@@ -3057,20 +3057,24 @@
   });
 
   // ---------- Framework tags (rendered inside the shoot modal) ----------
-  // Visual Language and Lighting render as their own smaller, collapsible
-  // subsections nested under Visuals (same visual language as Shot list).
-  // Lighting setups (a static block, wired once below) isn't part of this
-  // template — it's re-parented into the Lighting subsection's body after
-  // every render instead, so its own listeners never need rewiring.
-  function renderShootFrameworkTags(shoot) {
-    const container = document.getElementById('frameworkTagsContainer');
-    const lightingSetupsSection = document.getElementById('lightingSetupsSection');
-    // Detach before wiping the container's contents below — innerHTML= would
-    // otherwise discard this node for good once it's nested inside.
-    if (lightingSetupsSection.parentNode) lightingSetupsSection.parentNode.removeChild(lightingSetupsSection);
+  // Every framework-tag checkbox container in the Visuals section, in DOM
+  // order — Visual Language renders early (before References/Mood board),
+  // Lighting (and any custom frameworks a user adds via Manage) renders later,
+  // nesting Lighting setups inside it. Anything that needs to touch "all
+  // framework checkboxes" regardless of which container they landed in
+  // (autosave gathering, the auto-advance-focus listener) reads this list
+  // rather than hardcoding a single id.
+  const FRAMEWORK_TAG_CONTAINER_IDS = ['frameworkTagsContainerEarly', 'frameworkTagsContainer'];
+  const FRAMEWORK_TAG_CHECKBOX_SELECTOR = FRAMEWORK_TAG_CONTAINER_IDS.map(id => `#${id} input[type="checkbox"]`).join(', ');
+  // NOT `FRAMEWORK_TAG_CHECKBOX_SELECTOR + ':checked'` — appending to a
+  // comma-joined selector only scopes to the LAST item in the list ("all of A,
+  // checked B" rather than "checked in either"), which silently pulled in
+  // every Visual Language checkbox regardless of state. Each part needs its
+  // own suffix.
+  const FRAMEWORK_TAG_CHECKED_SELECTOR = FRAMEWORK_TAG_CONTAINER_IDS.map(id => `#${id} input[type="checkbox"]:checked`).join(', ');
 
-    const selectedTags = shoot ? (shoot.frameworkTags || []) : [];
-    container.innerHTML = state.frameworks.map(fw => {
+  function renderFrameworkTagGroup(container, frameworks, selectedTags) {
+    container.innerHTML = frameworks.map(fw => {
       const collapseKey = `shoot:framework:${fw.id}`;
       const collapsed = isSectionCollapsed(collapseKey);
       return `
@@ -3098,6 +3102,29 @@
         heading.classList.toggle('collapsed', nowCollapsed);
       });
     });
+  }
+
+  // Visual Language and Lighting render as their own smaller, collapsible
+  // subsections nested under Visuals (same visual language as Shot list).
+  // Visual Language gets its own early container so References/Mood board can
+  // sit between it and everything else — Lighting plus any custom frameworks
+  // a user adds via Manage render into the later container, in that order.
+  // Lighting setups (a static block, wired once below) isn't part of either
+  // template — it's re-parented into the Lighting subsection's body after
+  // every render instead, so its own listeners never need rewiring.
+  function renderShootFrameworkTags(shoot) {
+    const earlyContainer = document.getElementById('frameworkTagsContainerEarly');
+    const container = document.getElementById('frameworkTagsContainer');
+    const lightingSetupsSection = document.getElementById('lightingSetupsSection');
+    // Detach before wiping the container's contents below — innerHTML= would
+    // otherwise discard this node for good once it's nested inside.
+    if (lightingSetupsSection.parentNode) lightingSetupsSection.parentNode.removeChild(lightingSetupsSection);
+
+    const selectedTags = shoot ? (shoot.frameworkTags || []) : [];
+    const visualLanguageFws = state.frameworks.filter(fw => fw.name === 'Visual Language');
+    const restFws = state.frameworks.filter(fw => fw.name !== 'Visual Language');
+    renderFrameworkTagGroup(earlyContainer, visualLanguageFws, selectedTags);
+    renderFrameworkTagGroup(container, restFws, selectedTags);
 
     const lightingFw = state.frameworks.find(fw => fw.name === 'Lighting');
     const lightingBody = lightingFw ? container.querySelector(`.framework-subsection-body[data-fw-body="${lightingFw.id}"]`) : null;
@@ -3112,12 +3139,17 @@
   }
 
   // Checking a tag auto-advances focus to the next checkbox so a run of
-  // taps can march down the list without re-aiming each time.
-  document.getElementById('frameworkTagsContainer').addEventListener('change', (e) => {
-    if (e.target.type !== 'checkbox' || !e.target.checked) return;
-    const all = [...document.querySelectorAll('#frameworkTagsContainer input[type="checkbox"]')];
-    const next = all[all.indexOf(e.target) + 1];
-    if (next) next.focus();
+  // taps can march down the list without re-aiming each time. Attached to
+  // each framework container separately (rather than delegated from a shared
+  // ancestor) so it can't also catch unrelated checkboxes — the mood board
+  // "complete?" box sits between the two in the DOM now.
+  FRAMEWORK_TAG_CONTAINER_IDS.forEach(id => {
+    document.getElementById(id).addEventListener('change', (e) => {
+      if (e.target.type !== 'checkbox' || !e.target.checked) return;
+      const all = [...document.querySelectorAll(FRAMEWORK_TAG_CHECKBOX_SELECTOR)];
+      const next = all[all.indexOf(e.target) + 1];
+      if (next) next.focus();
+    });
   });
 
   // ---------- Known-contact handle lookup (talents + team members) ----------
@@ -5028,7 +5060,7 @@
   });
 
   function gatherShootFormData() {
-    const frameworkTags = [...document.querySelectorAll('#frameworkTagsContainer input[type="checkbox"]:checked')]
+    const frameworkTags = [...document.querySelectorAll(FRAMEWORK_TAG_CHECKED_SELECTOR)]
       .map(cb => ({ frameworkId: cb.dataset.fw, tag: cb.value }));
 
     const teamRequired = document.getElementById('teamRequiredYes').checked
@@ -7068,9 +7100,80 @@
   }
 
   document.getElementById('shootModeExitBtn').addEventListener('click', exitShootMode);
-  document.getElementById('shootModeDoneBtn').addEventListener('click', exitShootMode);
+
+  // "Done shooting" is a wrap-up action, not just an escape hatch — the next
+  // thing you want after finishing a shoot is almost always that shoot's own
+  // page (to jot a reflection, check something off), not whatever screen
+  // happened to be underneath. Same tab-then-modal sequence the post-shoot
+  // journal prompt uses, for the same reason: openShootModal needs the right
+  // tab active first, or it opens behind it.
+  document.getElementById('shootModeDoneBtn').addEventListener('click', () => {
+    const shootId = getShootModeShootId();
+    exitShootMode();
+    if (!shootId) return;
+    const s = state.shoots.find(x => x.id === shootId);
+    if (!s) return;
+    document.querySelector(`.tab[data-view="${s.archived ? 'archive' : 'shoots'}"]`).click();
+    openShootModal(shootId);
+  });
+
   document.getElementById('enterShootModeBtn').addEventListener('click', () => {
     if (currentShootId) openShootMode(currentShootId);
+  });
+
+  // ---------- Shoot mode: Quick review (read-only Direction / Lighting setups) ----------
+  const SHOOT_MODE_DIRECTION_FIELDS = [
+    ['premise', 'Concept'],
+    ['character', 'Character/Personality'],
+    ['worldNotes', 'World-building notes'],
+    ['generalNotes', 'General direction notes'],
+    ['shootGoals', 'Shoot goals'],
+    ['elevatorPitch', 'Elevator pitch'],
+    ['talentDirections', 'Directions for talent'],
+    ['teamDirections', 'Directions for team'],
+  ];
+
+  function renderShootModeReviewField(label, value) {
+    return `
+      <div class="shoot-mode-review-field">
+        <p class="shoot-mode-review-label">${escapeHtml(label)}</p>
+        <p class="shoot-mode-review-value">${escapeHtml(value)}</p>
+      </div>
+    `;
+  }
+
+  function openShootModeReview(kind) {
+    const shootId = getShootModeShootId();
+    const shoot = shootId ? state.shoots.find(s => s.id === shootId) : null;
+    if (!shoot) return;
+    const body = document.getElementById('shootModeReviewBody');
+
+    if (kind === 'direction') {
+      document.getElementById('shootModeReviewTitle').textContent = 'Direction';
+      const filled = SHOOT_MODE_DIRECTION_FIELDS
+        .map(([key, label]) => [label, shoot[key]])
+        .filter(([, value]) => hasText(value));
+      body.innerHTML = filled.length
+        ? filled.map(([label, value]) => renderShootModeReviewField(label, value)).join('')
+        : '<p class="shoot-mode-empty">Nothing filled in under Direction for this shoot.</p>';
+    } else {
+      document.getElementById('shootModeReviewTitle').textContent = 'Lighting setups';
+      const setups = shoot.lightingSetups || [];
+      body.innerHTML = setups.length
+        ? `<div class="shoot-mode-shots">${setups.map(item => `
+            <div class="shoot-mode-shot${item.checked ? ' shot-checked' : ''}">
+              <span>${escapeHtml(item.text || '')}</span>
+            </div>
+          `).join('')}</div>`
+        : '<p class="shoot-mode-empty">No lighting setups logged for this shoot.</p>';
+    }
+    document.getElementById('shootModeReviewOverlay').hidden = false;
+  }
+
+  document.getElementById('shootModeReviewDirectionBtn').addEventListener('click', () => openShootModeReview('direction'));
+  document.getElementById('shootModeReviewLightingBtn').addEventListener('click', () => openShootModeReview('lighting'));
+  document.getElementById('shootModeReviewCloseBtn').addEventListener('click', () => {
+    document.getElementById('shootModeReviewOverlay').hidden = true;
   });
 
   // Deliberately no backdrop-click dismiss: this is a mode you're working in

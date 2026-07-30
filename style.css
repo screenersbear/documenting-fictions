@@ -1447,7 +1447,9 @@ h2.status-group-heading.heading-navy {
 }
 
 #expandFieldOverlay .modal {
-  border-radius: 0 0 var(--radius-4xl) var(--radius-4xl);
+  /* Top-anchored, so it's the BOTTOM corners that sit in open space —
+     the reverse of every other bottom-sheet's top-only rounding. */
+  border-radius: 0 0 28px 28px;
   padding: calc(env(safe-area-inset-top) + 16px) 20px 20px;
   animation: slideDown 0.2s ease;
 }
@@ -1868,6 +1870,7 @@ h2.status-group-heading.heading-navy {
   margin: 14px 0;
 }
 
+#frameworkTagsContainerEarly,
 #frameworkTagsContainer {
   display: flex;
   flex-direction: column;
@@ -3307,7 +3310,8 @@ h2.status-group-heading.heading-navy {
 .confirm-modal {
   width: 100%;
   max-width: 400px;
-  border-radius: var(--radius-3xl);
+  border: 3px solid var(--ink);
+  border-radius: 28px;
   padding: 24px 20px;
   text-align: center;
   animation: slideUp 0.15s ease;
@@ -3355,7 +3359,10 @@ h2.status-group-heading.heading-navy {
   width: 100%;
   max-width: 380px;
   border: 3px solid var(--ink);
-  border-radius: var(--radius-4xl);
+  /* Hardcoded rather than var(--radius-4xl) — that token is 0 under every
+     theme (the app is square-cornered everywhere on purpose), and popups are
+     the one deliberate exception, same reasoning as Shoot mode's own card. */
+  border-radius: 28px;
   padding: 24px 22px;
   text-align: center;
   animation: slideUp 0.15s ease;
@@ -3399,7 +3406,7 @@ h2.status-group-heading.heading-navy {
   max-height: 70vh;
   overflow-y: auto;
   border: 3px solid var(--ink);
-  border-radius: var(--radius-4xl);
+  border-radius: 28px;
   padding: 20px;
 }
 
@@ -3418,7 +3425,7 @@ h2.status-group-heading.heading-navy {
   width: 100%;
   max-width: 380px;
   border: 3px solid var(--ink);
-  border-radius: var(--radius-4xl);
+  border-radius: 28px;
 }
 
 #tabIntroCloseBtn,
@@ -4062,7 +4069,8 @@ h2.status-group-heading.heading-navy {
   max-width: 420px;
   max-height: 80vh;
   background: var(--surface);
-  border-radius: var(--radius-4xl);
+  border: 3px solid var(--ink);
+  border-radius: 28px;
   overflow-y: auto;
   overscroll-behavior: none;
   transform: scale(0.94);
@@ -4332,4 +4340,97 @@ h2.status-group-heading.heading-navy {
   outline: none;
   border-bottom-style: solid;
   border-bottom-color: var(--accent);
+}
+
+/* ---------- Shoot mode: Done button, Quick review ---------- */
+
+/* The one action that ends the mode — reads as a decision, not just
+   another list item below the mood board. */
+.shoot-mode-modal #shootModeDoneBtn {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.shoot-mode-quick-review {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 4px 20px 20px;
+}
+
+.shoot-mode-quick-review-btn {
+  padding: 13px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+
+.shoot-mode-quick-review-btn:active {
+  background: var(--accent);
+}
+
+/* Read-only Direction fields inside the Quick review popup. */
+.shoot-mode-review-field {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.shoot-mode-review-field:last-child {
+  border-bottom: 0;
+}
+
+.shoot-mode-review-label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  opacity: 0.75;
+}
+
+.shoot-mode-review-value {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Lighting setups reused inside the review popup: same row look as the real
+   shot list, just without a checkbox — nothing to tick from a read-only view. */
+.shoot-mode-review-modal .shoot-mode-shots {
+  padding-top: 4px;
+}
+
+.shoot-mode-review-modal .shoot-mode-shot {
+  cursor: default;
+}
+
+/* ---------- Popup rounding pass ----------
+   Every ordinary prompt/menu/form popup in the app, given the same rounded-
+   card-with-ink-border language Shoot mode introduced — the app is otherwise
+   square-cornered everywhere on purpose (every --radius-* token is 0 under
+   every theme), so this is a hardcoded, deliberate exception, not a reuse of
+   those tokens.
+
+   Scope: every plain .modal-overlay prompt/menu/form (expand-field, location,
+   manage locations, frameworks, category visibility, photographer info, PDF
+   section picker, and the shoot/journal kebab option sheets). NOT applied to
+   Edit Shoot or Journal entry's own modal — those are primary content editors,
+   not popups — nor to the image viewer, crop tool, PDF preview, or either
+   stats-carousel/side-panel view, which are full-bleed tools rather than
+   dialogs. Those bottom sheets only round their TOP corners: flush against
+   the screen's bottom edge, there's no visible bottom edge to round against.
+   #expandFieldOverlay overrides this to bottom-only, since it anchors to the
+   top of the screen instead (see its own rule, above). */
+.rounded-modal {
+  border: 3px solid var(--ink);
+  border-radius: 28px 28px 0 0;
 }

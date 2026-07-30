@@ -375,6 +375,18 @@
       <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="visualsHeading">Visuals<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="visualsBody">
+        <div class="form-section-label-row">
+          <button type="button" class="manage-link inline-manage-link" id="manageFrameworksBtn">Manage</button>
+        </div>
+        <div id="frameworkTagsContainerEarly"></div>
+
+        <div class="references-block">
+          <label class="beats-label">References</label>
+          <p class="field-hint">Links to webpages, articles, YouTube videos, other inspiration</p>
+          <div id="referencesList" class="references-list"></div>
+          <button type="button" id="addReferenceBtn" class="primary small-btn">+ Add link</button>
+        </div>
+
         <div class="moodboard-section">
           <span class="moodboard-label">Mood board</span>
           <button type="button" id="addMoodboardPhotos" class="primary small-btn">+ Add photos</button>
@@ -383,9 +395,6 @@
           <label class="checkbox-row" id="moodboardCompleteRow"><input type="checkbox" id="shootMoodboardComplete" /> <span id="moodboardCompleteLabel">Mood board complete?</span></label>
         </div>
 
-        <div class="form-section-label-row">
-          <button type="button" class="manage-link inline-manage-link" id="manageFrameworksBtn">Manage</button>
-        </div>
         <div id="frameworkTagsContainer"></div>
         <div class="lighting-setups-section" id="lightingSetupsSection">
           <h4 class="subsection-heading" id="lightingSetupsHeading">Lighting setups<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h4>
@@ -394,13 +403,6 @@
             <div id="lightingSetupsItems" class="shot-list-items"></div>
             <button type="button" id="addLightingSetupBtn" class="primary small-btn">+ Add lighting setup</button>
           </div>
-        </div>
-
-        <div class="references-block">
-          <label class="beats-label">References</label>
-          <p class="field-hint">Links to webpages, articles, YouTube videos, other inspiration</p>
-          <div id="referencesList" class="references-list"></div>
-          <button type="button" id="addReferenceBtn" class="primary small-btn">+ Add link</button>
         </div>
       </div>
 
@@ -449,7 +451,7 @@
 
 <!-- ============ EXPAND FIELD MODAL ============ -->
 <div id="expandFieldOverlay" class="modal-overlay" hidden>
-  <div class="modal">
+  <div class="modal rounded-modal">
     <div class="modal-header">
       <h2 id="expandFieldTitle"></h2>
       <button class="icon-btn close-btn" id="expandFieldCloseBtn">&times;</button>
@@ -465,7 +467,7 @@
      intro line explaining what it's for) and the app menu's "Photographer
      information" (which doesn't). Every field is optional. -->
 <div id="photographerModalOverlay" class="modal-overlay" hidden>
-  <div class="modal">
+  <div class="modal rounded-modal">
     <div class="modal-header">
       <h2 id="photographerModalTitle">Photographer information</h2>
       <button type="button" class="icon-btn close-btn" id="photographerCloseBtn">&times;</button>
@@ -501,7 +503,7 @@
 </div>
 
 <div id="locationModalOverlay" class="modal-overlay" hidden>
-  <div class="modal">
+  <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Location</h2>
       <button class="icon-btn close-btn" data-close="location">&times;</button>
@@ -792,7 +794,7 @@
 
 <!-- ============ MANAGE LOCATIONS MODAL ============ -->
 <div id="manageLocationsOverlay" class="modal-overlay" hidden>
-  <div class="modal">
+  <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Manage Locations</h2>
       <button class="icon-btn close-btn" data-close="manageLocations">&times;</button>
@@ -815,7 +817,7 @@
 
 <!-- ============ MANAGE FRAMEWORKS MODAL ============ -->
 <div id="frameworksModalOverlay" class="modal-overlay" hidden>
-  <div class="modal">
+  <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Frameworks</h2>
       <button class="icon-btn close-btn" data-close="frameworks">&times;</button>
@@ -830,7 +832,7 @@
 
 <!-- ============ EDIT CATEGORY FILTERS ============ -->
 <div id="categoryVisibilityOverlay" class="modal-overlay" hidden>
-  <div class="modal">
+  <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Shoot Categories</h2>
       <button class="icon-btn close-btn" data-close="categoryVisibility">&times;</button>
@@ -884,7 +886,7 @@
 
 <!-- ============ PDF SECTIONS CHOICE ============ -->
 <div id="pdfSectionsOverlay" class="modal-overlay" hidden>
-  <div class="modal">
+  <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Share as PDF</h2>
       <button type="button" class="icon-btn close-btn" id="pdfSectionsCloseBtn">&times;</button>
@@ -916,7 +918,7 @@
 
 <!-- ============ SHOOT OPTIONS ============ -->
 <div id="shootOptionsOverlay" class="modal-overlay options-overlay" hidden>
-  <div class="modal options-modal options-modal-slider">
+  <div class="modal options-modal options-modal-slider rounded-modal">
     <div class="options-pane-track" id="shootOptionsPaneTrack">
       <div class="options-pane">
         <!-- Alphabetical, with Delete and Cancel pinned last (see the app
@@ -956,7 +958,7 @@
 
 <!-- ============ JOURNAL ENTRY OPTIONS ============ -->
 <div id="journalOptionsOverlay" class="modal-overlay options-overlay" hidden>
-  <div class="modal options-modal">
+  <div class="modal options-modal rounded-modal">
     <button type="button" class="options-item options-delete" id="deleteJournalOptionBtn">Delete entry</button>
     <button type="button" class="options-item options-cancel" id="journalOptionsCancelBtn">Cancel</button>
   </div>
@@ -1079,8 +1081,29 @@
       <h3 class="shoot-mode-section-heading heading-navy">Mood board</h3>
       <div id="shootModeMoodboard" class="moodboard-grid"></div>
       <p class="shoot-mode-empty" id="shootModeMoodEmpty" hidden>No mood board images for this shoot.</p>
+
+      <h3 class="shoot-mode-section-heading heading-yellow">Quick review</h3>
+      <div class="shoot-mode-quick-review">
+        <button type="button" class="shoot-mode-quick-review-btn" id="shootModeReviewDirectionBtn">Direction</button>
+        <button type="button" class="shoot-mode-quick-review-btn" id="shootModeReviewLightingBtn">Lighting setups</button>
+      </div>
     </div>
     <button type="button" class="primary modal-cta" id="shootModeDoneBtn">Done shooting</button>
+  </div>
+</div>
+
+<!-- Read-only popup shared by both Quick review buttons — same rounded,
+     ink-outlined treatment as Shoot mode itself, since it's reached from there. -->
+<div id="shootModeReviewOverlay" class="modal-overlay shoot-mode-overlay" hidden>
+  <div class="modal shoot-mode-modal shoot-mode-review-modal">
+    <div class="shoot-mode-header">
+      <div class="shoot-mode-heading-wrap">
+        <p class="shoot-mode-eyebrow">Quick review</p>
+        <h2 id="shootModeReviewTitle"></h2>
+      </div>
+      <button type="button" class="icon-btn close-btn" id="shootModeReviewCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="shoot-mode-body" id="shootModeReviewBody"></div>
   </div>
 </div>
 
