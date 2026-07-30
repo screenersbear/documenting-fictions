@@ -504,13 +504,12 @@
     return NEW_SHOOT_TITLES[Math.floor(Math.random() * NEW_SHOOT_TITLES.length)];
   }
 
-  const LIGHTING_TAGS = ['Natural light', 'Hard flash', '3-pt lighting', 'Bounced light', 'Backlighting', 'Low key', 'High key', 'Colored gels', 'Other'];
-
-  // Tags dropped from LIGHTING_TAGS. Kept as a named list because the framework
-  // lives in saved state, not in the constant above — an existing install has
-  // its own copy, so retiring a tag takes a migration (see removeFrameworkTags).
-  const RETIRED_LIGHTING_TAGS = ['Studio lighting', 'Softbox', 'Golden hour', 'Overcast/diffused', 'Ring light', 'Backlit', 'Silhouette', 'Practical lights'];
-  const VISUAL_LANGUAGE_TAGS = ['Lifestyle', 'Documentary', 'Magic realism', 'Surrealism', 'Portrait', 'Fashion', 'Fitness', 'Cinematic', 'Commercial', 'Headshot', 'Beauty', 'Other'];
+  const VISUAL_LANGUAGE_TAGS = ['Lifestyle', 'Documentary', 'Surrealism', 'Portrait', 'Fashion', 'Fitness', 'Cinematic', 'Commercial', 'Headshot', 'Beauty', 'Other'];
+  // Tags dropped from VISUAL_LANGUAGE_TAGS. Kept as a named list because the
+  // framework lives in saved state, not in the constant above — an existing
+  // install has its own copy, so retiring a tag takes a migration (see
+  // removeFrameworkTags).
+  const RETIRED_VISUAL_LANGUAGE_TAGS = ['Magic realism'];
 
   function seedFrameworks() {
     return [
@@ -518,11 +517,6 @@
         id: uid(),
         name: 'Visual Language',
         tags: [...VISUAL_LANGUAGE_TAGS],
-      },
-      {
-        id: uid(),
-        name: 'Lighting',
-        tags: [...LIGHTING_TAGS],
       },
     ];
   }
@@ -577,13 +571,15 @@
   }
 
   // One-time, idempotent cleanup: drops the old Documenting Fictions
-  // Principles framework entirely (this app is meant to be shareable, not
-  // tied to one photographer's vocabulary), and upgrades Visual Language's
-  // tags forward through each past default set, but only while they still
-  // exactly match a known-old default (so a user's own edits are never
-  // clobbered).
+  // Principles framework (this app is meant to be shareable, not tied to one
+  // photographer's vocabulary) and the Lighting framework (folded into the
+  // more robust Lighting setups list instead — see removeFramework in
+  // loadState for the accompanying per-shoot frameworkTags cleanup), and
+  // upgrades Visual Language's tags forward through each past default set,
+  // but only while they still exactly match a known-old default (so a
+  // user's own edits are never clobbered).
   function migrateFrameworks(frameworks) {
-    let result = frameworks.filter(f => f.name !== 'Documenting Fictions Principles');
+    let result = frameworks.filter(f => f.name !== 'Documenting Fictions Principles' && f.name !== 'Lighting');
     const oldestVisualTags = ['Narrative Realism', 'Expressive Performance', 'Editorial Aesthetic', 'Cinematic Atmosphere'];
     const midVisualTags = ['Realism', 'Lifestyle', 'Documentary', 'Magic realism', 'Surreal', 'Other'];
     const priorVisualTags = ['Realism', 'Lifestyle', 'Documentary', 'Magic realism', 'Surreal', 'Portrait', 'Other'];
@@ -598,26 +594,25 @@
         vl.tags = [...VISUAL_LANGUAGE_TAGS];
       }
     }
-    // Lighting replaced the old free-text field with checkboxes — add it
-    // for anyone whose saved frameworks predate that change, and bump an
-    // existing one forward if it still has the pre-expansion tag set.
-    const lighting = result.find(f => f.name === 'Lighting');
-    if (!lighting) {
-      result.push({ id: uid(), name: 'Lighting', tags: [...LIGHTING_TAGS] });
-    } else {
-      const priorLightingTags = ['Natural light', 'Golden hour', 'Overcast/diffused', 'Hard flash', 'Softbox', 'Ring light', 'Backlighting', 'Silhouette', 'Low key', 'High key', 'Practical lights', 'Colored gels', 'Other'];
-      if (JSON.stringify(lighting.tags) === JSON.stringify(priorLightingTags)) {
-        lighting.tags = [...LIGHTING_TAGS];
-      }
-    }
     return result.length ? result : seedFrameworks();
+  }
+
+  // Drops a whole framework's stale frameworkTags entries once it's been
+  // retired (see migrateFrameworks) — mirrors removeFrameworkTags but for a
+  // framework that no longer exists at all, so there's no fw.id left to read
+  // off the migrated list; the caller passes the id it captured beforehand.
+  function removeFramework(shoots, frameworkId) {
+    if (!frameworkId) return;
+    shoots.forEach(s => {
+      s.frameworkTags = (s.frameworkTags || []).filter(t => t.frameworkId !== frameworkId);
+    });
   }
 
   // Retires tags from a framework: drops them from the framework's own list and
   // from every shoot that had one checked. Clearing the shoots matters — a
   // selection pointing at a tag with no checkbox left is invisible but still
   // counted, so leaving them behind would quietly skew anything that tallies
-  // tags. Also inserts any newly added tags, positioned to match LIGHTING_TAGS
+  // tags. Also inserts any newly added tags, positioned to match canonicalOrder
   // rather than appended, so the list doesn't reshuffle for existing users.
   function removeFrameworkTags(shoots, frameworks, frameworkName, retiredTags, canonicalOrder) {
     const fw = frameworks.find(f => f.name === frameworkName);
@@ -704,10 +699,13 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return defaultState();
       const parsed = JSON.parse(raw);
-      const frameworks = migrateFrameworks((Array.isArray(parsed.frameworks) && parsed.frameworks.length) ? parsed.frameworks : seedFrameworks());
+      const rawFrameworks = (Array.isArray(parsed.frameworks) && parsed.frameworks.length) ? parsed.frameworks : seedFrameworks();
+      const retiredLightingFwId = (rawFrameworks.find(f => f.name === 'Lighting') || {}).id;
+      const frameworks = migrateFrameworks(rawFrameworks);
       const shoots = (parsed.shoots || []).map(s => migrateShoot(s, frameworks));
+      removeFramework(shoots, retiredLightingFwId);
       renameFrameworkTag(shoots, frameworks, 'Visual Language', 'Surreal', 'Surrealism');
-      removeFrameworkTags(shoots, frameworks, 'Lighting', RETIRED_LIGHTING_TAGS, LIGHTING_TAGS);
+      removeFrameworkTags(shoots, frameworks, 'Visual Language', RETIRED_VISUAL_LANGUAGE_TAGS, VISUAL_LANGUAGE_TAGS);
       const journalEntries = (Array.isArray(parsed.journalEntries) ? parsed.journalEntries : []).map(migrateJournalEntry);
       return {
         shoots,
@@ -3066,12 +3064,11 @@
 
   // ---------- Framework tags (rendered inside the shoot modal) ----------
   // Every framework-tag checkbox container in the Visuals section, in DOM
-  // order — Visual Language renders early (before References/Mood board),
-  // Lighting (and any custom frameworks a user adds via Manage) renders later,
-  // nesting Lighting setups inside it. Anything that needs to touch "all
-  // framework checkboxes" regardless of which container they landed in
-  // (autosave gathering, the auto-advance-focus listener) reads this list
-  // rather than hardcoding a single id.
+  // order — Visual Language renders early (before References/Mood board);
+  // any custom frameworks a user adds via Manage render later. Anything that
+  // needs to touch "all framework checkboxes" regardless of which container
+  // they landed in (autosave gathering, the auto-advance-focus listener)
+  // reads this list rather than hardcoding a single id.
   const FRAMEWORK_TAG_CONTAINER_IDS = ['frameworkTagsContainerEarly', 'frameworkTagsContainer'];
   const FRAMEWORK_TAG_CHECKBOX_SELECTOR = FRAMEWORK_TAG_CONTAINER_IDS.map(id => `#${id} input[type="checkbox"]`).join(', ');
   // NOT `FRAMEWORK_TAG_CHECKBOX_SELECTOR + ':checked'` — appending to a
@@ -3112,31 +3109,26 @@
     });
   }
 
-  // Visual Language and Lighting render as their own smaller, collapsible
-  // subsections nested under Visuals (same visual language as Shot list).
-  // Visual Language gets its own early container so References/Mood board can
-  // sit between it and everything else — Lighting plus any custom frameworks
-  // a user adds via Manage render into the later container, in that order.
-  // Lighting setups (a static block, wired once below) isn't part of either
-  // template — it's re-parented into the Lighting subsection's body after
-  // every render instead, so its own listeners never need rewiring.
+  // Visual Language renders as its own smaller, collapsible subsection nested
+  // under Visuals (same visual language as Shot list), in its own early
+  // container so References/Mood board can sit between it and everything
+  // else. Any custom frameworks a user adds via Manage render into the later
+  // container. Lighting setups is its own standalone section further down —
+  // no longer nested under a framework at all (see the Lighting removal in
+  // migrateFrameworks/loadState).
   function renderShootFrameworkTags(shoot) {
     const earlyContainer = document.getElementById('frameworkTagsContainerEarly');
     const container = document.getElementById('frameworkTagsContainer');
-    const lightingSetupsSection = document.getElementById('lightingSetupsSection');
-    // Detach before wiping the container's contents below — innerHTML= would
-    // otherwise discard this node for good once it's nested inside.
-    if (lightingSetupsSection.parentNode) lightingSetupsSection.parentNode.removeChild(lightingSetupsSection);
 
     const selectedTags = shoot ? (shoot.frameworkTags || []) : [];
     const visualLanguageFws = state.frameworks.filter(fw => fw.name === 'Visual Language');
     const restFws = state.frameworks.filter(fw => fw.name !== 'Visual Language');
     renderFrameworkTagGroup(earlyContainer, visualLanguageFws, selectedTags);
     renderFrameworkTagGroup(container, restFws, selectedTags);
-
-    const lightingFw = state.frameworks.find(fw => fw.name === 'Lighting');
-    const lightingBody = lightingFw ? container.querySelector(`.framework-subsection-body[data-fw-body="${lightingFw.id}"]`) : null;
-    if (lightingBody) lightingBody.appendChild(lightingSetupsSection);
+    // Empty once Lighting's gone, unless a custom framework was added via
+    // Manage — hidden rather than left as a stray gap (see the margin-top
+    // this container gets further down in Visuals).
+    container.hidden = restFws.length === 0;
   }
 
   function syncShootFrameworkTags() {
@@ -3199,102 +3191,40 @@
     return matches.find(m => m.platform === 'instagram') || matches[0];
   }
 
-  // ---------- Talents (dynamic list of talent cards, right under Title) ----------
-  // Each talent is its own outlined card (mirrors .team-member-card) with a
-  // name field and its own nested social-handles sub-list, so a shoot with
-  // multiple people in front of the camera can track each one separately.
+  // ---------- Talents (dynamic list, right under Title) ----------
+  // Each talent renders as a compact read-only summary card — name, and
+  // handles as plain text — with an Edit button that reopens the same popup
+  // used to add one, prefilled (see openTalentModal/talentModalDraft below).
+  // Mirrors the Location popup's pattern: nothing commits to currentTalents
+  // until Save is tapped, so canceling out of an edit throws nothing away.
   let currentTalents = [];
-
-  // Fold state goes through the same persisted store as every other collapsible
-  // section in the app, so reopening a shoot finds its talent cards exactly as
-  // they were left rather than all expanded again.
-  function talentCollapseKey(talent) {
-    return `shoot:${currentShootId}:talent:${talent.id}`;
-  }
 
   function renderTalents() {
     const container = document.getElementById('talentsList');
     container.innerHTML = currentTalents.map((talent, idx) => {
-      const collapsed = isSectionCollapsed(talentCollapseKey(talent));
-      // The bar IS the name field — there's no separate name box in the body.
-      // Styled to read as a plain header until you tap it (see .talent-card-bar
-      // .talent-name), so typing a name and pressing Enter leaves the name
-      // sitting there as the card's heading. Empty falls back to the position
-      // via the placeholder, which is also what the PDF prints.
+      const handles = (talent.socialHandles || []).filter(sh => hasText(sh.handle));
       return `
-      <div class="team-member-card talent-card${collapsed ? ' talent-card-collapsed' : ''}">
-        <div class="talent-card-bar">
-          <input type="text" class="talent-name" data-idx="${idx}" placeholder="Talent ${idx + 1}" aria-label="Talent ${idx + 1} name" value="${escapeHtml(talent.name || '')}" />
-          <button type="button" class="talent-collapse-toggle" data-idx="${idx}" aria-label="Collapse talent" aria-expanded="${collapsed ? 'false' : 'true'}">
-            ${COLLAPSE_ARROW_SVG}
-          </button>
-          <button type="button" class="delete-talent" data-idx="${idx}">&times;</button>
+      <div class="team-member-card talent-summary-card">
+        <div class="talent-summary-heading">
+          ${talent.photo ? `<img src="${talent.photo}" alt="" class="talent-summary-photo" />` : ''}
+          <span class="talent-summary-name">${escapeHtml(hasText(talent.name) ? talent.name : `Talent ${idx + 1}`)}</span>
+          <button type="button" class="talent-edit-btn" data-idx="${idx}">Edit</button>
         </div>
-        <div class="talent-card-body"${collapsed ? ' hidden' : ''}>
-          <button type="button" class="secondary small-btn add-talent-photo-btn" data-idx="${idx}">${talent.photo ? 'Change talent photo' : '+ Add talent photo'}</button>
-          <div class="talent-social-section">
-            <p class="team-question talent-social-heading">Social media handle(s)</p>
-            <div class="social-handles-list">
-              ${(talent.socialHandles || []).map((sh, shIdx) => `
-                <div class="social-handle-row">
-                  <select class="social-handle-platform" data-talent-idx="${idx}" data-handle-idx="${shIdx}">
-                    ${SOCIAL_PLATFORM_OPTIONS.map(([val, label]) => `<option value="${val}" ${sh.platform === val ? 'selected' : ''}>${label}</option>`).join('')}
-                  </select>
-                  <input type="text" class="social-handle-input" data-talent-idx="${idx}" data-handle-idx="${shIdx}" placeholder="@handle" value="${escapeHtml(sh.handle || '')}" />
-                  <button type="button" class="delete-social-handle" data-talent-idx="${idx}" data-handle-idx="${shIdx}">&times;</button>
-                </div>
-              `).join('')}
-            </div>
-            <button type="button" class="secondary small-btn add-talent-handle-btn" data-talent-idx="${idx}">+ Add handle</button>
+        ${handles.length ? `
+          <div class="talent-summary-handles">
+            ${handles.map(sh => {
+              const entry = SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === sh.platform);
+              return `<span>${escapeHtml(entry ? entry[1] : 'Other')}: ${escapeHtml(sh.handle)}</span>`;
+            }).join('')}
           </div>
-          ${talent.photo ? `
-            <div class="talent-photo-wrap">
-              <div class="moodboard-thumb talent-photo-thumb">
-                <img src="${talent.photo}" alt="" class="talent-photo-img" data-idx="${idx}" />
-              </div>
-              <button type="button" class="manage-link talent-photo-remove" data-idx="${idx}">Remove photo</button>
-            </div>
-          ` : ''}
-        </div>
+        ` : ''}
+        <button type="button" class="delete-talent" data-idx="${idx}">&times;</button>
       </div>
     `;
     }).join('');
 
-    container.querySelectorAll('.talent-collapse-toggle').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const talent = currentTalents[Number(btn.dataset.idx)];
-        if (!talent) return;
-        const key = talentCollapseKey(talent);
-        setSectionCollapsed(key, !isSectionCollapsed(key));
-        renderTalents();
-      });
-    });
-    container.querySelectorAll('.add-talent-photo-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        talentPhotoTargetIdx = Number(btn.dataset.idx);
-        document.getElementById('talentPhotoFileInput').click();
-      });
-    });
-    container.querySelectorAll('.talent-photo-img').forEach(imgEl => {
-      imgEl.addEventListener('click', () => {
-        const talent = currentTalents[Number(imgEl.dataset.idx)];
-        if (!talent || !talent.photo) return;
-        // Same full-screen viewer the mood board uses, as a one-image gallery.
-        // allowProjectPhoto:false hides "Set as project photo" — a talent
-        // portrait isn't a shoot cover, and there's no IDB collection behind
-        // this image for the viewer's delete/caption actions to write to.
-        openImageViewer([{ src: talent.photo, caption: '' }], 0, null, null, false);
-      });
-    });
-    container.querySelectorAll('.talent-photo-remove').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const talent = currentTalents[Number(btn.dataset.idx)];
-        if (!talent) return;
-        talent.photo = '';
-        renderTalents();
-        scheduleShootAutosave();
-        if (currentShootId && talent.id) idbDeleteImages(talentPhotoKey(currentShootId, talent.id)).catch(() => {});
-      });
+    container.querySelectorAll('.talent-edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => openTalentModal(Number(btn.dataset.idx)));
     });
     container.querySelectorAll('.delete-talent').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -3305,89 +3235,187 @@
         // asks first rather than vanishing on a mis-tap.
         const who = hasText(talent.name) ? talent.name.trim() : `Talent ${idx + 1}`;
         if (!confirm(`Remove ${who} from this shoot? Their handles and photo will be removed too.`)) return;
-        setSectionCollapsed(talentCollapseKey(talent), false);
         if (currentShootId && talent.id) idbDeleteImages(talentPhotoKey(currentShootId, talent.id)).catch(() => {});
         currentTalents.splice(idx, 1);
         renderTalents();
         scheduleShootAutosave();
       });
     });
-    container.querySelectorAll('.talent-name').forEach(input => {
-      input.addEventListener('input', () => {
-        currentTalents[Number(input.dataset.idx)].name = input.value;
-      });
-      // Enter commits the name: blurring drops the focused styling so the field
-      // settles back into looking like the card's heading. preventDefault stops
-      // the Enter from trying to submit the surrounding shoot form.
-      input.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        input.blur();
-      });
-      input.addEventListener('blur', () => {
-        const talent = currentTalents[Number(input.dataset.idx)];
-        if (!talent || (talent.socialHandles || []).some(sh => hasText(sh.handle))) return;
-        const matches = lookupContactHandles(talent.name);
-        if (!matches.length) return;
-        talent.socialHandles = matches;
-        renderTalents();
-        scheduleShootAutosave();
+  }
+
+  document.getElementById('addTalentBtn').addEventListener('click', () => openTalentModal(null));
+
+  // ---------- Talent popup (name/handles/photo + a "returning talent" picker) ----------
+  // talentModalTargetIdx: index into currentTalents being edited, or null
+  // while adding a new one. talentModalDraft holds the in-progress edits —
+  // nothing in currentTalents changes until Save (see saveTalentModalBtn).
+  let talentModalTargetIdx = null;
+  let talentModalDraft = null;
+  let pastTalentSamples = [];
+
+  // Every distinct past talent name, ranked: talents who were the FIRST
+  // (lead) name on 2+ shoots first, then talents who were lead on exactly
+  // one shoot, then everyone who only ever appeared as a secondary/tertiary
+  // talent — alphabetical within each tier. The sample pulled in for each
+  // name (handles/photo) is whichever shoot used it most recently, same
+  // "most recent wins" reasoning as getLastLocationDirections below.
+  function getAllPastTalents() {
+    const leadCounts = {};
+    const sampleDates = {};
+    const samples = {};
+    state.shoots.forEach(s => {
+      (s.talents || []).forEach((t, i) => {
+        if (!hasText(t.name)) return;
+        const key = t.name.trim().toLowerCase();
+        if (i === 0) leadCounts[key] = (leadCounts[key] || 0) + 1;
+        const d = s.date || '';
+        if (!(key in sampleDates) || d > sampleDates[key]) {
+          sampleDates[key] = d;
+          samples[key] = t;
+        }
       });
     });
-    container.querySelectorAll('.add-talent-handle-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        currentTalents[Number(btn.dataset.talentIdx)].socialHandles.push({ platform: 'instagram', handle: '' });
-        renderTalents();
-        scheduleShootAutosave();
-      });
-    });
+    return Object.keys(samples)
+      .sort((a, b) => {
+        const aLead = leadCounts[a] || 0;
+        const bLead = leadCounts[b] || 0;
+        const tier = n => (n >= 2 ? 0 : n === 1 ? 1 : 2);
+        const tierDiff = tier(aLead) - tier(bLead);
+        return tierDiff || samples[a].name.localeCompare(samples[b].name);
+      })
+      .map(key => samples[key]);
+  }
+
+  function refreshPastTalentsSelect() {
+    pastTalentSamples = getAllPastTalents();
+    const select = document.getElementById('pastTalentsSelect');
+    select.innerHTML = '<option value="">Select a past talent…</option>'
+      + pastTalentSamples.map((t, i) => `<option value="${i}">${escapeHtml(t.name)}</option>`).join('');
+  }
+
+  document.getElementById('pastTalentsSelect').addEventListener('change', (e) => {
+    if (e.target.value === '') return;
+    const t = pastTalentSamples[Number(e.target.value)];
+    if (!t || !talentModalDraft) return;
+    talentModalDraft.name = t.name || '';
+    talentModalDraft.socialHandles = (t.socialHandles || []).map(sh => ({ ...sh }));
+    talentModalDraft.photo = t.photo || '';
+    fillTalentModalForm();
+  });
+
+  function renderTalentModalHandles() {
+    const container = document.getElementById('talentModalHandlesList');
+    container.innerHTML = talentModalDraft.socialHandles.map((sh, shIdx) => `
+      <div class="social-handle-row">
+        <select class="social-handle-platform" data-handle-idx="${shIdx}">
+          ${SOCIAL_PLATFORM_OPTIONS.map(([val, label]) => `<option value="${val}" ${sh.platform === val ? 'selected' : ''}>${label}</option>`).join('')}
+        </select>
+        <input type="text" class="social-handle-input" data-handle-idx="${shIdx}" placeholder="@handle" value="${escapeHtml(sh.handle || '')}" />
+        <button type="button" class="delete-social-handle" data-handle-idx="${shIdx}">&times;</button>
+      </div>
+    `).join('');
     container.querySelectorAll('.social-handle-platform').forEach(sel => {
       sel.addEventListener('change', () => {
-        currentTalents[Number(sel.dataset.talentIdx)].socialHandles[Number(sel.dataset.handleIdx)].platform = sel.value;
+        talentModalDraft.socialHandles[Number(sel.dataset.handleIdx)].platform = sel.value;
       });
     });
     container.querySelectorAll('.social-handle-input').forEach(input => {
       input.addEventListener('input', () => {
-        currentTalents[Number(input.dataset.talentIdx)].socialHandles[Number(input.dataset.handleIdx)].handle = input.value;
+        talentModalDraft.socialHandles[Number(input.dataset.handleIdx)].handle = input.value;
       });
     });
     container.querySelectorAll('.delete-social-handle').forEach(btn => {
       btn.addEventListener('click', () => {
-        currentTalents[Number(btn.dataset.talentIdx)].socialHandles.splice(Number(btn.dataset.handleIdx), 1);
-        renderTalents();
-        scheduleShootAutosave();
+        talentModalDraft.socialHandles.splice(Number(btn.dataset.handleIdx), 1);
+        renderTalentModalHandles();
       });
     });
-    syncAllShootFormFields();
   }
 
-  document.getElementById('addTalentBtn').addEventListener('click', () => {
-    currentTalents.push({ id: uid(), name: '', socialHandles: [], photo: '' });
-    renderTalents();
-    scheduleShootAutosave();
-    // With talents already listed, the new card appears below the fold — focus
-    // its name field so the keyboard opens on the right box and the browser
-    // scrolls it into view, instead of leaving you hunting for where it landed.
-    const cards = document.querySelectorAll('#talentsList .talent-card');
-    const newField = cards.length ? cards[cards.length - 1].querySelector('.talent-name') : null;
-    if (newField) {
-      newField.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      newField.focus();
-    }
+  document.getElementById('talentModalAddHandleBtn').addEventListener('click', () => {
+    talentModalDraft.socialHandles.push({ platform: 'instagram', handle: '' });
+    renderTalentModalHandles();
   });
 
-  // Which talent card the file picker was opened for. Read once the crop is
-  // confirmed (see cropConfirmBtn) — index rather than id is safe here because
-  // the talent list can't be reordered or deleted while the crop is on screen.
-  let talentPhotoTargetIdx = null;
+  function renderTalentModalPhoto() {
+    document.getElementById('talentModalPhotoBtn').textContent = talentModalDraft.photo ? 'Change talent photo' : '+ Add talent photo';
+    const wrap = document.getElementById('talentModalPhotoWrap');
+    wrap.innerHTML = talentModalDraft.photo ? `
+      <div class="talent-photo-wrap">
+        <div class="moodboard-thumb talent-photo-thumb">
+          <img src="${talentModalDraft.photo}" alt="" id="talentModalPhotoImg" />
+        </div>
+        <button type="button" class="manage-link" id="talentModalPhotoRemoveBtn">Remove photo</button>
+      </div>
+    ` : '';
+    const img = document.getElementById('talentModalPhotoImg');
+    if (img) img.addEventListener('click', () => openImageViewer([{ src: talentModalDraft.photo, caption: '' }], 0, null, null, false));
+    const removeBtn = document.getElementById('talentModalPhotoRemoveBtn');
+    if (removeBtn) removeBtn.addEventListener('click', () => {
+      talentModalDraft.photo = '';
+      renderTalentModalPhoto();
+    });
+  }
+
+  document.getElementById('talentModalPhotoBtn').addEventListener('click', () => {
+    document.getElementById('talentPhotoFileInput').click();
+  });
 
   document.getElementById('talentPhotoFileInput').addEventListener('change', (e) => {
     const file = e.target.files[0];
     e.target.value = '';
-    if (!file || talentPhotoTargetIdx === null) return;
+    if (!file || !talentModalDraft) return;
     resizeImageFile(file, 1280, 0.72).then(dataUrl => {
       openProjectPhotoCrop(dataUrl, 'talent');
     }).catch(() => {});
+  });
+
+  function fillTalentModalForm() {
+    document.getElementById('talentModalNameInput').value = talentModalDraft.name || '';
+    renderTalentModalHandles();
+    renderTalentModalPhoto();
+  }
+
+  function openTalentModal(idx) {
+    talentModalTargetIdx = (idx === null || idx === undefined) ? null : idx;
+    const existing = talentModalTargetIdx !== null ? currentTalents[talentModalTargetIdx] : null;
+    talentModalDraft = existing
+      ? { id: existing.id, name: existing.name || '', socialHandles: (existing.socialHandles || []).map(sh => ({ ...sh })), photo: existing.photo || '' }
+      : { id: uid(), name: '', socialHandles: [], photo: '' };
+    refreshPastTalentsSelect();
+    fillTalentModalForm();
+    document.getElementById('talentModalOverlay').hidden = false;
+  }
+
+  document.getElementById('talentModalNameInput').addEventListener('input', (e) => {
+    talentModalDraft.name = e.target.value;
+  });
+
+  document.getElementById('saveTalentModalBtn').addEventListener('click', () => {
+    const draft = talentModalDraft;
+    draft.name = document.getElementById('talentModalNameInput').value.trim();
+    const oldPhoto = talentModalTargetIdx !== null ? (currentTalents[talentModalTargetIdx].photo || '') : '';
+
+    if (talentModalTargetIdx !== null) currentTalents[talentModalTargetIdx] = draft;
+    else currentTalents.push(draft);
+
+    if (currentShootId) {
+      if (draft.photo) savePhotoToIdb(talentPhotoKey(currentShootId, draft.id), draft.photo).catch(() => {});
+      else if (oldPhoto) idbDeleteImages(talentPhotoKey(currentShootId, draft.id)).catch(() => {});
+    }
+    // With no mood board or final images yet, nothing has claimed the cover
+    // (those paths auto-set it from their first photo) — so a talent photo
+    // becomes the shoot's cover rather than leaving the bubble blank. Both
+    // boxes are 4:5, so it drops in without any odd object-fit cropping.
+    if (draft.photo && !pendingProjectPhoto) {
+      pendingProjectPhoto = draft.photo;
+      if (currentShootId) savePhotoToIdb(projectPhotoKey(currentShootId), draft.photo).catch(() => {});
+    }
+
+    document.getElementById('talentModalOverlay').hidden = true;
+    talentModalDraft = null;
+    renderTalents();
+    scheduleShootAutosave();
   });
 
   // ---------- Team members (dynamic list inside the shoot modal) ----------
@@ -3504,7 +3532,7 @@
   }
 
   function autoSizeAllListTextareas() {
-    document.querySelectorAll('#shotListItems .shot-text, #lightingSetupsItems .shot-text')
+    document.querySelectorAll('#shotListItems .shot-text, #lightingSetupsItems .lighting-setup-description')
       .forEach(autoSizeTextarea);
   }
 
@@ -3723,67 +3751,96 @@
     scheduleShootAutosave();
   });
 
-  // ---------- Lighting setups (checklist nested under Lighting, in Visuals) ----------
-  // Same structure and behavior as the Shot list above, just its own array
-  // and container so the two lists don't interfere with each other.
+  // ---------- Lighting setups (nested bubble cards, in Visuals) ----------
+  // Collapsible outlined card per setup (same visual pattern Talent used to
+  // use before its own popup redesign) instead of the old single-field
+  // checklist — each setup gets a name (the card's heading), plus
+  // characteristics and a longer description.
   let currentLightingSetups = [];
 
-  function renderLightingSetups(focusIdx, refocusCheckIdx) {
-    const container = document.getElementById('lightingSetupsItems');
-    const modalEl = shootModalOverlay.querySelector('.modal');
-    const savedScrollTop = refocusCheckIdx === undefined || !modalEl ? undefined : modalEl.scrollTop;
-    const indexed = currentLightingSetups.map((item, idx) => ({ ...item, idx }));
-    const ordered = indexed.filter(i => !i.checked).concat(indexed.filter(i => i.checked));
-    container.innerHTML = ordered.map(item => `
-      <div class="shot-list-row${item.checked ? ' shot-checked' : ''}">
-        <input type="checkbox" class="shot-check" data-idx="${item.idx}" ${item.checked ? 'checked' : ''} />
-        <textarea class="shot-text" data-idx="${item.idx}" rows="1" placeholder="Describe the lighting setup">${escapeHtml(item.text || '')}</textarea>
-        <button type="button" class="delete-shot" data-idx="${item.idx}">&times;</button>
-      </div>
-    `).join('');
+  function lightingSetupCollapseKey(setup) {
+    return `shoot:${currentShootId}:lightingSetup:${setup.id}`;
+  }
 
-    container.querySelectorAll('.shot-check').forEach(cb => {
-      cb.addEventListener('change', () => {
-        const idx = Number(cb.dataset.idx);
-        currentLightingSetups[idx].checked = cb.checked;
-        renderLightingSetups(undefined, idx);
+  function renderLightingSetups() {
+    const container = document.getElementById('lightingSetupsItems');
+    container.innerHTML = currentLightingSetups.map((item, idx) => {
+      const collapsed = isSectionCollapsed(lightingSetupCollapseKey(item));
+      return `
+      <div class="team-member-card lighting-setup-card${collapsed ? ' lighting-setup-card-collapsed' : ''}">
+        <div class="lighting-setup-card-bar">
+          <input type="text" class="lighting-setup-name" data-idx="${idx}" placeholder="Setup ${idx + 1}" aria-label="Lighting setup ${idx + 1} name" value="${escapeHtml(item.name || '')}" />
+          <button type="button" class="lighting-setup-collapse-toggle" data-idx="${idx}" aria-label="Collapse lighting setup" aria-expanded="${collapsed ? 'false' : 'true'}">
+            ${COLLAPSE_ARROW_SVG}
+          </button>
+          <button type="button" class="delete-lighting-setup" data-idx="${idx}">&times;</button>
+        </div>
+        <div class="lighting-setup-card-body"${collapsed ? ' hidden' : ''}>
+          <input type="text" class="lighting-setup-characteristics" data-idx="${idx}" placeholder="mood, quality, style, etc." aria-label="Characteristics" value="${escapeHtml(item.characteristics || '')}" />
+          <textarea class="lighting-setup-description" data-idx="${idx}" rows="2" placeholder="Describe the setup." aria-label="Description">${escapeHtml(item.description || '')}</textarea>
+        </div>
+      </div>
+    `;
+    }).join('');
+
+    container.querySelectorAll('.lighting-setup-description').forEach(autoSizeTextarea);
+
+    container.querySelectorAll('.lighting-setup-collapse-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const setup = currentLightingSetups[Number(btn.dataset.idx)];
+        if (!setup) return;
+        const key = lightingSetupCollapseKey(setup);
+        setSectionCollapsed(key, !isSectionCollapsed(key));
+        renderLightingSetups();
+        // Collapsing alone doesn't touch a form field, so nothing else would
+        // autosave — same reasoning (and same fix) as the talent collapse
+        // toggle: a setup saved before it had an id needs this to persist
+        // the one just minted on load, or the collapse key it's hanging off
+        // of is orphaned by the next reopen's fresh id.
         scheduleShootAutosave();
       });
     });
-    container.querySelectorAll('.shot-text').forEach(textarea => {
-      autoSizeTextarea(textarea);
-      textarea.addEventListener('input', () => {
-        currentLightingSetups[Number(textarea.dataset.idx)].text = textarea.value;
-        autoSizeTextarea(textarea);
-        scheduleShootAutosave();
-      });
-      textarea.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        currentLightingSetups[Number(textarea.dataset.idx)].text = textarea.value;
-        currentLightingSetups.push({ text: '', checked: false });
-        renderLightingSetups(currentLightingSetups.length - 1);
-        scheduleShootAutosave();
-      });
-    });
-    container.querySelectorAll('.delete-shot').forEach(btn => {
+    container.querySelectorAll('.delete-lighting-setup').forEach(btn => {
       btn.addEventListener('click', () => {
         currentLightingSetups.splice(Number(btn.dataset.idx), 1);
         renderLightingSetups();
         scheduleShootAutosave();
       });
     });
-
-    if (focusIdx !== undefined) {
-      const focusInput = container.querySelector(`.shot-text[data-idx="${focusIdx}"]`);
-      if (focusInput) focusInput.focus();
-    }
-    restoreAfterListReorder(container, refocusCheckIdx, savedScrollTop);
+    container.querySelectorAll('.lighting-setup-name').forEach(input => {
+      input.addEventListener('input', () => {
+        currentLightingSetups[Number(input.dataset.idx)].name = input.value;
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        input.blur();
+      });
+    });
+    container.querySelectorAll('.lighting-setup-characteristics').forEach(input => {
+      input.addEventListener('input', () => {
+        currentLightingSetups[Number(input.dataset.idx)].characteristics = input.value;
+      });
+    });
+    container.querySelectorAll('.lighting-setup-description').forEach(textarea => {
+      textarea.addEventListener('input', () => {
+        currentLightingSetups[Number(textarea.dataset.idx)].description = textarea.value;
+        autoSizeTextarea(textarea);
+      });
+    });
   }
 
   document.getElementById('addLightingSetupBtn').addEventListener('click', () => {
-    currentLightingSetups.push({ text: '', checked: false });
-    renderLightingSetups(currentLightingSetups.length - 1);
+    currentLightingSetups.push({ id: uid(), name: '', characteristics: '', description: '' });
+    renderLightingSetups();
+    // Same reasoning as +Add talent — focus the new card's name field so the
+    // keyboard opens on the right box and the browser scrolls it into view.
+    const cards = document.querySelectorAll('#lightingSetupsItems .lighting-setup-card');
+    const newField = cards.length ? cards[cards.length - 1].querySelector('.lighting-setup-name') : null;
+    if (newField) {
+      newField.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      newField.focus();
+    }
     scheduleShootAutosave();
   });
 
@@ -4059,7 +4116,7 @@
   // that reveals a section runs this so the rows get their real height the
   // moment they're actually on screen. Idempotent, so calling it broadly is fine.
   function onShootSectionRevealed(bodyId) {
-    if (bodyId === 'shotListBody') autoSizeAllListTextareas();
+    if (bodyId === 'shotListBody' || bodyId === 'lightingSetupsBody') autoSizeAllListTextareas();
   }
 
   function applyShootFormCollapseState() {
@@ -4519,8 +4576,8 @@
     document.getElementById('shootEndTime').value = s ? (s.endTime || '') : '';
     currentShootLocation = s ? normalizeLocation(s.location) : { name: '', street: '', city: '', state: '', zip: '', country: state.defaultCountry || '' };
     updateLocationBtnDisplay();
-    // Talents saved before they had ids get one assigned on load, so the
-    // collapse state below always has a stable key to hang off.
+    // Talents saved before they had ids get one assigned on load — needed as
+    // a stable IndexedDB key for their photo (see talentPhotoKey).
     currentTalents = s && Array.isArray(s.talents)
       ? s.talents.map(t => ({ id: t.id || uid(), name: t.name || '', socialHandles: (t.socialHandles || []).map(sh => ({ ...sh })), photo: t.photo || '' }))
       : [];
@@ -4548,7 +4605,17 @@
     document.getElementById('shootLocationDirections').value = s ? (s.locationDirections || '') : '';
     currentShotList = s && Array.isArray(s.shotList) ? s.shotList.map(item => ({ ...item })) : [];
     renderShotList();
-    currentLightingSetups = s && Array.isArray(s.lightingSetups) ? s.lightingSetups.map(item => ({ ...item })) : [];
+    // Old-shaped setups (a single free-text checklist row, pre-redesign) map
+    // their text into the new description field rather than losing it — name
+    // and characteristics start blank since neither existed before.
+    currentLightingSetups = s && Array.isArray(s.lightingSetups)
+      ? s.lightingSetups.map(item => ({
+          id: item.id || uid(),
+          name: item.name || '',
+          characteristics: item.characteristics || '',
+          description: item.description !== undefined ? item.description : (item.text || ''),
+        }))
+      : [];
     renderLightingSetups();
 
     const teamRequired = s ? (s.teamRequired || '') : '';
@@ -4836,7 +4903,6 @@
   function closeProjectPhotoCrop() {
     cropOverlay.hidden = true;
     cropTargetShootId = null;
-    talentPhotoTargetIdx = null;
   }
 
   cropZoomSlider.addEventListener('input', () => {
@@ -4930,26 +4996,14 @@
     canvas.height = outputHeight;
     canvas.getContext('2d').drawImage(cropImg, sx, sy, sWidth, sHeight, 0, 0, outputWidth, outputHeight);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-    const talentIdx = talentPhotoTargetIdx;
     const targetId = cropTargetShootId;
     if (cropMode === 'talent') {
-      // Kept on the in-memory talent object so renderTalents can read it
-      // synchronously; the durable copy goes to IndexedDB, keyed by shoot +
-      // talent, since photos are deliberately excluded from the state blob.
-      if (talentIdx !== null && currentTalents[talentIdx]) {
-        const talent = currentTalents[talentIdx];
-        talent.photo = dataUrl;
-        renderTalents();
-        scheduleShootAutosave();
-        if (currentShootId && talent.id) savePhotoToIdb(talentPhotoKey(currentShootId, talent.id), dataUrl).catch(() => {});
-        // With no mood board or final images yet, nothing has claimed the cover
-        // (those paths auto-set it from their first photo) — so a talent photo
-        // becomes the shoot's cover rather than leaving the bubble blank. Both
-        // boxes are 4:5, so it drops in without any odd object-fit cropping.
-        if (!pendingProjectPhoto) {
-          pendingProjectPhoto = dataUrl;
-          if (currentShootId) savePhotoToIdb(projectPhotoKey(currentShootId), dataUrl).catch(() => {});
-        }
+      // Held on the draft only — nothing persists (IndexedDB write, cover-
+      // photo claim) until the talent popup's own Save commits it, same as
+      // every other field in that popup.
+      if (talentModalDraft) {
+        talentModalDraft.photo = dataUrl;
+        renderTalentModalPhoto();
       }
       closeProjectPhotoCrop();
     } else if (targetId) {
@@ -6151,6 +6205,7 @@
       if (btn.dataset.close === 'frameworks') closeFrameworksModal();
       if (btn.dataset.close === 'journal') closeJournalModal();
       if (btn.dataset.close === 'location') document.getElementById('locationModalOverlay').hidden = true;
+      if (btn.dataset.close === 'talent') document.getElementById('talentModalOverlay').hidden = true;
       if (btn.dataset.close === 'categoryVisibility') closeCategoryVisibilityModal();
       if (btn.dataset.close === 'manageLocations') document.getElementById('manageLocationsOverlay').hidden = true;
       if (btn.dataset.close === 'regionCountryPopup') document.getElementById('regionCountryPopupOverlay').hidden = true;
@@ -6160,7 +6215,7 @@
   shootModalOverlay.addEventListener('click', (e) => {
     if (e.target === shootModalOverlay) closeShootModal();
   });
-  [frameworksModalOverlay, document.getElementById('locationModalOverlay'), document.getElementById('tabIntroOverlay'), categoryVisibilityOverlay, document.getElementById('manageLocationsOverlay'), document.getElementById('regionCountryPopupOverlay')].forEach(overlay => {
+  [frameworksModalOverlay, document.getElementById('locationModalOverlay'), document.getElementById('talentModalOverlay'), document.getElementById('tabIntroOverlay'), categoryVisibilityOverlay, document.getElementById('manageLocationsOverlay'), document.getElementById('regionCountryPopupOverlay')].forEach(overlay => {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) overlay.hidden = true;
     });
@@ -7167,13 +7222,16 @@
         : '<p class="shoot-mode-empty">Nothing filled in under Direction for this shoot.</p>';
     } else {
       document.getElementById('shootModeReviewTitle').textContent = 'Lighting setups';
-      const setups = shoot.lightingSetups || [];
+      const setups = (shoot.lightingSetups || [])
+        .filter(item => hasText(item.name) || hasText(item.characteristics) || hasText(item.description));
       body.innerHTML = setups.length
-        ? `<div class="shoot-mode-shots">${setups.map(item => `
-            <div class="shoot-mode-shot${item.checked ? ' shot-checked' : ''}">
-              <span>${escapeHtml(item.text || '')}</span>
+        ? setups.map((item, idx) => `
+            <div class="shoot-mode-review-setup">
+              <p class="shoot-mode-review-setup-name">${escapeHtml(hasText(item.name) ? item.name : `Setup ${idx + 1}`)}</p>
+              ${hasText(item.characteristics) ? renderShootModeReviewField('Characteristics', item.characteristics) : ''}
+              ${hasText(item.description) ? renderShootModeReviewField('Description', item.description) : ''}
             </div>
-          `).join('')}</div>`
+          `).join('')
         : '<p class="shoot-mode-empty">No lighting setups logged for this shoot.</p>';
     }
     document.getElementById('shootModeReviewOverlay').hidden = false;

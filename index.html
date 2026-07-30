@@ -401,8 +401,8 @@
           <h4 class="subsection-heading" id="lightingSetupsHeading">Lighting setups<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h4>
           <div id="lightingSetupsBody">
             <p class="field-hint">Log your specific setups for reference on the day of, as well as to review what worked in each image.</p>
-            <div id="lightingSetupsItems" class="shot-list-items"></div>
             <button type="button" id="addLightingSetupBtn" class="primary small-btn">+ Add lighting setup</button>
+            <div id="lightingSetupsItems" class="lighting-setups-list"></div>
           </div>
         </div>
       </div>
@@ -500,6 +500,33 @@
       </label>
       <button type="button" class="primary modal-cta" id="photographerSaveBtn">Save</button>
     </div>
+  </div>
+</div>
+
+<div id="talentModalOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2>Talent</h2>
+      <button class="icon-btn close-btn" data-close="talent">&times;</button>
+    </div>
+    <div id="talentForm">
+      <label>Returning talent
+        <select id="pastTalentsSelect">
+          <option value="">Select a past talent…</option>
+        </select>
+      </label>
+      <label>Name
+        <input type="text" id="talentModalNameInput" maxlength="120" placeholder="Talent name" />
+      </label>
+      <div class="talent-social-section">
+        <p class="team-question talent-social-heading">Social media handle(s)</p>
+        <div id="talentModalHandlesList" class="social-handles-list"></div>
+        <button type="button" id="talentModalAddHandleBtn" class="secondary small-btn">+ Add handle</button>
+      </div>
+      <button type="button" id="talentModalPhotoBtn" class="secondary small-btn">+ Add talent photo</button>
+      <div id="talentModalPhotoWrap"></div>
+    </div>
+    <button type="button" class="primary modal-cta" id="saveTalentModalBtn">Save</button>
   </div>
 </div>
 

@@ -1704,6 +1704,7 @@ h2.status-group-heading.heading-navy {
 #journalForm,
 #formSection2,
 #locationForm,
+#talentForm,
 #narrativeFieldsBlock,
 #commercialFieldsBlock,
 #postShootContent,
@@ -1751,7 +1752,8 @@ h2.status-group-heading.heading-navy {
 
 #shootForm label,
 #journalForm label,
-#locationForm label {
+#locationForm label,
+#talentForm label {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1768,6 +1770,8 @@ h2.status-group-heading.heading-navy {
 #journalForm textarea,
 #locationForm input,
 #locationForm select,
+#talentForm input,
+#talentForm select,
 #expandFieldTextarea {
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -1897,8 +1901,8 @@ h2.status-group-heading.heading-navy {
 }
 
 /* Extra breathing room on top of #visualsBody's own 14px flex gap, so Visual
-   Language / References / Mood board / Lighting read as distinct blocks
-   rather than one continuous stack. */
+   Language / References / Mood board / any custom frameworks read as
+   distinct blocks rather than one continuous stack. */
 #visualsBody .references-block,
 #visualsBody .moodboard-section,
 #visualsBody #frameworkTagsContainer {
@@ -1909,11 +1913,10 @@ h2.status-group-heading.heading-navy {
   margin-top: 10px;
 }
 
-/* Lighting setups nests one level deeper still (under the Lighting
-   framework subsection) — its own border-top is dropped (see
-   #lightingSetupsHeading below) since .subsection-heading's usual top rule
-   would otherwise double up with the spacing here. No left border/indent:
-   that read as a stray line rather than a clear nesting cue. */
+/* Its own border-top is dropped (see #lightingSetupsHeading below) since
+   .subsection-heading's usual top rule would otherwise double up with the
+   margin here. No left border/indent: that read as a stray line rather
+   than a clear nesting cue. */
 .lighting-setups-section {
   margin-top: 18px;
 }
@@ -1928,6 +1931,106 @@ h2.status-group-heading.heading-navy {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.lighting-setups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* A theme-colored bar across the card's full width holds the setup's name
+   and a collapse arrow, so a shoot with several setups can be folded down
+   instead of becoming one long scroll — the bar is why this drops
+   .team-member-card's own padding (and its absolutely-positioned delete
+   button): the bar goes edge to edge and the delete × lives inside it,
+   with the padding moved onto .lighting-setup-card-body instead. */
+.lighting-setup-card {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.lighting-setup-card-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ink);
+  padding: 6px 8px 6px 12px;
+}
+
+#shootForm .lighting-setup-card-bar .lighting-setup-name {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-xs);
+  padding: 5px 6px;
+  color: #fff;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 15px;
+  text-transform: none;
+  text-overflow: ellipsis;
+}
+
+#shootForm .lighting-setup-card-bar .lighting-setup-name::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+  opacity: 1;
+}
+
+#shootForm .lighting-setup-card-bar .lighting-setup-name:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.lighting-setup-collapse-toggle {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  color: #fff;
+  cursor: pointer;
+}
+
+.lighting-setup-card-collapsed .lighting-setup-collapse-toggle .collapse-arrow {
+  transform: rotate(-90deg);
+}
+
+.lighting-setup-card .lighting-setup-card-bar .delete-lighting-setup {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.lighting-setup-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.lighting-setup-card-body[hidden] {
+  display: none;
+}
+
+#shootForm .lighting-setup-characteristics,
+#shootForm .lighting-setup-description {
+  font-size: 14px;
 }
 
 .tag-group {
@@ -2043,8 +2146,7 @@ h2.status-group-heading.heading-navy {
 }
 
 .team-member-role,
-.team-member-name,
-.talent-name {
+.team-member-name {
   display: block;
   width: 100%;
   box-sizing: border-box;
@@ -2072,10 +2174,9 @@ h2.status-group-heading.heading-navy {
   gap: 10px;
 }
 
-/* Each talent card nests its own social-handles sub-list (reusing
-   .social-handles-list/.social-handle-row etc. below) under a smaller,
-   secondary heading — kept distinct from the outer "Talent name(s)"
-   heading's own size override just above. */
+/* Each talent's social handles are edited inside the talent popup (see
+   #talentForm), reusing .social-handles-list/.social-handle-row etc. below
+   under this same smaller, secondary heading. */
 .talent-social-section {
   display: flex;
   flex-direction: column;
@@ -2087,111 +2188,53 @@ h2.status-group-heading.heading-navy {
   margin: 0;
 }
 
-/* A talent card carries a theme-colored bar across its full width holding the
-   talent's name and a collapse arrow, so a shoot with several talents can be
-   folded down instead of becoming one long scroll. The bar is why .talent-card
-   drops .team-member-card's own padding (and its absolutely-positioned delete
-   button): the bar goes edge to edge and the delete × lives inside it, with
-   the padding moved onto .talent-card-body instead. */
-.talent-card {
-  padding: 0;
-  gap: 0;
-  overflow: hidden;
-}
-
-.talent-card-bar {
+/* Read-only summary card — the main form shows name + handles as plain
+   text, with an Edit button reopening the talent popup prefilled. Base
+   border/radius/padding (and the corner-positioned delete ×) come from
+   .team-member-card, same as before the popup redesign. */
+.talent-summary-heading {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--ink);
-  padding: 6px 8px 6px 12px;
 }
 
-/* The name field lives in the bar and is the card's heading. Undecorated by
-   default so a committed name reads as a title rather than a form input; the
-   focus state is what makes it look editable. Padding stays constant between
-   the two states so focusing doesn't nudge the text sideways.
-   The #shootForm prefix is load-bearing: `#shootForm input` (see above) gives
-   every field in this form a white box with a border, and an id outranks any
-   number of classes — so a class-only selector here silently loses. Same
-   pattern as #shootForm .shot-text. */
-#shootForm .talent-card-bar .talent-name {
+.talent-summary-photo {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.talent-summary-name {
   flex: 1;
   min-width: 0;
-  background: none;
-  border: none;
-  border-radius: var(--radius-xs);
-  padding: 5px 6px;
-  color: #fff;
   font-family: var(--font-title);
   font-weight: 700;
   font-size: 15px;
-  text-transform: none;
+  overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Beats the global ::placeholder rule, which sets a dark colour that would be
-   unreadable on the bar. */
-#shootForm .talent-card-bar .talent-name::placeholder {
-  color: rgba(255, 255, 255, 0.6);
-  opacity: 1;
-}
-
-#shootForm .talent-card-bar .talent-name:focus {
-  outline: none;
-  background: rgba(255, 255, 255, 0.16);
-}
-
-/* Only the arrow collapses the card now — tapping the name edits it — so the
-   button gets a proper touch target of its own. */
-.talent-collapse-toggle {
-  flex: none;
-  width: 34px;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.talent-edit-btn {
+  flex-shrink: 0;
   background: none;
-  border: none;
-  padding: 0;
-  color: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
   cursor: pointer;
 }
 
-.talent-card-collapsed .talent-collapse-toggle .collapse-arrow {
-  transform: rotate(-90deg);
-}
-
-/* Overrides .team-member-card .delete-talent's absolute positioning — inside
-   the bar it's a normal flex sibling of the collapse toggle. The white-circle
-   badge treatment it inherits is too heavy sitting on the coloured bar, so
-   here it's just the glyph, matching the plain ✕ controls elsewhere. */
-.talent-card .talent-card-bar .delete-talent {
-  position: static;
-  top: auto;
-  right: auto;
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 0;
-  background: none;
-  color: #fff;
-  font-size: 22px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.talent-card-body {
+.talent-summary-handles {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-}
-
-.talent-card-body[hidden] {
-  display: none;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--text-dim);
 }
 
 /* The photo sits centered below everything else in the card, at roughly the
@@ -2487,6 +2530,16 @@ h2.status-group-heading.heading-navy {
   padding-bottom: 0;
   border: 2px solid var(--surface);
   border-bottom: none;
+  /* svh (smallest viewport height) instead of the base .modal's dvh, which
+     tracks the CURRENT visual viewport — on iOS Safari that shrinks the
+     instant the keyboard opens, dragging the sticky Save bar below up along
+     with the now-shorter modal so it visually floats over whatever field
+     just got focused/scrolled into view (e.g. a freshly added talent). svh
+     is pinned to the viewport's smallest-ever size, so the modal's height
+     (and the Save bar stuck to its bottom) stays put; the keyboard covers
+     whatever's low enough on screen instead of the bar relocating on top of
+     it. Scoped to this modal only — the shared dvh above is unaffected. */
+  max-height: 92svh;
 }
 
 #shootModalOverlay .modal-actions {
@@ -4432,14 +4485,24 @@ h2.status-group-heading.heading-navy {
   word-wrap: break-word;
 }
 
-/* Lighting setups reused inside the review popup: same row look as the real
-   shot list, just without a checkbox — nothing to tick from a read-only view. */
-.shoot-mode-review-modal .shoot-mode-shots {
-  padding-top: 4px;
+/* Lighting setups inside the review popup: one group per setup, its name as
+   a heading followed by whichever of Characteristics/Description are
+   filled in (see .shoot-mode-review-field above) — the group's own
+   border-bottom is the only divider between setups, since the last field
+   inside a group already drops its own via :last-child. */
+.shoot-mode-review-setup {
+  border-bottom: 1px solid var(--border);
 }
 
-.shoot-mode-review-modal .shoot-mode-shot {
-  cursor: default;
+.shoot-mode-review-setup:last-child {
+  border-bottom: 0;
+}
+
+.shoot-mode-review-setup-name {
+  margin: 14px 20px 0;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 17px;
 }
 
 /* ---------- Popup rounding pass ----------
