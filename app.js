@@ -3482,72 +3482,164 @@
     scheduleShootAutosave();
   });
 
-  // ---------- Team members (dynamic list inside the shoot modal) ----------
-  // Each member renders as its own outlined card — position, name, and
-  // social handle stacked on their own line — rather than a single packed
-  // row, so none of the three fields end up squeezed.
+  // ---------- Team members (popup, mirrors the Talent popup pattern) ----------
+  // Each member renders as a read-only summary card — role, name, and handle
+  // as plain text — with the card itself reopening the same popup used to
+  // add one, prefilled (see openTeamMemberModal/teamMemberModalDraft below).
+  // Nothing commits to currentTeamMembers until Save is tapped.
   let currentTeamMembers = [];
 
   function renderTeamMembers() {
     const container = document.getElementById('teamMembersList');
-    container.innerHTML = currentTeamMembers.map((tm, idx) => `
-      <div class="team-member-card">
-        <button type="button" class="delete-team-member" data-idx="${idx}">&times;</button>
-        <select class="team-member-role" data-idx="${idx}">
-          ${TEAM_ROLE_OPTIONS.map(([val, label]) => `<option value="${val}" ${tm.role === val ? 'selected' : ''}>${label}</option>`).join('')}
-        </select>
-        <input type="text" class="team-member-name" data-idx="${idx}" placeholder="Name" value="${escapeHtml(tm.name || '')}" />
-        <div class="social-handle-row">
-          <select class="social-handle-platform team-member-social-platform" data-idx="${idx}">
-            ${SOCIAL_PLATFORM_OPTIONS.map(([val, label]) => `<option value="${val}" ${(tm.socialPlatform || 'instagram') === val ? 'selected' : ''}>${label}</option>`).join('')}
-          </select>
-          <input type="text" class="social-handle-input team-member-social" data-idx="${idx}" placeholder="Social media handle" value="${escapeHtml(tm.socialHandle || '')}" />
+    container.innerHTML = currentTeamMembers.map((tm, idx) => {
+      const roleLabel = (TEAM_ROLE_OPTIONS.find(([val]) => val === tm.role) || [null, 'Other'])[1];
+      const platformLabel = (SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === tm.socialPlatform) || [null, 'Other'])[1];
+      return `
+      <div class="team-member-card team-member-summary-card" data-idx="${idx}">
+        <div class="talent-summary-heading">
+          <span class="talent-summary-name">${escapeHtml(hasText(tm.name) ? tm.name : `Team member ${idx + 1}`)}</span>
         </div>
+        <div class="talent-summary-handles">
+          <span>${escapeHtml(roleLabel)}</span>
+          ${hasText(tm.socialHandle) ? `<span>${escapeHtml(platformLabel)}: ${escapeHtml(tm.socialHandle)}</span>` : ''}
+        </div>
+        <button type="button" class="talent-summary-delete" data-idx="${idx}">&times;</button>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
-    container.querySelectorAll('.team-member-role').forEach(sel => {
-      sel.addEventListener('change', () => {
-        currentTeamMembers[Number(sel.dataset.idx)].role = sel.value;
-      });
+    // The whole card is the "edit" affordance — no separate button needed.
+    container.querySelectorAll('.team-member-summary-card').forEach(card => {
+      card.addEventListener('click', () => openTeamMemberModal(Number(card.dataset.idx)));
     });
-    container.querySelectorAll('.team-member-name').forEach(input => {
-      input.addEventListener('input', () => {
-        currentTeamMembers[Number(input.dataset.idx)].name = input.value;
-      });
-      input.addEventListener('blur', () => {
-        const tm = currentTeamMembers[Number(input.dataset.idx)];
-        if (!tm || hasText(tm.socialHandle)) return;
-        const match = lookupBestContactHandle(tm.name);
-        if (!match) return;
-        tm.socialPlatform = match.platform;
-        tm.socialHandle = match.handle;
+    container.querySelectorAll('.talent-summary-delete').forEach(btn => {
+      btn.addEventListener('click', (ev) => {
+        // The card itself opens the edit popup, so the delete "x" has to stop
+        // the click here or it also reopens a popup for the member it just removed.
+        ev.stopPropagation();
+        const idx = Number(btn.dataset.idx);
+        currentTeamMembers.splice(idx, 1);
         renderTeamMembers();
         scheduleShootAutosave();
       });
     });
-    container.querySelectorAll('.team-member-social-platform').forEach(sel => {
-      sel.addEventListener('change', () => {
-        currentTeamMembers[Number(sel.dataset.idx)].socialPlatform = sel.value;
-      });
-    });
-    container.querySelectorAll('.team-member-social').forEach(input => {
-      input.addEventListener('input', () => {
-        currentTeamMembers[Number(input.dataset.idx)].socialHandle = input.value;
-      });
-    });
-    container.querySelectorAll('.delete-team-member').forEach(btn => {
-      btn.addEventListener('click', () => {
-        currentTeamMembers.splice(Number(btn.dataset.idx), 1);
-        renderTeamMembers();
-        scheduleShootAutosave();
-      });
-    });
-    syncAllShootFormFields();
   }
 
-  document.getElementById('addTeamMemberBtn').addEventListener('click', () => {
-    currentTeamMembers.push({ role: 'makeup_artist', name: '', socialPlatform: 'instagram', socialHandle: '' });
+  document.getElementById('addTeamMemberBtn').addEventListener('click', () => openTeamMemberModal(null));
+
+  // ---------- Team member popup (name/role/handle + a "returning member" picker) ----------
+  let teamMemberModalTargetIdx = null;
+  let teamMemberModalDraft = null;
+  let pastTeamMemberSamples = [];
+
+  // Every distinct past team member name, ranked by how many past shoots
+  // they've worked (most-used first, alphabetical within a tie) — same
+  // "returning contact" idea as past locations, just counted by name
+  // instead of by location key. The sample pulled in for each name is
+  // whichever shoot used it most recently.
+  function getAllPastTeamMembers() {
+    const counts = {};
+    const sampleDates = {};
+    const samples = {};
+    state.shoots.forEach(s => {
+      (s.teamMembers || []).forEach(tm => {
+        if (!hasText(tm.name)) return;
+        const key = tm.name.trim().toLowerCase();
+        counts[key] = (counts[key] || 0) + 1;
+        const d = s.date || '';
+        if (!(key in sampleDates) || d > sampleDates[key]) {
+          sampleDates[key] = d;
+          samples[key] = tm;
+        }
+      });
+    });
+    return Object.keys(counts)
+      .sort((a, b) => counts[b] - counts[a] || samples[a].name.localeCompare(samples[b].name))
+      .map(key => samples[key]);
+  }
+
+  // Static option lists — populated once rather than per-render, since
+  // (unlike the old inline repeater) this modal isn't rebuilt every time
+  // a team member is added or edited.
+  document.getElementById('teamMemberModalRoleSelect').innerHTML =
+    TEAM_ROLE_OPTIONS.map(([val, label]) => `<option value="${val}">${label}</option>`).join('');
+  document.getElementById('teamMemberModalSocialPlatform').innerHTML =
+    SOCIAL_PLATFORM_OPTIONS.map(([val, label]) => `<option value="${val}">${label}</option>`).join('');
+
+  function refreshPastTeamMembersSelect() {
+    pastTeamMemberSamples = getAllPastTeamMembers();
+    const select = document.getElementById('pastTeamMembersSelect');
+    select.innerHTML = '<option value="">Select a past team member…</option>'
+      + pastTeamMemberSamples.map((tm, i) => `<option value="${i}">${escapeHtml(tm.name)}</option>`).join('');
+  }
+
+  document.getElementById('pastTeamMembersSelect').addEventListener('change', (e) => {
+    if (e.target.value === '') return;
+    const tm = pastTeamMemberSamples[Number(e.target.value)];
+    if (!tm || !teamMemberModalDraft) return;
+    teamMemberModalDraft.role = tm.role || 'makeup_artist';
+    teamMemberModalDraft.name = tm.name || '';
+    teamMemberModalDraft.socialPlatform = tm.socialPlatform || 'instagram';
+    teamMemberModalDraft.socialHandle = tm.socialHandle || '';
+    fillTeamMemberModalForm();
+  });
+
+  function fillTeamMemberModalForm() {
+    document.getElementById('teamMemberModalRoleSelect').value = teamMemberModalDraft.role || 'makeup_artist';
+    document.getElementById('teamMemberModalNameInput').value = teamMemberModalDraft.name || '';
+    document.getElementById('teamMemberModalSocialPlatform').value = teamMemberModalDraft.socialPlatform || 'instagram';
+    document.getElementById('teamMemberModalSocialInput').value = teamMemberModalDraft.socialHandle || '';
+  }
+
+  function openTeamMemberModal(idx) {
+    teamMemberModalTargetIdx = (idx === null || idx === undefined) ? null : idx;
+    const existing = teamMemberModalTargetIdx !== null ? currentTeamMembers[teamMemberModalTargetIdx] : null;
+    teamMemberModalDraft = existing
+      ? { ...existing }
+      : { role: 'makeup_artist', name: '', socialPlatform: 'instagram', socialHandle: '' };
+    refreshPastTeamMembersSelect();
+    fillTeamMemberModalForm();
+    document.getElementById('teamMemberModalOverlay').hidden = false;
+  }
+
+  document.getElementById('teamMemberModalRoleSelect').addEventListener('change', (e) => {
+    teamMemberModalDraft.role = e.target.value;
+  });
+
+  document.getElementById('teamMemberModalNameInput').addEventListener('input', (e) => {
+    teamMemberModalDraft.name = e.target.value;
+  });
+
+  // Same auto-fill as before the popup redesign: leaving the name field
+  // having typed a known contact's name fills in whatever handle was saved
+  // for them last time, unless one's already been typed here.
+  document.getElementById('teamMemberModalNameInput').addEventListener('blur', () => {
+    const draft = teamMemberModalDraft;
+    if (!draft || hasText(draft.socialHandle)) return;
+    const match = lookupBestContactHandle(draft.name);
+    if (!match) return;
+    draft.socialPlatform = match.platform;
+    draft.socialHandle = match.handle;
+    fillTeamMemberModalForm();
+  });
+
+  document.getElementById('teamMemberModalSocialPlatform').addEventListener('change', (e) => {
+    teamMemberModalDraft.socialPlatform = e.target.value;
+  });
+
+  document.getElementById('teamMemberModalSocialInput').addEventListener('input', (e) => {
+    teamMemberModalDraft.socialHandle = e.target.value;
+  });
+
+  document.getElementById('saveTeamMemberModalBtn').addEventListener('click', () => {
+    const draft = teamMemberModalDraft;
+    draft.name = document.getElementById('teamMemberModalNameInput').value.trim();
+
+    if (teamMemberModalTargetIdx !== null) currentTeamMembers[teamMemberModalTargetIdx] = draft;
+    else currentTeamMembers.push(draft);
+
+    document.getElementById('teamMemberModalOverlay').hidden = true;
+    teamMemberModalDraft = null;
     renderTeamMembers();
     scheduleShootAutosave();
   });
@@ -6274,6 +6366,7 @@
       if (btn.dataset.close === 'journal') closeJournalModal();
       if (btn.dataset.close === 'location') document.getElementById('locationModalOverlay').hidden = true;
       if (btn.dataset.close === 'talent') document.getElementById('talentModalOverlay').hidden = true;
+      if (btn.dataset.close === 'teamMember') document.getElementById('teamMemberModalOverlay').hidden = true;
       if (btn.dataset.close === 'journalToc') document.getElementById('journalTocOverlay').hidden = true;
       if (btn.dataset.close === 'categoryVisibility') closeCategoryVisibilityModal();
       if (btn.dataset.close === 'manageLocations') document.getElementById('manageLocationsOverlay').hidden = true;
@@ -6284,7 +6377,7 @@
   shootModalOverlay.addEventListener('click', (e) => {
     if (e.target === shootModalOverlay) closeShootModal();
   });
-  [frameworksModalOverlay, document.getElementById('locationModalOverlay'), document.getElementById('talentModalOverlay'), document.getElementById('journalTocOverlay'), document.getElementById('tabIntroOverlay'), categoryVisibilityOverlay, document.getElementById('manageLocationsOverlay'), document.getElementById('regionCountryPopupOverlay')].forEach(overlay => {
+  [frameworksModalOverlay, document.getElementById('locationModalOverlay'), document.getElementById('talentModalOverlay'), document.getElementById('teamMemberModalOverlay'), document.getElementById('journalTocOverlay'), document.getElementById('tabIntroOverlay'), categoryVisibilityOverlay, document.getElementById('manageLocationsOverlay'), document.getElementById('regionCountryPopupOverlay')].forEach(overlay => {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) overlay.hidden = true;
     });

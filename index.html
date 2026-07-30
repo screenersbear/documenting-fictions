@@ -533,6 +533,34 @@
   </div>
 </div>
 
+<div id="teamMemberModalOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2>Team Member</h2>
+      <button class="icon-btn close-btn" data-close="teamMember">&times;</button>
+    </div>
+    <div id="teamMemberForm">
+      <label>Returning team member
+        <select id="pastTeamMembersSelect">
+          <option value="">Select a past team member…</option>
+        </select>
+      </label>
+      <label>Role
+        <select id="teamMemberModalRoleSelect"></select>
+      </label>
+      <label>Name
+        <input type="text" id="teamMemberModalNameInput" maxlength="120" placeholder="Name" />
+      </label>
+      <p class="team-question talent-social-heading">Social media handle</p>
+      <div class="social-handle-row">
+        <select id="teamMemberModalSocialPlatform" class="social-handle-platform"></select>
+        <input type="text" id="teamMemberModalSocialInput" class="social-handle-input" placeholder="Social media handle" />
+      </div>
+    </div>
+    <button type="button" class="primary modal-cta" id="saveTeamMemberModalBtn">Save</button>
+  </div>
+</div>
+
 <div id="locationModalOverlay" class="modal-overlay" hidden>
   <div class="modal rounded-modal">
     <div class="modal-header">

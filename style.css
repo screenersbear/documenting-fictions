@@ -1746,6 +1746,7 @@ h2.status-group-heading.heading-navy {
 #formSection2,
 #locationForm,
 #talentForm,
+#teamMemberForm,
 #narrativeFieldsBlock,
 #commercialFieldsBlock,
 #postShootContent,
@@ -1794,7 +1795,8 @@ h2.status-group-heading.heading-navy {
 #shootForm label,
 #journalForm label,
 #locationForm label,
-#talentForm label {
+#talentForm label,
+#teamMemberForm label {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1813,6 +1815,8 @@ h2.status-group-heading.heading-navy {
 #locationForm select,
 #talentForm input,
 #talentForm select,
+#teamMemberForm input,
+#teamMemberForm select,
 #expandFieldTextarea {
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -2172,10 +2176,9 @@ h2.status-group-heading.heading-navy {
   gap: 10px;
 }
 
-/* Each team member is its own outlined card — position, name, and social
-   handle stacked one per line — rather than a single packed row, so none
-   of the three fields end up squeezed. The delete button sits in the
-   card's own top-right corner instead of taking up a 4th line. */
+/* Shared outlined-card wrapper reused by Talent, Team Member, and Lighting
+   Setup summary cards alike — border/radius/padding only; each of those
+   supplies its own inner layout and its own corner-positioned delete ×. */
 .team-member-card {
   position: relative;
   display: flex;
@@ -2186,26 +2189,6 @@ h2.status-group-heading.heading-navy {
   padding: 12px 44px 12px 12px;
 }
 
-.team-member-role,
-.team-member-name {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 8px 10px;
-  color: var(--text);
-  font-size: 14px;
-  font-family: var(--font-body);
-  text-transform: none;
-}
-
-.team-member-card .delete-team-member {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-}
 
 /* ---- Talents (dynamic list of talent cards, right under Title) ---- */
 .talents-section {
@@ -2231,8 +2214,12 @@ h2.status-group-heading.heading-navy {
 /* Read-only summary card — the main form shows name + handles as plain
    text; tapping the card itself (not a separate button) reopens the talent
    popup prefilled. Base border/radius/padding (and the corner-positioned
-   delete ×) come from .team-member-card, same as before the popup redesign. */
-.talent-summary-card {
+   delete ×) come from .team-member-card, same as before the popup redesign.
+   .team-member-summary-card is the same pattern applied to the Team
+   section — reuses these same .talent-summary-* classes rather than
+   duplicating them under a parallel name. */
+.talent-summary-card,
+.team-member-summary-card {
   cursor: pointer;
 }
 
@@ -2427,18 +2414,6 @@ h2.status-group-heading.heading-navy {
   justify-content: space-between;
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
-}
-
-.delete-team-member {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--red);
-  font-size: 16px;
-  cursor: pointer;
-  flex-shrink: 0;
 }
 
 /* ---- Shot list (checklist inside Shoot-day notes) ---- */
