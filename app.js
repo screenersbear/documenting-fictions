@@ -1928,7 +1928,6 @@
   }
 
   // ---------- Journal ----------
-  let journalTagFilter = 'all';
   let currentJournalEntry = null;
   let journalIsNew = false;
   let journalMode = 'view';
@@ -2420,6 +2419,8 @@
   function renderJournalEntryCard(container, e) {
     const card = document.createElement('div');
     card.className = 'card log-card journal-entry-card';
+    // Anchor the table of contents scrolls to (see scrollToJournalEntry).
+    card.dataset.entryId = e.id;
     // Alternates within the month it lands in, so collapsing a month never
     // leaves two same-coloured banners stacked against each other.
     const headingColorClass = container.children.length % 2 === 0 ? 'heading-yellow' : 'heading-navy';
@@ -2570,16 +2571,7 @@
   // actually written) — same grouping structure Archive uses for shoots,
   // just keyed off the journal entry's date rather than a shoot's date.
   function renderJournal() {
-    const tags = getAllUsedJournalTags();
-    if (journalTagFilter !== 'all' && !tags.includes(journalTagFilter)) journalTagFilter = 'all';
-
-    const filtersEl = document.getElementById('journalFilters');
-    filtersEl.innerHTML = `<button class="chip${journalTagFilter === 'all' ? ' active' : ''}" data-tag="all">All</button>` +
-      tags.map(t => `<button class="chip${journalTagFilter === t ? ' active' : ''}" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</button>`).join('');
-    document.getElementById('journalFilterToggle').textContent = `Filter: ${journalTagFilter === 'all' ? 'All' : '#' + journalTagFilter}`;
-
-    let items = [...state.journalEntries];
-    if (journalTagFilter !== 'all') items = items.filter(e => (e.tags || []).includes(journalTagFilter));
+    const items = [...state.journalEntries];
 
     const list = document.getElementById('journalList');
     list.innerHTML = '';
@@ -2594,6 +2586,51 @@
       keyPrefix: 'journal',
       renderItem: renderJournalEntryCard,
     });
+  }
+
+  // ---------- Reflections table of contents ----------
+  // Reuses renderYearMonthGroups with its own 'journalToc' keyPrefix, so
+  // expanding/collapsing a year or month inside the TOC popup never disturbs
+  // what's expanded in the real list underneath (and vice versa).
+  function renderJournalTocItem(container, e) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'journal-toc-item';
+    row.textContent = e.title || 'Untitled entry';
+    row.addEventListener('click', () => scrollToJournalEntry(e.id));
+    container.appendChild(row);
+  }
+
+  function openJournalToc() {
+    const items = [...state.journalEntries].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    const list = document.getElementById('journalTocList');
+    list.innerHTML = '';
+    document.getElementById('journalTocEmpty').hidden = items.length !== 0;
+    renderYearMonthGroups(list, items, {
+      dateOf: e => e.createdAt,
+      keyPrefix: 'journalToc',
+      renderItem: renderJournalTocItem,
+    });
+    document.getElementById('journalTocOverlay').hidden = false;
+  }
+
+  document.getElementById('journalTocBtn').addEventListener('click', openJournalToc);
+
+  // Expands whichever year/month the entry actually lives under in the real
+  // list (that list's own 'journal' collapse keys, independent of the TOC's),
+  // then scrolls it to the top of the same scrolling space.
+  function scrollToJournalEntry(id) {
+    const entry = state.journalEntries.find(e => e.id === id);
+    if (!entry) return;
+    const d = entry.createdAt;
+    if (d) {
+      setSectionCollapsed(`journal:${d.slice(0, 4)}`, false);
+      setSectionCollapsed(`journal:${d.slice(0, 4)}:${d.slice(5, 7)}`, false);
+    }
+    document.getElementById('journalTocOverlay').hidden = true;
+    renderJournal();
+    const card = document.querySelector(`.journal-entry-card[data-entry-id="${id}"]`);
+    if (card) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
 
   // ---------- Journal "Log" notebook (auto-generated weekly recap) ----------
@@ -2743,19 +2780,6 @@
       renderItem: renderLogWeekCard,
     });
   }
-
-  document.getElementById('journalFilterToggle').addEventListener('click', () => {
-    const filters = document.getElementById('journalFilters');
-    filters.hidden = !filters.hidden;
-  });
-
-  document.getElementById('journalFilters').addEventListener('click', (e) => {
-    const chip = e.target.closest('.chip');
-    if (!chip) return;
-    journalTagFilter = chip.dataset.tag;
-    document.getElementById('journalFilters').hidden = true;
-    renderJournal();
-  });
 
   // ---------- Journal entry options (kebab menu on the list card) ----------
   let optionsJournalEntryId = null;
@@ -6206,6 +6230,7 @@
       if (btn.dataset.close === 'journal') closeJournalModal();
       if (btn.dataset.close === 'location') document.getElementById('locationModalOverlay').hidden = true;
       if (btn.dataset.close === 'talent') document.getElementById('talentModalOverlay').hidden = true;
+      if (btn.dataset.close === 'journalToc') document.getElementById('journalTocOverlay').hidden = true;
       if (btn.dataset.close === 'categoryVisibility') closeCategoryVisibilityModal();
       if (btn.dataset.close === 'manageLocations') document.getElementById('manageLocationsOverlay').hidden = true;
       if (btn.dataset.close === 'regionCountryPopup') document.getElementById('regionCountryPopupOverlay').hidden = true;
@@ -6215,7 +6240,7 @@
   shootModalOverlay.addEventListener('click', (e) => {
     if (e.target === shootModalOverlay) closeShootModal();
   });
-  [frameworksModalOverlay, document.getElementById('locationModalOverlay'), document.getElementById('talentModalOverlay'), document.getElementById('tabIntroOverlay'), categoryVisibilityOverlay, document.getElementById('manageLocationsOverlay'), document.getElementById('regionCountryPopupOverlay')].forEach(overlay => {
+  [frameworksModalOverlay, document.getElementById('locationModalOverlay'), document.getElementById('talentModalOverlay'), document.getElementById('journalTocOverlay'), document.getElementById('tabIntroOverlay'), categoryVisibilityOverlay, document.getElementById('manageLocationsOverlay'), document.getElementById('regionCountryPopupOverlay')].forEach(overlay => {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) overlay.hidden = true;
     });

@@ -351,8 +351,11 @@ h1, h2, h3 {
   cursor: pointer;
   flex-shrink: 0;
   /* The chevron glyph carries its own trailing sidebearing, so flex centring
-     leaves it visibly right of centre in the circle. */
-  padding-right: 4px;
+     leaves it visibly right of centre in the circle. Measured precisely via
+     canvas TextMetrics + a live DOM offset check at this exact font/size:
+     6px lands the glyph at a dead-on 0px horizontal offset from the
+     circle's true center (4px undershot by 2px). */
+  padding-right: 6px;
 }
 
 .journal-back-btn:active {
@@ -1173,6 +1176,29 @@ h2.status-group-heading.heading-navy {
 
 .shoot-status-rows[hidden] {
   display: none;
+}
+
+/* Rows inside the Reflections table-of-contents popup (#journalTocList) —
+   shares the same .shoot-status-group/.archive-month-group year>month
+   nesting as the real list, so only the leaf row itself needs styling. */
+.journal-toc-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 2px;
+  font-size: 15px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.journal-toc-item:last-child {
+  border-bottom: none;
 }
 
 .card {

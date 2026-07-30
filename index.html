@@ -159,8 +159,7 @@
     </div>
 
     <div id="journalReflectionsView" hidden>
-      <button type="button" class="filter-toggle" id="journalFilterToggle">Filter: All</button>
-      <div class="filters" id="journalFilters" hidden></div>
+      <button type="button" class="filter-toggle" id="journalTocBtn">Table of contents</button>
       <div id="journalList" class="card-list"></div>
       <p class="empty-state" id="journalEmpty" hidden>No journal entries yet.</p>
     </div>
@@ -1303,6 +1302,18 @@
       <button type="button" class="secondary" id="logShootRefCancelBtn">Close</button>
       <button type="button" class="primary" id="logShootRefViewBtn">View shoot</button>
     </div>
+  </div>
+</div>
+
+<!-- ============ REFLECTIONS TABLE OF CONTENTS ============ -->
+<div id="journalTocOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2>Table of contents</h2>
+      <button class="icon-btn close-btn" data-close="journalToc">&times;</button>
+    </div>
+    <div id="journalTocList"></div>
+    <p class="empty-state" id="journalTocEmpty" hidden>No journal entries yet.</p>
   </div>
 </div>
 
