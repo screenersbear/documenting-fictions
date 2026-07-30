@@ -4251,6 +4251,10 @@
     if (!expandFieldTargetId) return;
     const field = document.getElementById(expandFieldTargetId);
     field.value = document.getElementById('expandFieldTextarea').value;
+    // The readonly field is what's visible on the main form once this popup
+    // closes — it should always read from the start of what was written,
+    // not wherever the popup's own cursor/scroll happened to be sitting.
+    field.scrollTop = 0;
     field.dispatchEvent(new Event('input', { bubbles: true }));
   });
 

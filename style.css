@@ -735,8 +735,13 @@ h1, h2, h3 {
 }
 
 .shoot-row .badge {
-  /* Base .badge is already surface-2/text-dim — this just keeps it from
-     stretching to full width as a column-flex child. */
+  /* Base .badge's surface-2 background is white — identical to the row's
+     own background, so on a regular (non-compact) row it read as bare gray
+     text with no visible box at all. Matches .shoot-row-compact .badge
+     (the Overview counter popups) so a "Pending: X" reminder looks the same
+     bubble everywhere it shows up, not just there. */
+  background: var(--accent);
+  color: var(--text);
   align-self: flex-start;
 }
 
@@ -3616,6 +3621,11 @@ h2.status-group-heading.heading-navy {
      box that looks like it's stretching edge-to-edge. */
   -webkit-appearance: none;
   appearance: none;
+  /* iOS Safari sizes an empty date input's internal mm/dd/yyyy segments to
+     a shorter line box than a filled one, so without a fixed height the
+     field visibly grows the moment a date is picked. Explicit height keeps
+     it identical (and comfortably tappable) in both states. */
+  height: 44px;
 }
 
 /* The native calendar icon doesn't reliably respect padding-right on its
