@@ -1896,6 +1896,15 @@ h2.status-group-heading.heading-navy {
   gap: 12px;
 }
 
+/* Extra breathing room on top of #visualsBody's own 14px flex gap, so Visual
+   Language / References / Mood board / Lighting read as distinct blocks
+   rather than one continuous stack. */
+#visualsBody .references-block,
+#visualsBody .moodboard-section,
+#visualsBody #frameworkTagsContainer {
+  margin-top: 28px;
+}
+
 .framework-subsection-body {
   margin-top: 10px;
 }
