@@ -677,18 +677,19 @@ h1, h2, h3 {
 }
 
 /* Every shoot bubble on every page (Overview, Shoots, Archive, Stats) reserves
-   the same height — the tallest any bubble's stacked content can reach: a
-   2-line title (clamped, see .shoot-row-title), the shot date, the due date,
-   the status pill, and a 2-line pending badge. Grown from the previous 88px
-   fixed floor specifically so all four stacked fields (title/shot date/due
-   date/status) get their own line rather than sharing space — the tradeoff,
-   deliberately accepted, is that .shoot-thumb now stretches to a taller,
-   narrower crop instead of the old near-square one (see .crop-stage, which
-   the crop tool matches to this same value so what you frame is what shows).
-   Measured worst-case with all five lines present; adjust both together if
-   this ever changes. */
+   the same floor — calibrated to the realistic common case (2-line title,
+   shot date, due date, status pill — no badge), not the rare compound case
+   that also stacks a 2-line pending badge on top. That rarer combination
+   only occurs for a non-archived captured shoot with no reflection recorded,
+   surfaced through the Stats/Archive detail popups — min-height is a floor,
+   not a ceiling, so those rows simply grow past 120px rather than clipping;
+   that's fine, since more content genuinely earning more room reads better
+   than every row padding out to match the rarest case. See .crop-stage,
+   which the crop tool matches to this same value so what you frame is what
+   shows. Measured against the common case; adjust both together if this
+   ever changes. */
 .shoot-row-body {
-  min-height: 168px;
+  min-height: 120px;
 }
 
 .shoot-row-title {
@@ -3257,11 +3258,9 @@ h2.status-group-heading.heading-navy {
   position: relative;
   width: 100%;
   /* Matches the shoot bubble's thumbnail shape (62px wide, stretched to the
-     bubble's fixed ~168px height, since the stacked title/date/due/status
-     layout needs more vertical room than the old side-by-side one) instead
-     of a square, so what you frame here is what actually shows on every
-     shoot bubble. */
-  aspect-ratio: 31 / 84;
+     bubble's ~120px floor height) instead of a square, so what you frame
+     here is what actually shows on every shoot bubble. */
+  aspect-ratio: 31 / 60;
   overflow: hidden;
   border-radius: var(--radius-2xl);
   background: #000;
