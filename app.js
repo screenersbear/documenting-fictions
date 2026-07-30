@@ -4796,13 +4796,14 @@
     cropImg.style.transform = `translate(${cropOffsetX}px, ${cropOffsetY}px) scale(${cropBaseScale * cropZoom})`;
   }
 
-  // 'project' crops to the shoot bubble's 31:60 thumbnail; 'talent' crops to
-  // the 4:5 talent card photo box. The stage's own ratio comes from CSS, and
-  // the base-scale math below measures the live box, so switching modes is
-  // just a class swap plus the matching output canvas size.
+  // 'project' crops to the shoot bubble's thumbnail (96x120, a 4:5 ratio);
+  // 'talent' crops to the 4:5 talent card photo box — same ratio, different
+  // absolute size. The stage's own ratio comes from CSS, and the base-scale
+  // math below measures the live box, so switching modes is just a class
+  // swap plus the matching output canvas size.
   let cropMode = 'project';
   const CROP_OUTPUT = {
-    project: { width: 124, height: 240 },
+    project: { width: 192, height: 240 },
     talent: { width: 240, height: 300 },
   };
 
@@ -4942,8 +4943,8 @@
         if (currentShootId && talent.id) savePhotoToIdb(talentPhotoKey(currentShootId, talent.id), dataUrl).catch(() => {});
         // With no mood board or final images yet, nothing has claimed the cover
         // (those paths auto-set it from their first photo) — so a talent photo
-        // becomes the shoot's cover rather than leaving the bubble blank. It's
-        // 4:5 against the bubble's 31:60 slot, which object-fit crops to suit.
+        // becomes the shoot's cover rather than leaving the bubble blank. Both
+        // boxes are 4:5, so it drops in without any odd object-fit cropping.
         if (!pendingProjectPhoto) {
           pendingProjectPhoto = dataUrl;
           if (currentShootId) savePhotoToIdb(projectPhotoKey(currentShootId), dataUrl).catch(() => {});
