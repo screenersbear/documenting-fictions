@@ -38,6 +38,7 @@
   }
 
   const STATUS_LABELS = {
+    prospect: 'Prospect',
     idea_phase: 'Early idea',
     planning: 'Active planning',
     waiting_to_shoot: 'Shoot ready',
@@ -503,12 +504,12 @@
     return NEW_SHOOT_TITLES[Math.floor(Math.random() * NEW_SHOOT_TITLES.length)];
   }
 
-  const LIGHTING_TAGS = ['Natural light', 'Golden hour', 'Overcast/diffused', 'Hard flash', '3-pt lighting', 'Ring light', 'Bounced light', 'Backlighting', 'Backlit', 'Silhouette', 'Low key', 'High key', 'Practical lights', 'Colored gels', 'Other'];
+  const LIGHTING_TAGS = ['Natural light', 'Hard flash', '3-pt lighting', 'Bounced light', 'Backlighting', 'Low key', 'High key', 'Colored gels', 'Other'];
 
   // Tags dropped from LIGHTING_TAGS. Kept as a named list because the framework
   // lives in saved state, not in the constant above — an existing install has
   // its own copy, so retiring a tag takes a migration (see removeFrameworkTags).
-  const RETIRED_LIGHTING_TAGS = ['Studio lighting', 'Softbox'];
+  const RETIRED_LIGHTING_TAGS = ['Studio lighting', 'Softbox', 'Golden hour', 'Overcast/diffused', 'Ring light', 'Backlit', 'Silhouette', 'Practical lights'];
   const VISUAL_LANGUAGE_TAGS = ['Lifestyle', 'Documentary', 'Magic realism', 'Surrealism', 'Portrait', 'Fashion', 'Fitness', 'Cinematic', 'Commercial', 'Headshot', 'Beauty', 'Other'];
 
   function seedFrameworks() {

@@ -248,6 +248,7 @@
         <div class="status-swatch-wrap">
           <span class="status-swatch-display shine-sweep" id="statusSwatchDisplay" aria-hidden="true">Status: Early idea</span>
           <select id="shootStatus" class="status-swatch-select" aria-label="Status">
+            <option value="prospect">Prospect</option>
             <option value="idea_phase">Early idea</option>
             <option value="planning">Active planning</option>
             <option value="waiting_to_shoot">Shoot ready</option>
@@ -1074,19 +1075,19 @@
       <button type="button" class="icon-btn close-btn" id="shootModeExitBtn" aria-label="Exit shoot mode">&times;</button>
     </div>
     <div class="shoot-mode-body">
-      <h3 class="shoot-mode-section-heading heading-yellow">Shot list</h3>
-      <div id="shootModeShotList" class="shoot-mode-shots"></div>
-      <p class="shoot-mode-empty" id="shootModeShotsEmpty" hidden>No shots on the list for this shoot.</p>
-
-      <h3 class="shoot-mode-section-heading heading-navy">Mood board</h3>
-      <div id="shootModeMoodboard" class="moodboard-grid"></div>
-      <p class="shoot-mode-empty" id="shootModeMoodEmpty" hidden>No mood board images for this shoot.</p>
-
       <h3 class="shoot-mode-section-heading heading-yellow">Quick review</h3>
       <div class="shoot-mode-quick-review">
         <button type="button" class="shoot-mode-quick-review-btn" id="shootModeReviewDirectionBtn">Direction</button>
         <button type="button" class="shoot-mode-quick-review-btn" id="shootModeReviewLightingBtn">Lighting setups</button>
       </div>
+
+      <h3 class="shoot-mode-section-heading heading-navy">Shot list</h3>
+      <div id="shootModeShotList" class="shoot-mode-shots"></div>
+      <p class="shoot-mode-empty" id="shootModeShotsEmpty" hidden>No shots on the list for this shoot.</p>
+
+      <h3 class="shoot-mode-section-heading heading-yellow">Mood board</h3>
+      <div id="shootModeMoodboard" class="moodboard-grid"></div>
+      <p class="shoot-mode-empty" id="shootModeMoodEmpty" hidden>No mood board images for this shoot.</p>
     </div>
     <button type="button" class="primary modal-cta" id="shootModeDoneBtn">Done shooting</button>
   </div>
