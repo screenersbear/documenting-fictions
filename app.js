@@ -956,30 +956,37 @@
     // are expected any time from captured onward rather than only once archived.
     const hasReflection = hasText(s.whatWentRight) || hasText(s.couldBeBetter) || hasText(s.lessonsLearned);
     const reflectionPendingText = (showBadge && POST_CAPTURE_STATUSES.includes(s.status) && !hasReflection) ? 'Pending: Reflection' : '';
-    const badgeParts = [statusLabel, pendingText, proofsPendingText, reflectionPendingText].filter(Boolean);
+    // Status now gets its own stacked line with a background pill (see
+    // .shoot-row-status-pill below) — everything else stays in the old
+    // <br>-joined badge, which keeps its existing hidden/shown logic and its
+    // async final-images top-up untouched, just moved to its own line under
+    // the stack instead of sharing a slot with status.
+    const badgeParts = [pendingText, proofsPendingText, reflectionPendingText].filter(Boolean);
     const badgeHtml = badgeParts.join('<br>');
     // Once archived there's nothing left to deliver, so the deadline no
     // longer means anything — don't show it. Otherwise, an overdue deadline
     // still shows (until the shoot's delivered or archived), just in red.
     const isOverdue = !!s.deadline && s.deadline < todayStr();
     const dueHtml = (s.deadline && !s.archived)
-      ? `<span class="shoot-row-due${isOverdue ? ' overdue' : ''}">Due: ${prettyDateShort(s.deadline)}</span>`
+      ? `<span class="shoot-row-date-line shoot-row-due${isOverdue ? ' overdue' : ''}">Due: ${prettyDateShort(s.deadline)}</span>`
+      : '';
+    const statusHtml = statusLabel
+      ? `<span class="shoot-row-status-pill">${escapeHtml(statusLabel)}</span>`
       : '';
     const div = document.createElement('div');
     div.className = 'shoot-row';
     div.innerHTML = `
       ${shootThumbHtml(s)}
       <div class="shoot-row-body">
-        <div class="shoot-row-top">
-          <span class="shoot-row-title"><strong>${escapeHtml(shootDisplayName(s))}</strong></span>
-          <div class="shoot-row-dates">
-            <span class="mi-sub">${shootDateLabel(s, prettyDateShort)}</span>
-            ${dueHtml}
-          </div>
-        </div>
+        <span class="shoot-row-title"><strong>${escapeHtml(shootDisplayName(s))}</strong></span>
+        <span class="shoot-row-date-line">${shootDateLabel(s, prettyDateShort)}</span>
+        ${dueHtml}
+        ${statusHtml}
         <span class="badge"${badgeHtml ? '' : ' hidden'}>${badgeHtml}</span>
       </div>
-      <button type="button" class="row-options-btn" aria-label="Options">&#8942;</button>
+      <div class="shoot-row-accent-strip">
+        <button type="button" class="row-options-btn" aria-label="Options">&#8942;</button>
+      </div>
     `;
     div.addEventListener('click', () => {
       if (opts && opts.switchToShootsTab) document.querySelector('.tab[data-view="shoots"]').click();
@@ -4789,13 +4796,13 @@
     cropImg.style.transform = `translate(${cropOffsetX}px, ${cropOffsetY}px) scale(${cropBaseScale * cropZoom})`;
   }
 
-  // 'project' crops to the shoot bubble's 31:44 thumbnail; 'talent' crops to
+  // 'project' crops to the shoot bubble's 31:84 thumbnail; 'talent' crops to
   // the 4:5 talent card photo box. The stage's own ratio comes from CSS, and
   // the base-scale math below measures the live box, so switching modes is
   // just a class swap plus the matching output canvas size.
   let cropMode = 'project';
   const CROP_OUTPUT = {
-    project: { width: 124, height: 176 },
+    project: { width: 124, height: 336 },
     talent: { width: 240, height: 300 },
   };
 
@@ -4936,7 +4943,7 @@
         // With no mood board or final images yet, nothing has claimed the cover
         // (those paths auto-set it from their first photo) — so a talent photo
         // becomes the shoot's cover rather than leaving the bubble blank. It's
-        // 4:5 against the bubble's 31:44 slot, which object-fit crops to suit.
+        // 4:5 against the bubble's 31:84 slot, which object-fit crops to suit.
         if (!pendingProjectPhoto) {
           pendingProjectPhoto = dataUrl;
           if (currentShootId) savePhotoToIdb(projectPhotoKey(currentShootId), dataUrl).catch(() => {});

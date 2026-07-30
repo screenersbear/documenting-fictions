@@ -648,8 +648,9 @@ h1, h2, h3 {
   background: var(--surface);
   border: 3px solid var(--ink);
   border-radius: var(--radius-xl);
-  /* Kept tight — every px here is a px the title/dates don't get. */
-  padding: 0 2px 0 0;
+  /* No padding of its own — the thumb and the new accent strip both go flush
+     to their respective edges, same as before; the gap below is what
+     separates them from the text in between. */
   display: flex;
   align-items: stretch;
   gap: 8px;
@@ -671,75 +672,90 @@ h1, h2, h3 {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 6px 0;
+  gap: 3px;
+  padding: 8px 8px 8px 0;
 }
 
 /* Every shoot bubble on every page (Overview, Shoots, Archive, Stats) reserves
-   the same height — the most any bubble's content can actually reach: a
-   2-line title (clamped, see .shoot-row-title), the date + due date, and a
-   2-line badge (status/pending line + a second pending line). Measured at
-   87px with that worst-case content (tight padding/gap above); a couple px
-   of headroom on top. Kept close to that worst case on purpose — anything
-   taller just stretches the thumbnail photo into an odd, elongated crop. */
+   the same height — the tallest any bubble's stacked content can reach: a
+   2-line title (clamped, see .shoot-row-title), the shot date, the due date,
+   the status pill, and a 2-line pending badge. Grown from the previous 88px
+   fixed floor specifically so all four stacked fields (title/shot date/due
+   date/status) get their own line rather than sharing space — the tradeoff,
+   deliberately accepted, is that .shoot-thumb now stretches to a taller,
+   narrower crop instead of the old near-square one (see .crop-stage, which
+   the crop tool matches to this same value so what you frame is what shows).
+   Measured worst-case with all five lines present; adjust both together if
+   this ever changes. */
 .shoot-row-body {
-  min-height: 88px;
-}
-
-.shoot-row-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  font-size: 16px;
-  gap: 10px;
+  min-height: 168px;
 }
 
 .shoot-row-title {
-  flex: 1;
-  min-width: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  font-size: 16px;
 }
 
-.shoot-row-top .mi-sub {
-  flex-shrink: 0;
-}
-
-.shoot-row-dates {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  flex-shrink: 0;
-  gap: 2px;
+.shoot-row-date-line {
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .shoot-row-due {
   color: var(--accent);
-  font-weight: 700;
 }
 
 .shoot-row-due.overdue {
   color: var(--red);
 }
 
-.shoot-row .badge {
+/* The status pill is the one line that always gets a background when it's
+   shown at all ("active planning", "early idea", etc.) — distinct from the
+   plain .badge line below it, which is reminders (Pending: X), not status. */
+.shoot-row-status-pill {
+  display: inline-block;
+  align-self: flex-start;
   background: var(--accent);
   color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shoot-row .badge {
+  /* Base .badge is already surface-2/text-dim — this just keeps it from
+     stretching to full width as a column-flex child. */
   align-self: flex-start;
+}
+
+/* Full-height strip on the side opposite the thumbnail — the kebab now sits
+   inside it rather than floating on plain background. */
+.shoot-row-accent-strip {
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 30px;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .row-options-btn {
   flex-shrink: 0;
-  align-self: center;
   width: 28px;
   height: 28px;
   border-radius: 50%;
   border: none;
   background: none;
-  color: var(--text-dim);
-  font-size: 20px;
+  color: var(--text);
+  font-size: 26px;
+  font-weight: 900;
   line-height: 1;
   cursor: pointer;
 }
@@ -3241,9 +3257,11 @@ h2.status-group-heading.heading-navy {
   position: relative;
   width: 100%;
   /* Matches the shoot bubble's thumbnail shape (62px wide, stretched to the
-     bubble's fixed ~88px height) instead of a square, so what you frame
-     here is what actually shows on every shoot bubble. */
-  aspect-ratio: 31 / 44;
+     bubble's fixed ~168px height, since the stacked title/date/due/status
+     layout needs more vertical room than the old side-by-side one) instead
+     of a square, so what you frame here is what actually shows on every
+     shoot bubble. */
+  aspect-ratio: 31 / 84;
   overflow: hidden;
   border-radius: var(--radius-2xl);
   background: #000;
