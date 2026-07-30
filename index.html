@@ -168,6 +168,10 @@
       <div id="journalLogList" class="card-list"></div>
       <p class="empty-state" id="journalLogEmpty" hidden>No shoots logged yet — the log fills in automatically once you've marked a shoot captured or further along.</p>
     </div>
+
+    <button type="button" class="scroll-top-btn" id="journalScrollTopBtn" aria-label="Scroll to top" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+    </button>
   </section>
 
   <!-- ============ STATS ============ -->
@@ -1307,13 +1311,15 @@
 
 <!-- ============ REFLECTIONS TABLE OF CONTENTS ============ -->
 <div id="journalTocOverlay" class="modal-overlay" hidden>
-  <div class="modal rounded-modal">
+  <div class="modal rounded-modal journal-toc-modal">
     <div class="modal-header">
       <h2>Table of contents</h2>
       <button class="icon-btn close-btn" data-close="journalToc">&times;</button>
     </div>
-    <div id="journalTocList"></div>
-    <p class="empty-state" id="journalTocEmpty" hidden>No journal entries yet.</p>
+    <div class="journal-toc-scroll">
+      <div id="journalTocList"></div>
+      <p class="empty-state" id="journalTocEmpty" hidden>No journal entries yet.</p>
+    </div>
   </div>
 </div>
 

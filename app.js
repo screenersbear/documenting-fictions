@@ -2259,11 +2259,26 @@
     if (view === 'log') renderJournalLog();
     if (view === 'reflections') showTabIntro('journal:reflections');
     if (view === 'log') showTabIntro('journal:log2');
+    updateJournalScrollTopBtn();
   }
 
   document.getElementById('openReflectionsNotebookBtn').addEventListener('click', () => showJournalView('reflections'));
   document.getElementById('openLogNotebookBtn').addEventListener('click', () => showJournalView('log'));
   document.getElementById('journalBackBtn').addEventListener('click', () => showJournalView('select'));
+
+  // Both notebooks can run long — offers a quick way back to the top
+  // without hunting for it. Only relevant while Log or Reflections is
+  // actually the active view; hidden the instant either isn't (switching
+  // top-level tabs, or backing out to the notebook picker).
+  const journalScrollTopBtn = document.getElementById('journalScrollTopBtn');
+  function updateJournalScrollTopBtn() {
+    const inNotebook = !views.journal.hidden && (journalView === 'log' || journalView === 'reflections');
+    journalScrollTopBtn.hidden = !inNotebook || window.scrollY < 400;
+  }
+  window.addEventListener('scroll', updateJournalScrollTopBtn, { passive: true });
+  journalScrollTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 
   // Linked entries (auto-compiled from a shoot's post-shoot reflection)
   // share the shoot's own final-images store instead of getting a separate
@@ -2395,7 +2410,7 @@
   // let a background list render overwrite the editor's flag with some other
   // entry's answer.
   function renderJournalListImages(grid, key) {
-    idbGetImages(key).then(images => {
+    return idbGetImages(key).then(images => {
       grid.hidden = !images.length;
       grid.innerHTML = '';
       images.forEach((img, idx) => {
@@ -2467,7 +2482,12 @@
     });
 
     container.appendChild(card);
-    renderJournalListImages(card.querySelector('.journal-entry-images'), journalEntryImagesKey(e));
+    // Returned (not fire-and-forget) so scrollToJournalEntry can wait for
+    // every card's cover photos to finish loading before it scrolls — those
+    // load from IndexedDB asynchronously and would otherwise grow cards
+    // above the target after the scroll already landed, shoving it back out
+    // of view.
+    return renderJournalListImages(card.querySelector('.journal-entry-images'), journalEntryImagesKey(e));
   }
 
   // Collapsible year > month nesting, shared by both Journal notebooks so the
@@ -2480,6 +2500,11 @@
   // two same-coloured bars stacked.
   function renderYearMonthGroups(list, items, opts) {
     const { dateOf, keyPrefix, renderItem } = opts;
+    // Collects whatever each renderItem call returns (e.g. a journal card's
+    // image-loading promise) so a caller that needs to know when everything
+    // has actually finished rendering — not just synchronously appended —
+    // can Promise.all() this. Callers that don't care just ignore it.
+    const results = [];
 
     const years = new Map();
     items.forEach(item => {
@@ -2520,7 +2545,7 @@
         // Undated only ever has the one '00' month bucket, so an "Undated"
         // sub-heading under the "Undated" year heading is the same word twice.
         sortedMonths.forEach(month => {
-          months.get(month).forEach(item => renderItem(yearRowsWrap, item));
+          months.get(month).forEach(item => results.push(renderItem(yearRowsWrap, item)));
         });
       } else {
         let visibleMonthIndex = 0;
@@ -2537,7 +2562,7 @@
           const monthRowsWrap = document.createElement('div');
           monthRowsWrap.className = 'shoot-status-rows';
           monthRowsWrap.hidden = monthCollapsed;
-          months.get(month).forEach(item => renderItem(monthRowsWrap, item));
+          months.get(month).forEach(item => results.push(renderItem(monthRowsWrap, item)));
 
           monthHeading.addEventListener('click', () => {
             const nowHidden = !monthRowsWrap.hidden;
@@ -2565,11 +2590,17 @@
       list.appendChild(yearGroupEl);
       visibleYearIndex++;
     });
+
+    return results;
   }
 
   // Nested by year > month of each entry's own createdAt (when it was
   // actually written) — same grouping structure Archive uses for shoots,
   // just keyed off the journal entry's date rather than a shoot's date.
+  // Returns a promise that resolves once every card's cover photos have
+  // finished loading (see renderJournalEntryCard) — most callers can ignore
+  // it, but scrollToJournalEntry needs it so the layout has stopped shifting
+  // before it scrolls.
   function renderJournal() {
     const items = [...state.journalEntries];
 
@@ -2581,11 +2612,12 @@
     // renderYearMonthGroups keeps whatever order it's handed.
     items.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
-    renderYearMonthGroups(list, items, {
+    const imagePromises = renderYearMonthGroups(list, items, {
       dateOf: e => e.createdAt,
       keyPrefix: 'journal',
       renderItem: renderJournalEntryCard,
     });
+    return Promise.all(imagePromises);
   }
 
   // ---------- Reflections table of contents ----------
@@ -2628,9 +2660,14 @@
       setSectionCollapsed(`journal:${d.slice(0, 4)}:${d.slice(5, 7)}`, false);
     }
     document.getElementById('journalTocOverlay').hidden = true;
-    renderJournal();
-    const card = document.querySelector(`.journal-entry-card[data-entry-id="${id}"]`);
-    if (card) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    // Wait for renderJournal's cover photos to finish loading before
+    // scrolling — otherwise a photo landing above the target after the
+    // scroll already happened grows that card and shoves the target back
+    // down, so it lands short of the top instead of flush with it.
+    renderJournal().then(() => {
+      const card = document.querySelector(`.journal-entry-card[data-entry-id="${id}"]`);
+      if (card) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
   }
 
   // ---------- Journal "Log" notebook (auto-generated weekly recap) ----------
@@ -3228,11 +3265,10 @@
     container.innerHTML = currentTalents.map((talent, idx) => {
       const handles = (talent.socialHandles || []).filter(sh => hasText(sh.handle));
       return `
-      <div class="team-member-card talent-summary-card">
+      <div class="team-member-card talent-summary-card" data-idx="${idx}">
         <div class="talent-summary-heading">
           ${talent.photo ? `<img src="${talent.photo}" alt="" class="talent-summary-photo" />` : ''}
           <span class="talent-summary-name">${escapeHtml(hasText(talent.name) ? talent.name : `Talent ${idx + 1}`)}</span>
-          <button type="button" class="talent-edit-btn" data-idx="${idx}">Edit</button>
         </div>
         ${handles.length ? `
           <div class="talent-summary-handles">
@@ -3242,16 +3278,20 @@
             }).join('')}
           </div>
         ` : ''}
-        <button type="button" class="delete-talent" data-idx="${idx}">&times;</button>
+        <button type="button" class="talent-summary-delete" data-idx="${idx}">&times;</button>
       </div>
     `;
     }).join('');
 
-    container.querySelectorAll('.talent-edit-btn').forEach(btn => {
-      btn.addEventListener('click', () => openTalentModal(Number(btn.dataset.idx)));
+    // The whole card is the "edit" affordance now — no separate button needed.
+    container.querySelectorAll('.talent-summary-card').forEach(card => {
+      card.addEventListener('click', () => openTalentModal(Number(card.dataset.idx)));
     });
-    container.querySelectorAll('.delete-talent').forEach(btn => {
-      btn.addEventListener('click', () => {
+    container.querySelectorAll('.talent-summary-delete').forEach(btn => {
+      btn.addEventListener('click', (ev) => {
+        // The card itself opens the edit popup, so the delete "x" has to stop
+        // the click here or it also reopens a popup for the talent it just removed.
+        ev.stopPropagation();
         const idx = Number(btn.dataset.idx);
         const talent = currentTalents[idx];
         if (!talent) return;
