@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dailies-scratchpad",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["/private/tmp/claude-501/-Users-starkyproductions-Library-CloudStorage-OneDrive-SharedLibraries-Onedrive-Documents-Claude/83625233-067d-4d09-b90c-1d65c7adae6a/scratchpad/Dailies/serve.py"],
+      "port": 8743
+    }
+  ]
+}

@@ -3536,6 +3536,22 @@ h2.status-group-heading.heading-navy {
   border-radius: 28px;
 }
 
+/* Team Member — centered like the app menu/intro popups rather than a
+   bottom sheet: unlike Talent/Location (longer, scrolling forms), its
+   content is short and fixed, so floating it in the middle reads as a
+   quick dialog rather than something you'd pull up from the bottom. */
+.team-member-overlay {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal.team-member-modal {
+  width: 100%;
+  max-width: 380px;
+  border-radius: 28px;
+}
+
 #tabIntroCloseBtn,
 #postShootPromptDismissBtn,
 #dayAfterOkBtn,

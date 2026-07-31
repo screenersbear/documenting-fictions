@@ -4267,12 +4267,20 @@
     ['shoot:postShoot', '#postShootHeading', 'postShootBody'],
   ];
 
-  // Shot rows auto-size to their text, but a row measured while its section was
-  // collapsed reports zero height and keeps the one-line default. Every path
-  // that reveals a section runs this so the rows get their real height the
-  // moment they're actually on screen. Idempotent, so calling it broadly is fine.
+  // Any auto-sized textarea measured while its section was collapsed reports
+  // zero height and keeps the one-line/rows-default size — true for the shot
+  // list and lighting setups (handled below), but just as true for every
+  // other collapsible section's own readonly notes fields (Location
+  // directions, Character, Concept, Talent/Team directions, etc.): a shoot
+  // opened with, say, Logistics collapsed leaves Location directions stuck
+  // too short once Logistics is expanded, cutting its text off, since
+  // nothing else ever re-measures it. Every path that reveals a section runs
+  // this so everything inside gets its real height the moment it's actually
+  // on screen. Idempotent, so calling it broadly is fine.
   function onShootSectionRevealed(bodyId) {
     if (bodyId === 'shotListBody' || bodyId === 'lightingSetupsBody') autoSizeAllListTextareas();
+    const body = document.getElementById(bodyId);
+    if (body) body.querySelectorAll('textarea').forEach(syncFieldFilledState);
   }
 
   function applyShootFormCollapseState() {

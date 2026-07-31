@@ -1,4 +1,4 @@
-const CACHE_NAME = 'starky-v47';
+const CACHE_NAME = 'starky-v48';
 const ASSETS = [
   './',
   './index.html',
@@ -30,7 +30,12 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    fetch(event.request)
+    // no-store bypasses the browser's own HTTP cache, not just this SW's
+    // Cache Storage — without it, a host that sets any cache lifetime on
+    // static assets can make this "network-first" fetch silently resolve
+    // to a stale response the browser cached below the service worker,
+    // even right after a fresh deploy with a bumped CACHE_NAME.
+    fetch(event.request, { cache: 'no-store' })
       .then((response) => {
         if (response && response.status === 200) {
           const clone = response.clone();
