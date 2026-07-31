@@ -4712,6 +4712,21 @@
     const s = id ? state.shoots.find(x => x.id === id) : null;
     currentShootId = id || uid();
     pendingProjectPhoto = s ? (s.projectPhoto || null) : null;
+    // s.projectPhoto is only set once hydratePhotos()'s IndexedDB reads
+    // resolve, which happens once at boot — opening a shoot before its own
+    // read lands here leaves this seeded empty even though it has a saved
+    // photo. Double-checked directly (bypassing the boot-time hydration
+    // race entirely) so a talent added in the same session doesn't get
+    // auto-claimed as the cover over an existing one it just hasn't seen
+    // yet. Guarded against a since-closed/reopened modal.
+    if (s && !s.projectPhoto) {
+      idbGetImages(projectPhotoKey(s.id)).then(entries => {
+        const src = photoFromEntries(entries);
+        if (!src || currentShootId !== s.id) return;
+        s.projectPhoto = src;
+        pendingProjectPhoto = src;
+      }).catch(() => {});
+    }
     shootHasImages = false;
 
     shootModalBaseTitle = s ? 'Edit Shoot' : randomNewShootTitle();
@@ -5321,7 +5336,16 @@
       locationDirections: document.getElementById('shootLocationDirections').value.trim(),
       shotList: [...currentShotList],
       lightingSetups: [...currentLightingSetups],
-      projectPhoto: pendingProjectPhoto,
+      // Omitted rather than set to null when there's nothing pending: there's
+      // no "remove cover photo" action anywhere, so pendingProjectPhoto only
+      // legitimately goes from empty to a real photo, never back down. If it
+      // reads empty here it's because this shoot's photo hadn't finished
+      // loading from IndexedDB yet when the modal opened (that's async, and
+      // runs once at boot) — spreading an explicit null over the shoot's
+      // existing photo on every autosave/blur was silently wiping the
+      // thumbnail. Leaving the key out lets the {...oldShoot, ...data} spread
+      // in autosaveShoot() keep whatever the shoot already had.
+      ...(pendingProjectPhoto ? { projectPhoto: pendingProjectPhoto } : {}),
     };
   }
 
