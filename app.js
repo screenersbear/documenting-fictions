@@ -4339,7 +4339,11 @@
     textarea.maxLength = field.maxLength;
     textarea.placeholder = field.placeholder;
     document.getElementById('expandFieldOverlay').hidden = false;
-    textarea.focus();
+    // Deferred a frame: focusing (which opens the keyboard) in the same tick
+    // as un-hiding gives the browser no chance to lay out the now-visible
+    // modal first, which is one way the keyboard-open/scroll-into-view
+    // behavior it triggers can end up positioning this popup off-screen.
+    requestAnimationFrame(() => textarea.focus());
   }
 
   function closeExpandField() {

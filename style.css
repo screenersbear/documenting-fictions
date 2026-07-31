@@ -4533,6 +4533,14 @@ h2.status-group-heading.heading-navy {
   font-size: 14px;
   letter-spacing: 0.5px;
   cursor: pointer;
+  /* Grid stretches both buttons to match the taller two-line "Lighting
+     setups" label; without flex centering the shorter one-line "Direction"
+     label just sits at the top of that extra height instead of centering
+     in it. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .shoot-mode-quick-review-btn:active {
