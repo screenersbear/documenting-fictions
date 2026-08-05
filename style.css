@@ -2131,6 +2131,42 @@ h2.status-group-heading.heading-navy {
   flex-shrink: 0;
 }
 
+/* ---- Export previous shoots: year/month checkbox picker ---- */
+.export-picker-year-heading {
+  width: 100%;
+  align-self: stretch;
+  justify-content: flex-start;
+}
+
+.export-picker-heading-label {
+  flex: 1;
+}
+
+.export-picker-year-check,
+.export-picker-month-check {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.export-picker-month-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0 8px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.export-picker-count {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
 #teamFinalizedLabel {
   font-size: 18px;
 }
@@ -3487,13 +3523,29 @@ h2.status-group-heading.heading-navy {
 /* Delete-all-data's 2nd confirmation step — reuses the standard
    .intro-modal card but flips to a red warning look while it's asking
    "are you SURE sure"; .danger-state is removed again once the delete
-   actually happens so the follow-up success message reads normal. */
+   actually happens so the follow-up success message reads normal. Opaque
+   fill, not a low-alpha rgba() — a semi-transparent background here shows
+   through to the dark 0.9-opacity overlay backdrop behind the card, not a
+   white page, so a low-alpha red renders as near-illegible dark red rather
+   than the intended light warning tint. */
 #deleteAllConfirmModal.danger-state {
   border-color: var(--red);
-  background: rgba(192, 57, 43, 0.12);
+  background: #fbe1df;
 }
 
 #deleteAllConfirmModal.danger-state h2 {
+  color: var(--red);
+}
+
+/* Export previous shoots' 2nd delete-confirmation step — same danger-state
+   treatment as the "Delete all shoot data" modal above, kept as its own
+   rule since it's a different modal id. */
+#exportDeleteConfirmModal.danger-state {
+  border-color: var(--red);
+  background: #fbe1df;
+}
+
+#exportDeleteConfirmModal.danger-state h2 {
   color: var(--red);
 }
 

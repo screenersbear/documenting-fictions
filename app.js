@@ -394,6 +394,7 @@
 
   const CATEGORY_LABELS = {
     commercial: 'Commercial',
+    content_shoot: 'Content shoot',
     video: 'Video',
     editorial: 'Editorial',
     lighting_test: 'Lighting test',
@@ -410,7 +411,7 @@
     uncategorized: 'Uncategorized',
   };
 
-  const CATEGORY_FILTER_ORDER = ['commercial', 'video', 'editorial', 'lighting_test', 'portfolio_building', 'test_shoot', 'event', 'wedding', 'family', 'headshot', 'branding', 'publicity', 'maternity', 'other'];
+  const CATEGORY_FILTER_ORDER = ['commercial', 'content_shoot', 'video', 'editorial', 'lighting_test', 'portfolio_building', 'test_shoot', 'event', 'wedding', 'family', 'headshot', 'branding', 'publicity', 'maternity', 'other'];
 
   // Grammatical plural form of each category, for use as a countable noun in
   // a sentence (e.g. "more commercial shoots than video shoots") — CATEGORY_LABELS
@@ -785,6 +786,14 @@
 
   function monthLabel(monthNum) {
     return monthNum === '00' ? 'Undated' : (MONTH_NAMES[Number(monthNum) - 1] || monthNum);
+  }
+
+  // 'YYYY-MM-DD' -> 'MM.DD.YY', for the call sheet / archive PDF naming
+  // format — distinct from prettyDate's "Jan 5, 2026" used on-page.
+  function formatDateDots(dateStr) {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    return `${m}.${d}.${y.slice(2)}`;
   }
 
   // A nested level of collapsing inside an already-collapsible Overview
@@ -6156,9 +6165,14 @@
     try {
       const doc = await buildShootPdf(s, chosenSections);
       pdfPreviewBlob = doc.output('blob');
-      const safeName = (s.title || primaryTalentName(s) || 'shoot').replace(/[^\w\- ]+/g, '').trim() || 'shoot';
+      const dateLabel = formatDateDots(s.date);
+      const nameOrTalent = s.title || primaryTalentName(s) || 'Shoot';
+      pdfPreviewTitle = dateLabel ? `${dateLabel} — ${nameOrTalent} call sheet` : `${nameOrTalent} call sheet`;
+      // Filename allows dots (the date format needs them) but swaps the em
+      // dash for a plain hyphen rather than dropping it, since the sanitizer
+      // strips anything that isn't word/hyphen/space/dot.
+      const safeName = pdfPreviewTitle.replace(/—/g, '-').replace(/[^\w\- .]+/g, '').trim() || 'call sheet';
       pdfPreviewFilename = `${safeName}.pdf`;
-      pdfPreviewTitle = s.title || primaryTalentName(s) || 'Shoot';
       const url = URL.createObjectURL(pdfPreviewBlob);
       if (previewWindow) {
         previewWindow.location.href = url;
@@ -6211,6 +6225,562 @@
         showToast('Could not create PDF');
       }
     }
+  });
+
+  // ---------- Export previous shoots (archive PDF + optional bulk cleanup) ----------
+  // A separate, much bigger export than the single-shoot call sheet above: one
+  // PDF containing every text section AND every photo (cover, talent, mood
+  // board, final images) for a whole batch of shoots at once, picked by
+  // year/month rather than shoot-by-shoot, meant to be the last stop before
+  // the user deletes those shoots to free up storage.
+  const EXPORT_PREVIOUS_INTRO_KEY = 'dailies_seen_export_previous_intro_v1';
+
+  function shootYearMonth(shoot) {
+    const d = shoot.date;
+    return { year: d ? d.slice(0, 4) : 'Undated', month: d ? d.slice(5, 7) : '00' };
+  }
+
+  function groupShootsByYearMonth(shoots) {
+    const years = new Map();
+    shoots.forEach(shoot => {
+      const { year, month } = shootYearMonth(shoot);
+      if (!years.has(year)) years.set(year, new Map());
+      const months = years.get(year);
+      if (!months.has(month)) months.set(month, []);
+      months.get(month).push(shoot);
+    });
+    return years;
+  }
+
+  function renderExportPreviousPicker() {
+    const list = document.getElementById('exportPreviousPickerList');
+    list.innerHTML = '';
+    document.getElementById('exportPreviousPickerEmpty').hidden = state.shoots.length > 0;
+
+    const years = groupShootsByYearMonth(state.shoots);
+    const sortedYears = [...years.keys()].sort((a, b) => {
+      if (a === 'Undated') return 1;
+      if (b === 'Undated') return -1;
+      return b.localeCompare(a);
+    });
+
+    let visibleYearIndex = 0;
+    sortedYears.forEach(year => {
+      const months = years.get(year);
+      const sortedMonths = [...months.keys()].sort((a, b) => b.localeCompare(a));
+
+      const yearGroupEl = document.createElement('div');
+      yearGroupEl.className = 'shoot-status-group';
+
+      const yearCollapseKey = `exportPicker:${year}`;
+      const yearCollapsed = isSectionCollapsed(yearCollapseKey);
+      const yearHeading = document.createElement('h2');
+      yearHeading.className = `status-group-heading export-picker-year-heading ${visibleYearIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${yearCollapsed ? ' collapsed' : ''}`;
+      yearHeading.innerHTML = `
+        <input type="checkbox" class="export-picker-year-check" data-year="${escapeHtml(year)}" />
+        <span class="export-picker-heading-label">${escapeHtml(year)}</span>
+        ${COLLAPSE_ARROW_SVG}
+      `;
+
+      const monthsWrap = document.createElement('div');
+      monthsWrap.className = 'shoot-status-rows';
+      monthsWrap.hidden = yearCollapsed;
+
+      sortedMonths.forEach(month => {
+        const monthShoots = months.get(month);
+        const row = document.createElement('label');
+        row.className = 'export-picker-month-row';
+        row.innerHTML = `
+          <input type="checkbox" class="export-picker-month-check" data-year="${escapeHtml(year)}" data-month="${escapeHtml(month)}" />
+          <span>${escapeHtml(monthLabel(month))}</span>
+          <span class="export-picker-count">${monthShoots.length} shoot${monthShoots.length === 1 ? '' : 's'}</span>
+        `;
+        monthsWrap.appendChild(row);
+      });
+
+      yearHeading.addEventListener('click', (e) => {
+        if (e.target.classList.contains('export-picker-year-check')) return;
+        const nowHidden = !monthsWrap.hidden;
+        monthsWrap.hidden = nowHidden;
+        yearHeading.classList.toggle('collapsed', nowHidden);
+        setSectionCollapsed(yearCollapseKey, nowHidden);
+      });
+
+      yearGroupEl.appendChild(yearHeading);
+      yearGroupEl.appendChild(monthsWrap);
+      list.appendChild(yearGroupEl);
+      visibleYearIndex++;
+    });
+  }
+
+  // One delegated listener, wired once (not re-attached on every render):
+  // checking a year checks/unchecks every month underneath it; checking or
+  // unchecking a month updates its year's checked/indeterminate state to
+  // match — the only parent/child checkbox cascade anywhere in this app.
+  document.getElementById('exportPreviousPickerList').addEventListener('change', (e) => {
+    const list = document.getElementById('exportPreviousPickerList');
+    if (e.target.classList.contains('export-picker-year-check')) {
+      const year = e.target.dataset.year;
+      const checked = e.target.checked;
+      list.querySelectorAll(`.export-picker-month-check[data-year="${year}"]`).forEach(cb => { cb.checked = checked; });
+      e.target.indeterminate = false;
+    } else if (e.target.classList.contains('export-picker-month-check')) {
+      const year = e.target.dataset.year;
+      const monthChecks = [...list.querySelectorAll(`.export-picker-month-check[data-year="${year}"]`)];
+      const yearCheck = list.querySelector(`.export-picker-year-check[data-year="${year}"]`);
+      const checkedCount = monthChecks.filter(cb => cb.checked).length;
+      yearCheck.checked = checkedCount === monthChecks.length;
+      yearCheck.indeterminate = checkedCount > 0 && checkedCount < monthChecks.length;
+    }
+  });
+
+  function selectedExportPreviousShoots() {
+    const checkedMonths = [...document.querySelectorAll('.export-picker-month-check:checked')]
+      .map(cb => ({ year: cb.dataset.year, month: cb.dataset.month }));
+    if (!checkedMonths.length) return [];
+    return state.shoots.filter(shoot => {
+      const { year, month } = shootYearMonth(shoot);
+      return checkedMonths.some(m => m.year === year && m.month === month);
+    });
+  }
+
+  function openExportPreviousPicker() {
+    renderExportPreviousPicker();
+    document.getElementById('exportPreviousPickerOverlay').hidden = false;
+  }
+
+  function closeExportPreviousPicker() {
+    document.getElementById('exportPreviousPickerOverlay').hidden = true;
+  }
+
+  document.getElementById('exportPreviousShootsBtn').addEventListener('click', () => {
+    closeAppMenu();
+    if (localStorage.getItem(EXPORT_PREVIOUS_INTRO_KEY)) {
+      openExportPreviousPicker();
+    } else {
+      document.getElementById('exportPreviousIntroOverlay').hidden = false;
+    }
+  });
+
+  document.getElementById('exportPreviousIntroCloseBtn').addEventListener('click', () => {
+    localStorage.setItem(EXPORT_PREVIOUS_INTRO_KEY, '1');
+    document.getElementById('exportPreviousIntroOverlay').hidden = true;
+    openExportPreviousPicker();
+  });
+
+  document.getElementById('exportPreviousIntroOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('exportPreviousIntroOverlay')) e.currentTarget.hidden = true;
+  });
+
+  document.getElementById('exportPreviousPickerCloseBtn').addEventListener('click', closeExportPreviousPicker);
+
+  document.getElementById('exportPreviousPickerOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('exportPreviousPickerOverlay')) closeExportPreviousPicker();
+  });
+
+  // Calling openExportArchivePreview synchronously (not after an await) here
+  // matters for the same reason as the single-shoot build button: its own
+  // window.open('', '_blank') call needs to stay inside this click handler's
+  // user-gesture context, or mobile browsers block it.
+  document.getElementById('exportPreviousPickerBuildBtn').addEventListener('click', () => {
+    const shoots = selectedExportPreviousShoots();
+    if (!shoots.length) { showToast('Select at least one month to export.'); return; }
+    closeExportPreviousPicker();
+    openExportArchivePreview(shoots);
+  });
+
+  function archiveExportLabel(shoots) {
+    const count = shoots.length;
+    const dated = shoots.map(s => s.date).filter(Boolean).sort();
+    if (!dated.length) return `Shoot archive (${count} shoot${count === 1 ? '' : 's'})`;
+    const first = formatDateDots(dated[0]);
+    const last = formatDateDots(dated[dated.length - 1]);
+    const range = first === last ? first : `${first}-${last}`;
+    return `Shoot archive ${range} (${count} shoot${count === 1 ? '' : 's'})`;
+  }
+
+  function compareShootsForArchive(a, b) {
+    if (!a.date && !b.date) return 0;
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return b.date.localeCompare(a.date);
+  }
+
+  // Every image collection a shoot owns, gathered up front so the archive
+  // builder can lay each one out as a plain image grid alongside the text
+  // sections — this is the one thing the single-shoot call sheet doesn't
+  // need, since it only ever embeds talent photos and the in-progress mood
+  // board there.
+  async function gatherArchiveImages(shoot) {
+    const [coverEntries, moodboard, finalImages, talentPhotos] = await Promise.all([
+      idbGetImages(projectPhotoKey(shoot.id)),
+      idbGetImages(shoot.id),
+      idbGetImages(finalImagesKey(shoot.id)),
+      Promise.all((shoot.talents || []).map(async (t, idx) => {
+        if (!t.id) return null;
+        const src = photoFromEntries(await idbGetImages(talentPhotoKey(shoot.id, t.id)));
+        if (!src) return null;
+        return { src, label: hasText(t.name) ? t.name.trim() : `Talent ${idx + 1}` };
+      })),
+    ]);
+    return {
+      cover: photoFromEntries(coverEntries),
+      moodboard,
+      finalImages,
+      talentPhotos: talentPhotos.filter(Boolean),
+    };
+  }
+
+  async function buildArchivePdf(shoots) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 44;
+    const navy = [49, 61, 69];
+    const yellow = [255, 209, 3];
+    const logoSize = 30;
+    const logoGap = 12;
+    const colGap = 14;
+    const colW = (pageWidth - margin * 2 - colGap) / 2;
+    const logoDataUrl = await loadLogoDataUrl();
+    let y = margin;
+
+    function ensureSpace(needed) {
+      if (y + needed > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+    }
+
+    function drawLabeledLine(label, value, lineHeight) {
+      const maxWidth = pageWidth - margin * 2;
+      doc.setFont('courier', 'bold');
+      const labelWidth = doc.getTextWidth(label);
+      doc.setFont('courier', 'normal');
+      const lines = doc.splitTextToSize(String(value), Math.max(10, maxWidth - labelWidth));
+      if (!lines.length) return;
+      ensureSpace(lineHeight * 2);
+      doc.setFont('courier', 'bold');
+      doc.text(label, margin, y);
+      doc.setFont('courier', 'normal');
+      doc.text(lines[0], margin + labelWidth, y);
+      y += lineHeight;
+      for (let i = 1; i < lines.length; i++) {
+        ensureSpace(lineHeight);
+        doc.text(lines[i], margin, y);
+        y += lineHeight;
+      }
+    }
+
+    function sectionHeading(text, firstChunk = 30) {
+      ensureSpace(22 + firstChunk);
+      doc.setTextColor(...navy);
+      doc.setFont('courier', 'bold');
+      doc.setFontSize(14);
+      doc.text(text, margin, y);
+      y += 19;
+    }
+
+    async function drawImageGrid(label, images) {
+      if (!images.length) return;
+      const cellH = colW * 1.3;
+      const rows = [];
+      for (let idx = 0; idx < images.length; idx += 2) {
+        const items = [];
+        for (let c = 0; c < 2 && idx + c < images.length; c++) {
+          const img = images[idx + c];
+          const dims = await getImageDims(img.src);
+          items.push({ src: img.src, ...fitContain(dims.w, dims.h, colW, cellH) });
+        }
+        rows.push({ items, height: Math.max(...items.map(it => it.h)) });
+      }
+      sectionHeading(label, rows[0].height);
+      rows.forEach(row => {
+        ensureSpace(row.height);
+        row.items.forEach((it, c) => {
+          const x = margin + c * (colW + colGap);
+          doc.addImage(it.src, 'JPEG', x + (colW - it.w) / 2, y, it.w, it.h);
+        });
+        y += row.height + colGap;
+      });
+      y += 4;
+    }
+
+    const orderedShoots = [...shoots].sort(compareShootsForArchive);
+    for (let s_i = 0; s_i < orderedShoots.length; s_i++) {
+      const s = orderedShoots[s_i];
+      if (s_i > 0) { doc.addPage(); y = margin; }
+
+      // Per-shoot header banner — the same navy/yellow band as the
+      // single-shoot call sheet, just smaller (14pt), since this is one
+      // entry in a running archive rather than a stand-alone document.
+      const titleFontSize = 16;
+      const titleLineHeight = titleFontSize * 1.15;
+      const titleX = margin + logoSize + logoGap;
+      doc.setFont('courier', 'bold');
+      doc.setFontSize(titleFontSize);
+      const headerLabel = (s.title || primaryTalentName(s) || 'Shoot').toUpperCase();
+      const titleLines = doc.splitTextToSize(headerLabel, pageWidth - titleX - margin);
+      const titleBlockHeight = titleLines.length * titleLineHeight;
+      const headerHeight = Math.max(46, titleBlockHeight + 18);
+
+      doc.setFillColor(...navy);
+      doc.rect(0, 0, pageWidth, headerHeight, 'F');
+      doc.addImage(logoDataUrl, 'PNG', margin, (headerHeight - logoSize) / 2, logoSize, logoSize);
+      doc.setTextColor(...yellow);
+      const titleTopPad = (headerHeight - titleBlockHeight) / 2;
+      titleLines.forEach((line, i) => {
+        doc.text(line, titleX, titleTopPad + i * titleLineHeight + titleLineHeight * 0.83);
+      });
+
+      doc.setTextColor(...navy);
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(10);
+      const subLabel = [prettyDate(s.date) || 'Date TBD', CATEGORY_LABELS[s.category] || null, STATUS_LABELS[s.status] || null]
+        .filter(Boolean).join('   •   ');
+      doc.text(subLabel, margin, headerHeight + 16);
+      y = headerHeight + 32;
+      doc.setFontSize(11);
+
+      // ---- Talent ----
+      const talentsForPdf = (s.talents || [])
+        .map((talent, idx) => ({ talent, label: hasText(talent.name) ? talent.name.trim() : `Talent ${idx + 1}` }))
+        .filter(({ talent }) => hasText(talent.name) || hasText(talent.photo));
+      if (talentsForPdf.length) {
+        sectionHeading('Talent:');
+        doc.setFont('courier', 'normal');
+        doc.setFontSize(11);
+        talentsForPdf.forEach(({ talent, label }) => {
+          ensureSpace(14);
+          doc.text(`• ${label}`, margin, y);
+          y += 14;
+          (talent.socialHandles || []).filter(sh => hasText(sh.handle)).forEach(sh => {
+            const entry = SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === sh.platform);
+            ensureSpace(14);
+            doc.text(`   ${entry ? entry[1] : 'Other'}: ${sh.handle}`, margin, y);
+            y += 14;
+          });
+        });
+        y += 6;
+      }
+
+      // ---- Logistics ----
+      const timeRange = shootTimeRange(s);
+      const locationDisplay = formatLocationDisplayNoCountry(s.location);
+      if (timeRange || locationDisplay) {
+        sectionHeading('Logistics:');
+        doc.setFontSize(11);
+        if (timeRange) drawLabeledLine('Time: ', timeRange, 14);
+        if (locationDisplay) { drawLabeledLine('Location: ', locationDisplay, 14); y += 2; }
+        if (hasText(s.locationDirections)) { drawLabeledLine('Location instructions: ', s.locationDirections, 14); y += 2; }
+        y += 6;
+      }
+
+      // ---- Direction ----
+      const directionFields = [
+        ['Concept: ', s.premise],
+        ['Elevator pitch: ', s.elevatorPitch],
+        ['Character/Personality: ', s.character],
+        ['World-building notes: ', s.worldNotes],
+        ['Shoot goals: ', s.shootGoals],
+        ['General direction notes: ', s.generalNotes],
+      ].filter(([, value]) => hasText(value));
+      if (directionFields.length) {
+        sectionHeading('Direction:');
+        doc.setFontSize(11);
+        directionFields.forEach(([label, value]) => { drawLabeledLine(label, value.trim(), 14); y += 4; });
+        y += 6;
+      }
+
+      // ---- Visuals: framework tags (Visual Language, etc.) + lighting setups ----
+      const tagsByFramework = new Map();
+      (s.frameworkTags || []).forEach(t => {
+        const fw = state.frameworks.find(f => f.id === t.frameworkId);
+        const name = fw ? fw.name : 'Visual language';
+        if (!tagsByFramework.has(name)) tagsByFramework.set(name, []);
+        tagsByFramework.get(name).push(t.tag);
+      });
+      const lightingSetups = (s.lightingSetups || [])
+        .filter(item => hasText(item.name) || hasText(item.characteristics) || hasText(item.description));
+      if (tagsByFramework.size || lightingSetups.length) {
+        sectionHeading('Visuals:');
+        doc.setFontSize(11);
+        tagsByFramework.forEach((tags, name) => { drawLabeledLine(`${name}: `, tags.join(', '), 14); y += 2; });
+        lightingSetups.forEach((item, idx) => {
+          ensureSpace(14);
+          doc.setFont('courier', 'bold');
+          doc.text(`• ${hasText(item.name) ? item.name.trim() : `Lighting setup ${idx + 1}`}`, margin, y);
+          y += 14;
+          doc.setFont('courier', 'normal');
+          if (hasText(item.characteristics)) drawLabeledLine('   Characteristics: ', item.characteristics, 14);
+          if (hasText(item.description)) drawLabeledLine('   Description: ', item.description, 14);
+        });
+        y += 6;
+      }
+
+      // ---- Shot list ----
+      const shots = (s.shotList || []).filter(item => hasText(item.text));
+      if (shots.length) {
+        sectionHeading('Shot list:');
+        doc.setFont('courier', 'normal');
+        doc.setFontSize(11);
+        const maxWidth = pageWidth - margin * 2 - 16;
+        shots.forEach(item => {
+          const lines = doc.splitTextToSize(item.text.trim(), maxWidth);
+          ensureSpace(14 * lines.length);
+          lines.forEach((line, i) => {
+            doc.text(i === 0 ? `${item.checked ? '[x] ' : '[ ] '}${line}` : `      ${line}`, margin, y);
+            y += 14;
+          });
+        });
+        y += 6;
+      }
+
+      // ---- Team ----
+      const team = s.teamRequired === 'yes' ? (s.teamMembers || []) : [];
+      if (team.length) {
+        sectionHeading('Team:');
+        doc.setFont('courier', 'normal');
+        doc.setFontSize(11);
+        team.forEach(tm => {
+          ensureSpace(14);
+          const roleEntry = TEAM_ROLE_OPTIONS.find(([val]) => val === tm.role);
+          doc.text(`• ${tm.name ? tm.name : 'Unnamed'} — ${roleEntry ? roleEntry[1] : 'Other'}`, margin, y);
+          y += 14;
+          if (hasText(tm.socialHandle)) {
+            const platformEntry = SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === tm.socialPlatform);
+            ensureSpace(14);
+            doc.text(`   ${platformEntry ? platformEntry[1] : 'Other'}: ${tm.socialHandle}`, margin, y);
+            y += 14;
+          }
+        });
+        y += 6;
+      }
+
+      // ---- References ----
+      const refs = (s.references || []).map(r => r.trim()).filter(Boolean);
+      if (refs.length) {
+        sectionHeading('References:');
+        doc.setFont('courier', 'normal');
+        doc.setFontSize(11);
+        refs.forEach(r => {
+          ensureSpace(14);
+          doc.text(`• ${r}`, margin, y, { maxWidth: pageWidth - margin * 2 });
+          y += 14;
+        });
+        y += 6;
+      }
+
+      // ---- Post-shoot reflection ----
+      const reflectionFields = [
+        ['What went right: ', s.whatWentRight],
+        ["What could've gone better: ", s.couldBeBetter],
+        ['Lessons for next time: ', s.lessonsLearned],
+      ].filter(([, value]) => hasText(value));
+      if (reflectionFields.length) {
+        sectionHeading('Post-shoot reflection:');
+        doc.setFontSize(11);
+        reflectionFields.forEach(([label, value]) => { drawLabeledLine(label, value.trim(), 14); y += 4; });
+        y += 6;
+      }
+
+      // ---- Photos: cover, talent, mood board, final/delivered ----
+      const images = await gatherArchiveImages(s);
+      if (images.cover) await drawImageGrid('Cover photo:', [{ src: images.cover }]);
+      if (images.talentPhotos.length) await drawImageGrid('Talent photos:', images.talentPhotos);
+      if (images.moodboard.length) await drawImageGrid('Mood board:', images.moodboard);
+      if (images.finalImages.length) await drawImageGrid('Final images:', images.finalImages);
+    }
+
+    return doc;
+  }
+
+  async function openExportArchivePreview(shoots) {
+    const previewWindow = window.open('', '_blank');
+    try {
+      const doc = await buildArchivePdf(shoots);
+      pdfPreviewBlob = doc.output('blob');
+      const label = archiveExportLabel(shoots);
+      pdfPreviewTitle = label;
+      const safeName = label.replace(/[^\w\- .]+/g, '').trim() || 'shoot archive';
+      pdfPreviewFilename = `${safeName}.pdf`;
+      const url = URL.createObjectURL(pdfPreviewBlob);
+      if (previewWindow) {
+        previewWindow.location.href = url;
+      } else {
+        document.getElementById('pdfPreviewFrame').src = url;
+        document.getElementById('pdfPreviewOverlay').hidden = false;
+      }
+      // The delete-prompt is offered right away rather than gated on the
+      // share/save actually completing — the OS share sheet and the new-tab
+      // PDF viewer both finish outside any event this app can observe, so
+      // "the save screen was presented" is the one reliable moment to hook.
+      openExportDeleteAsk(shoots);
+    } catch (err) {
+      if (previewWindow) previewWindow.close();
+      console.error('Failed to build archive PDF', err);
+      showToast('Could not create PDF archive');
+    }
+  }
+
+  // ---- Post-export delete flow: ask, then double-confirm, then delete ----
+  let exportPendingDeleteShoots = [];
+
+  function openExportDeleteAsk(shoots) {
+    exportPendingDeleteShoots = shoots;
+    document.getElementById('exportDeleteAskCount').textContent = `${shoots.length} shoot${shoots.length === 1 ? '' : 's'}`;
+    document.getElementById('exportDeleteAskOverlay').hidden = false;
+  }
+
+  document.getElementById('exportDeleteAskNoBtn').addEventListener('click', () => {
+    document.getElementById('exportDeleteAskOverlay').hidden = true;
+    exportPendingDeleteShoots = [];
+  });
+
+  document.getElementById('exportDeleteAskOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('exportDeleteAskOverlay')) {
+      document.getElementById('exportDeleteAskOverlay').hidden = true;
+      exportPendingDeleteShoots = [];
+    }
+  });
+
+  const exportDeleteConfirmModal = document.getElementById('exportDeleteConfirmModal');
+  const exportDeleteConfirmTitle = document.getElementById('exportDeleteConfirmTitle');
+  const exportDeleteConfirmText = document.getElementById('exportDeleteConfirmText');
+  const exportDeleteConfirmActions = document.getElementById('exportDeleteConfirmActions');
+  const exportDeleteConfirmOkBtn = document.getElementById('exportDeleteConfirmOkBtn');
+
+  document.getElementById('exportDeleteAskYesBtn').addEventListener('click', () => {
+    document.getElementById('exportDeleteAskOverlay').hidden = true;
+    const n = exportPendingDeleteShoots.length;
+    exportDeleteConfirmModal.classList.add('danger-state');
+    exportDeleteConfirmTitle.textContent = 'Delete these shoots for good?';
+    exportDeleteConfirmText.textContent = `This permanently removes ${n} shoot${n === 1 ? '' : 's'} and every photo attached to ${n === 1 ? 'it' : 'them'} — cover photos, talent photos, mood boards, and final images. They're already saved in the PDF you just exported, but this app copy of them can't be recovered once deleted.`;
+    exportDeleteConfirmActions.hidden = false;
+    exportDeleteConfirmOkBtn.hidden = true;
+    document.getElementById('exportDeleteConfirmOverlay').hidden = false;
+  });
+
+  document.getElementById('exportDeleteConfirmCancelBtn').addEventListener('click', () => {
+    document.getElementById('exportDeleteConfirmOverlay').hidden = true;
+    exportPendingDeleteShoots = [];
+  });
+
+  document.getElementById('exportDeleteConfirmYesBtn').addEventListener('click', () => {
+    const shoots = exportPendingDeleteShoots;
+    shoots.forEach(s => deleteShootById(s.id));
+    renderAll();
+    exportDeleteConfirmModal.classList.remove('danger-state');
+    exportDeleteConfirmTitle.textContent = 'Shoots deleted.';
+    exportDeleteConfirmText.textContent = 'Your archive PDF still has everything — good luck out there!';
+    exportDeleteConfirmActions.hidden = true;
+    exportDeleteConfirmOkBtn.hidden = false;
+    exportPendingDeleteShoots = [];
+  });
+
+  exportDeleteConfirmOkBtn.addEventListener('click', () => {
+    document.getElementById('exportDeleteConfirmOverlay').hidden = true;
   });
 
   document.getElementById('completeShootBtn').addEventListener('click', () => {

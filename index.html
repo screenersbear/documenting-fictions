@@ -271,6 +271,7 @@
             <option value="" disabled>Tap here to select</option>
             <option value="branding">Branding</option>
             <option value="commercial">Commercial</option>
+            <option value="content_shoot">Content shoot</option>
             <option value="editorial">Editorial</option>
             <option value="event">Event</option>
             <option value="family">Family</option>
@@ -1033,6 +1034,8 @@
              your thumb where a routine option used to be. -->
         <button type="button" class="options-item" id="changeThemeBtn">Change theme</button>
         <div class="menu-divider" aria-hidden="true"></div>
+        <button type="button" class="options-item" id="exportPreviousShootsBtn">Export previous shoots</button>
+        <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="exportDataBtn">Export shoot data</button>
         <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="importDataBtn">Import shoot data</button>
@@ -1078,6 +1081,51 @@
       <button type="button" class="danger" id="deleteAllConfirmYesBtn">Yes, delete everything</button>
     </div>
     <button type="button" class="primary" id="deleteAllConfirmOkBtn" hidden>OK</button>
+  </div>
+</div>
+
+<!-- ============ EXPORT PREVIOUS SHOOTS ============ -->
+<div id="exportPreviousIntroOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2>Export previous shoots</h2>
+    <p>This builds one PDF that compiles everything from the shoot page — direction, location, team, visuals, shot list, lighting setups, reflections, and all your photos and mood board images — for whichever shoots you pick. Once it's saved, you'll have the option to remove those shoots (and their photos) from the app to free up storage.</p>
+    <button type="button" class="primary" id="exportPreviousIntroCloseBtn">got it!</button>
+  </div>
+</div>
+
+<div id="exportPreviousPickerOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2>Select shoots to export</h2>
+      <button type="button" class="icon-btn close-btn" id="exportPreviousPickerCloseBtn">&times;</button>
+    </div>
+    <p class="field-hint">Choose which months to include — everything shot in a checked month goes into the archive.</p>
+    <div id="exportPreviousPickerList" class="export-picker-list"></div>
+    <p class="empty-state" id="exportPreviousPickerEmpty" hidden>No past shoots yet.</p>
+    <button type="button" class="primary modal-cta" id="exportPreviousPickerBuildBtn">Build PDF archive</button>
+  </div>
+</div>
+
+<div id="exportDeleteAskOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2>Delete the exported shoots?</h2>
+    <p>Your PDF archive is saved. Would you also like to remove <span id="exportDeleteAskCount"></span> from the app now, to free up storage?</p>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="exportDeleteAskNoBtn">Not now</button>
+      <button type="button" class="danger" id="exportDeleteAskYesBtn">Yes, delete them</button>
+    </div>
+  </div>
+</div>
+
+<div id="exportDeleteConfirmOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal export-delete-confirm-modal" id="exportDeleteConfirmModal">
+    <h2 id="exportDeleteConfirmTitle">Delete these shoots for good?</h2>
+    <p id="exportDeleteConfirmText"></p>
+    <div class="modal-actions" id="exportDeleteConfirmActions">
+      <button type="button" class="secondary" id="exportDeleteConfirmCancelBtn">Cancel</button>
+      <button type="button" class="danger" id="exportDeleteConfirmYesBtn">Yes, delete them</button>
+    </div>
+    <button type="button" class="primary" id="exportDeleteConfirmOkBtn" hidden>OK</button>
   </div>
 </div>
 
