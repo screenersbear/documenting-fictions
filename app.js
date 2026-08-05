@@ -7869,29 +7869,155 @@
     } catch (e) { /* ignore */ }
   }
 
-  // Ticking a shot here writes straight to state rather than through the edit
-  // form's working copy — shoot mode is the only thing open, and the point is
-  // that a tick survives whatever happens to the phone next.
-  function renderShootModeShots(shoot) {
+  // Ticking, editing, or reordering a shot here writes straight to state
+  // rather than through the edit form's working copy — shoot mode is the
+  // only thing open, and the point is that any change survives whatever
+  // happens to the phone next. Same row shape as the edit form's shot list
+  // (drag handle, checkbox, auto-sized textarea, delete) so shoot mode isn't
+  // a different interaction to relearn mid-shoot — just without the
+  // checked-to-bottom sort, since watching the active list you're working
+  // through reshuffle itself would be more disorienting than helpful here.
+  function renderShootModeShots(shoot, focusIdx) {
     const list = document.getElementById('shootModeShotList');
     const shots = shoot.shotList || [];
-    list.innerHTML = '';
+    list.innerHTML = shots.map((item, idx) => `
+      <div class="shoot-mode-shot-row${item.checked ? ' shot-checked' : ''}" data-idx="${idx}">
+        <button type="button" class="shot-drag-handle" aria-label="Drag to reorder shot" tabindex="-1">&#8942;</button>
+        <input type="checkbox" class="shoot-mode-shot-check" data-idx="${idx}" ${item.checked ? 'checked' : ''} />
+        <textarea class="shot-text" data-idx="${idx}" rows="1" placeholder="Describe the shot">${escapeHtml(item.text || '')}</textarea>
+        <button type="button" class="delete-shot" data-idx="${idx}">&times;</button>
+      </div>
+    `).join('');
     document.getElementById('shootModeShotsEmpty').hidden = shots.length !== 0;
 
-    shots.forEach((item, idx) => {
-      const row = document.createElement('label');
-      row.className = `shoot-mode-shot${item.checked ? ' shot-checked' : ''}`;
-      row.innerHTML = `
-        <input type="checkbox" ${item.checked ? 'checked' : ''} />
-        <span>${escapeHtml(item.text || '')}</span>
-      `;
-      row.querySelector('input').addEventListener('change', (e) => {
-        shoot.shotList[idx].checked = e.target.checked;
+    list.querySelectorAll('.shoot-mode-shot-check').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const idx = Number(cb.dataset.idx);
+        shoot.shotList[idx].checked = cb.checked;
         saveState();
-        row.classList.toggle('shot-checked', e.target.checked);
+        cb.closest('.shoot-mode-shot-row').classList.toggle('shot-checked', cb.checked);
         renderAll();
       });
-      list.appendChild(row);
+    });
+    list.querySelectorAll('.shot-text').forEach(textarea => {
+      autoSizeTextarea(textarea);
+      textarea.addEventListener('input', () => {
+        shoot.shotList[Number(textarea.dataset.idx)].text = textarea.value;
+        autoSizeTextarea(textarea);
+        saveState();
+      });
+      textarea.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        shoot.shotList[Number(textarea.dataset.idx)].text = textarea.value;
+        shoot.shotList.push({ text: '', checked: false });
+        saveState();
+        renderShootModeShots(shoot, shoot.shotList.length - 1);
+        renderAll();
+      });
+    });
+    list.querySelectorAll('.delete-shot').forEach(btn => {
+      btn.addEventListener('click', () => {
+        shoot.shotList.splice(Number(btn.dataset.idx), 1);
+        saveState();
+        renderShootModeShots(shoot);
+        renderAll();
+      });
+    });
+    list.querySelectorAll('.shot-drag-handle').forEach(handle => {
+      wireShootModeShotDragHandle(handle, list, shoot);
+    });
+
+    if (focusIdx !== undefined) {
+      const focusInput = list.querySelector(`.shot-text[data-idx="${focusIdx}"]`);
+      if (focusInput) focusInput.focus();
+    }
+  }
+
+  // Same press-and-hold reorder as the edit form's shot list
+  // (wireShotDragHandle), minus the checked/unchecked bucket split — shoot
+  // mode doesn't sort checked shots to the bottom, so the whole list is one
+  // bucket and a drag can land anywhere in it.
+  function wireShootModeShotDragHandle(handle, container, shoot) {
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      e.preventDefault();
+      const row = handle.closest('.shoot-mode-shot-row');
+      if (!row) return;
+
+      const rowRects = Array.from(container.querySelectorAll('.shoot-mode-shot-row')).map(r => r.getBoundingClientRect());
+      const bucketTop = Math.min(...rowRects.map(r => r.top));
+      const bucketBottom = Math.max(...rowRects.map(r => r.bottom));
+
+      let baseClientY = e.clientY;
+      let baseTranslateY = 0;
+      let appliedTransform = 0;
+      row.classList.add('shot-dragging');
+      if (navigator.vibrate) navigator.vibrate(15);
+      handle.classList.add('shot-drag-pulse');
+      handle.addEventListener('animationend', () => {
+        handle.classList.remove('shot-drag-pulse');
+      }, { once: true });
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* capture is a nice-to-have, not required */ }
+
+      function onMove(ev) {
+        const rawRect = row.getBoundingClientRect();
+        const layoutTop = rawRect.top - appliedTransform;
+        const rowHeight = rawRect.height;
+        const minDy = bucketTop - layoutTop;
+        const maxDy = (bucketBottom - rowHeight) - layoutTop;
+        const proposedDy = baseTranslateY + (ev.clientY - baseClientY);
+        const dy = Math.min(maxDy, Math.max(minDy, proposedDy));
+
+        row.style.transform = `translateY(${dy}px)`;
+        appliedTransform = dy;
+
+        const rows = Array.from(container.querySelectorAll('.shoot-mode-shot-row'));
+        const idx = rows.indexOf(row);
+        const rowRect = row.getBoundingClientRect();
+        const rowCenter = rowRect.top + rowRect.height / 2;
+        const next = rows[idx + 1];
+        const prev = rows[idx - 1];
+
+        let neighbor = null;
+        let insertBeforeRow = false;
+        if (next) {
+          const nextRect = next.getBoundingClientRect();
+          if (rowCenter >= nextRect.top + nextRect.height / 2) neighbor = next;
+        }
+        if (!neighbor && prev) {
+          const prevRect = prev.getBoundingClientRect();
+          if (rowCenter <= prevRect.top + prevRect.height / 2) { neighbor = prev; insertBeforeRow = true; }
+        }
+        if (!neighbor) return;
+
+        const before = row.getBoundingClientRect();
+        if (insertBeforeRow) container.insertBefore(row, neighbor);
+        else container.insertBefore(neighbor, row);
+        row.style.transform = 'none';
+        const after = row.getBoundingClientRect();
+        baseTranslateY = before.top - after.top;
+        baseClientY = ev.clientY;
+        row.style.transform = `translateY(${baseTranslateY}px)`;
+        appliedTransform = baseTranslateY;
+      }
+
+      function onEnd() {
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', onEnd);
+        handle.removeEventListener('pointercancel', onEnd);
+        row.classList.remove('shot-dragging');
+        row.style.transform = '';
+        const rows = Array.from(container.querySelectorAll('.shoot-mode-shot-row'));
+        shoot.shotList = rows.map(r => shoot.shotList[Number(r.dataset.idx)]);
+        saveState();
+        renderShootModeShots(shoot);
+        renderAll();
+      }
+
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onEnd);
+      handle.addEventListener('pointercancel', onEnd);
     });
   }
 
@@ -7913,14 +8039,17 @@
   }
 
   function openShootMode(shootId) {
+    // Close (and thus autosave) the edit form BEFORE looking the shoot up —
+    // autosaveShoot() replaces state.shoots[idx] with a new merged object
+    // rather than mutating it in place, so a reference grabbed beforehand
+    // would be left pointing at a detached, stale copy. Every edit made in
+    // shoot mode writes straight through this reference, so it has to be
+    // the live one or ticks/edits made here would silently not persist.
+    if (!shootModalOverlay.hidden) closeShootModal();
     const shoot = state.shoots.find(s => s.id === shootId);
     if (!shoot) { setShootModeShootId(null); return false; }
-    // The edit form keeps its own working copy of the shot list, so leaving it
-    // open behind shoot mode would let a stale copy overwrite ticks on save.
-    if (!shootModalOverlay.hidden) closeShootModal();
     setShootModeShootId(shootId);
     document.getElementById('shootModeTitle').textContent = shootDisplayName(shoot);
-    document.getElementById('shootModeAddShotInput').value = '';
     renderShootModeShots(shoot);
     renderShootModeMoodboard(shoot);
     shootModeOverlay.hidden = false;
@@ -7929,34 +8058,22 @@
 
   function exitShootMode() {
     setShootModeShootId(null);
-    document.getElementById('shootModeAddShotInput').value = '';
     shootModeOverlay.hidden = true;
   }
 
   document.getElementById('shootModeExitBtn').addEventListener('click', exitShootMode);
 
   // Writes straight to state and re-renders just the shot list, same as
-  // ticking a checkbox above — no working copy, so a shot added mid-shoot
-  // survives whatever happens to the phone next.
-  function addShootModeShot() {
+  // ticking a checkbox or editing a shot above — no working copy, so a shot
+  // added mid-shoot survives whatever happens to the phone next.
+  document.getElementById('shootModeAddShotBtn').addEventListener('click', () => {
     const shoot = state.shoots.find(s => s.id === getShootModeShootId());
     if (!shoot) return;
-    const input = document.getElementById('shootModeAddShotInput');
-    const text = input.value.trim();
-    if (!text) { input.focus(); return; }
     if (!Array.isArray(shoot.shotList)) shoot.shotList = [];
-    shoot.shotList.push({ text, checked: false });
+    shoot.shotList.push({ text: '', checked: false });
     saveState();
-    input.value = '';
-    renderShootModeShots(shoot);
+    renderShootModeShots(shoot, shoot.shotList.length - 1);
     renderAll();
-    input.focus();
-  }
-  document.getElementById('shootModeAddShotBtn').addEventListener('click', addShootModeShot);
-  document.getElementById('shootModeAddShotInput').addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    addShootModeShot();
   });
 
   // "Done shooting" is a wrap-up action, not just an escape hatch — the next

@@ -2539,7 +2539,8 @@ h2.status-group-heading.heading-navy {
    which has an id and would otherwise win on specificity and restore the box.
    Height is set inline by growShotText(); min-height keeps an empty or
    not-yet-measured row tappable. */
-#shootForm .shot-text {
+#shootForm .shot-text,
+#shootModeShotList .shot-text {
   background: none;
   border: 0;
   border-bottom: 2px dashed var(--border);
@@ -2561,13 +2562,15 @@ h2.status-group-heading.heading-navy {
    the one that looks like a field. Only the style and colour change: the border
    width and padding stay put, because growShotText() measures the box once and
    any geometry change on focus would leave that height wrong and clip a line. */
-#shootForm .shot-text:focus {
+#shootForm .shot-text:focus,
+#shootModeShotList .shot-text:focus {
   outline: none;
   border-bottom-style: solid;
   border-bottom-color: var(--accent);
 }
 
-#shootForm .shot-text::placeholder {
+#shootForm .shot-text::placeholder,
+#shootModeShotList .shot-text::placeholder {
   opacity: 0.5;
 }
 
@@ -4456,34 +4459,32 @@ h2.status-group-heading.heading-navy {
   padding: 4px 20px 0;
 }
 
-.shoot-mode-shot {
+/* Same row shape as the edit form's shot list (.shot-list-row/.shot-drag-
+   handle/.shot-text/.delete-shot are all reused as-is) plus a checkbox for
+   ticking a shot off during the actual shoot — the one thing the planning-
+   only list on the edit page doesn't need. */
+.shoot-mode-shot-row {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 13px 0;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
   border-bottom: 1px solid var(--border);
-  font-size: 17px;
-  line-height: 1.35;
-  cursor: pointer;
+  position: relative;
 }
 
-.shoot-mode-shot:last-child {
+.shoot-mode-shot-row:last-child {
   border-bottom: 0;
 }
 
-.shoot-mode-shot input[type="checkbox"] {
+.shoot-mode-shot-row.shot-dragging {
+  z-index: 5;
+}
+
+.shoot-mode-shot-check {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
-  margin-top: 1px;
   accent-color: var(--ink);
-}
-
-/* Opacity rather than a grey — the palette has no grey to spend (--text-dim
-   equals --text), so fading is the only way to visually retire a done shot. */
-.shoot-mode-shot.shot-checked span {
-  text-decoration: line-through;
-  opacity: 0.5;
 }
 
 .shoot-mode-empty {
@@ -4494,37 +4495,10 @@ h2.status-group-heading.heading-navy {
   opacity: 0.75;
 }
 
-.shoot-mode-add-shot-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 20px 14px;
-}
-
-/* Same bare-underline convention as .shot-text in the edit form's shot list
-   (see #shootForm .shot-text) — a boxed input here would look like it belongs
-   to a different, more "form-y" part of the app than the rest of shoot mode. */
-.shoot-mode-add-shot-input {
-  flex: 1;
-  min-width: 0;
-  background: none;
-  border: 0;
-  border-bottom: 2px dashed var(--border);
-  border-radius: 0;
-  padding: 6px 2px;
-  color: var(--text);
-  font-size: 16px;
-  font-family: var(--font-body);
-}
-
-.shoot-mode-add-shot-input:focus {
-  outline: none;
-  border-bottom-style: solid;
-  border-bottom-color: var(--accent);
-}
-
-.shoot-mode-add-shot-input::placeholder {
-  opacity: 0.5;
+.shoot-mode-add-shot-btn {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 10px 20px 14px;
 }
 
 #shootModeMoodboard {
