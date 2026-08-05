@@ -7920,6 +7920,7 @@
     if (!shootModalOverlay.hidden) closeShootModal();
     setShootModeShootId(shootId);
     document.getElementById('shootModeTitle').textContent = shootDisplayName(shoot);
+    document.getElementById('shootModeAddShotInput').value = '';
     renderShootModeShots(shoot);
     renderShootModeMoodboard(shoot);
     shootModeOverlay.hidden = false;
@@ -7928,10 +7929,35 @@
 
   function exitShootMode() {
     setShootModeShootId(null);
+    document.getElementById('shootModeAddShotInput').value = '';
     shootModeOverlay.hidden = true;
   }
 
   document.getElementById('shootModeExitBtn').addEventListener('click', exitShootMode);
+
+  // Writes straight to state and re-renders just the shot list, same as
+  // ticking a checkbox above — no working copy, so a shot added mid-shoot
+  // survives whatever happens to the phone next.
+  function addShootModeShot() {
+    const shoot = state.shoots.find(s => s.id === getShootModeShootId());
+    if (!shoot) return;
+    const input = document.getElementById('shootModeAddShotInput');
+    const text = input.value.trim();
+    if (!text) { input.focus(); return; }
+    if (!Array.isArray(shoot.shotList)) shoot.shotList = [];
+    shoot.shotList.push({ text, checked: false });
+    saveState();
+    input.value = '';
+    renderShootModeShots(shoot);
+    renderAll();
+    input.focus();
+  }
+  document.getElementById('shootModeAddShotBtn').addEventListener('click', addShootModeShot);
+  document.getElementById('shootModeAddShotInput').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    addShootModeShot();
+  });
 
   // "Done shooting" is a wrap-up action, not just an escape hatch — the next
   // thing you want after finishing a shoot is almost always that shoot's own

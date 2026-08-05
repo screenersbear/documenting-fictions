@@ -3608,7 +3608,8 @@ h2.status-group-heading.heading-navy {
 #postShootPromptDismissBtn,
 #dayAfterOkBtn,
 #dailyReportCloseBtn,
-#statusSwatchIntroCloseBtn {
+#statusSwatchIntroCloseBtn,
+#exportPreviousIntroCloseBtn {
   width: 100%;
   padding: 13px;
   border-radius: var(--radius-xl);
@@ -4491,6 +4492,39 @@ h2.status-group-heading.heading-navy {
   font-size: 14px;
   color: var(--text-dim);
   opacity: 0.75;
+}
+
+.shoot-mode-add-shot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 20px 14px;
+}
+
+/* Same bare-underline convention as .shot-text in the edit form's shot list
+   (see #shootForm .shot-text) — a boxed input here would look like it belongs
+   to a different, more "form-y" part of the app than the rest of shoot mode. */
+.shoot-mode-add-shot-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  border-bottom: 2px dashed var(--border);
+  border-radius: 0;
+  padding: 6px 2px;
+  color: var(--text);
+  font-size: 16px;
+  font-family: var(--font-body);
+}
+
+.shoot-mode-add-shot-input:focus {
+  outline: none;
+  border-bottom-style: solid;
+  border-bottom-color: var(--accent);
+}
+
+.shoot-mode-add-shot-input::placeholder {
+  opacity: 0.5;
 }
 
 #shootModeMoodboard {
