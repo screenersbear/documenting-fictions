@@ -3373,6 +3373,11 @@
     talentModalDraft.name = t.name || '';
     talentModalDraft.socialHandles = (t.socialHandles || []).map(sh => ({ ...sh }));
     talentModalDraft.photo = t.photo || '';
+    // Picking a returning talent links this draft to their identity (by
+    // name, same matching getAllPastTalents already uses) — saveTalentModalBtn
+    // uses this to propagate any edits back to every other shoot's copy of
+    // the same person instead of leaving them out of sync.
+    talentModalDraft._matchName = t.name || '';
     fillTalentModalForm();
   });
 
@@ -3455,6 +3460,11 @@
     talentModalDraft = existing
       ? { id: existing.id, name: existing.name || '', socialHandles: (existing.socialHandles || []).map(sh => ({ ...sh })), photo: existing.photo || '' }
       : { id: uid(), name: '', socialHandles: [], photo: '' };
+    // Editing someone already named (whether typed fresh earlier or picked
+    // from "returning talent" on a past visit) still counts as their
+    // identity — an edit here should propagate to their other shoots too,
+    // not just to picks made in this exact session. See saveTalentModalBtn.
+    talentModalDraft._matchName = talentModalDraft.name || '';
     refreshPastTalentsSelect();
     fillTalentModalForm();
     document.getElementById('talentModalOverlay').hidden = false;
@@ -3483,6 +3493,32 @@
     if (draft.photo && !pendingProjectPhoto) {
       pendingProjectPhoto = draft.photo;
       if (currentShootId) savePhotoToIdb(projectPhotoKey(currentShootId), draft.photo).catch(() => {});
+    }
+
+    // A talent picked from "returning talent" (or reopened from a card that
+    // was itself picked that way once) is the same person everywhere they
+    // appear — a handle added, a photo added, or a name fixed here should
+    // update every other shoot's copy too, rather than leaving those behind
+    // as stale duplicates of who they used to be. Matched by name, same as
+    // getAllPastTalents groups them; matches on THIS shoot are left alone
+    // since the block above already wrote the one being edited.
+    const matchName = (draft._matchName || '').trim().toLowerCase();
+    delete draft._matchName;
+    if (matchName) {
+      state.shoots.forEach(s => {
+        if (s.id === currentShootId) return;
+        (s.talents || []).forEach(t => {
+          if ((t.name || '').trim().toLowerCase() !== matchName) return;
+          const oldTalentPhoto = t.photo || '';
+          t.name = draft.name;
+          t.socialHandles = draft.socialHandles.map(sh => ({ ...sh }));
+          t.photo = draft.photo || '';
+          if (draft.photo) savePhotoToIdb(talentPhotoKey(s.id, t.id), draft.photo).catch(() => {});
+          else if (oldTalentPhoto) idbDeleteImages(talentPhotoKey(s.id, t.id)).catch(() => {});
+        });
+      });
+      saveState();
+      renderAll();
     }
 
     document.getElementById('talentModalOverlay').hidden = true;
