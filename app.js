@@ -3895,31 +3895,44 @@
         row.style.transform = `translateY(${dy}px)`;
         appliedTransform = dy;
 
-        const rows = Array.from(container.querySelectorAll(bucketSelector));
-        const idx = rows.indexOf(row);
-        const rowRect = row.getBoundingClientRect();
-        const rowCenter = rowRect.top + rowRect.height / 2;
-        const next = rows[idx + 1];
-        const prev = rows[idx - 1];
-
-        let neighbor = null;
-        let insertBeforeRow = false;
-        if (next) {
-          const nextRect = next.getBoundingClientRect();
-          // >= (not >): the bucket-bounds clamp above can cap the dragged
-          // row's center at exactly the last slot's center, so a strict ">"
-          // would make the final swap unreachable.
-          if (rowCenter >= nextRect.top + nextRect.height / 2) neighbor = next;
-        }
-        if (!neighbor && prev) {
-          const prevRect = prev.getBoundingClientRect();
-          if (rowCenter <= prevRect.top + prevRect.height / 2) { neighbor = prev; insertBeforeRow = true; }
-        }
-        if (!neighbor) return;
-
+        // A fast flick can carry the row's center past more than one
+        // neighbor between two pointermove events — checking just the
+        // immediate neighbor once per event let the dragged row's visual
+        // position (driven directly by the finger, above) outrun its actual
+        // slot in the list, landing on top of rows it hadn't swapped past
+        // yet. Loop until neither neighbor qualifies, so the DOM order
+        // always catches up to wherever the transform already put it.
         const before = row.getBoundingClientRect();
-        if (insertBeforeRow) container.insertBefore(row, neighbor);
-        else container.insertBefore(neighbor, row);
+        let swapped = false;
+        while (true) {
+          const rows = Array.from(container.querySelectorAll(bucketSelector));
+          const idx = rows.indexOf(row);
+          const rowRect = row.getBoundingClientRect();
+          const rowCenter = rowRect.top + rowRect.height / 2;
+          const next = rows[idx + 1];
+          const prev = rows[idx - 1];
+
+          let neighbor = null;
+          let insertBeforeRow = false;
+          if (next) {
+            const nextRect = next.getBoundingClientRect();
+            // >= (not >): the bucket-bounds clamp above can cap the dragged
+            // row's center at exactly the last slot's center, so a strict ">"
+            // would make the final swap unreachable.
+            if (rowCenter >= nextRect.top + nextRect.height / 2) neighbor = next;
+          }
+          if (!neighbor && prev) {
+            const prevRect = prev.getBoundingClientRect();
+            if (rowCenter <= prevRect.top + prevRect.height / 2) { neighbor = prev; insertBeforeRow = true; }
+          }
+          if (!neighbor) break;
+
+          if (insertBeforeRow) container.insertBefore(row, neighbor);
+          else container.insertBefore(neighbor, row);
+          swapped = true;
+        }
+        if (!swapped) return;
+
         row.style.transform = 'none';
         const after = row.getBoundingClientRect();
         baseTranslateY = before.top - after.top;
@@ -8008,28 +8021,37 @@
         row.style.transform = `translateY(${dy}px)`;
         appliedTransform = dy;
 
-        const rows = Array.from(container.querySelectorAll('.shoot-mode-shot-row'));
-        const idx = rows.indexOf(row);
-        const rowRect = row.getBoundingClientRect();
-        const rowCenter = rowRect.top + rowRect.height / 2;
-        const next = rows[idx + 1];
-        const prev = rows[idx - 1];
-
-        let neighbor = null;
-        let insertBeforeRow = false;
-        if (next) {
-          const nextRect = next.getBoundingClientRect();
-          if (rowCenter >= nextRect.top + nextRect.height / 2) neighbor = next;
-        }
-        if (!neighbor && prev) {
-          const prevRect = prev.getBoundingClientRect();
-          if (rowCenter <= prevRect.top + prevRect.height / 2) { neighbor = prev; insertBeforeRow = true; }
-        }
-        if (!neighbor) return;
-
+        // See wireShotDragHandle: a fast flick can cross more than one
+        // neighbor between events, so this loops until the DOM order
+        // catches up with wherever the transform already moved the row.
         const before = row.getBoundingClientRect();
-        if (insertBeforeRow) container.insertBefore(row, neighbor);
-        else container.insertBefore(neighbor, row);
+        let swapped = false;
+        while (true) {
+          const rows = Array.from(container.querySelectorAll('.shoot-mode-shot-row'));
+          const idx = rows.indexOf(row);
+          const rowRect = row.getBoundingClientRect();
+          const rowCenter = rowRect.top + rowRect.height / 2;
+          const next = rows[idx + 1];
+          const prev = rows[idx - 1];
+
+          let neighbor = null;
+          let insertBeforeRow = false;
+          if (next) {
+            const nextRect = next.getBoundingClientRect();
+            if (rowCenter >= nextRect.top + nextRect.height / 2) neighbor = next;
+          }
+          if (!neighbor && prev) {
+            const prevRect = prev.getBoundingClientRect();
+            if (rowCenter <= prevRect.top + prevRect.height / 2) { neighbor = prev; insertBeforeRow = true; }
+          }
+          if (!neighbor) break;
+
+          if (insertBeforeRow) container.insertBefore(row, neighbor);
+          else container.insertBefore(neighbor, row);
+          swapped = true;
+        }
+        if (!swapped) return;
+
         row.style.transform = 'none';
         const after = row.getBoundingClientRect();
         baseTranslateY = before.top - after.top;
@@ -8089,6 +8111,14 @@
     renderShootModeShots(shoot);
     renderShootModeMoodboard(shoot);
     shootModeOverlay.hidden = false;
+    // renderShootModeShots() ran while shootModeOverlay was still hidden, so
+    // every row measured zero height and kept its one-line default — same
+    // trap as openShootModal, same fix: re-size once there's real layout.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        autoSizeAllListTextareas();
+      });
+    });
     return true;
   }
 
