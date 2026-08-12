@@ -2603,6 +2603,23 @@
     return results;
   }
 
+  // createdAt only holds a date (see todayStr), so two entries written the
+  // same day compare equal — journalEntries is append-only (always pushed,
+  // never unshifted), so the array's own order already IS creation order.
+  // Array.sort is stable, and stability alone would keep same-day ties in
+  // that oldest-first order, which is the wrong direction for "most recent
+  // first" — breaking ties by original index (reversed) fixes that without
+  // needing a real timestamp field.
+  function sortJournalEntriesRecent(entries) {
+    return entries
+      .map((e, i) => [e, i])
+      .sort(([ea, ia], [eb, ib]) => {
+        const cmp = (eb.createdAt || '').localeCompare(ea.createdAt || '');
+        return cmp !== 0 ? cmp : ib - ia;
+      })
+      .map(([e]) => e);
+  }
+
   // Nested by year > month of each entry's own createdAt (when it was
   // actually written) — same grouping structure Archive uses for shoots,
   // just keyed off the journal entry's date rather than a shoot's date.
@@ -2611,15 +2628,13 @@
   // it, but scrollToJournalEntry needs it so the layout has stopped shifting
   // before it scrolls.
   function renderJournal() {
-    const items = [...state.journalEntries];
+    // Sorted here rather than inside each month bucket, because
+    // renderYearMonthGroups keeps whatever order it's handed.
+    const items = sortJournalEntriesRecent(state.journalEntries);
 
     const list = document.getElementById('journalList');
     list.innerHTML = '';
     document.getElementById('journalEmpty').hidden = items.length !== 0;
-
-    // Sorted here rather than inside each month bucket, because
-    // renderYearMonthGroups keeps whatever order it's handed.
-    items.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
     const imagePromises = renderYearMonthGroups(list, items, {
       dateOf: e => e.createdAt,
@@ -2643,7 +2658,7 @@
   }
 
   function openJournalToc() {
-    const items = [...state.journalEntries].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    const items = sortJournalEntriesRecent(state.journalEntries);
     const list = document.getElementById('journalTocList');
     list.innerHTML = '';
     document.getElementById('journalTocEmpty').hidden = items.length !== 0;

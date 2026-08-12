@@ -1490,6 +1490,7 @@ h2.status-group-heading.heading-navy {
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-4xl) var(--radius-4xl) 0 0;
   padding: 16px 20px calc(env(safe-area-inset-bottom) + 20px);
   animation: slideUp 0.2s ease;
@@ -1530,6 +1531,14 @@ h2.status-group-heading.heading-navy {
   background: var(--surface);
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
+  /* iOS WKWebView (the engine behind an installed/home-screen PWA, not just
+     Safari) can fail to repaint a sticky element's own background layer
+     mid-scroll, letting whatever's scrolling underneath show through it —
+     worse the longer the scroll (journal entries with photos/tags are the
+     usual culprit). Forcing its own GPU compositing layer keeps it painted
+     independently of the content scrolling behind it. */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .modal-header h2 {
