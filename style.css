@@ -2005,6 +2005,14 @@ h2.status-group-heading.heading-navy {
   overflow: hidden;
 }
 
+/* The card's own overflow:hidden (above) exists to keep its full-bleed
+   header bar's corners clean — but it also clips the suggestions dropdown
+   below, which needs to escape past the card's edge. Toggled on only while
+   that card's own dropdown is open, so collapsed neighbors stay clipped. */
+.lighting-setup-card.lighting-setup-suggestions-open {
+  overflow: visible;
+}
+
 .lighting-setup-card-bar {
   display: flex;
   align-items: center;
@@ -2013,9 +2021,14 @@ h2.status-group-heading.heading-navy {
   padding: 6px 8px 6px 12px;
 }
 
-#shootForm .lighting-setup-card-bar .lighting-setup-name {
+.lighting-setup-name-wrap {
+  position: relative;
   flex: 1;
   min-width: 0;
+}
+
+#shootForm .lighting-setup-card-bar .lighting-setup-name {
+  width: 100%;
   background: none;
   border: none;
   border-radius: var(--radius-xs);
@@ -2026,6 +2039,51 @@ h2.status-group-heading.heading-navy {
   font-size: 15px;
   text-transform: none;
   text-overflow: ellipsis;
+}
+
+/* Dropdown of past setups by name — this app's only floating (as opposed to
+   inline chip-row) suggestion list, so it has no existing pattern to reuse;
+   modeled on the app's other popovers' surface/border treatment instead. */
+.lighting-setup-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  margin-top: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  max-height: 180px;
+  overflow-y: auto;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.lighting-setup-suggestions[hidden] {
+  display: none;
+}
+
+.lighting-setup-suggestion {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.lighting-setup-suggestion:last-child {
+  border-bottom: none;
+}
+
+.lighting-setup-suggestion:hover,
+.lighting-setup-suggestion:active {
+  background: var(--surface-2);
 }
 
 #shootForm .lighting-setup-card-bar .lighting-setup-name::placeholder {

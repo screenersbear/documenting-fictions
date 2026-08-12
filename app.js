@@ -1391,8 +1391,15 @@
     const box = e.target.closest('.stat-box');
     if (!box) return;
     const key = box.dataset.stat;
-    openStatBoxDetail(STAT_BOX_FILTERS[key], STAT_BOX_TITLES[key]);
+    openStatBoxDetail(STAT_BOX_FILTERS[key], STAT_BOX_TITLES[key], key);
   });
+
+  // Tracks which stat box's list is showing so closeShootModal can re-apply
+  // the same filter — the popup stacks UNDER the shoot modal rather than
+  // closing when a row's shoot is opened (see .stat-box-detail-overlay's
+  // z-index comment), so without this a shoot you just completed from here
+  // stayed listed until you closed and reopened the popup by hand.
+  let activeStatBoxKey = null;
 
   let statBoxScrollLockY = 0;
   function lockBodyScroll() {
@@ -1410,21 +1417,43 @@
     window.scrollTo(0, statBoxScrollLockY);
   }
 
-  function openStatBoxDetail(filterFn, title) {
+  // Split out from openStatBoxDetail so a later refresh (see closeShootModal)
+  // can repaint just the list, without replaying the open animation or
+  // re-locking scroll on a popup that's already open.
+  function renderStatBoxDetailList(filterFn) {
     const shoots = state.shoots.filter(filterFn)
       .sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
-    document.getElementById('statBoxDetailTitle').textContent = title;
     const list = document.getElementById('statBoxDetailList');
     list.innerHTML = '';
     shoots.forEach(s => renderCompactShootRow(list, s));
     document.getElementById('statBoxDetailEmpty').hidden = shoots.length > 0;
+  }
+
+  function openStatBoxDetail(filterFn, title, key) {
+    activeStatBoxKey = key;
+    document.getElementById('statBoxDetailTitle').textContent = title;
+    renderStatBoxDetailList(filterFn);
     const overlay = document.getElementById('statBoxDetailOverlay');
     overlay.hidden = false;
     lockBodyScroll();
     requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('open')));
   }
 
+  // The stat box popup stacks UNDER the shoot modal rather than closing when
+  // a row's shoot is opened (see .stat-box-detail-overlay's z-index comment),
+  // so every path that can close the shoot modal — save, delete (both the
+  // in-modal button and the options-menu one), complete, unarchive — needs
+  // to call this or a shoot that just stopped matching the active filter
+  // (mood board checked off, deleted, completed…) sits there stale until
+  // the popup itself is closed and reopened by hand.
+  function refreshOpenStatBoxDetail() {
+    if (activeStatBoxKey && !document.getElementById('statBoxDetailOverlay').hidden) {
+      renderStatBoxDetailList(STAT_BOX_FILTERS[activeStatBoxKey]);
+    }
+  }
+
   function closeStatBoxDetail() {
+    activeStatBoxKey = null;
     const overlay = document.getElementById('statBoxDetailOverlay');
     overlay.classList.remove('open');
     unlockBodyScroll();
@@ -3991,6 +4020,76 @@
     return `shoot:${currentShootId}:lightingSetup:${setup.id}`;
   }
 
+  // Grouped by name across every shoot's lightingSetups, most-recent shoot's
+  // version winning ties — same "most recent wins" shape as
+  // getAllPastTalents/getLastLocationDirections, just without lead-count
+  // tiering since setups aren't ranked, only deduped.
+  function getPastLightingSetups() {
+    const sampleDates = {};
+    const samples = {};
+    state.shoots.forEach(s => {
+      (s.lightingSetups || []).forEach(item => {
+        if (!hasText(item.name)) return;
+        const key = item.name.trim().toLowerCase();
+        const d = s.date || '';
+        if (!(key in sampleDates) || d > sampleDates[key]) {
+          sampleDates[key] = d;
+          samples[key] = item;
+        }
+      });
+    });
+    return Object.keys(samples)
+      .sort((a, b) => samples[a].name.localeCompare(samples[b].name))
+      .map(key => samples[key]);
+  }
+
+  // Typing (or just tapping into) a setup's name shows past setups sharing
+  // this shoot's Visuals-section styling as a dropdown under the field —
+  // picking one COPIES its name/characteristics/description in, a one-time
+  // fill rather than the Talent popup's ongoing cross-shoot sync. Lighting
+  // setups are far more likely than a person's identity to legitimately
+  // vary shoot to shoot under the same name (a different room, different
+  // gear), so silently keeping every past "Rembrandt lighting" in sync
+  // would rewrite descriptions the user never touched.
+  function updateLightingSetupSuggestions(idx, input) {
+    const wrap = input.closest('.lighting-setup-name-wrap');
+    const box = wrap.querySelector('.lighting-setup-suggestions');
+    const card = input.closest('.lighting-setup-card');
+    const query = input.value.trim().toLowerCase();
+    const ownId = currentLightingSetups[idx].id;
+    const matches = getPastLightingSetups()
+      // Autosave can land mid-typing, which briefly puts THIS setup's own
+      // in-progress name into state.shoots — without this it would then
+      // suggest itself back to whoever's still typing it.
+      .filter(item => item.id !== ownId)
+      .filter(item => !query || item.name.toLowerCase().includes(query))
+      .slice(0, 6);
+    if (!matches.length) {
+      box.hidden = true;
+      card.classList.remove('lighting-setup-suggestions-open');
+      return;
+    }
+    box.innerHTML = matches.map((item, i) => `
+      <button type="button" class="lighting-setup-suggestion" data-idx="${idx}" data-match="${i}">${escapeHtml(item.name)}</button>
+    `).join('');
+    box.querySelectorAll('.lighting-setup-suggestion').forEach((btn, i) => {
+      // mousedown (not click) fires before the field's blur, so the copy
+      // lands before blur's own handler hides this dropdown out from
+      // under it — preventDefault keeps focus on the field throughout.
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const picked = matches[i];
+        currentLightingSetups[idx].name = picked.name || '';
+        currentLightingSetups[idx].characteristics = picked.characteristics || '';
+        currentLightingSetups[idx].description = picked.description || '';
+        renderLightingSetups();
+        scheduleShootAutosave();
+      });
+    });
+    box.hidden = false;
+    card.classList.add('lighting-setup-suggestions-open');
+  }
+
   function renderLightingSetups() {
     const container = document.getElementById('lightingSetupsItems');
     container.innerHTML = currentLightingSetups.map((item, idx) => {
@@ -3998,7 +4097,10 @@
       return `
       <div class="team-member-card lighting-setup-card${collapsed ? ' lighting-setup-card-collapsed' : ''}">
         <div class="lighting-setup-card-bar">
-          <input type="text" class="lighting-setup-name" data-idx="${idx}" placeholder="Setup ${idx + 1}" aria-label="Lighting setup ${idx + 1} name" value="${escapeHtml(item.name || '')}" />
+          <div class="lighting-setup-name-wrap">
+            <input type="text" class="lighting-setup-name" data-idx="${idx}" placeholder="Setup ${idx + 1}" aria-label="Lighting setup ${idx + 1} name" value="${escapeHtml(item.name || '')}" autocomplete="off" />
+            <div class="lighting-setup-suggestions" hidden></div>
+          </div>
           <button type="button" class="lighting-setup-collapse-toggle" data-idx="${idx}" aria-label="Collapse lighting setup" aria-expanded="${collapsed ? 'false' : 'true'}">
             ${COLLAPSE_ARROW_SVG}
           </button>
@@ -4037,8 +4139,18 @@
       });
     });
     container.querySelectorAll('.lighting-setup-name').forEach(input => {
+      const idx = Number(input.dataset.idx);
       input.addEventListener('input', () => {
-        currentLightingSetups[Number(input.dataset.idx)].name = input.value;
+        currentLightingSetups[idx].name = input.value;
+        updateLightingSetupSuggestions(idx, input);
+      });
+      // Focusing an empty field browses every past setup, same as tapping
+      // open the Returning talent/team-member select — you shouldn't have
+      // to already remember a name to find it.
+      input.addEventListener('focus', () => updateLightingSetupSuggestions(idx, input));
+      input.addEventListener('blur', () => {
+        input.closest('.lighting-setup-name-wrap').querySelector('.lighting-setup-suggestions').hidden = true;
+        input.closest('.lighting-setup-card').classList.remove('lighting-setup-suggestions-open');
       });
       input.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
@@ -5531,6 +5643,7 @@
     shootModalOverlay.hidden = true;
     editingShootId = null;
     renderAll();
+    refreshOpenStatBoxDetail();
   }
 
   document.getElementById('saveShootBtn').addEventListener('click', closeShootModal);
@@ -5591,6 +5704,7 @@
     shootModalOverlay.hidden = true;
     editingShootId = null;
     renderAll();
+    refreshOpenStatBoxDetail();
   });
 
   document.getElementById('shareShootBtn').addEventListener('click', () => {
@@ -5817,6 +5931,7 @@
     }
     deleteShootById(id);
     renderAll();
+    refreshOpenStatBoxDetail();
   });
 
   document.getElementById('shootOptionsCancelBtn').addEventListener('click', closeShootOptions);
@@ -6874,6 +6989,7 @@
     shootModalOverlay.hidden = true;
     editingShootId = null;
     renderAll();
+    refreshOpenStatBoxDetail();
     showToast('You did it! Revisit this shoot in your archive.');
   });
 
@@ -6887,6 +7003,7 @@
     shootModalOverlay.hidden = true;
     editingShootId = null;
     renderAll();
+    refreshOpenStatBoxDetail();
   });
 
   document.getElementById('addShootBtn').addEventListener('click', () => openShootModal(null));
