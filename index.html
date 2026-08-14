@@ -340,6 +340,10 @@
         <p class="continue-prompt" id="categoryContinuePrompt">select a category to continue</p>
 
         <div id="formSection2" hidden>
+          <label>Shoot goals
+            <textarea id="shootGoals" rows="6" maxlength="1000" placeholder="What this shoot needs to accomplish" readonly></textarea>
+          </label>
+
           <label><span id="shootPremiseLabelText">Concept</span>
             <textarea id="shootPremise" rows="6" maxlength="200" placeholder="visual narrative or message" readonly></textarea>
           </label>
@@ -355,12 +359,6 @@
 
             <label>General direction notes
               <textarea id="shootGeneralNotes" rows="6" maxlength="1000" placeholder="Anything else worth remembering about this shoot" readonly></textarea>
-            </label>
-          </div>
-
-          <div id="commercialFieldsBlock" hidden>
-            <label>Shoot goals
-              <textarea id="shootGoals" rows="6" maxlength="1000" placeholder="What this shoot needs to accomplish" readonly></textarea>
             </label>
           </div>
 
@@ -1191,17 +1189,23 @@
       <div id="shootModeShotList" class="shoot-mode-shots"></div>
       <p class="shoot-mode-empty" id="shootModeShotsEmpty" hidden>No shots on the list for this shoot.</p>
       <button type="button" id="shootModeAddShotBtn" class="primary small-btn shoot-mode-add-shot-btn">+ Add shot</button>
+      <label class="shoot-mode-shooting-notes-label">Shooting notes
+        <textarea id="shootModeShootingNotes" rows="4" maxlength="2000" placeholder="Anything to remember on the day — settings, timings, things to try"></textarea>
+      </label>
 
       <h3 class="shoot-mode-section-heading heading-yellow">Mood board</h3>
       <div id="shootModeMoodboard" class="moodboard-grid"></div>
       <p class="shoot-mode-empty" id="shootModeMoodEmpty" hidden>No mood board images for this shoot.</p>
     </div>
-    <button type="button" class="primary modal-cta" id="shootModeDoneBtn">Done shooting</button>
+    <button type="button" class="primary shoot-mode-bottom-cta" id="shootModeDoneBtn">Done shooting</button>
   </div>
 </div>
 
-<!-- Read-only popup shared by both Quick review buttons — same rounded,
-     ink-outlined treatment as Shoot mode itself, since it's reached from there. -->
+<!-- Editable popup shared by both Quick review buttons — same rounded,
+     ink-outlined treatment as Shoot mode itself, since it's reached from
+     there. Every field is tap-to-edit (see openExpandField's config-object
+     form), writing straight to the shoot, same as everything else in
+     Shoot Mode. -->
 <div id="shootModeReviewOverlay" class="modal-overlay shoot-mode-overlay" hidden>
   <div class="modal shoot-mode-modal shoot-mode-review-modal">
     <div class="shoot-mode-header">
@@ -1212,6 +1216,7 @@
       <button type="button" class="icon-btn close-btn" id="shootModeReviewCloseBtn" aria-label="Close">&times;</button>
     </div>
     <div class="shoot-mode-body" id="shootModeReviewBody"></div>
+    <button type="button" class="primary shoot-mode-bottom-cta" id="shootModeReviewOkBtn">OK</button>
   </div>
 </div>
 

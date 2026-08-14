@@ -1733,7 +1733,6 @@ h2.status-group-heading.heading-navy {
 
 #formSection2[hidden],
 #narrativeFieldsBlock[hidden],
-#commercialFieldsBlock[hidden],
 #postShootContent[hidden],
 #postShootBody[hidden],
 #basicInfoBody[hidden],
@@ -1757,7 +1756,6 @@ h2.status-group-heading.heading-navy {
 #talentForm,
 #teamMemberForm,
 #narrativeFieldsBlock,
-#commercialFieldsBlock,
 #postShootContent,
 #postShootBody,
 #basicInfoBody,
@@ -4487,6 +4485,20 @@ h2.status-group-heading.heading-navy {
   overflow-wrap: anywhere;
 }
 
+/* Was never given its own rule, so it fell through to the browser's raw h2
+   default — oversized, and with margins that didn't match this header's
+   own rhythm. It also inherited body's plain text color, which happens to
+   equal var(--ink) in the default theme — i.e. it rendered the same color
+   as its own dark background. Sized like a normal popup header (matches
+   .modal-header h2) and colored white to actually read against the ink
+   banner, same treatment as .shoot-mode-eyebrow right above it — the
+   banner itself stays var(--ink), only the title text changes. */
+#shootModeReviewTitle {
+  margin: 0;
+  font-size: 19px;
+  color: #fff;
+}
+
 .shoot-mode-header .close-btn {
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.15);
@@ -4519,7 +4531,13 @@ h2.status-group-heading.heading-navy {
   color: #fff;
 }
 
-.shoot-mode-body .shoot-mode-section-heading:not(:first-child) {
+/* Used to skip the first heading (Quick review) so it wouldn't stack a
+   margin on top of .shoot-mode-body's own padding — but with no padding
+   of its own above it either, that left Quick review sitting flush against
+   the header banner while every section after it got real breathing room.
+   Applying to every heading, first included, gives it that same breathing
+   room from the banner. */
+.shoot-mode-body .shoot-mode-section-heading {
   margin-top: 14px;
 }
 
@@ -4571,22 +4589,63 @@ h2.status-group-heading.heading-navy {
   margin: 10px 20px 14px;
 }
 
+/* Same field the main edit form's Shot list section has (#shootShootingNotes)
+   — Shoot Mode had no way to see or add to it before, even though it's
+   exactly the kind of thing you'd want mid-shoot. Written directly here
+   rather than through the tap-to-expand pattern the main form uses, same
+   as the shot rows above it — everything in Shoot Mode edits in place. */
+.shoot-mode-shooting-notes-label {
+  display: block;
+  margin: 0 20px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+}
+
+.shoot-mode-shooting-notes-label textarea {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 15px;
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: normal;
+  resize: none;
+}
+
 #shootModeMoodboard {
   padding: 4px 20px 4px;
 }
 
-.shoot-mode-modal #shootModeDoneBtn {
+/* Shared by #shootModeDoneBtn and the Quick review popup's OK button — a
+   fixed bottom action that closes out whatever Shoot-Mode screen it's on.
+   padding-bottom used to be 16px PLUS the safe-area inset added on top,
+   which on a home-indicator device (~34px) made the bottom padding more
+   than 3x the top and left the label looking like it was riding high in
+   the button. max() instead of + makes the safe area a floor rather than
+   an addition, so it only grows past the visual 20px baseline on devices
+   that actually need it, and even then not by nearly as much. */
+.shoot-mode-bottom-cta {
   flex-shrink: 0;
+  display: block;
   width: 100%;
   margin: 0;
-  padding: 16px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  padding: 20px 16px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
   border: none;
   border-top: 2px solid var(--ink);
   border-radius: 0;
-  font-size: 18px;
+  text-align: center;
+  font-size: 21px;
   font-family: var(--font-title);
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 1.5px;
   cursor: pointer;
 }
@@ -4638,18 +4697,11 @@ h2.status-group-heading.heading-navy {
 
 /* ---------- Shoot mode: Done button, Quick review ---------- */
 
-/* The one action that ends the mode — reads as a decision, not just
-   another list item below the mood board. */
-.shoot-mode-modal #shootModeDoneBtn {
-  font-size: 20px;
-  font-weight: 800;
-}
-
 .shoot-mode-quick-review {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  padding: 4px 20px 20px;
+  padding: 4px 20px 10px;
 }
 
 .shoot-mode-quick-review-btn {
@@ -4677,14 +4729,32 @@ h2.status-group-heading.heading-navy {
   background: var(--accent);
 }
 
-/* Read-only Direction fields inside the Quick review popup. */
+/* Direction fields inside the Quick review popup — every field is its own
+   tap target (see renderShootModeReviewField), opening the shared
+   expand-field editor to modify it or, for a field with nothing written
+   yet, add something. */
 .shoot-mode-review-field {
+  width: 100%;
   padding: 14px 20px;
+  border: none;
   border-bottom: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  cursor: pointer;
 }
 
 .shoot-mode-review-field:last-child {
   border-bottom: 0;
+}
+
+.shoot-mode-review-field:active {
+  background: var(--surface-2);
+}
+
+.shoot-mode-review-empty {
+  color: var(--text-dim);
+  opacity: 0.6;
+  font-style: italic;
 }
 
 .shoot-mode-review-label {
@@ -4723,6 +4793,7 @@ h2.status-group-heading.heading-navy {
   font-family: var(--font-title);
   font-weight: 700;
   font-size: 17px;
+  cursor: pointer;
 }
 
 /* ---------- Popup rounding pass ----------

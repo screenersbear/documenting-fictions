@@ -3900,6 +3900,7 @@
       e.preventDefault();
       const row = handle.closest('.shot-list-row');
       if (!row) return;
+      const pointerId = e.pointerId;
       const bucketSelector = row.classList.contains('shot-checked')
         ? '.shot-list-row.shot-checked'
         : '.shot-list-row:not(.shot-checked)';
@@ -3928,6 +3929,7 @@
       try { handle.setPointerCapture(e.pointerId); } catch (err) { /* capture is a nice-to-have, not required */ }
 
       function onMove(ev) {
+        if (ev.pointerId !== pointerId) return;
         const rawRect = row.getBoundingClientRect();
         const layoutTop = rawRect.top - appliedTransform;
         const rowHeight = rawRect.height;
@@ -3985,10 +3987,11 @@
         appliedTransform = baseTranslateY;
       }
 
-      function onEnd() {
-        handle.removeEventListener('pointermove', onMove);
-        handle.removeEventListener('pointerup', onEnd);
-        handle.removeEventListener('pointercancel', onEnd);
+      function onEnd(ev) {
+        if (ev && ev.pointerId !== undefined && ev.pointerId !== pointerId) return;
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onEnd);
+        window.removeEventListener('pointercancel', onEnd);
         row.classList.remove('shot-dragging');
         row.style.transform = '';
         const rows = Array.from(container.querySelectorAll('.shot-list-row'));
@@ -3997,9 +4000,16 @@
         scheduleShootAutosave();
       }
 
-      handle.addEventListener('pointermove', onMove);
-      handle.addEventListener('pointerup', onEnd);
-      handle.addEventListener('pointercancel', onEnd);
+      // Listening on window (not the handle) means tracking survives even
+      // if the row hits its bucket clamp and stops moving while the finger
+      // keeps going — hit-testing on a now-stationary handle would miss
+      // the finger and silently stop delivering events, leaving the row
+      // stuck mid-drag with no pointerup ever arriving to release it.
+      // setPointerCapture above is kept too, as a belt-and-suspenders
+      // targeting hint, but window is what makes this actually reliable.
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onEnd);
+      window.addEventListener('pointercancel', onEnd);
     });
   }
 
@@ -4406,7 +4416,6 @@
   function updateCategoryTierUI() {
     const isCommercialTier = COMMERCIAL_TIER_CATEGORIES.includes(document.getElementById('shootCategory').value);
     document.getElementById('narrativeFieldsBlock').hidden = isCommercialTier;
-    document.getElementById('commercialFieldsBlock').hidden = !isCommercialTier;
     document.getElementById('shootPremiseLabelText').textContent = isCommercialTier ? 'Concept (if applicable)' : 'Concept';
   }
 
@@ -4508,21 +4517,48 @@
     shootShootingNotes: 'Shooting notes',
     shootLocationDirections: 'Location directions',
   };
-  let expandFieldTargetId = null;
+  let expandFieldOnSave = null;
 
   function expandFieldLabel(fieldId) {
     if (fieldId === 'shootPremise') return document.getElementById('shootPremiseLabelText').textContent;
     return EXPAND_FIELD_LABELS[fieldId] || '';
   }
 
-  function openExpandField(fieldId) {
-    const field = document.getElementById(fieldId);
-    expandFieldTargetId = fieldId;
-    document.getElementById('expandFieldTitle').textContent = expandFieldLabel(fieldId);
+  // Accepts either a field id (the main form's own readonly fields — reads
+  // label/value/placeholder/maxLength off that field, and writes back +
+  // re-dispatches 'input' so the field's own listener persists it) or a
+  // {title, value, placeholder, maxLength, onSave} config for callers with
+  // no backing DOM field to read from, like Shoot Mode's Quick review —
+  // those write straight to the shoot object themselves, same as
+  // everything else in Shoot Mode does.
+  function openExpandField(fieldIdOrConfig) {
+    let config;
+    if (typeof fieldIdOrConfig === 'string') {
+      const field = document.getElementById(fieldIdOrConfig);
+      config = {
+        title: expandFieldLabel(fieldIdOrConfig),
+        value: field.value,
+        placeholder: field.placeholder,
+        maxLength: field.maxLength,
+        onSave: (newValue) => {
+          field.value = newValue;
+          // The readonly field is what's visible on the main form once this
+          // popup closes — it should always read from the start of what was
+          // written, not wherever the popup's own cursor/scroll happened to
+          // be sitting.
+          field.scrollTop = 0;
+          field.dispatchEvent(new Event('input', { bubbles: true }));
+        },
+      };
+    } else {
+      config = fieldIdOrConfig;
+    }
+    expandFieldOnSave = config.onSave;
+    document.getElementById('expandFieldTitle').textContent = config.title;
     const textarea = document.getElementById('expandFieldTextarea');
-    textarea.value = field.value;
-    textarea.maxLength = field.maxLength;
-    textarea.placeholder = field.placeholder;
+    textarea.value = config.value || '';
+    textarea.maxLength = config.maxLength || 2000;
+    textarea.placeholder = config.placeholder || '';
     document.getElementById('expandFieldOverlay').hidden = false;
     // Deferred a frame: focusing (which opens the keyboard) in the same tick
     // as un-hiding gives the browser no chance to lay out the now-visible
@@ -4533,18 +4569,11 @@
 
   function closeExpandField() {
     document.getElementById('expandFieldOverlay').hidden = true;
-    expandFieldTargetId = null;
+    expandFieldOnSave = null;
   }
 
   document.getElementById('expandFieldTextarea').addEventListener('input', () => {
-    if (!expandFieldTargetId) return;
-    const field = document.getElementById(expandFieldTargetId);
-    field.value = document.getElementById('expandFieldTextarea').value;
-    // The readonly field is what's visible on the main form once this popup
-    // closes — it should always read from the start of what was written,
-    // not wherever the popup's own cursor/scroll happened to be sitting.
-    field.scrollTop = 0;
-    field.dispatchEvent(new Event('input', { bubbles: true }));
+    if (expandFieldOnSave) expandFieldOnSave(document.getElementById('expandFieldTextarea').value);
   });
 
   document.getElementById('expandFieldCloseBtn').addEventListener('click', closeExpandField);
@@ -8125,6 +8154,7 @@
       e.preventDefault();
       const row = handle.closest('.shoot-mode-shot-row');
       if (!row) return;
+      const pointerId = e.pointerId;
 
       const rowRects = Array.from(container.querySelectorAll('.shoot-mode-shot-row')).map(r => r.getBoundingClientRect());
       const bucketTop = Math.min(...rowRects.map(r => r.top));
@@ -8142,6 +8172,7 @@
       try { handle.setPointerCapture(e.pointerId); } catch (err) { /* capture is a nice-to-have, not required */ }
 
       function onMove(ev) {
+        if (ev.pointerId !== pointerId) return;
         const rawRect = row.getBoundingClientRect();
         const layoutTop = rawRect.top - appliedTransform;
         const rowHeight = rawRect.height;
@@ -8192,10 +8223,11 @@
         appliedTransform = baseTranslateY;
       }
 
-      function onEnd() {
-        handle.removeEventListener('pointermove', onMove);
-        handle.removeEventListener('pointerup', onEnd);
-        handle.removeEventListener('pointercancel', onEnd);
+      function onEnd(ev) {
+        if (ev && ev.pointerId !== undefined && ev.pointerId !== pointerId) return;
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onEnd);
+        window.removeEventListener('pointercancel', onEnd);
         row.classList.remove('shot-dragging');
         row.style.transform = '';
         const rows = Array.from(container.querySelectorAll('.shoot-mode-shot-row'));
@@ -8205,9 +8237,11 @@
         renderAll();
       }
 
-      handle.addEventListener('pointermove', onMove);
-      handle.addEventListener('pointerup', onEnd);
-      handle.addEventListener('pointercancel', onEnd);
+      // See wireShotDragHandle for why this listens on window rather than
+      // the handle itself.
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onEnd);
+      window.addEventListener('pointercancel', onEnd);
     });
   }
 
@@ -8242,6 +8276,7 @@
     document.getElementById('shootModeTitle').textContent = shootDisplayName(shoot);
     renderShootModeShots(shoot);
     renderShootModeMoodboard(shoot);
+    document.getElementById('shootModeShootingNotes').value = shoot.shootingNotes || '';
     shootModeOverlay.hidden = false;
     // renderShootModeShots() ran while shootModeOverlay was still hidden, so
     // every row measured zero height and kept its one-line default — same
@@ -8260,6 +8295,15 @@
   }
 
   document.getElementById('shootModeExitBtn').addEventListener('click', exitShootMode);
+
+  // Same field as the main edit form's Shot list section (#shootShootingNotes)
+  // — writes straight to the shoot, same as every other Shoot Mode field.
+  document.getElementById('shootModeShootingNotes').addEventListener('input', (e) => {
+    const shoot = state.shoots.find(s => s.id === getShootModeShootId());
+    if (!shoot) return;
+    shoot.shootingNotes = e.target.value;
+    saveState();
+  });
 
   // Writes straight to state and re-renders just the shot list, same as
   // ticking a checkbox or editing a shot above — no working copy, so a shot
@@ -8294,25 +8338,39 @@
     if (currentShootId) openShootMode(currentShootId);
   });
 
-  // ---------- Shoot mode: Quick review (read-only Direction / Lighting setups) ----------
+  // ---------- Shoot mode: Quick review (editable Direction / Lighting setups) ----------
   const SHOOT_MODE_DIRECTION_FIELDS = [
-    ['premise', 'Concept'],
-    ['character', 'Character/Personality'],
-    ['worldNotes', 'World-building notes'],
-    ['generalNotes', 'General direction notes'],
-    ['shootGoals', 'Shoot goals'],
-    ['elevatorPitch', 'Elevator pitch'],
-    ['talentDirections', 'Directions for talent'],
-    ['teamDirections', 'Directions for team'],
+    ['premise', 'Concept', 200],
+    ['character', 'Character/Personality', 1000],
+    ['worldNotes', 'World-building notes', 1000],
+    ['generalNotes', 'General direction notes', 1000],
+    ['shootGoals', 'Shoot goals', 1000],
+    ['elevatorPitch', 'Elevator pitch', 150],
+    ['talentDirections', 'Directions for talent', 1000],
+    ['teamDirections', 'Directions for team', 1000],
   ];
 
-  function renderShootModeReviewField(label, value) {
-    return `
-      <div class="shoot-mode-review-field">
-        <p class="shoot-mode-review-label">${escapeHtml(label)}</p>
-        <p class="shoot-mode-review-value">${escapeHtml(value)}</p>
-      </div>
+  // Every field is its own tap target — opens the shared expand-field editor
+  // (see openExpandField's config-object form) to change what's there, or
+  // fill in a field that's still blank, which is why this shows ALL fields
+  // rather than filtering to ones already written (the old read-only
+  // version's whole-field-blank empty state doesn't apply here for the
+  // same reason). onSave is the caller's own write-back — this function
+  // doesn't know or care whether it's writing a Direction field or a
+  // lighting setup's.
+  function renderShootModeReviewField(label, value, maxLength, onSave) {
+    const filled = hasText(value);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'shoot-mode-review-field';
+    btn.innerHTML = `
+      <p class="shoot-mode-review-label">${escapeHtml(label)}</p>
+      <p class="shoot-mode-review-value${filled ? '' : ' shoot-mode-review-empty'}">${filled ? escapeHtml(value) : 'Tap to add'}</p>
     `;
+    btn.addEventListener('click', () => {
+      openExpandField({ title: label, value: value || '', maxLength, onSave });
+    });
+    return btn;
   }
 
   function openShootModeReview(kind) {
@@ -8320,28 +8378,56 @@
     const shoot = shootId ? state.shoots.find(s => s.id === shootId) : null;
     if (!shoot) return;
     const body = document.getElementById('shootModeReviewBody');
+    body.innerHTML = '';
+
+    // Re-opens on the same kind, so editing one field doesn't lose your
+    // place among the rest of the list.
+    const refresh = () => openShootModeReview(kind);
+    const commit = () => {
+      saveState();
+      refresh();
+      renderAll();
+    };
 
     if (kind === 'direction') {
       document.getElementById('shootModeReviewTitle').textContent = 'Direction';
-      const filled = SHOOT_MODE_DIRECTION_FIELDS
-        .map(([key, label]) => [label, shoot[key]])
-        .filter(([, value]) => hasText(value));
-      body.innerHTML = filled.length
-        ? filled.map(([label, value]) => renderShootModeReviewField(label, value)).join('')
-        : '<p class="shoot-mode-empty">Nothing filled in under Direction for this shoot.</p>';
+      SHOOT_MODE_DIRECTION_FIELDS.forEach(([key, label, maxLength]) => {
+        body.appendChild(renderShootModeReviewField(label, shoot[key] || '', maxLength, (newValue) => {
+          shoot[key] = newValue;
+          commit();
+        }));
+      });
     } else {
       document.getElementById('shootModeReviewTitle').textContent = 'Lighting setups';
       const setups = (shoot.lightingSetups || [])
         .filter(item => hasText(item.name) || hasText(item.characteristics) || hasText(item.description));
-      body.innerHTML = setups.length
-        ? setups.map((item, idx) => `
-            <div class="shoot-mode-review-setup">
-              <p class="shoot-mode-review-setup-name">${escapeHtml(hasText(item.name) ? item.name : `Setup ${idx + 1}`)}</p>
-              ${hasText(item.characteristics) ? renderShootModeReviewField('Characteristics', item.characteristics) : ''}
-              ${hasText(item.description) ? renderShootModeReviewField('Description', item.description) : ''}
-            </div>
-          `).join('')
-        : '<p class="shoot-mode-empty">No lighting setups logged for this shoot.</p>';
+      if (!setups.length) {
+        body.innerHTML = '<p class="shoot-mode-empty">No lighting setups logged for this shoot.</p>';
+      } else {
+        setups.forEach((item, idx) => {
+          const group = document.createElement('div');
+          group.className = 'shoot-mode-review-setup';
+          const name = document.createElement('p');
+          name.className = 'shoot-mode-review-setup-name';
+          name.textContent = hasText(item.name) ? item.name : `Setup ${idx + 1}`;
+          name.addEventListener('click', () => {
+            openExpandField({
+              title: 'Setup name', value: item.name || '', maxLength: 200,
+              onSave: (newValue) => { item.name = newValue; commit(); },
+            });
+          });
+          group.appendChild(name);
+          group.appendChild(renderShootModeReviewField('Characteristics', item.characteristics || '', 1000, (newValue) => {
+            item.characteristics = newValue;
+            commit();
+          }));
+          group.appendChild(renderShootModeReviewField('Description', item.description || '', 1000, (newValue) => {
+            item.description = newValue;
+            commit();
+          }));
+          body.appendChild(group);
+        });
+      }
     }
     document.getElementById('shootModeReviewOverlay').hidden = false;
   }
@@ -8349,6 +8435,9 @@
   document.getElementById('shootModeReviewDirectionBtn').addEventListener('click', () => openShootModeReview('direction'));
   document.getElementById('shootModeReviewLightingBtn').addEventListener('click', () => openShootModeReview('lighting'));
   document.getElementById('shootModeReviewCloseBtn').addEventListener('click', () => {
+    document.getElementById('shootModeReviewOverlay').hidden = true;
+  });
+  document.getElementById('shootModeReviewOkBtn').addEventListener('click', () => {
     document.getElementById('shootModeReviewOverlay').hidden = true;
   });
 
