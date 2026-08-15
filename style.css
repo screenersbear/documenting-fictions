@@ -1755,6 +1755,7 @@ h2.status-group-heading.heading-navy {
 #locationForm,
 #talentForm,
 #teamMemberForm,
+#photographerForm,
 #narrativeFieldsBlock,
 #postShootContent,
 #postShootBody,
@@ -1803,7 +1804,8 @@ h2.status-group-heading.heading-navy {
 #journalForm label,
 #locationForm label,
 #talentForm label,
-#teamMemberForm label {
+#teamMemberForm label,
+#photographerForm label {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1824,6 +1826,8 @@ h2.status-group-heading.heading-navy {
 #talentForm select,
 #teamMemberForm input,
 #teamMemberForm select,
+#photographerForm input,
+#photographerForm select,
 #expandFieldTextarea {
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -1922,6 +1926,70 @@ h2.status-group-heading.heading-navy {
   font-size: 14px;
   color: var(--text-dim);
   margin: 0;
+}
+
+/* ---------- Storage usage popup ---------- */
+#storageUsageBody {
+  margin-top: 12px;
+}
+
+.storage-usage-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 14px;
+  margin-bottom: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.storage-usage-total-label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.storage-usage-total-value {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  color: var(--text);
+}
+
+.storage-usage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.storage-usage-row:last-child {
+  border-bottom: 0;
+}
+
+.storage-usage-row-label {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.storage-usage-row-value {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.storage-usage-row-count {
+  font-weight: 400;
+  color: var(--text-dim);
+  font-size: 13px;
 }
 
 .field-hint-bold {

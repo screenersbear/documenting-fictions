@@ -505,6 +505,18 @@
   </div>
 </div>
 
+<!-- ============ STORAGE USAGE ============ -->
+<div id="storageUsageOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2>Storage usage</h2>
+      <button type="button" class="icon-btn close-btn" id="storageUsageCloseBtn">&times;</button>
+    </div>
+    <p class="field-hint">Roughly how much space this app and everything you've added to it — photos especially — are taking up on your phone.</p>
+    <div id="storageUsageBody"></div>
+  </div>
+</div>
+
 <div id="talentModalOverlay" class="modal-overlay" hidden>
   <div class="modal rounded-modal">
     <div class="modal-header">
@@ -1041,6 +1053,8 @@
         <button type="button" class="options-item" id="photographerInfoBtn">Photographer information</button>
         <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="shootDisplayOptionsBtn">Shoot display options</button>
+        <div class="menu-divider" aria-hidden="true"></div>
+        <button type="button" class="options-item" id="storageUsageBtn">Storage usage</button>
         <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item options-delete" id="deleteAllShootDataBtn">Delete all shoot data</button>
         <div class="menu-divider" aria-hidden="true"></div>

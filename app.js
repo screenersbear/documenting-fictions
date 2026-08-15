@@ -1124,6 +1124,132 @@
     return [projectPhotoKey(shoot.id)].concat((shoot.talents || []).filter(t => t.id).map(t => talentPhotoKey(shoot.id, t.id)));
   }
 
+  // ---------- Storage usage (App menu) ----------
+  // Every image key in the store matches exactly one of these suffix
+  // patterns except mood board images, which were the original, un-suffixed
+  // shape this store started with — so "none of the above" is what's left
+  // for that bucket, not a dedicated pattern of its own.
+  function categorizeStorageKey(key) {
+    if (key.endsWith('__cover')) return 'cover';
+    if (key.endsWith('__final')) return 'final';
+    if (key.endsWith('__journal')) return 'journal';
+    if (key.includes('__talent_')) return 'talent';
+    return 'moodboard';
+  }
+
+  // Estimated from the data URL's own encoded length rather than decoding
+  // it — base64 inflates the true byte count by ~4/3, so this runs a hair
+  // high, but consistently so across every category, which is what matters
+  // for comparing them against each other rather than for a byte-exact figure.
+  function estimateDataUrlBytes(src) {
+    if (!src) return 0;
+    const commaIdx = src.indexOf(',');
+    const payload = commaIdx === -1 ? src : src.slice(commaIdx + 1);
+    return Math.round(payload.length * 0.75);
+  }
+
+  function computeIdbStorageBreakdown() {
+    return idbOpen().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const totals = { moodboard: 0, cover: 0, talent: 0, final: 0, journal: 0 };
+      const counts = { moodboard: 0, cover: 0, talent: 0, final: 0, journal: 0 };
+      const req = tx.objectStore(IDB_STORE).openCursor();
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (!cursor) return;
+        const category = categorizeStorageKey(String(cursor.key));
+        normalizeMoodboardImages(cursor.value).forEach(img => {
+          totals[category] += estimateDataUrlBytes(img.src);
+          counts[category] += 1;
+        });
+        cursor.continue();
+      };
+      tx.oncomplete = () => resolve({ totals, counts });
+      tx.onerror = () => reject(tx.error);
+    }));
+  }
+
+  function formatStorageBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  const STORAGE_CATEGORY_LABELS = [
+    ['moodboard', 'Mood board photos'],
+    ['final', 'Final images'],
+    ['cover', 'Cover photos'],
+    ['talent', 'Talent photos'],
+    ['journal', 'Journal photos'],
+  ];
+
+  async function openStorageUsageModal() {
+    const overlay = document.getElementById('storageUsageOverlay');
+    const body = document.getElementById('storageUsageBody');
+    overlay.hidden = false;
+    body.innerHTML = '<p class="field-hint">Calculating…</p>';
+
+    const [estimate, breakdown] = await Promise.all([
+      (navigator.storage && navigator.storage.estimate)
+        ? navigator.storage.estimate().catch(() => null)
+        : Promise.resolve(null),
+      computeIdbStorageBreakdown().catch(() => null),
+    ]);
+    // The popup may have been closed while these were in flight.
+    if (overlay.hidden) return;
+
+    const rows = [];
+    if (estimate && estimate.usage != null) {
+      rows.push(`
+        <div class="storage-usage-total">
+          <p class="storage-usage-total-label">Total on this device</p>
+          <p class="storage-usage-total-value">${formatStorageBytes(estimate.usage)}</p>
+        </div>
+      `);
+    }
+
+    if (breakdown) {
+      STORAGE_CATEGORY_LABELS.forEach(([key, label]) => {
+        if (!breakdown.counts[key]) return;
+        rows.push(`
+          <div class="storage-usage-row">
+            <p class="storage-usage-row-label">${label}</p>
+            <p class="storage-usage-row-value">${formatStorageBytes(breakdown.totals[key])} <span class="storage-usage-row-count">(${breakdown.counts[key]})</span></p>
+          </div>
+        `);
+      });
+    }
+
+    let appDataBytes = 0;
+    try { appDataBytes = new Blob([localStorage.getItem(STORAGE_KEY) || '']).size; } catch (e) {}
+    rows.push(`
+      <div class="storage-usage-row">
+        <p class="storage-usage-row-label">Shoots, journal &amp; settings (text only)</p>
+        <p class="storage-usage-row-value">${formatStorageBytes(appDataBytes)}</p>
+      </div>
+    `);
+
+    rows.push(`
+      <div class="storage-usage-row">
+        <p class="storage-usage-row-label">Shoots logged</p>
+        <p class="storage-usage-row-value">${state.shoots.length}</p>
+      </div>
+    `);
+
+    body.innerHTML = rows.join('');
+  }
+
+  document.getElementById('storageUsageBtn').addEventListener('click', () => {
+    closeAppMenu();
+    openStorageUsageModal();
+  });
+  document.getElementById('storageUsageCloseBtn').addEventListener('click', () => {
+    document.getElementById('storageUsageOverlay').hidden = true;
+  });
+  document.getElementById('storageUsageOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('storageUsageOverlay')) document.getElementById('storageUsageOverlay').hidden = true;
+  });
+
   // Reads every shoot's photos back onto the in-memory state so that all the
   // render code can keep reading shoot.projectPhoto / talent.photo
   // synchronously, exactly as it did when they were stored inline.
@@ -2767,7 +2893,15 @@
         shoots: w.shoots.slice().sort((a, b) => a.date.localeCompare(b.date)),
         // Keeps each takeaway tied to the shoot it came from (rather than a
         // flat list of strings) so tapping one can open that same shoot.
-        takeaways: w.shoots.flatMap(s => (s.lessonsLearned || '').split('\n').map(t => t.trim()).filter(Boolean).map(text => ({ text, shootId: s.id }))),
+        // One shoot's Lessons Learned is always exactly one takeaway here —
+        // splitting on every newline used to turn a single entry into
+        // several bullets the moment it had a paragraph break in it, which
+        // read as several distinct lessons instead of the one the shoot
+        // actually had. Internal line breaks are collapsed to spaces rather
+        // than dropped outright, so the text stays readable as one bullet.
+        takeaways: w.shoots
+          .map(s => ({ text: (s.lessonsLearned || '').replace(/\s*\n+\s*/g, ' ').trim(), shootId: s.id }))
+          .filter(t => t.text),
       }));
   }
 
@@ -3776,8 +3910,15 @@
     el.style.height = (el.scrollHeight + borders) + 'px';
   }
 
+  // #shootModeShotList included here too — openShootMode's own re-measure
+  // pass calls this function expecting it to cover Shoot Mode's shot rows
+  // as well as the main form's; it silently didn't, since this selector
+  // never named that list, leaving a shot with wrapped text visibly
+  // clipped to one line the moment you entered Shoot Mode (correcting
+  // itself only once you typed in it, which re-triggers sizing via the
+  // row's own input listener).
   function autoSizeAllListTextareas() {
-    document.querySelectorAll('#shotListItems .shot-text, #lightingSetupsItems .lighting-setup-description')
+    document.querySelectorAll('#shotListItems .shot-text, #lightingSetupsItems .lighting-setup-description, #shootModeShotList .shot-text')
       .forEach(autoSizeTextarea);
   }
 
@@ -5054,6 +5195,14 @@
         // multi-line shot would open clipped. This is the first frame where the
         // rows actually have layout, so it's the first chance to size them.
         autoSizeAllListTextareas();
+        // syncAllShootFormFields() ran earlier too, for the exact same reason
+        // — every readonly notes field (Location directions, Character,
+        // reflection fields, etc.) that had real content measured zero height
+        // and was left at its bare rows="N" size, silently clipping whatever
+        // didn't fit. autoSizeTextarea itself is idempotent, so re-running the
+        // whole sync here is cheap and catches every field at once rather
+        // than needing a bespoke re-measure per field.
+        syncAllShootFormFields();
       });
     });
   }
