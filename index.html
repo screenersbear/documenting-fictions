@@ -1249,14 +1249,13 @@
      text instead of an editable one, since nothing here is meant to change. -->
 <div id="archiveModeOverlay" class="modal-overlay shoot-mode-overlay" hidden>
   <div class="modal shoot-mode-modal">
-    <div class="shoot-mode-header">
-      <div class="shoot-mode-heading-wrap">
-        <p class="shoot-mode-eyebrow">Archive</p>
-        <h2 id="archiveModeTitle"></h2>
+    <div class="shoot-mode-header archive-mode-header">
+      <h2 id="archiveModeTitle"></h2>
+      <div class="archive-mode-header-actions">
+        <button type="button" class="archive-mode-details-btn" id="archiveModeShootDetailsBtn">shoot details</button>
+        <button type="button" class="icon-btn close-btn" id="archiveModeExitBtn" aria-label="Exit archive mode">&times;</button>
       </div>
-      <button type="button" class="icon-btn close-btn" id="archiveModeExitBtn" aria-label="Exit archive mode">&times;</button>
     </div>
-    <button type="button" class="archive-mode-details-btn" id="archiveModeShootDetailsBtn">shoot details</button>
     <div class="shoot-mode-body" id="archiveModeBody"></div>
     <button type="button" class="primary shoot-mode-bottom-cta" id="archiveModeDoneBtn"></button>
   </div>

@@ -2755,6 +2755,24 @@
   // finished loading (see renderJournalEntryCard) — most callers can ignore
   // it, but scrollToJournalEntry needs it so the layout has stopped shifting
   // before it scrolls.
+  // With shoot reflections no longer mirrored in here automatically, a new
+  // user's first visit is genuinely blank rather than pre-populated — this
+  // gives the empty state something to say instead of just "nothing yet".
+  // Counts this calendar week's already-shot shoots (same week window and
+  // POST_CAPTURE_STATUSES gate the Log notebook uses) so the prompt reflects
+  // what's actually been happening, not a static line.
+  function reflectionsEmptyPrompt() {
+    const { start, end } = shootWeekWindow(todayStr());
+    const startStr = formatDate(start);
+    const endStr = formatDate(end);
+    const shootsThisWeek = state.shoots.filter(s => s.date && POST_CAPTURE_STATUSES.includes(s.status) && s.date >= startStr && s.date <= endStr);
+    if (shootsThisWeek.length) {
+      const n = shootsThisWeek.length;
+      return `${n} shoot${n === 1 ? '' : 's'} this week. Anything you noticed that didn't fit a shoot's reflection?`;
+    }
+    return 'Nothing written yet — anything on your mind?';
+  }
+
   function renderJournal() {
     // Sorted here rather than inside each month bucket, because
     // renderYearMonthGroups keeps whatever order it's handed.
@@ -2762,7 +2780,9 @@
 
     const list = document.getElementById('journalList');
     list.innerHTML = '';
-    document.getElementById('journalEmpty').hidden = items.length !== 0;
+    const empty = document.getElementById('journalEmpty');
+    empty.hidden = items.length !== 0;
+    if (!empty.hidden) empty.textContent = reflectionsEmptyPrompt();
 
     const imagePromises = renderYearMonthGroups(list, items, {
       dateOf: e => e.createdAt,
@@ -8496,11 +8516,20 @@
     const body = document.getElementById('archiveModeBody');
     body.innerHTML = '';
 
-    const basicInfoFields = [];
-    if (hasText(shoot.title)) basicInfoFields.push(['Title', shoot.title]);
-    basicInfoFields.push(['Category', CATEGORY_LABELS[shoot.category] || 'Uncategorized']);
+    // Whichever of Title/Talent the header's shootDisplayName actually drew
+    // from is skipped below so it isn't said twice — titleDisplayMode picks
+    // talent-first by default, so that's normally Talent, but flips to Title
+    // when the app's set to show titles first. The other one, if present,
+    // still adds information the header alone doesn't carry (e.g. a title
+    // distinct from whoever's in it, or extra talents beyond the first).
+    const displayName = shootDisplayName(shoot);
     const talentNames = (shoot.talents || []).map(t => t.name).filter(hasText);
-    if (talentNames.length) basicInfoFields.push(['Talent', talentNames.join(', ')]);
+    const basicInfoFields = [];
+    basicInfoFields.push(['Category', CATEGORY_LABELS[shoot.category] || 'Uncategorized']);
+    if (hasText(shoot.title) && shoot.title !== displayName) basicInfoFields.push(['Title', shoot.title]);
+    if (talentNames.length && !(talentNames.length === 1 && talentNames[0] === displayName)) {
+      basicInfoFields.push(['Talent', talentNames.join(', ')]);
+    }
     if (basicInfoFields.length) {
       body.appendChild(archiveModeSectionHeading('Basic info', 'heading-yellow'));
       basicInfoFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));

@@ -4494,28 +4494,50 @@ h2.status-group-heading.heading-navy {
   display: none;
 }
 
-/* Archive mode's own version of the button above — same pill look, but a
-   normal flex child instead of absolutely positioned. The edit-form version
-   floats over a form that scrolls underneath it; Archive mode's body is the
-   only scrolling region, and this sits above it, so there's nothing for it
-   to float over and normal flow keeps it visible the whole time instead of
-   scrolling out of view with the rest of the report. */
-.archive-mode-details-btn {
-  display: block;
+/* Archive mode's header is its own, much shorter banner: just the shoot's
+   name (no "Archive" eyebrow above it — that's the tab it came from, not
+   something worth repeating here) with the mode-switch and close buttons
+   beside it, rather than Shoot mode's taller stacked eyebrow+title. */
+.archive-mode-header {
+  align-items: center;
+  padding: 12px 12px 10px 18px;
+}
+
+#archiveModeTitle {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  /* Matches the Edit Shoot modal's own header title (.shoot-modal-header h2)
+     exactly — same size and color, so the two headers read as the same
+     "shoot" regardless of which mode you're looking at it from. */
+  font-size: 23px;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.archive-mode-header-actions {
+  display: flex;
   flex-shrink: 0;
-  margin: 14px 20px;
-  padding: 9px 20px;
-  border: 2px solid var(--ink);
+  align-items: center;
+  gap: 8px;
+}
+
+/* Same pill look as .enter-shoot-mode-btn, recolored for sitting directly on
+   the header's own --ink fill instead of the light form background it
+   normally floats over. */
+.archive-mode-details-btn {
+  padding: 7px 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
   border-radius: 999px;
-  background: var(--surface);
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
   font-family: var(--font-title);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 12px;
   letter-spacing: 1px;
   text-transform: uppercase;
   cursor: pointer;
-  align-self: flex-start;
+  white-space: nowrap;
 }
 
 /* The one deliberately rounded, bordered surface in an otherwise square-cornered
