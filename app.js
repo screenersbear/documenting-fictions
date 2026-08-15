@@ -707,7 +707,14 @@
       removeFramework(shoots, retiredLightingFwId);
       renameFrameworkTag(shoots, frameworks, 'Visual Language', 'Surreal', 'Surrealism');
       removeFrameworkTags(shoots, frameworks, 'Visual Language', RETIRED_VISUAL_LANGUAGE_TAGS, VISUAL_LANGUAGE_TAGS);
-      const journalEntries = (Array.isArray(parsed.journalEntries) ? parsed.journalEntries : []).map(migrateJournalEntry);
+      // sourceShootId entries were auto-mirrored from a shoot's own reflection
+      // fields — that mirroring is gone (Reflections now only ever shows
+      // entries written there directly), so any left over from before are
+      // dropped here rather than lingering as orphaned duplicates. The
+      // reflection text itself isn't lost: it still lives on the shoot.
+      const journalEntries = (Array.isArray(parsed.journalEntries) ? parsed.journalEntries : [])
+        .filter(e => !e.sourceShootId)
+        .map(migrateJournalEntry);
       return {
         shoots,
         frameworks,
@@ -998,6 +1005,7 @@
     `;
     div.addEventListener('click', () => {
       if (opts && opts.switchToShootsTab) document.querySelector('.tab[data-view="shoots"]').click();
+      if (opts && opts.openArchiveMode) { openArchiveMode(s.id); return; }
       openShootModal(s.id);
     });
     div.querySelector('.row-options-btn').addEventListener('click', (e) => {
@@ -1401,7 +1409,7 @@
     },
     'journal:reflections': {
       title: 'Reflections',
-      text: "this is your freeform journal. Every shoot's post-shoot reflection is automatically logged here too, right alongside anything you write yourself. Tap '+' to add your own entry, or tap any entry to reopen and edit it. To get back to your notebooks, hit the arrow up top or just swipe right.",
+      text: "this is your freeform journal — just what you write here, nothing pulled in automatically. Tap '+' to add your own entry, or tap any entry to reopen and edit it. To get back to your notebooks, hit the arrow up top or just swipe right.",
     },
   };
 
@@ -2044,7 +2052,7 @@
         // second "Undated" sub-heading under the "Undated" year heading
         // is pure redundancy, so just list the shoots directly.
         sortedMonths.forEach(month => {
-          months.get(month).forEach(s => renderShootRow(yearRowsWrap, s, { showStatus: true, checkFinalImages: true }));
+          months.get(month).forEach(s => renderShootRow(yearRowsWrap, s, { showBadge: false, openArchiveMode: true }));
         });
       } else {
         let visibleMonthIndex = 0;
@@ -2061,7 +2069,7 @@
           const monthRowsWrap = document.createElement('div');
           monthRowsWrap.className = 'shoot-status-rows';
           monthRowsWrap.hidden = monthCollapsed;
-          months.get(month).forEach(s => renderShootRow(monthRowsWrap, s, { showStatus: true, checkFinalImages: true }));
+          months.get(month).forEach(s => renderShootRow(monthRowsWrap, s, { showBadge: false, openArchiveMode: true }));
 
           monthHeading.addEventListener('click', () => {
             const nowHidden = !monthRowsWrap.hidden;
@@ -2529,41 +2537,6 @@
     const set = new Set();
     state.journalEntries.forEach(e => (e.tags || []).forEach(t => set.add(t)));
     return [...set].sort();
-  }
-
-  // Keeps a journal entry (linked via sourceShootId) in sync with a shoot's
-  // post-shoot reflection fields — created on first content, updated on
-  // every later edit, removed if all three fields get cleared out.
-  function syncPostShootJournalEntry(shoot) {
-    const parts = [shoot.whatWentRight, shoot.couldBeBetter, shoot.lessonsLearned]
-      .map(t => (t || '').trim())
-      .filter(t => t);
-    const existingIdx = state.journalEntries.findIndex(e => e.sourceShootId === shoot.id);
-
-    if (!parts.length) {
-      if (existingIdx !== -1) state.journalEntries.splice(existingIdx, 1);
-      return;
-    }
-
-    const body = parts.join('\n\n');
-    const title = shoot.title || primaryTalentName(shoot) || 'Untitled shoot';
-    // Tagged with the shoot's category — a linked entry has no hashtag input
-    // of its own (editing always routes back to the shoot), so this is the
-    // only source of its tags and can just stay fully in sync with it.
-    const tags = CATEGORY_LABELS[shoot.category] ? [CATEGORY_LABELS[shoot.category]] : [];
-
-    if (existingIdx !== -1) {
-      state.journalEntries[existingIdx] = { ...state.journalEntries[existingIdx], title, body, tags };
-    } else {
-      state.journalEntries.push({
-        id: uid(),
-        title,
-        body,
-        tags,
-        createdAt: todayStr(),
-        sourceShootId: shoot.id,
-      });
-    }
   }
 
   // Read-only photo strip for an entry rendered inline in the list.
@@ -4818,10 +4791,16 @@
   // worth working from and a day it's actually happening — "Shoot ready" is the
   // one status that means both. Re-run on every status change (not just on
   // load), since flipping the swatch while the modal is open is the normal way
-  // a shoot reaches that status in the first place.
+  // a shoot reaches that status in the first place. An archived shoot gets
+  // Archive mode's button in this exact same spot instead — the two are
+  // mutually exclusive, so Shoot mode is also hidden once archived even on
+  // the off chance a shoot got archived without ever reaching "Shoot ready".
   function updateEnterShootModeBtnVisibility() {
     const status = document.getElementById('shootStatus').value;
-    document.getElementById('enterShootModeBtn').hidden = !editingShootId || status !== 'waiting_to_shoot';
+    const shoot = editingShootId ? state.shoots.find(s => s.id === editingShootId) : null;
+    const isArchived = !!(shoot && shoot.archived);
+    document.getElementById('enterShootModeBtn').hidden = !editingShootId || isArchived || status !== 'waiting_to_shoot';
+    document.getElementById('enterArchiveModeBtn').hidden = !editingShootId || !isArchived;
   }
 
   document.getElementById('shootStatus').addEventListener('change', (e) => {
@@ -5773,7 +5752,6 @@
       applyStatusTimestamps(shoot, oldStatus, shoot.status);
       state.shoots[idx] = shoot;
     }
-    syncPostShootJournalEntry(shoot);
     saveState();
   }
 
@@ -6056,7 +6034,6 @@
       shoot.endTime = '';
     }
     state.shoots[idx] = shoot;
-    syncPostShootJournalEntry(shoot);
     saveState();
     renderAll();
   }
@@ -7162,7 +7139,6 @@
       shoot = { ...state.shoots[idx], ...data };
       state.shoots[idx] = shoot;
     }
-    syncPostShootJournalEntry(shoot);
     saveState();
     shootModalOverlay.hidden = true;
     editingShootId = null;
@@ -8485,6 +8461,129 @@
 
   document.getElementById('enterShootModeBtn').addEventListener('click', () => {
     if (currentShootId) openShootMode(currentShootId);
+  });
+
+  // ---------- Archive mode ----------
+  // A read-only counterpart to Shoot mode for a shoot that's already done —
+  // a condensed report (Basic info, a trimmed Logistics/Team, the reflection
+  // in full, final images) instead of a working view, since there's nothing
+  // left to plan or shoot. No persisted "survives a restart" id like Shoot
+  // mode's — this is a quick look, not a mode you'd want to still be in after
+  // relaunching the app.
+  const archiveModeOverlay = document.getElementById('archiveModeOverlay');
+  let archiveModeShootId = null;
+
+  // One label-over-value block, styled like Shoot Mode's Quick review fields
+  // but a plain div rather than a button — nothing here is tappable.
+  function archiveModeField(label, value) {
+    const div = document.createElement('div');
+    div.className = 'archive-mode-field';
+    div.innerHTML = `
+      <p class="shoot-mode-review-label">${escapeHtml(label)}</p>
+      <p class="shoot-mode-review-value">${escapeHtml(value)}</p>
+    `;
+    return div;
+  }
+
+  function archiveModeSectionHeading(text, colorClass) {
+    const h3 = document.createElement('h3');
+    h3.className = `shoot-mode-section-heading ${colorClass}`;
+    h3.textContent = text;
+    return h3;
+  }
+
+  function renderArchiveModeBody(shoot) {
+    const body = document.getElementById('archiveModeBody');
+    body.innerHTML = '';
+
+    const basicInfoFields = [];
+    if (hasText(shoot.title)) basicInfoFields.push(['Title', shoot.title]);
+    basicInfoFields.push(['Category', CATEGORY_LABELS[shoot.category] || 'Uncategorized']);
+    const talentNames = (shoot.talents || []).map(t => t.name).filter(hasText);
+    if (talentNames.length) basicInfoFields.push(['Talent', talentNames.join(', ')]);
+    if (basicInfoFields.length) {
+      body.appendChild(archiveModeSectionHeading('Basic info', 'heading-yellow'));
+      basicInfoFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
+    }
+
+    const logisticsFields = [];
+    if (hasText(shoot.date)) logisticsFields.push(['Shoot date', prettyDate(shoot.date)]);
+    const locationText = formatLocationDisplay(shoot.location);
+    if (hasText(locationText)) logisticsFields.push(['Location', locationText]);
+    if (logisticsFields.length) {
+      body.appendChild(archiveModeSectionHeading('Logistics', 'heading-navy'));
+      logisticsFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
+    }
+
+    const teamMembers = (shoot.teamMembers || []).filter(tm => hasText(tm.name));
+    if (teamMembers.length) {
+      body.appendChild(archiveModeSectionHeading('Team', 'heading-yellow'));
+      teamMembers.forEach(tm => {
+        const roleLabel = (TEAM_ROLE_OPTIONS.find(([val]) => val === tm.role) || [null, 'Other'])[1];
+        body.appendChild(archiveModeField(roleLabel, tm.name));
+      });
+    }
+
+    const reflectionFields = [];
+    if (hasText(shoot.whatWentRight)) reflectionFields.push(['What went right', shoot.whatWentRight]);
+    if (hasText(shoot.couldBeBetter)) reflectionFields.push(["What could've gone better", shoot.couldBeBetter]);
+    if (hasText(shoot.lessonsLearned)) reflectionFields.push(['Lessons for next time', shoot.lessonsLearned]);
+    if (reflectionFields.length) {
+      body.appendChild(archiveModeSectionHeading('Reflection', 'heading-navy'));
+      reflectionFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
+    }
+
+    const finalImagesGrid = document.createElement('div');
+    finalImagesGrid.className = 'moodboard-grid archive-mode-final-images';
+    idbGetImages(finalImagesKey(shoot.id)).then(images => {
+      if (!images.length) return;
+      if (!reflectionFields.length) body.appendChild(archiveModeSectionHeading('Reflection', 'heading-navy'));
+      body.appendChild(finalImagesGrid);
+      images.forEach((img, idx) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'moodboard-thumb';
+        thumb.innerHTML = `<img src="${img.src}" alt="" />`;
+        thumb.querySelector('img').addEventListener('click', () => {
+          openImageViewer(images, idx, finalImagesKey(shoot.id), null, false);
+        });
+        finalImagesGrid.appendChild(thumb);
+      });
+    }).catch(() => {});
+  }
+
+  function openArchiveMode(shootId) {
+    if (!shootModalOverlay.hidden) closeShootModal();
+    const shoot = state.shoots.find(s => s.id === shootId);
+    if (!shoot) return;
+    archiveModeShootId = shootId;
+    document.getElementById('archiveModeTitle').textContent = shootDisplayName(shoot);
+    document.getElementById('archiveModeDoneBtn').textContent = pickRandomSaveMessage();
+    renderArchiveModeBody(shoot);
+    archiveModeOverlay.hidden = false;
+  }
+
+  function exitArchiveMode() {
+    archiveModeShootId = null;
+    archiveModeOverlay.hidden = true;
+  }
+
+  document.getElementById('archiveModeExitBtn').addEventListener('click', exitArchiveMode);
+  document.getElementById('archiveModeDoneBtn').addEventListener('click', exitArchiveMode);
+
+  // "Shoot details" swaps to the full edit view for the same shoot — the
+  // mirror image of Archive mode's own button on that page (see
+  // updateEnterShootModeBtnVisibility), so the two stay switchable back and
+  // forth without ever landing on the main tab underneath.
+  document.getElementById('archiveModeShootDetailsBtn').addEventListener('click', () => {
+    const shootId = archiveModeShootId;
+    exitArchiveMode();
+    if (!shootId) return;
+    document.querySelector('.tab[data-view="archive"]').click();
+    openShootModal(shootId);
+  });
+
+  document.getElementById('enterArchiveModeBtn').addEventListener('click', () => {
+    if (currentShootId) openArchiveMode(currentShootId);
   });
 
   // ---------- Shoot mode: Quick review (editable Direction / Lighting setups) ----------

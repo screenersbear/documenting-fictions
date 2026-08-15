@@ -244,6 +244,7 @@
       </div>
     </div>
     <button type="button" class="enter-shoot-mode-btn" id="enterShootModeBtn" hidden>shoot mode</button>
+    <button type="button" class="enter-shoot-mode-btn" id="enterArchiveModeBtn" hidden>archive mode</button>
     <form id="shootForm">
       <svg class="folder-tab-deco tab-fill-yellow" viewBox="0 -90 400 120" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,-90 L0,-90 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="basicInfoHeading">Basic Info<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
@@ -1240,6 +1241,24 @@
     <p id="shootModePromptText"></p>
     <button type="button" class="primary" id="shootModeStartBtn">start shoot mode</button>
     <button type="button" class="secondary shoot-mode-skip" id="shootModeSkipBtn">not now</button>
+  </div>
+</div>
+
+<!-- Archive mode: a condensed, read-only report of a completed shoot — the
+     same working-view shape as Shoot mode, but every field is plain typed
+     text instead of an editable one, since nothing here is meant to change. -->
+<div id="archiveModeOverlay" class="modal-overlay shoot-mode-overlay" hidden>
+  <div class="modal shoot-mode-modal">
+    <div class="shoot-mode-header">
+      <div class="shoot-mode-heading-wrap">
+        <p class="shoot-mode-eyebrow">Archive</p>
+        <h2 id="archiveModeTitle"></h2>
+      </div>
+      <button type="button" class="icon-btn close-btn" id="archiveModeExitBtn" aria-label="Exit archive mode">&times;</button>
+    </div>
+    <button type="button" class="archive-mode-details-btn" id="archiveModeShootDetailsBtn">shoot details</button>
+    <div class="shoot-mode-body" id="archiveModeBody"></div>
+    <button type="button" class="primary shoot-mode-bottom-cta" id="archiveModeDoneBtn"></button>
   </div>
 </div>
 
