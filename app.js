@@ -2565,6 +2565,34 @@
     }).catch(() => { grid.hidden = true; });
   }
 
+  // Sizes .journal-paper's --header-band (see the CSS) to this specific
+  // entry's actual title/date height, so the blank band above the ruling
+  // always fully covers it — a fixed guess would either crop a long wrapped
+  // title or leave excess blank space under a short one. Reads as 0 (and is
+  // skipped) whenever the card isn't laid out yet — not just inside a
+  // collapsed month/year group, but even a fully-visible one: renderYear-
+  // MonthGroups builds a whole year's months and cards in memory before
+  // attaching that year to the live list in one shot, so every card is still
+  // a detached, unlaid-out node at the moment renderItem builds it,
+  // regardless of collapse state. Never call this from inside renderItem —
+  // it always reads 0 there. renderJournal's own post-pass (after
+  // renderYearMonthGroups returns, once the list is genuinely in the
+  // document) is what actually measures correctly for a visible entry;
+  // onReveal covers the collapsed-group case for everything left over.
+  function applyJournalHeaderBand(card) {
+    const heading = card.querySelector('.journal-entry-heading');
+    const paper = card.querySelector('.journal-paper');
+    if (!heading || !paper || !heading.offsetHeight) return;
+    // .journal-paper's own 14px top padding sits above the heading, plus a
+    // little breathing room below it, snapped up to the ruled-line pattern's
+    // own existing line positions (21, 49, 77, 105px, ... — see .journal-
+    // paper's 22px background-position) so the band's bottom edge lands
+    // exactly on a real rule instead of slicing one in half.
+    const minBand = 14 + heading.offsetHeight + 8;
+    const band = Math.ceil((minBand - 21) / 28) * 28 + 21;
+    paper.style.setProperty('--header-band', band + 'px');
+  }
+
   // One entry, rendered inline on lined notebook paper under a coloured title
   // banner — the same card shape the Log uses for a week, so the two notebooks
   // read as one continuous scrolling page rather than a list of things to open.
@@ -2636,7 +2664,7 @@
   // first. Headings alternate colour by *visible* index so a fold never leaves
   // two same-coloured bars stacked.
   function renderYearMonthGroups(list, items, opts) {
-    const { dateOf, keyPrefix, renderItem } = opts;
+    const { dateOf, keyPrefix, renderItem, onReveal } = opts;
     // Collects whatever each renderItem call returns (e.g. a journal card's
     // image-loading promise) so a caller that needs to know when everything
     // has actually finished rendering — not just synchronously appended —
@@ -2706,6 +2734,7 @@
             monthRowsWrap.hidden = nowHidden;
             monthHeading.classList.toggle('collapsed', nowHidden);
             setSectionCollapsed(monthCollapseKey, nowHidden);
+            if (!nowHidden && onReveal) onReveal(monthRowsWrap);
           });
 
           monthGroupEl.appendChild(monthHeading);
@@ -2720,6 +2749,7 @@
         yearRowsWrap.hidden = nowHidden;
         yearHeading.classList.toggle('collapsed', nowHidden);
         setSectionCollapsed(yearCollapseKey, nowHidden);
+        if (!nowHidden && onReveal) onReveal(yearRowsWrap);
       });
 
       yearGroupEl.appendChild(yearHeading);
@@ -2788,7 +2818,17 @@
       dateOf: e => e.createdAt,
       keyPrefix: 'journal',
       renderItem: renderJournalEntryCard,
+      // Covers a card in a month/year that's still collapsed at this point —
+      // it stays genuinely unmeasurable (real height 0) until the group
+      // holding it is actually opened, which is what this re-runs for.
+      onReveal: wrap => wrap.querySelectorAll('.journal-entry-card').forEach(applyJournalHeaderBand),
     });
+    // Every card just built is a real, attached, laid-out node now — each
+    // year's whole subtree (months, cards, all of it) only gets appended to
+    // `list` at the very end of building that year (see renderYearMonth-
+    // Groups), so nothing in it could be measured correctly any earlier than
+    // this, not even a card in a section that's expanded by default.
+    list.querySelectorAll('.journal-entry-card').forEach(applyJournalHeaderBand);
     return Promise.all(imagePromises);
   }
 

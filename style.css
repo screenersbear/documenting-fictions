@@ -481,6 +481,24 @@ h1, h2, h3 {
   min-height: 0;
   white-space: normal;
   padding: 14px 14px 20px 44px;
+  /* Two background layers instead of .journal-paper's single ruled one: a
+     solid block matching the paper's own cream, sized to --header-band, in
+     front of the same repeating ruled-line pattern. A repeating-linear-
+     gradient repeats infinitely in both directions, so there's no way to
+     shift its position to leave a genuinely blank region for a Reflections
+     entry's title to sit in above the ruling (see .journal-entry-heading) —
+     it can only be painted over. --header-band is set per card in JS
+     (applyJournalHeaderBand), measured from the actual title/date height so
+     a long wrapped title still gets full coverage; it defaults to 0 here so
+     Log's own week cards — same markup, but with nothing to cover, since
+     their heading never moves onto the page — render with no gap at all,
+     exactly as before this existed. */
+  background-image:
+    linear-gradient(#fffdf7, #fffdf7),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 27px, #a9c9e8 27px, #a9c9e8 28px);
+  background-size: 100% var(--header-band, 0px), auto;
+  background-repeat: no-repeat, repeat;
+  background-position: 0 0, 0 22px;
 }
 
 /* Everything on the paper is locked to the 28px ruling. .journal-paper draws a
@@ -512,27 +530,19 @@ h1, h2, h3 {
 /* ---- Reflections entries, rendered inline on the same paper as the Log ---- */
 
 /* The banner above no longer carries an entry's title or date (see
-   .journal-entry-binding below) — both moved onto the page itself, in a
-   blank band above the ruling, the same way a letterhead sits above a legal
-   pad's rules rather than fighting them. Title left, date right, same
-   arrangement the banner used to have.
-
-   .journal-paper's ruled-line background is a repeating-linear-gradient,
-   which is infinite in both directions — shifting background-position just
-   re-phases where the lines fall, it can't carve out a genuinely blank
-   region, so a rule always ends up crossing straight through this block
-   somewhere. Painting this block's own background over it (matching the
-   paper's cream exactly) hides whatever line lands here instead. The
-   generous padding-bottom is what actually creates the "blank margin before
-   the ruling" look — a plain margin wouldn't be covered by this background,
-   since margin sits outside the box being painted. */
+   .journal-entry-binding below) — both moved onto the page itself, in the
+   blank band .journal-paper.log-paper's --header-band creates above the
+   ruling, the same way a letterhead sits above a legal pad's rules rather
+   than fighting them. Title left, date right, same arrangement the banner
+   used to have. No background/padding of its own to carve out that space —
+   the paper's own background already reserves exactly enough room for it
+   (see applyJournalHeaderBand), sized to this block's real height rather
+   than guessed. */
 .journal-entry-heading {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  padding-bottom: 34px;
-  background-color: #fffdf7;
 }
 
 .journal-entry-title {
