@@ -511,47 +511,68 @@ h1, h2, h3 {
 
 /* ---- Reflections entries, rendered inline on the same paper as the Log ---- */
 
-/* Title on the left, date and kebab on the right — the banner carries all of
-   an entry's metadata so the paper below holds only what was written. */
+/* The banner above no longer carries an entry's title or date (see
+   .journal-entry-binding below) — both moved onto the page itself, in a
+   blank band above the ruling, the same way a letterhead sits above a legal
+   pad's rules rather than fighting them. Title left, date right, same
+   arrangement the banner used to have.
+
+   .journal-paper's ruled-line background is a repeating-linear-gradient,
+   which is infinite in both directions — shifting background-position just
+   re-phases where the lines fall, it can't carve out a genuinely blank
+   region, so a rule always ends up crossing straight through this block
+   somewhere. Painting this block's own background over it (matching the
+   paper's cream exactly) hides whatever line lands here instead. The
+   generous padding-bottom is what actually creates the "blank margin before
+   the ruling" look — a plain margin wouldn't be covered by this background,
+   since margin sits outside the box being painted. */
 .journal-entry-heading {
   display: flex;
-  align-items: flex-start;
+  align-items: baseline;
   justify-content: space-between;
   gap: 10px;
+  padding-bottom: 34px;
+  background-color: #fffdf7;
 }
 
 .journal-entry-title {
   font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 17px;
   letter-spacing: 0.5px;
+  color: var(--text);
   min-width: 0;
 }
 
-.journal-entry-meta {
-  display: flex;
-  align-items: center;
-  /* Enough that the date and the kebab read as two things, not one blob. */
-  gap: 8px;
+.journal-entry-date {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  opacity: 0.6;
   flex-shrink: 0;
-  /* Pulls the kebab's padding back out of the banner's 16px inset so the glyph
-     still lines up with the edge despite the wider tap target. */
-  margin-right: -8px;
 }
 
-.journal-entry-date {
-  font-size: 14px;
-  font-weight: 700;
-  opacity: 0.75;
+/* Collapses the banner to a thin binding strip once it's holding only the
+   options button — same accent-yellow/navy alternation as before, just
+   sized to the button instead of to whatever title used to be in it. */
+.log-week-heading.journal-entry-binding {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 8px 10px;
 }
 
 /* Inherits the banner's colour so it stays legible on both the yellow and the
    navy variant, rather than picking a fixed ink that vanishes on one of them.
-   Sized to match .row-options-btn's 28px: the glyph itself is only ~13px wide,
-   which is a thumb-missable target on a phone. */
+   Sized to match .row-options-btn's 28px tap target, and weighted/sized to
+   match its glyph too — at the old 20px/400-weight the three dots read as
+   faint on the banner's fill. */
 .journal-entry-options {
   border: none;
   background: none;
   color: inherit;
-  font-size: 20px;
+  font-size: 26px;
+  font-weight: 900;
   line-height: 1;
   width: 28px;
   height: 28px;

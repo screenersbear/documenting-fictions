@@ -2585,14 +2585,14 @@
     const tagsHtml = (e.tags || []).map(t => `<span class="beat-chip view-only">${escapeHtml(t)}</span>`).join('');
 
     card.innerHTML = `
-      <p class="log-week-heading ${headingColorClass} journal-entry-heading">
-        <span class="journal-entry-title">${escapeHtml(e.title || 'Untitled entry')}</span>
-        <span class="journal-entry-meta">
-          <span class="journal-entry-date">${prettyDate(e.createdAt)}</span>
-          <button type="button" class="journal-entry-options" aria-label="Options">&#8942;</button>
-        </span>
-      </p>
+      <div class="log-week-heading ${headingColorClass} journal-entry-binding">
+        <button type="button" class="journal-entry-options" aria-label="Options">&#8942;</button>
+      </div>
       <div class="journal-paper log-paper">
+        <div class="journal-entry-heading">
+          <span class="journal-entry-title">${escapeHtml(e.title || 'Untitled entry')}</span>
+          <span class="journal-entry-date">${prettyDate(e.createdAt)}</span>
+        </div>
         <div class="journal-entry-body">${escapeHtml(e.body || '')}${credit}</div>
         <div class="journal-entry-images moodboard-grid" hidden></div>
         <div class="journal-entry-tags"${tagsHtml ? '' : ' hidden'}>${tagsHtml}</div>
