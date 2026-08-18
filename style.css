@@ -546,7 +546,7 @@ h1, h2, h3 {
 }
 
 .journal-entry-title {
-  font-family: var(--font-title);
+  font-family: var(--font-body);
   font-weight: 700;
   font-size: 17px;
   letter-spacing: 0.5px;
@@ -1567,9 +1567,16 @@ h2.status-group-heading.heading-navy {
      mid-scroll, letting whatever's scrolling underneath show through it —
      worse the longer the scroll (journal entries with photos/tags are the
      usual culprit). Forcing its own GPU compositing layer keeps it painted
-     independently of the content scrolling behind it. */
+     independently of the content scrolling behind it. backface-visibility is
+     the usual companion to translateZ for this exact WebKit repaint bug —
+     translateZ alone still let it recur on the Journal entry view
+     specifically, the case the comment above already flagged as the worst
+     offender (see also #journalModalOverlay .modal-header::before, a second,
+     belt-and-suspenders layer of insurance scoped to just that modal). */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .modal-header h2 {
@@ -2798,6 +2805,24 @@ h2.status-group-heading.heading-navy {
 
 #journalModalOverlay .modal {
   padding-bottom: 0;
+}
+
+/* Second, independent solid layer behind the header's own text/close button
+   — belt-and-suspenders for the exact iOS WKWebView sticky-repaint bug
+   .modal-header's own comment already describes, specifically for the case
+   that comment calls out as the worst offender (a long journal entry with
+   photos). Its own translateZ makes this its own GPU layer, so even if the
+   header element's own background layer is the one that fails to repaint
+   mid-scroll, this one — compositing independently — still reliably covers
+   whatever's scrolling underneath. */
+#journalModalOverlay .modal-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--surface);
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 #journalModalOverlay .modal-actions {

@@ -2588,9 +2588,18 @@
     // own existing line positions (21, 49, 77, 105px, ... — see .journal-
     // paper's 22px background-position) so the band's bottom edge lands
     // exactly on a real rule instead of slicing one in half.
-    const minBand = 14 + heading.offsetHeight + 8;
+    const headingBottom = 14 + heading.offsetHeight;
+    const minBand = headingBottom + 8;
     const band = Math.ceil((minBand - 21) / 28) * 28 + 21;
     paper.style.setProperty('--header-band', band + 'px');
+    // Without this, the entry's own text starts flush under the title —
+    // shorter than the band above (that's sized with extra breathing room
+    // and snapped to the rule grid, so it's rarely an exact match) — landing
+    // the body's first line inside the still-blank part of the band instead
+    // of on the first real rule below it. This margin closes exactly that
+    // gap, so "only the title sits in the header" holds regardless of how
+    // long the title is.
+    heading.style.marginBottom = (band - headingBottom) + 'px';
   }
 
   // One entry, rendered inline on lined notebook paper under a coloured title
@@ -7743,6 +7752,7 @@
     TEAM_ROLE_OPTIONS.forEach(([val, label]) => {
       if (roleCounts[val]) data.push({ key: val, label, value: roleCounts[val] });
     });
+    data.sort((a, b) => b.value - a.value);
     statsSliceFilters.teamMembers = {};
     data.forEach(d => {
       statsSliceFilters.teamMembers[d.key] = d.key === '__none__'
@@ -7760,7 +7770,8 @@
     });
     const data = Object.keys(STATUS_LABELS)
       .filter(key => counts[key])
-      .map(key => ({ key, label: STATUS_LABELS[key], value: counts[key] }));
+      .map(key => ({ key, label: STATUS_LABELS[key], value: counts[key] }))
+      .sort((a, b) => b.value - a.value);
     statsSliceFilters.status = {};
     data.forEach(d => {
       statsSliceFilters.status[d.key] = (s) => (s.status || 'idea_phase') === d.key;
@@ -7799,10 +7810,10 @@
   }
 
   const STATS_PAGES = [
+    { key: 'status', title: 'Status', build: buildStatusStats },
     { key: 'visualLanguage', title: 'Visual Languages', build: buildVisualLanguageStats },
     { key: 'shootCategory', title: 'Shoot Categories', build: buildCategoryStats },
     { key: 'teamMembers', title: 'Team Members', build: buildTeamStats },
-    { key: 'status', title: 'Status', build: buildStatusStats },
     { key: 'location', title: 'Locations', build: buildLocationStats },
     { key: 'regions', title: 'Regions', custom: true },
   ];
