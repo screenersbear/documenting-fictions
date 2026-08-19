@@ -4049,9 +4049,10 @@
       textarea.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
-        currentShotList[Number(textarea.dataset.idx)].text = textarea.value;
-        currentShotList.push({ text: '', checked: false });
-        renderShotList(currentShotList.length - 1);
+        const idx = Number(textarea.dataset.idx);
+        currentShotList[idx].text = textarea.value;
+        currentShotList.splice(idx + 1, 0, { text: '', checked: false });
+        renderShotList(idx + 1);
         scheduleShootAutosave();
       });
     });
@@ -8315,10 +8316,11 @@
       textarea.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
-        shoot.shotList[Number(textarea.dataset.idx)].text = textarea.value;
-        shoot.shotList.push({ text: '', checked: false });
+        const idx = Number(textarea.dataset.idx);
+        shoot.shotList[idx].text = textarea.value;
+        shoot.shotList.splice(idx + 1, 0, { text: '', checked: false });
         saveState();
-        renderShootModeShots(shoot, shoot.shotList.length - 1);
+        renderShootModeShots(shoot, idx + 1);
         renderAll();
       });
     });
