@@ -5934,6 +5934,11 @@
   });
 
   document.getElementById('shareShootBtn').addEventListener('click', () => {
+    // buildShootPdf reads from state.shoots, not the live form fields — so
+    // an edit still sitting in the 2s autosave debounce (e.g. just closed
+    // the expand-field editor for Directions for talent/team, then tapped
+    // Share right away) would otherwise get left out of the PDF.
+    saveShootNow();
     if (editingShootId) openPdfSectionsModal(editingShootId);
   });
 
@@ -8351,7 +8356,16 @@
 
     if (focusIdx !== undefined) {
       const focusInput = list.querySelector(`.shot-text[data-idx="${focusIdx}"]`);
-      if (focusInput) focusInput.focus();
+      if (focusInput) {
+        focusInput.focus();
+        // A row added via Enter can land low enough in this scrolling list
+        // to come up right against the Done button fixed below it (or the
+        // iOS keyboard) — the browser's own scroll-into-view-on-focus
+        // doesn't know that button is there and won't leave it any
+        // clearance. Centering it ourselves guarantees a clear look at
+        // what's being typed instead of a sliver hidden behind either one.
+        focusInput.scrollIntoView({ block: 'center' });
+      }
     }
   }
 

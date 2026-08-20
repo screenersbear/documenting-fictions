@@ -4871,7 +4871,13 @@ h2.status-group-heading.heading-navy {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  padding: 4px 20px 10px;
+  /* The visible gap below these buttons isn't just this padding-bottom —
+     the "Shot list" heading right after adds its own 14px margin-top on
+     top of it (see .shoot-mode-body .shoot-mode-section-heading), for a
+     real total of 24px before that banner starts. Matching padding-top to
+     that same 24px, instead of to the bare 10px bottom padding, is what
+     actually centers the buttons in the white space between both banners. */
+  padding: 24px 20px 10px;
 }
 
 .shoot-mode-quick-review-btn {
