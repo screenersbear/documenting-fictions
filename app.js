@@ -6577,7 +6577,13 @@
       // strips anything that isn't word/hyphen/space/dot.
       const safeName = pdfPreviewTitle.replace(/—/g, '-').replace(/[^\w\- .]+/g, '').trim() || 'call sheet';
       pdfPreviewFilename = `${safeName}.pdf`;
-      const url = URL.createObjectURL(pdfPreviewBlob);
+      // Object-URL'd straight from pdfPreviewBlob, a plain Blob carries no
+      // name at all — Safari's own PDF viewer (and whatever share sheet it
+      // hands the file to next, e.g. Mail) falls back to calling it
+      // "Unknown". Wrapping it in a File first, which does carry a name,
+      // is what the share-button fallback below already does for the same
+      // reason; this makes the primary opened-tab path do the same.
+      const url = URL.createObjectURL(new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' }));
       if (previewWindow) {
         previewWindow.location.href = url;
       } else {
@@ -7109,7 +7115,9 @@
       pdfPreviewTitle = label;
       const safeName = label.replace(/[^\w\- .]+/g, '').trim() || 'shoot archive';
       pdfPreviewFilename = `${safeName}.pdf`;
-      const url = URL.createObjectURL(pdfPreviewBlob);
+      // See openPdfPreview's matching comment: a File (not a bare Blob)
+      // is what keeps Safari/Mail from calling this attachment "Unknown".
+      const url = URL.createObjectURL(new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' }));
       if (previewWindow) {
         previewWindow.location.href = url;
       } else {
