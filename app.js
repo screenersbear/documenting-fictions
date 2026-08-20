@@ -39,7 +39,6 @@
 
   const STATUS_LABELS = {
     prospect: 'Prospect',
-    idea_phase: 'Early idea',
     planning: 'Active planning',
     waiting_to_shoot: 'Shoot ready',
     captured: 'Captured',
@@ -602,6 +601,16 @@
   // retired (see migrateFrameworks) — mirrors removeFrameworkTags but for a
   // framework that no longer exists at all, so there's no fw.id left to read
   // off the migrated list; the caller passes the id it captured beforehand.
+  // "Early idea" (idea_phase) is a retired status — folded into Active
+  // planning, the next stage forward, since it never got its own migration
+  // and existing shoots there would otherwise keep a status STATUS_LABELS
+  // no longer has an entry for.
+  function migrateIdeaPhaseStatus(shoots) {
+    shoots.forEach(s => {
+      if (s.status === 'idea_phase') s.status = 'planning';
+    });
+  }
+
   function removeFramework(shoots, frameworkId) {
     if (!frameworkId) return;
     shoots.forEach(s => {
@@ -661,7 +670,7 @@
     (s.manifestoTags || []).forEach(tag => { if (dfp) frameworkTags.push({ frameworkId: dfp.id, tag }); });
     (s.visualTags || []).forEach(tag => { if (vl) frameworkTags.push({ frameworkId: vl.id, tag }); });
     const category = s.category || (s.isProofBuilding || s.shootType === 'proof' ? 'portfolio_building' : 'client');
-    const status = s.status !== undefined ? s.status : (hasText(s.deliveryStatus) ? 'delivered' : 'idea_phase');
+    const status = s.status !== undefined ? s.status : (hasText(s.deliveryStatus) ? 'delivered' : 'prospect');
     const lessonsLearned = s.lessonsLearned !== undefined ? s.lessonsLearned : (s.reflection || '');
     return {
       ...s,
@@ -704,6 +713,7 @@
       const retiredLightingFwId = (rawFrameworks.find(f => f.name === 'Lighting') || {}).id;
       const frameworks = migrateFrameworks(rawFrameworks);
       const shoots = (parsed.shoots || []).map(s => migrateShoot(s, frameworks));
+      migrateIdeaPhaseStatus(shoots);
       removeFramework(shoots, retiredLightingFwId);
       renameFrameworkTag(shoots, frameworks, 'Visual Language', 'Surreal', 'Surrealism');
       removeFrameworkTags(shoots, frameworks, 'Visual Language', RETIRED_VISUAL_LANGUAGE_TAGS, VISUAL_LANGUAGE_TAGS);
@@ -1510,13 +1520,13 @@
   document.getElementById('newShootBtn').addEventListener('click', () => openShootModal(null));
 
   const STAT_BOX_FILTERS = {
-    ideas: s => !s.archived && (s.status === 'idea_phase' || s.status === 'planning'),
+    ideas: s => !s.archived && s.status === 'planning',
     ready: s => !s.archived && s.status === 'waiting_to_shoot',
     pending: s => !s.archived && shootPendingLabels(s).length > 0,
   };
 
   const STAT_BOX_TITLES = {
-    ideas: 'Ideas + Planning',
+    ideas: 'Planning',
     ready: 'Ready to shoot',
     pending: 'Teams + mood boards pending',
   };
@@ -1836,7 +1846,7 @@
   function renderShootsByStatus(list, items) {
     let visibleIndex = 0;
     Object.keys(STATUS_LABELS).forEach(statusKey => {
-      const group = items.filter(s => (s.status || 'idea_phase') === statusKey)
+      const group = items.filter(s => (s.status || 'prospect') === statusKey)
         .sort((a, b) => statusKey === 'editing'
           ? dateSortKey(a.deadline).localeCompare(dateSortKey(b.deadline))
           : dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
@@ -4777,7 +4787,7 @@
   });
 
   // ---------- Post-shoot reflection (gated behind captured-or-later status) ----------
-  let previousStatusValue = 'idea_phase';
+  let previousStatusValue = 'prospect';
 
   function isPostCaptureStatus(status) {
     // Rescheduled/canceled are an off-track branch, not a step further along
@@ -5157,7 +5167,7 @@
     document.getElementById('completeShootBtn').hidden = !s || isArchived || s.status !== 'delivered';
 
     document.getElementById('shootTitle').value = s ? (s.title || '') : '';
-    document.getElementById('shootStatus').value = s ? (s.status || 'idea_phase') : 'idea_phase';
+    document.getElementById('shootStatus').value = s ? (s.status || 'prospect') : 'prospect';
     previousStatusValue = document.getElementById('shootStatus').value;
     updateStatusSwatchDisplay();
     updateEnterShootModeBtnVisibility();
@@ -6091,7 +6101,7 @@
     const idx = state.shoots.findIndex(x => x.id === shootId);
     if (idx === -1) return;
     const shoot = { ...state.shoots[idx] };
-    const oldStatus = shoot.status || 'idea_phase';
+    const oldStatus = shoot.status || 'prospect';
     const wasPostCapture = isPostCaptureStatus(oldStatus);
     const willBePostCapture = isPostCaptureStatus(newStatus);
     const hasReflection = hasText(shoot.whatWentRight) || hasText(shoot.couldBeBetter) || hasText(shoot.lessonsLearned);
@@ -6115,7 +6125,7 @@
 
   document.getElementById('changeStatusOptionBtn').addEventListener('click', () => {
     const s = state.shoots.find(x => x.id === optionsShootId);
-    renderStatusOptionsList(s ? (s.status || 'idea_phase') : 'idea_phase');
+    renderStatusOptionsList(s ? (s.status || 'prospect') : 'prospect');
     shootOptionsPaneTrack.classList.add('show-second');
   });
 
@@ -7784,7 +7794,7 @@
   function buildStatusStats() {
     const counts = {};
     getStatsShoots().forEach(s => {
-      const key = s.status || 'idea_phase';
+      const key = s.status || 'prospect';
       counts[key] = (counts[key] || 0) + 1;
     });
     const data = Object.keys(STATUS_LABELS)
@@ -7793,7 +7803,7 @@
       .sort((a, b) => b.value - a.value);
     statsSliceFilters.status = {};
     data.forEach(d => {
-      statsSliceFilters.status[d.key] = (s) => (s.status || 'idea_phase') === d.key;
+      statsSliceFilters.status[d.key] = (s) => (s.status || 'prospect') === d.key;
     });
     return data;
   }
@@ -8365,6 +8375,19 @@
         // clearance. Centering it ourselves guarantees a clear look at
         // what's being typed instead of a sliver hidden behind either one.
         focusInput.scrollIntoView({ block: 'center' });
+        // The on-screen keyboard opens AFTER focus, animating the visible
+        // area shorter well after the call above already ran — without
+        // re-centering once that settles, the row can end up freshly
+        // covered by the keyboard on a real phone even though the call
+        // above looked correct against the keyboard-less layout it had to
+        // work with at the time.
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener(
+            'resize',
+            () => focusInput.scrollIntoView({ block: 'center' }),
+            { once: true }
+          );
+        }
       }
     }
   }
@@ -9125,8 +9148,6 @@
     if (editingCount > 0) facts.push(`${editingCount} shoot${editingCount === 1 ? ' is' : 's are'} currently in post.`);
     const selectsCount = count(s => s.status === 'waiting_for_selects');
     if (selectsCount > 0) facts.push(`${selectsCount} shoot${selectsCount === 1 ? '' : 's'} waiting on selects.`);
-    const ideaCount = count(s => s.status === 'idea_phase');
-    if (ideaCount > 0) facts.push(`You've got ${ideaCount} shoot idea${ideaCount === 1 ? '' : 's'} waiting to become real.`);
 
     return facts;
   }
@@ -9390,8 +9411,26 @@
   // the native shell serves local assets. No-op today since window.Capacitor
   // doesn't exist in a plain browser/PWA context.
   if (!window.Capacitor && 'serviceWorker' in navigator) {
+    // Without this, an installed (Add to Home Screen) PWA can sit on a
+    // stale service worker far longer than "close and reopen the app"
+    // would suggest — WKWebView doesn't reliably check for a new sw.js on
+    // its own timeline, and even once it does, the new worker installing
+    // in the background doesn't do anything for the tab/app instance
+    // that's already open until that instance is reloaded. This forces an
+    // eager check on every load, and reloads once (guarded so it can't
+    // loop) the instant a new worker actually takes over — so a fresh
+    // deploy shows up on the very next load instead of an unpredictable
+    // number of relaunches later.
+    let refreshingForNewWorker = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshingForNewWorker) return;
+      refreshingForNewWorker = true;
+      window.location.reload();
+    });
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+      navigator.serviceWorker.register('sw.js').then((registration) => {
+        registration.update();
+      }).catch(() => {});
     });
   }
 
