@@ -6375,13 +6375,15 @@
 
     const timeRange = shootTimeRange(s);
     const locationDisplay = formatLocationDisplayNoCountry(s.location);
-    if ((s.date || timeRange || locationDisplay) && sections.logistics) {
+    if ((s.date || timeRange || locationDisplay || hasText(s.talentDirections) || hasText(s.teamDirections)) && sections.logistics) {
       sectionHeading('Logistics:');
       doc.setFontSize(11);
       if (s.date) drawLabeledLine('Date: ', prettyDate(s.date), 16);
       if (timeRange) drawLabeledLine('Time: ', timeRange, 16);
       if (locationDisplay) { drawLabeledLine('Location: ', locationDisplay, 14); y += 2; }
       if (hasText(s.locationDirections)) { drawLabeledLine('Location instructions: ', s.locationDirections, 14); y += 2; }
+      if (hasText(s.talentDirections)) { drawLabeledLine('Directions for talent: ', s.talentDirections, 14); y += 2; }
+      if (hasText(s.teamDirections)) { drawLabeledLine('Directions for team: ', s.teamDirections, 14); y += 2; }
       y += 8;
     }
 
@@ -6577,21 +6579,21 @@
       // strips anything that isn't word/hyphen/space/dot.
       const safeName = pdfPreviewTitle.replace(/—/g, '-').replace(/[^\w\- .]+/g, '').trim() || 'call sheet';
       pdfPreviewFilename = `${safeName}.pdf`;
-      // Object-URL'd straight from pdfPreviewBlob, a plain Blob carries no
-      // name at all — Safari's own PDF viewer (and whatever share sheet it
-      // hands the file to next, e.g. Mail) falls back to calling it
-      // "Unknown". Wrapping it in a File first, which does carry a name,
-      // is what the share-button fallback below already does for the same
-      // reason; this makes the primary opened-tab path do the same.
-      const url = URL.createObjectURL(new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' }));
-      if (previewWindow) {
-        previewWindow.location.href = url;
-      } else {
-        // Popup blocked (or unsupported, e.g. some installed-PWA contexts)
-        // — fall back to the in-app preview modal instead.
-        document.getElementById('pdfPreviewFrame').src = url;
-        document.getElementById('pdfPreviewOverlay').hidden = false;
-      }
+      if (previewWindow) previewWindow.location.href = URL.createObjectURL(pdfPreviewBlob);
+      // Always show the in-app preview + Share button too, even when the
+      // tab above opened fine — a blob: URL carries no filename at all, so
+      // Safari's own share icon inside that native PDF viewer has nothing
+      // to name the Mail/Messages attachment with and falls back to
+      // "Unknown" (wrapping the blob in a File before creating the object
+      // URL doesn't help; that association isn't visible across a fresh
+      // tab navigation). This modal's own Share button below sidesteps
+      // that entirely by handing Web Share a File it built directly, which
+      // Mail/Messages do respect. A separate object URL of its own (rather
+      // than reusing the tab's) so closing this modal's revoke doesn't pull
+      // the PDF out from under that still-open tab.
+      document.getElementById('pdfPreviewFrame').src = URL.createObjectURL(pdfPreviewBlob);
+      document.getElementById('pdfPreviewOverlay').hidden = false;
+      if (previewWindow) showToast('Opened for viewing — use Share below to send it with the right filename');
     } catch (err) {
       if (previewWindow) previewWindow.close();
       console.error('Failed to build shoot PDF', err);
@@ -6978,12 +6980,14 @@
       // ---- Logistics ----
       const timeRange = shootTimeRange(s);
       const locationDisplay = formatLocationDisplayNoCountry(s.location);
-      if (timeRange || locationDisplay) {
+      if (timeRange || locationDisplay || hasText(s.talentDirections) || hasText(s.teamDirections)) {
         sectionHeading('Logistics:');
         doc.setFontSize(11);
         if (timeRange) drawLabeledLine('Time: ', timeRange, 14);
         if (locationDisplay) { drawLabeledLine('Location: ', locationDisplay, 14); y += 2; }
         if (hasText(s.locationDirections)) { drawLabeledLine('Location instructions: ', s.locationDirections, 14); y += 2; }
+        if (hasText(s.talentDirections)) { drawLabeledLine('Directions for talent: ', s.talentDirections, 14); y += 2; }
+        if (hasText(s.teamDirections)) { drawLabeledLine('Directions for team: ', s.teamDirections, 14); y += 2; }
         y += 6;
       }
 
@@ -7115,15 +7119,16 @@
       pdfPreviewTitle = label;
       const safeName = label.replace(/[^\w\- .]+/g, '').trim() || 'shoot archive';
       pdfPreviewFilename = `${safeName}.pdf`;
-      // See openPdfPreview's matching comment: a File (not a bare Blob)
-      // is what keeps Safari/Mail from calling this attachment "Unknown".
-      const url = URL.createObjectURL(new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' }));
-      if (previewWindow) {
-        previewWindow.location.href = url;
-      } else {
-        document.getElementById('pdfPreviewFrame').src = url;
-        document.getElementById('pdfPreviewOverlay').hidden = false;
-      }
+      // See openPdfPreview's matching comment: the tab's blob: URL can't
+      // carry a filename at all, so the modal + Share button below are
+      // shown regardless of whether that tab opened, since it's the only
+      // reliably-named way to actually send this. Separate object URLs so
+      // closing the modal's revoke doesn't pull the PDF out from under a
+      // still-open tab.
+      if (previewWindow) previewWindow.location.href = URL.createObjectURL(pdfPreviewBlob);
+      document.getElementById('pdfPreviewFrame').src = URL.createObjectURL(pdfPreviewBlob);
+      document.getElementById('pdfPreviewOverlay').hidden = false;
+      if (previewWindow) showToast('Opened for viewing — use Share below to send it with the right filename');
       // The delete-prompt is offered right away rather than gated on the
       // share/save actually completing — the OS share sheet and the new-tab
       // PDF viewer both finish outside any event this app can observe, so
