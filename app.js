@@ -4156,7 +4156,14 @@
         e.preventDefault();
         const idx = Number(textarea.dataset.idx);
         currentShotList[idx].text = textarea.value;
-        currentShotList.splice(idx + 1, 0, { text: '', checked: false });
+        // If the row right after is already a blank one — e.g. it was just
+        // created by an earlier Enter, and the user tapped back up to fix
+        // something above it rather than typing into it — reuse that one
+        // instead of stacking a second blank row on top of it.
+        const next = currentShotList[idx + 1];
+        if (!next || hasText(next.text)) {
+          currentShotList.splice(idx + 1, 0, { text: '', checked: false });
+        }
         renderShotList(idx + 1);
         scheduleShootAutosave();
       });
@@ -8494,7 +8501,14 @@
         e.preventDefault();
         const idx = Number(textarea.dataset.idx);
         shoot.shotList[idx].text = textarea.value;
-        shoot.shotList.splice(idx + 1, 0, { text: '', checked: false });
+        // If the row right after is already a blank one — e.g. it was just
+        // created by an earlier Enter, and the user tapped back up to fix
+        // something above it rather than typing into it — reuse that one
+        // instead of stacking a second blank row on top of it.
+        const next = shoot.shotList[idx + 1];
+        if (!next || hasText(next.text)) {
+          shoot.shotList.splice(idx + 1, 0, { text: '', checked: false });
+        }
         saveState();
         renderShootModeShots(shoot, idx + 1);
         renderAll();
