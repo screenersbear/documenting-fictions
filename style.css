@@ -4660,18 +4660,27 @@ h2.status-group-heading.heading-navy {
   overflow-wrap: anywhere;
 }
 
-/* Was never given its own rule, so it fell through to the browser's raw h2
-   default — oversized, and with margins that didn't match this header's
-   own rhythm. It also inherited body's plain text color, which happens to
-   equal var(--ink) in the default theme — i.e. it rendered the same color
-   as its own dark background. Sized like a normal popup header (matches
-   .modal-header h2) and colored white to actually read against the ink
-   banner, same treatment as .shoot-mode-eyebrow right above it — the
-   banner itself stays var(--ink), only the title text changes. */
+/* Matches #shootModeTitle's own treatment (same header shape, one screen
+   over) rather than the plain white/19px it had before — same bigger
+   accent-coloured title both places, not a look unique to this one popup. */
 #shootModeReviewTitle {
   margin: 0;
-  font-size: 19px;
-  color: #fff;
+  font-family: var(--font-title);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+/* The "Quick review" eyebrow right above #shootModeReviewTitle — bigger and
+   accent-coloured to match, rather than the small dim-white treatment
+   .shoot-mode-eyebrow otherwise has everywhere else (e.g. "Shoot mode"
+   above the talent name) — scoped to this one popup so that shared
+   treatment elsewhere is untouched. */
+.shoot-mode-review-modal .shoot-mode-eyebrow {
+  font-size: 14px;
+  color: var(--accent);
+  opacity: 1;
 }
 
 .shoot-mode-header .close-btn {
@@ -4966,6 +4975,11 @@ h2.status-group-heading.heading-navy {
   line-height: 1.4;
   white-space: pre-wrap;
   word-wrap: break-word;
+  /* Without this it inherits from .shoot-mode-review-field, a <button> with
+     no color of its own — some browsers give unstyled button text their
+     native blue tint by default, which is exactly the stray blue this was
+     showing instead of the app's own text color. */
+  color: var(--text);
 }
 
 /* Archive mode's read-only counterpart to .shoot-mode-review-field above —
