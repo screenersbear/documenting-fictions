@@ -532,6 +532,9 @@
       colorTheme: 'default',
       defaultCountry: '',
       dismissedLocationKeys: [],
+      dismissedTeamMemberKeys: [],
+      dismissedTalentKeys: [],
+      dismissedLightingSetupKeys: [],
       photographer: emptyPhotographer(),
     };
   }
@@ -733,6 +736,9 @@
         colorTheme: THEME_KEYS.includes(parsed.colorTheme) ? parsed.colorTheme : 'default',
         defaultCountry: typeof parsed.defaultCountry === 'string' ? parsed.defaultCountry : '',
         dismissedLocationKeys: Array.isArray(parsed.dismissedLocationKeys) ? parsed.dismissedLocationKeys : [],
+        dismissedTeamMemberKeys: Array.isArray(parsed.dismissedTeamMemberKeys) ? parsed.dismissedTeamMemberKeys : [],
+        dismissedTalentKeys: Array.isArray(parsed.dismissedTalentKeys) ? parsed.dismissedTalentKeys : [],
+        dismissedLightingSetupKeys: Array.isArray(parsed.dismissedLightingSetupKeys) ? parsed.dismissedLightingSetupKeys : [],
         photographer: normalizePhotographer(parsed.photographer),
       };
     } catch (e) {
@@ -3566,10 +3572,12 @@
     const leadCounts = {};
     const sampleDates = {};
     const samples = {};
+    const dismissed = new Set(state.dismissedTalentKeys);
     state.shoots.forEach(s => {
       (s.talents || []).forEach((t, i) => {
         if (!hasText(t.name)) return;
         const key = t.name.trim().toLowerCase();
+        if (dismissed.has(key)) return;
         if (i === 0) leadCounts[key] = (leadCounts[key] || 0) + 1;
         const d = s.date || '';
         if (!(key in sampleDates) || d > sampleDates[key]) {
@@ -3593,10 +3601,16 @@
     pastTalentSamples = getAllPastTalents();
     const select = document.getElementById('pastTalentsSelect');
     select.innerHTML = '<option value="">Select a past talent…</option>'
-      + pastTalentSamples.map((t, i) => `<option value="${i}">${escapeHtml(t.name)}</option>`).join('');
+      + pastTalentSamples.map((t, i) => `<option value="${i}">${escapeHtml(t.name)}</option>`).join('')
+      + '<option value="__manage__">Manage saved…</option>';
   }
 
   document.getElementById('pastTalentsSelect').addEventListener('change', (e) => {
+    if (e.target.value === '__manage__') {
+      e.target.value = '';
+      openManageTalentsModal();
+      return;
+    }
     if (e.target.value === '') return;
     const t = pastTalentSamples[Number(e.target.value)];
     if (!t || !talentModalDraft) return;
@@ -3610,6 +3624,43 @@
     talentModalDraft._matchName = t.name || '';
     fillTalentModalForm();
   });
+
+  // Same non-destructive "dismiss" pattern as Manage Locations — deleting
+  // here only hides a name from future quick-picks (dismissedTalentKeys),
+  // it never touches any shoot's own talents array or the profile-sync
+  // matching saveTalentModalBtn does by name.
+  function renderManageTalentsList() {
+    const samples = getAllPastTalents();
+    const container = document.getElementById('manageTalentsList');
+    if (!samples.length) {
+      container.innerHTML = '<p class="empty-hint">No saved talents yet.</p>';
+      return;
+    }
+    container.innerHTML = samples.map((t, idx) => `
+      <div class="manage-location-row">
+        <span>${escapeHtml(t.name)}</span>
+        <button type="button" class="delete-manage-location" data-idx="${idx}">&times;</button>
+      </div>
+    `).join('');
+    container.querySelectorAll('.delete-manage-location').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = samples[Number(btn.dataset.idx)];
+        if (!t) return;
+        const key = t.name.trim().toLowerCase();
+        if (!state.dismissedTalentKeys.includes(key)) state.dismissedTalentKeys.push(key);
+        saveState();
+        renderManageTalentsList();
+        // The Talent modal's dropdown is still open underneath, so it has
+        // to drop the deleted entry now rather than on next open.
+        refreshPastTalentsSelect();
+      });
+    });
+  }
+
+  function openManageTalentsModal() {
+    renderManageTalentsList();
+    document.getElementById('manageTalentsOverlay').hidden = false;
+  }
 
   function renderTalentModalHandles() {
     const container = document.getElementById('talentModalHandlesList');
@@ -3816,10 +3867,12 @@
     const counts = {};
     const sampleDates = {};
     const samples = {};
+    const dismissed = new Set(state.dismissedTeamMemberKeys);
     state.shoots.forEach(s => {
       (s.teamMembers || []).forEach(tm => {
         if (!hasText(tm.name)) return;
         const key = tm.name.trim().toLowerCase();
+        if (dismissed.has(key)) return;
         counts[key] = (counts[key] || 0) + 1;
         const d = s.date || '';
         if (!(key in sampleDates) || d > sampleDates[key]) {
@@ -3845,10 +3898,16 @@
     pastTeamMemberSamples = getAllPastTeamMembers();
     const select = document.getElementById('pastTeamMembersSelect');
     select.innerHTML = '<option value="">Select a past team member…</option>'
-      + pastTeamMemberSamples.map((tm, i) => `<option value="${i}">${escapeHtml(tm.name)}</option>`).join('');
+      + pastTeamMemberSamples.map((tm, i) => `<option value="${i}">${escapeHtml(tm.name)}</option>`).join('')
+      + '<option value="__manage__">Manage saved…</option>';
   }
 
   document.getElementById('pastTeamMembersSelect').addEventListener('change', (e) => {
+    if (e.target.value === '__manage__') {
+      e.target.value = '';
+      openManageTeamMembersModal();
+      return;
+    }
     if (e.target.value === '') return;
     const tm = pastTeamMemberSamples[Number(e.target.value)];
     if (!tm || !teamMemberModalDraft) return;
@@ -3858,6 +3917,42 @@
     teamMemberModalDraft.socialHandle = tm.socialHandle || '';
     fillTeamMemberModalForm();
   });
+
+  // Same non-destructive "dismiss" pattern as Manage Locations — deleting
+  // here only hides a name from future quick-picks (dismissedTeamMemberKeys),
+  // it never touches any shoot's own teamMembers array.
+  function renderManageTeamMembersList() {
+    const samples = getAllPastTeamMembers();
+    const container = document.getElementById('manageTeamMembersList');
+    if (!samples.length) {
+      container.innerHTML = '<p class="empty-hint">No saved team members yet.</p>';
+      return;
+    }
+    container.innerHTML = samples.map((tm, idx) => `
+      <div class="manage-location-row">
+        <span>${escapeHtml(tm.name)}</span>
+        <button type="button" class="delete-manage-location" data-idx="${idx}">&times;</button>
+      </div>
+    `).join('');
+    container.querySelectorAll('.delete-manage-location').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tm = samples[Number(btn.dataset.idx)];
+        if (!tm) return;
+        const key = tm.name.trim().toLowerCase();
+        if (!state.dismissedTeamMemberKeys.includes(key)) state.dismissedTeamMemberKeys.push(key);
+        saveState();
+        renderManageTeamMembersList();
+        // The Team member modal's dropdown is still open underneath, so it
+        // has to drop the deleted entry now rather than on next open.
+        refreshPastTeamMembersSelect();
+      });
+    });
+  }
+
+  function openManageTeamMembersModal() {
+    renderManageTeamMembersList();
+    document.getElementById('manageTeamMembersOverlay').hidden = false;
+  }
 
   function fillTeamMemberModalForm() {
     document.getElementById('teamMemberModalRoleSelect').value = teamMemberModalDraft.role || 'makeup_artist';
@@ -3970,7 +4065,7 @@
   // itself only once you typed in it, which re-triggers sizing via the
   // row's own input listener).
   function autoSizeAllListTextareas() {
-    document.querySelectorAll('#shotListItems .shot-text, #lightingSetupsItems .lighting-setup-description, #shootModeShotList .shot-text')
+    document.querySelectorAll('#shotListItems .shot-text, #lightingSetupsItems .lighting-setup-description, #shootModeShotList .shot-text, #shootModeShootingNotes')
       .forEach(autoSizeTextarea);
   }
 
@@ -4231,10 +4326,12 @@
   function getPastLightingSetups() {
     const sampleDates = {};
     const samples = {};
+    const dismissed = new Set(state.dismissedLightingSetupKeys);
     state.shoots.forEach(s => {
       (s.lightingSetups || []).forEach(item => {
         if (!hasText(item.name)) return;
         const key = item.name.trim().toLowerCase();
+        if (dismissed.has(key)) return;
         const d = s.date || '';
         if (!(key in sampleDates) || d > sampleDates[key]) {
           sampleDates[key] = d;
@@ -4275,8 +4372,8 @@
     }
     box.innerHTML = matches.map((item, i) => `
       <button type="button" class="lighting-setup-suggestion" data-idx="${idx}" data-match="${i}">${escapeHtml(item.name)}</button>
-    `).join('');
-    box.querySelectorAll('.lighting-setup-suggestion').forEach((btn, i) => {
+    `).join('') + '<button type="button" class="lighting-setup-suggestion lighting-setup-suggestion-manage">Manage saved…</button>';
+    box.querySelectorAll('.lighting-setup-suggestion:not(.lighting-setup-suggestion-manage)').forEach((btn, i) => {
       // mousedown (not click) fires before the field's blur, so the copy
       // lands before blur's own handler hides this dropdown out from
       // under it — preventDefault keeps focus on the field throughout.
@@ -4290,8 +4387,53 @@
         scheduleShootAutosave();
       });
     });
+    box.querySelector('.lighting-setup-suggestion-manage').addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      openManageLightingSetupsModal();
+    });
     box.hidden = false;
     card.classList.add('lighting-setup-suggestions-open');
+  }
+
+  // Same non-destructive "dismiss" pattern as Manage Locations — deleting
+  // here only hides a name from future suggestions (dismissedLightingSetup-
+  // Keys), it never touches any shoot's own lightingSetups array.
+  function renderManageLightingSetupsList() {
+    const samples = getPastLightingSetups();
+    const container = document.getElementById('manageLightingSetupsList');
+    if (!samples.length) {
+      container.innerHTML = '<p class="empty-hint">No saved lighting setups yet.</p>';
+      return;
+    }
+    container.innerHTML = samples.map((item, idx) => `
+      <div class="manage-location-row">
+        <span>${escapeHtml(item.name)}</span>
+        <button type="button" class="delete-manage-location" data-idx="${idx}">&times;</button>
+      </div>
+    `).join('');
+    container.querySelectorAll('.delete-manage-location').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = samples[Number(btn.dataset.idx)];
+        if (!item) return;
+        const key = item.name.trim().toLowerCase();
+        if (!state.dismissedLightingSetupKeys.includes(key)) state.dismissedLightingSetupKeys.push(key);
+        saveState();
+        renderManageLightingSetupsList();
+        // Unlike the other three "manage saved" lists, this one opens from a
+        // transient typeahead rather than a persistent select still sitting
+        // open behind it — but that typeahead's field never lost focus (see
+        // updateLightingSetupSuggestions' preventDefault), so its box is
+        // still showing whatever it last rendered, dismissed entry and all.
+        // Hiding it here avoids a stale delete offer; it rebuilds correctly
+        // on the field's next input/focus.
+        document.querySelectorAll('.lighting-setup-suggestions').forEach(box => { box.hidden = true; });
+      });
+    });
+  }
+
+  function openManageLightingSetupsModal() {
+    renderManageLightingSetupsList();
+    document.getElementById('manageLightingSetupsOverlay').hidden = false;
   }
 
   function renderLightingSetups() {
@@ -7409,6 +7551,9 @@
       if (btn.dataset.close === 'journalToc') document.getElementById('journalTocOverlay').hidden = true;
       if (btn.dataset.close === 'categoryVisibility') closeCategoryVisibilityModal();
       if (btn.dataset.close === 'manageLocations') document.getElementById('manageLocationsOverlay').hidden = true;
+      if (btn.dataset.close === 'manageTeamMembers') document.getElementById('manageTeamMembersOverlay').hidden = true;
+      if (btn.dataset.close === 'manageTalents') document.getElementById('manageTalentsOverlay').hidden = true;
+      if (btn.dataset.close === 'manageLightingSetups') document.getElementById('manageLightingSetupsOverlay').hidden = true;
       if (btn.dataset.close === 'regionCountryPopup') document.getElementById('regionCountryPopupOverlay').hidden = true;
     });
   });
@@ -7416,7 +7561,7 @@
   shootModalOverlay.addEventListener('click', (e) => {
     if (e.target === shootModalOverlay) closeShootModal();
   });
-  [frameworksModalOverlay, document.getElementById('locationModalOverlay'), document.getElementById('talentModalOverlay'), document.getElementById('teamMemberModalOverlay'), document.getElementById('journalTocOverlay'), document.getElementById('tabIntroOverlay'), categoryVisibilityOverlay, document.getElementById('manageLocationsOverlay'), document.getElementById('regionCountryPopupOverlay')].forEach(overlay => {
+  [frameworksModalOverlay, document.getElementById('locationModalOverlay'), document.getElementById('talentModalOverlay'), document.getElementById('teamMemberModalOverlay'), document.getElementById('journalTocOverlay'), document.getElementById('tabIntroOverlay'), categoryVisibilityOverlay, document.getElementById('manageLocationsOverlay'), document.getElementById('manageTeamMembersOverlay'), document.getElementById('manageTalentsOverlay'), document.getElementById('manageLightingSetupsOverlay'), document.getElementById('regionCountryPopupOverlay')].forEach(overlay => {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) overlay.hidden = true;
     });
@@ -7650,6 +7795,9 @@
         colorTheme: THEME_KEYS.includes(payload.state.colorTheme) ? payload.state.colorTheme : 'default',
         defaultCountry: typeof payload.state.defaultCountry === 'string' ? payload.state.defaultCountry : '',
         dismissedLocationKeys: Array.isArray(payload.state.dismissedLocationKeys) ? payload.state.dismissedLocationKeys : [],
+        dismissedTeamMemberKeys: Array.isArray(payload.state.dismissedTeamMemberKeys) ? payload.state.dismissedTeamMemberKeys : [],
+        dismissedTalentKeys: Array.isArray(payload.state.dismissedTalentKeys) ? payload.state.dismissedTalentKeys : [],
+        dismissedLightingSetupKeys: Array.isArray(payload.state.dismissedLightingSetupKeys) ? payload.state.dismissedLightingSetupKeys : [],
         photographer: normalizePhotographer(payload.state.photographer),
       };
       saveState();
@@ -8550,6 +8698,7 @@
     const shoot = state.shoots.find(s => s.id === getShootModeShootId());
     if (!shoot) return;
     shoot.shootingNotes = e.target.value;
+    autoSizeTextarea(e.target);
     saveState();
   });
 

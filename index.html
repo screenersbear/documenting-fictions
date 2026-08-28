@@ -873,6 +873,42 @@
   </div>
 </div>
 
+<!-- ============ MANAGE TEAM MEMBERS MODAL ============ -->
+<div id="manageTeamMembersOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2>Manage Team Members</h2>
+      <button class="icon-btn close-btn" data-close="manageTeamMembers">&times;</button>
+    </div>
+    <p class="field-hint">Remove a name to stop it from showing up as a quick pick — it won't change any shoot that already used it.</p>
+    <div id="manageTeamMembersList"></div>
+  </div>
+</div>
+
+<!-- ============ MANAGE TALENTS MODAL ============ -->
+<div id="manageTalentsOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2>Manage Talents</h2>
+      <button class="icon-btn close-btn" data-close="manageTalents">&times;</button>
+    </div>
+    <p class="field-hint">Remove a name to stop it from showing up as a quick pick — it won't change any shoot that already used it.</p>
+    <div id="manageTalentsList"></div>
+  </div>
+</div>
+
+<!-- ============ MANAGE LIGHTING SETUPS MODAL ============ -->
+<div id="manageLightingSetupsOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2>Manage Lighting Setups</h2>
+      <button class="icon-btn close-btn" data-close="manageLightingSetups">&times;</button>
+    </div>
+    <p class="field-hint">Remove a setup to stop it from showing up as a quick pick — it won't change any shoot that already used it.</p>
+    <div id="manageLightingSetupsList"></div>
+  </div>
+</div>
+
 <!-- ============ REGION COUNTRY POPUP (tap a country on the map) ============ -->
 <div id="regionCountryPopupOverlay" class="modal-overlay intro-overlay" hidden>
   <div class="modal region-country-popup-modal">
@@ -1203,7 +1239,7 @@
       <p class="shoot-mode-empty" id="shootModeShotsEmpty" hidden>No shots on the list for this shoot.</p>
       <button type="button" id="shootModeAddShotBtn" class="primary small-btn shoot-mode-add-shot-btn">+ Add shot</button>
       <label class="shoot-mode-shooting-notes-label">Shooting notes
-        <textarea id="shootModeShootingNotes" rows="4" maxlength="2000" placeholder="Anything to remember on the day — settings, timings, things to try"></textarea>
+        <textarea id="shootModeShootingNotes" rows="1" maxlength="2000" placeholder="Anything to remember on the day — settings, timings, things to try"></textarea>
       </label>
 
       <h3 class="shoot-mode-section-heading heading-yellow">Mood board</h3>

@@ -2190,6 +2190,11 @@ h2.status-group-heading.heading-navy {
   background: var(--surface-2);
 }
 
+.lighting-setup-suggestion-manage {
+  color: var(--accent);
+  font-weight: 700;
+}
+
 #shootForm .lighting-setup-card-bar .lighting-setup-name::placeholder {
   color: rgba(255, 255, 255, 0.6);
   opacity: 1;
@@ -4774,20 +4779,32 @@ h2.status-group-heading.heading-navy {
   color: var(--text-dim);
 }
 
+/* Plain text on the page, not a bounded box — same treatment as the shot
+   rows above it (border/background dropped, just a rule underneath), and
+   auto-grown via autoSizeTextarea (see openShootMode/autoSizeAllListText-
+   areas and the input listener) so a long note is never clipped behind a
+   fixed height, unlike the tap-to-expand fields on the main edit form. */
 .shoot-mode-shooting-notes-label textarea {
   display: block;
   width: 100%;
   margin-top: 6px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 10px 12px;
+  background: none;
+  border: 0;
+  border-bottom: 2px dashed var(--border);
+  border-radius: 0;
+  padding: 4px 2px 8px;
   color: var(--text);
   font-size: 15px;
   font-family: var(--font-body);
   text-transform: none;
   letter-spacing: normal;
   resize: none;
+  overflow: hidden;
+}
+
+.shoot-mode-shooting-notes-label textarea:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
 }
 
 #shootModeMoodboard {
