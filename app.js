@@ -6724,14 +6724,26 @@
   async function openPdfPreview(id, chosenSections) {
     const s = state.shoots.find(x => x.id === id);
     if (!s) return;
-    // A PDF embedded in an iframe doesn't reliably support scrolling past
-    // page 1 on mobile browsers — their own full PDF viewer (opened as its
-    // own tab) handles multi-page scrolling and pinch-zoom properly, and
-    // usually has its own share icon too. Opening the tab has to happen
-    // synchronously, before the "await" below, or it loses the user-gesture
-    // context and gets popup-blocked — so open it blank first, then point
-    // it at the PDF once it's built.
-    const previewWindow = window.open('', '_blank');
+    // Web Share, tried first, is the only thing that reliably hands off a
+    // correctly-named file — Mail/Messages/etc respect the name on a File
+    // shared this way, unlike a blob: URL opened in a new tab (no filename
+    // at all) or this app's own preview modal (an extra screen sitting
+    // between "done" and the shoot screen). When it's available it's the
+    // WHOLE interaction: no tab, no modal — dismissing the OS's own share
+    // sheet lands straight back on the shoot screen underneath, nothing
+    // else to close. Probed with a throwaway file since the real PDF
+    // doesn't exist yet and this has to be decided before the popup below
+    // (which needs the same still-fresh user gesture either way).
+    const canWebShare = !!(navigator.canShare && navigator.share
+      && navigator.canShare({ files: [new File([''], 'probe.pdf', { type: 'application/pdf' })] }));
+    // Fallback path only: a PDF embedded in an iframe doesn't reliably
+    // support scrolling past page 1 on mobile browsers — their own full PDF
+    // viewer (opened as its own tab) handles multi-page scrolling and
+    // pinch-zoom properly. Opening the tab has to happen synchronously,
+    // before the "await" below, or it loses the user-gesture context and
+    // gets popup-blocked — so open it blank first, then point it at the
+    // PDF once it's built.
+    const previewWindow = canWebShare ? null : window.open('', '_blank');
     try {
       const doc = await buildShootPdf(s, chosenSections);
       pdfPreviewBlob = doc.output('blob');
@@ -6743,23 +6755,21 @@
       // strips anything that isn't word/hyphen/space/dot.
       const safeName = pdfPreviewTitle.replace(/—/g, '-').replace(/[^\w\- .]+/g, '').trim() || 'call sheet';
       pdfPreviewFilename = `${safeName}.pdf`;
+      if (canWebShare) {
+        const file = new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' });
+        await navigator.share({ files: [file], title: pdfPreviewTitle });
+        return;
+      }
       if (previewWindow) previewWindow.location.href = URL.createObjectURL(pdfPreviewBlob);
-      // Always show the in-app preview + Share button too, even when the
-      // tab above opened fine — a blob: URL carries no filename at all, so
-      // Safari's own share icon inside that native PDF viewer has nothing
-      // to name the Mail/Messages attachment with and falls back to
-      // "Unknown" (wrapping the blob in a File before creating the object
-      // URL doesn't help; that association isn't visible across a fresh
-      // tab navigation). This modal's own Share button below sidesteps
-      // that entirely by handing Web Share a File it built directly, which
-      // Mail/Messages do respect. A separate object URL of its own (rather
-      // than reusing the tab's) so closing this modal's revoke doesn't pull
-      // the PDF out from under that still-open tab.
+      // Shown only when Web Share isn't available — a separate object URL
+      // of its own (rather than reusing the tab's) so closing this modal's
+      // revoke doesn't pull the PDF out from under that still-open tab.
       document.getElementById('pdfPreviewFrame').src = URL.createObjectURL(pdfPreviewBlob);
       document.getElementById('pdfPreviewOverlay').hidden = false;
       if (previewWindow) showToast('Opened for viewing — use Share below to send it with the right filename');
     } catch (err) {
       if (previewWindow) previewWindow.close();
+      if (err && err.name === 'AbortError') return;
       console.error('Failed to build shoot PDF', err);
       showToast('Could not create PDF');
     }
@@ -7275,7 +7285,14 @@
   }
 
   async function openExportArchivePreview(shoots) {
-    const previewWindow = window.open('', '_blank');
+    // See openPdfPreview's matching comment: Web Share, tried first, is the
+    // only thing that reliably hands off a correctly-named file, and skips
+    // both the new tab and this app's own preview modal entirely when it's
+    // available — so closing out of the OS's own share sheet lands
+    // straight back on whatever was showing before, nothing else to close.
+    const canWebShare = !!(navigator.canShare && navigator.share
+      && navigator.canShare({ files: [new File([''], 'probe.pdf', { type: 'application/pdf' })] }));
+    const previewWindow = canWebShare ? null : window.open('', '_blank');
     try {
       const doc = await buildArchivePdf(shoots);
       pdfPreviewBlob = doc.output('blob');
@@ -7283,16 +7300,18 @@
       pdfPreviewTitle = label;
       const safeName = label.replace(/[^\w\- .]+/g, '').trim() || 'shoot archive';
       pdfPreviewFilename = `${safeName}.pdf`;
-      // See openPdfPreview's matching comment: the tab's blob: URL can't
-      // carry a filename at all, so the modal + Share button below are
-      // shown regardless of whether that tab opened, since it's the only
-      // reliably-named way to actually send this. Separate object URLs so
-      // closing the modal's revoke doesn't pull the PDF out from under a
-      // still-open tab.
-      if (previewWindow) previewWindow.location.href = URL.createObjectURL(pdfPreviewBlob);
-      document.getElementById('pdfPreviewFrame').src = URL.createObjectURL(pdfPreviewBlob);
-      document.getElementById('pdfPreviewOverlay').hidden = false;
-      if (previewWindow) showToast('Opened for viewing — use Share below to send it with the right filename');
+      if (canWebShare) {
+        const file = new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' });
+        await navigator.share({ files: [file], title: pdfPreviewTitle });
+      } else {
+        // Shown only when Web Share isn't available — separate object URLs
+        // so closing the modal's revoke doesn't pull the PDF out from
+        // under a still-open tab.
+        if (previewWindow) previewWindow.location.href = URL.createObjectURL(pdfPreviewBlob);
+        document.getElementById('pdfPreviewFrame').src = URL.createObjectURL(pdfPreviewBlob);
+        document.getElementById('pdfPreviewOverlay').hidden = false;
+        if (previewWindow) showToast('Opened for viewing — use Share below to send it with the right filename');
+      }
       // The delete-prompt is offered right away rather than gated on the
       // share/save actually completing — the OS share sheet and the new-tab
       // PDF viewer both finish outside any event this app can observe, so
@@ -7300,6 +7319,7 @@
       openExportDeleteAsk(shoots);
     } catch (err) {
       if (previewWindow) previewWindow.close();
+      if (err && err.name === 'AbortError') { openExportDeleteAsk(shoots); return; }
       console.error('Failed to build archive PDF', err);
       showToast('Could not create PDF archive');
     }
