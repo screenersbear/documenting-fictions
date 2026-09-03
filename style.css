@@ -1533,9 +1533,16 @@ h2.status-group-heading.heading-navy {
 }
 
 /* Anchored to the top instead of the bottom sheet default so the on-screen
-   keyboard (which covers the bottom of the screen) never hides it. */
+   keyboard (which covers the bottom of the screen) never hides it. Also
+   opened from Shoot Mode's Quick review popup (a .modal-overlay in its own
+   right, further down the DOM) to edit a Direction/Lighting-setup field —
+   without a z-index above the plain .modal-overlay 10 they share, DOM order
+   alone would put that already-open popup on top instead, leaving this one
+   opening but invisible behind it (tapping "Tap to add" would silently do
+   nothing visible). */
 #expandFieldOverlay {
   align-items: flex-start;
+  z-index: 15;
 }
 
 #expandFieldOverlay .modal {
@@ -3926,6 +3933,15 @@ h2.status-group-heading.heading-navy {
   cursor: default;
   font-style: italic;
   border-left: 3px solid var(--accent);
+}
+
+.daily-report-item-list {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.daily-report-item-list li {
+  margin-top: 2px;
 }
 
 /* ---- Shoot options sheet ---- */

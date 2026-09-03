@@ -1526,13 +1526,16 @@
   document.getElementById('newShootBtn').addEventListener('click', () => openShootModal(null));
 
   const STAT_BOX_FILTERS = {
-    ideas: s => !s.archived && s.status === 'planning',
+    ideas: s => !s.archived && s.status === 'prospect',
     ready: s => !s.archived && s.status === 'waiting_to_shoot',
-    pending: s => !s.archived && shootPendingLabels(s).length > 0,
+    // Prospects excluded — nothing that early would realistically have a
+    // team or mood board started yet, so every prospect would otherwise
+    // show up here just for not having done work nobody expects yet.
+    pending: s => !s.archived && s.status !== 'prospect' && shootPendingLabels(s).length > 0,
   };
 
   const STAT_BOX_TITLES = {
-    ideas: 'Planning',
+    ideas: 'Ideas + Prospects',
     ready: 'Ready to shoot',
     pending: 'Teams + mood boards pending',
   };
@@ -1633,7 +1636,7 @@
     document.getElementById('statsRow').innerHTML = `
       <div class="stat-box" data-stat="ideas">
         <span class="stat-num">${ideasCount}</span>
-        <span class="stat-label">Ideas + Planning</span>
+        <span class="stat-label">Ideas + Prospects</span>
       </div>
       <div class="stat-box" data-stat="pending">
         <span class="stat-num">${pendingTeamMoodboardCount}</span>
@@ -4181,7 +4184,24 @@
 
     if (focusIdx !== undefined) {
       const focusInput = container.querySelector(`.shot-text[data-idx="${focusIdx}"]`);
-      if (focusInput) focusInput.focus();
+      if (focusInput) {
+        focusInput.focus();
+        // A row added via Enter can land low enough in this scrolling form
+        // to come up right against the sticky Save bar fixed below it (or
+        // the iOS keyboard) — the browser's own scroll-into-view-on-focus
+        // doesn't know either is there and won't leave them any clearance.
+        // Centering it ourselves guarantees a clear look at what's being
+        // typed instead of a sliver hidden behind either one. Same fix as
+        // Shoot Mode's own shot list — see renderShootModeShots.
+        focusInput.scrollIntoView({ block: 'center' });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener(
+            'resize',
+            () => focusInput.scrollIntoView({ block: 'center' }),
+            { once: true }
+          );
+        }
+      }
     }
     restoreAfterListReorder(container, refocusCheckIdx, savedScrollTop);
   }
@@ -4850,7 +4870,6 @@
     shootCharacter: 'Character/Personality',
     shootWorldNotes: 'World-building notes',
     shootGoals: 'Shoot goals',
-    shootGeneralNotes: 'General direction notes',
     shootElevatorPitch: 'Elevator pitch',
     shootWentRight: 'What went right',
     shootCouldBeBetter: "What could've gone better",
@@ -4927,7 +4946,7 @@
 
   [
     'shootPremise', 'shootCharacter', 'shootWorldNotes', 'shootGoals',
-    'shootGeneralNotes', 'shootElevatorPitch',
+    'shootElevatorPitch',
     'shootWentRight', 'shootCouldBeBetter', 'shootLessonsLearned',
     'shootTalentDirections', 'shootTeamDirections', 'shootLocationDirections',
     'shootShootingNotes',
@@ -5076,7 +5095,7 @@
 
   function updateMoodboardCompleteLabel() {
     const checked = document.getElementById('shootMoodboardComplete').checked;
-    document.getElementById('moodboardCompleteLabel').textContent = checked ? 'Mood board complete' : 'Mood board complete?';
+    document.getElementById('moodboardCompleteLabel').textContent = checked ? 'Mood board complete or not required' : 'Mood board complete or not required?';
   }
 
   // Past capture, the mood board is moot — hide the checkbox entirely rather
@@ -5345,7 +5364,6 @@
     updateMoodboardCompleteVisibility();
     currentReferences = s && Array.isArray(s.references) ? [...s.references] : [];
     renderReferences();
-    document.getElementById('shootGeneralNotes').value = s ? (s.generalNotes || '') : '';
     document.getElementById('shootWentRight').value = s ? (s.whatWentRight || '') : '';
     document.getElementById('shootCouldBeBetter').value = s ? (s.couldBeBetter || '') : '';
     document.getElementById('shootLessonsLearned').value = s ? (s.lessonsLearned || '') : '';
@@ -5519,6 +5537,24 @@
     imageViewerMenuBtn.hidden = allowProjectPhoto === false;
     renderViewerCaption();
     imageViewerOverlay.hidden = false;
+    allowViewportZoom(true);
+  }
+
+  // The page's own viewport meta pins maximum-scale=1 (no pinch-zoom
+  // anywhere) so an accidental double-tap doesn't zoom the whole app while
+  // filling out a form — but that blocks pinch-zoom on a full-screen photo
+  // too, e.g. a mood board image in Shoot Mode, where it's exactly what
+  // you'd want. Relaxed only while the image viewer is open, restored the
+  // moment it closes, so the rest of the app keeps its normal no-zoom feel.
+  function allowViewportZoom(allow) {
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) return;
+    meta.setAttribute(
+      'content',
+      allow
+        ? 'width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5, interactive-widget=resizes-content'
+        : 'width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, interactive-widget=resizes-content'
+    );
   }
 
   function showViewerImage(idx) {
@@ -5546,6 +5582,7 @@
     if (!imageViewerCaptionInput.hidden) saveViewerCaption(imageViewerCaptionInput.value.trim());
     imageViewerOverlay.hidden = true;
     imageViewerMenu.hidden = true;
+    allowViewportZoom(false);
   }
 
   document.getElementById('closeImageViewer').addEventListener('click', closeImageViewer);
@@ -5909,7 +5946,6 @@
       teamMembers: teamRequired === 'yes' ? [...currentTeamMembers] : [],
       references: currentReferences.map(r => r.trim()).filter(r => r),
       frameworkTags,
-      generalNotes: document.getElementById('shootGeneralNotes').value.trim(),
       whatWentRight: document.getElementById('shootWentRight').value.trim(),
       couldBeBetter: document.getElementById('shootCouldBeBetter').value.trim(),
       lessonsLearned: document.getElementById('shootLessonsLearned').value.trim(),
@@ -5941,7 +5977,7 @@
     const loc = data.location;
     const locationEffectivelyBlank = !hasText(loc.name) && !hasText(loc.street) && !hasText(loc.city) && !hasText(loc.zip) && !hasText(loc.state);
     return !hasText(data.title) && locationEffectivelyBlank && !hasText(data.startTime) && !hasText(data.endTime) && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0 && !hasText(t.photo)) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals) && !hasText(data.elevatorPitch)
-      && !hasText(data.worldNotes) && !hasText(data.generalNotes) && !hasText(data.deadline)
+      && !hasText(data.worldNotes) && !hasText(data.deadline)
       && !hasText(data.whatWentRight) && !hasText(data.couldBeBetter) && !hasText(data.lessonsLearned)
       && !hasText(data.talentDirections) && !hasText(data.teamDirections) && !hasText(data.locationDirections)
       && !hasText(data.shootingNotes) && data.shotList.length === 0
@@ -6559,7 +6595,6 @@
       ['Character/Personality: ', s.character],
       ['World-building notes: ', s.worldNotes],
       ['Shoot goals: ', s.shootGoals],
-      ['General direction notes: ', s.generalNotes],
     ].filter(([, value]) => hasText(value));
     if (directionFields.length && sections.direction) {
       sectionHeading('Direction:');
@@ -7172,7 +7207,6 @@
         ['Character/Personality: ', s.character],
         ['World-building notes: ', s.worldNotes],
         ['Shoot goals: ', s.shootGoals],
-        ['General direction notes: ', s.generalNotes],
       ].filter(([, value]) => hasText(value));
       if (directionFields.length) {
         sectionHeading('Direction:');
@@ -8906,7 +8940,6 @@
     ['premise', 'Concept', 200],
     ['character', 'Character/Personality', 1000],
     ['worldNotes', 'World-building notes', 1000],
-    ['generalNotes', 'General direction notes', 1000],
     ['shootGoals', 'Shoot goals', 1000],
     ['elevatorPitch', 'Elevator pitch', 150],
     ['talentDirections', 'Directions for talent', 1000],
@@ -9147,7 +9180,8 @@
     if (reflectionMissing.length) {
       items.push({
         shootId: reflectionMissing.length === 1 ? reflectionMissing[0].id : null,
-        text: `Post-shoot reflection still missing for ${reflectionMissing.map(shootDisplayName).join(', ')}`,
+        text: 'Post-shoot reflection still missing for:',
+        list: reflectionMissing.map(shootDisplayName),
       });
     }
 
@@ -9428,6 +9462,16 @@
       // several shoots reuses it rather than inventing a second flavour.
       row.className = item.shootId ? 'daily-report-item' : 'daily-report-item daily-report-fact';
       row.textContent = item.text;
+      if (item.list && item.list.length) {
+        const ul = document.createElement('ul');
+        ul.className = 'daily-report-item-list';
+        item.list.forEach(name => {
+          const li = document.createElement('li');
+          li.textContent = name;
+          ul.appendChild(li);
+        });
+        row.appendChild(ul);
+      }
       if (item.shootId) {
         row.addEventListener('click', () => {
           document.getElementById('dailyReportOverlay').hidden = true;
