@@ -2504,6 +2504,7 @@
       if (editable) {
         grid.querySelectorAll('.final-thumb-delete').forEach(btn => {
           btn.addEventListener('click', () => {
+            if (!confirm("Delete this photo? This can't be undone.")) return;
             idbGetImages(key).then(imgs => {
               imgs.splice(Number(btn.dataset.idx), 1);
               return idbSetImages(key, imgs);
@@ -5451,6 +5452,7 @@
       });
       grid.querySelectorAll('.moodboard-thumb-delete').forEach(btn => {
         btn.addEventListener('click', () => {
+          if (!confirm("Delete this photo? This can't be undone.")) return;
           idbGetImages(currentShootId).then(imgs => {
             imgs.splice(Number(btn.dataset.idx), 1);
             return idbSetImages(currentShootId, imgs);
@@ -5874,6 +5876,7 @@
       });
       grid.querySelectorAll('.final-thumb-delete').forEach(btn => {
         btn.addEventListener('click', () => {
+          if (!confirm("Delete this photo? This can't be undone.")) return;
           idbGetImages(finalImagesKey(currentShootId)).then(imgs => {
             imgs.splice(Number(btn.dataset.idx), 1);
             return idbSetImages(finalImagesKey(currentShootId), imgs);
@@ -6848,6 +6851,152 @@
     }
   });
 
+  // ---------- Journal entry PDF (share a single reflection) ----------
+  // Same header/body drawing conventions as buildShootPdf (title banner,
+  // ensureSpace, courier body text) — no sections to choose here since a
+  // journal entry is just title/date/tags/body/photos, one flat page.
+  async function buildJournalEntryPdf(entry) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 44;
+    const navy = [49, 61, 69];
+    const yellow = [255, 209, 3];
+    const logoSize = 36;
+    const logoGap = 14;
+    const titleX = margin + logoSize + logoGap;
+    const titleFontSize = 26;
+    const titleLineHeight = titleFontSize * 1.15;
+
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(titleFontSize);
+    const titleLines = doc.splitTextToSize((entry.title || 'Untitled entry').toUpperCase(), pageWidth - titleX - margin);
+    const titleBlockHeight = titleLines.length * titleLineHeight;
+    const headerHeight = Math.max(64, titleBlockHeight + 28);
+
+    doc.setFillColor(...navy);
+    doc.rect(0, 0, pageWidth, headerHeight, 'F');
+
+    const logoDataUrl = await loadLogoDataUrl();
+    doc.addImage(logoDataUrl, 'PNG', margin, (headerHeight - logoSize) / 2, logoSize, logoSize);
+
+    doc.setTextColor(...yellow);
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(titleFontSize);
+    const titleTopPad = (headerHeight - titleBlockHeight) / 2;
+    titleLines.forEach((line, i) => {
+      doc.text(line, titleX, titleTopPad + i * titleLineHeight + titleLineHeight * 0.83);
+    });
+
+    doc.setTextColor(...navy);
+    let y = headerHeight + 34;
+
+    function ensureSpace(needed) {
+      if (y + needed > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+    }
+
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(11);
+    doc.text(prettyDate(entry.createdAt), margin, y);
+    y += 24;
+
+    if ((entry.tags || []).length) {
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(11);
+      const tagsLine = entry.tags.map(t => `#${t}`).join('   ');
+      doc.splitTextToSize(tagsLine, pageWidth - margin * 2).forEach(line => {
+        ensureSpace(16);
+        doc.text(line, margin, y);
+        y += 16;
+      });
+      y += 8;
+    }
+
+    if (hasText(entry.body)) {
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(12);
+      entry.body.split('\n').forEach(paragraph => {
+        const wrapped = doc.splitTextToSize(paragraph, pageWidth - margin * 2);
+        (wrapped.length ? wrapped : ['']).forEach(line => {
+          ensureSpace(17);
+          doc.text(line, margin, y);
+          y += 17;
+        });
+      });
+      y += 10;
+    }
+
+    const images = await idbGetImages(journalEntryImagesKey(entry));
+    if (images.length) {
+      const maxImgW = pageWidth - margin * 2;
+      const maxImgH = 320;
+      for (const img of images) {
+        const dims = await getImageDims(img.src);
+        const fitted = fitContain(dims.w, dims.h, maxImgW, maxImgH);
+        ensureSpace(fitted.h + 20);
+        doc.addImage(img.src, 'JPEG', margin, y, fitted.w, fitted.h);
+        y += fitted.h + 10;
+        if (hasText(img.caption)) {
+          doc.setFont('courier', 'normal');
+          doc.setFontSize(10);
+          doc.splitTextToSize(img.caption, maxImgW).forEach(line => {
+            ensureSpace(14);
+            doc.text(line, margin, y);
+            y += 14;
+          });
+          y += 6;
+        }
+      }
+    }
+
+    return doc;
+  }
+
+  async function openJournalEntryPdfPreview(id) {
+    const entry = state.journalEntries.find(e => e.id === id);
+    if (!entry) return;
+    // See openPdfPreview's matching comment: Web Share, tried first, is the
+    // only thing that reliably hands off a correctly-named file, and skips
+    // both the new tab and this app's own preview modal entirely when it's
+    // available.
+    const canWebShare = !!(navigator.canShare && navigator.share
+      && navigator.canShare({ files: [new File([''], 'probe.pdf', { type: 'application/pdf' })] }));
+    const previewWindow = canWebShare ? null : window.open('', '_blank');
+    try {
+      const doc = await buildJournalEntryPdf(entry);
+      pdfPreviewBlob = doc.output('blob');
+      const dateLabel = prettyDate(entry.createdAt);
+      const titleOrUntitled = entry.title || 'Untitled entry';
+      pdfPreviewTitle = dateLabel ? `${dateLabel} — ${titleOrUntitled}` : titleOrUntitled;
+      const safeName = pdfPreviewTitle.replace(/—/g, '-').replace(/[^\w\- .]+/g, '').trim() || 'journal entry';
+      pdfPreviewFilename = `${safeName}.pdf`;
+      if (canWebShare) {
+        const file = new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' });
+        await navigator.share({ files: [file], title: pdfPreviewTitle });
+        return;
+      }
+      if (previewWindow) previewWindow.location.href = URL.createObjectURL(pdfPreviewBlob);
+      document.getElementById('pdfPreviewFrame').src = URL.createObjectURL(pdfPreviewBlob);
+      document.getElementById('pdfPreviewOverlay').hidden = false;
+      if (previewWindow) showToast('Opened for viewing — use Share below to send it with the right filename');
+    } catch (err) {
+      if (previewWindow) previewWindow.close();
+      if (err && err.name === 'AbortError') return;
+      console.error('Failed to build journal entry PDF', err);
+      showToast('Could not create PDF');
+    }
+  }
+
+  document.getElementById('shareJournalOptionBtn').addEventListener('click', () => {
+    const id = optionsJournalEntryId;
+    closeJournalOptions();
+    if (id) openJournalEntryPdfPreview(id);
+  });
+
   // ---------- Export previous shoots (archive PDF + optional bulk cleanup) ----------
   // A separate, much bigger export than the single-shoot call sheet above: one
   // PDF containing every text section AND every photo (cover, talent, mood
@@ -7503,6 +7652,9 @@
 
     frameworksBody.querySelectorAll('.delete-framework').forEach(btn => {
       btn.addEventListener('click', () => {
+        const fw = state.frameworks.find(f => f.id === btn.dataset.id);
+        const name = fw && hasText(fw.name) ? fw.name : 'this framework';
+        if (!confirm(`Delete ${name}? This removes every one of its tags from every shoot that used them, and can't be undone.`)) return;
         state.frameworks = state.frameworks.filter(f => f.id !== btn.dataset.id);
         saveState();
         renderFrameworksList();
@@ -7525,6 +7677,9 @@
       btn.addEventListener('click', () => {
         const fw = state.frameworks.find(f => f.id === btn.dataset.fw);
         if (fw) {
+          const tag = fw.tags[Number(btn.dataset.idx)];
+          const label = hasText(tag) ? `"${tag}"` : 'this tag';
+          if (!confirm(`Delete ${label}? This removes it from every shoot that used it, and can't be undone.`)) return;
           fw.tags.splice(Number(btn.dataset.idx), 1);
           saveState();
           renderFrameworksList();
@@ -8399,7 +8554,7 @@
     renderStatsYearFilters();
     const funFactEl = document.getElementById('statsFunFact');
     const fact = pickRandomFunFact();
-    funFactEl.textContent = fact || '';
+    funFactEl.textContent = fact ? `Fun fact: ${fact}` : '';
     funFactEl.hidden = !fact;
     const pages = STATS_PAGES.map(page => page.custom
       ? regionsPageHtml(buildRegionsStats())

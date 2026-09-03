@@ -327,6 +327,15 @@ h1, h2, h3 {
   flex-shrink: 0;
 }
 
+/* The "+" glyph (Reflections' add-entry button, the Shoots list's add-shoot
+   button) reads as hanging a little low of true center in this font/weight
+   once flex-centered — a small upward nudge, same em-scaled approach as
+   .close-btn's own × correction. */
+#addJournalBtn,
+#addShootBtn {
+  transform: translateY(-0.05em);
+}
+
 .icon-btn[hidden] {
   display: none;
 }
@@ -356,6 +365,9 @@ h1, h2, h3 {
      6px lands the glyph at a dead-on 0px horizontal offset from the
      circle's true center (4px undershot by 2px). */
   padding-right: 6px;
+  /* Also hangs a little low of true center vertically — a small upward
+     nudge, same em-scaled approach as .close-btn's own × correction. */
+  transform: translateY(-0.05em);
 }
 
 .journal-back-btn:active {
