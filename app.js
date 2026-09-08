@@ -546,6 +546,16 @@
     return { name: '', businessName: '', socialPlatform: 'instagram', socialHandle: '', phone: '' };
   }
 
+  // Handle fields prefill with "@" so there's less to type — but if that's
+  // all that's left when the field is saved (tapped in, nothing typed,
+  // tapped away), it should read as never having been set, not as a real
+  // (garbage) handle. Used everywhere a handle gets committed: photographer,
+  // talent, team member.
+  function normalizeSocialHandle(value) {
+    const trimmed = (value || '').trim();
+    return trimmed === '@' ? '' : trimmed;
+  }
+
   function normalizePhotographer(p) {
     const src = (p && typeof p === 'object') ? p : {};
     return {
@@ -1466,7 +1476,7 @@
     document.getElementById('photographerNameInput').value = p.name;
     document.getElementById('photographerBusinessInput').value = p.businessName;
     document.getElementById('photographerPlatformSelect').value = p.socialPlatform;
-    document.getElementById('photographerHandleInput').value = p.socialHandle;
+    document.getElementById('photographerHandleInput').value = p.socialHandle || '@';
     document.getElementById('photographerPhoneInput').value = p.phone;
     document.getElementById('photographerIntroText').hidden = !isFirstRun;
     document.getElementById('photographerModalTitle').textContent =
@@ -1483,7 +1493,7 @@
       name: document.getElementById('photographerNameInput').value.trim(),
       businessName: document.getElementById('photographerBusinessInput').value.trim(),
       socialPlatform: document.getElementById('photographerPlatformSelect').value,
-      socialHandle: document.getElementById('photographerHandleInput').value.trim(),
+      socialHandle: normalizeSocialHandle(document.getElementById('photographerHandleInput').value),
       phone: document.getElementById('photographerPhoneInput').value.trim(),
     });
     saveState();
@@ -3673,7 +3683,7 @@
         <select class="social-handle-platform" data-handle-idx="${shIdx}">
           ${SOCIAL_PLATFORM_OPTIONS.map(([val, label]) => `<option value="${val}" ${sh.platform === val ? 'selected' : ''}>${label}</option>`).join('')}
         </select>
-        <input type="text" class="social-handle-input" data-handle-idx="${shIdx}" placeholder="@handle" value="${escapeHtml(sh.handle || '')}" />
+        <input type="text" class="social-handle-input" data-handle-idx="${shIdx}" placeholder="@handle" value="${escapeHtml(sh.handle || '@')}" />
         <button type="button" class="delete-social-handle" data-handle-idx="${shIdx}">&times;</button>
       </div>
     `).join('');
@@ -3762,6 +3772,7 @@
   document.getElementById('saveTalentModalBtn').addEventListener('click', () => {
     const draft = talentModalDraft;
     draft.name = document.getElementById('talentModalNameInput').value.trim();
+    draft.socialHandles = draft.socialHandles.map(sh => ({ ...sh, handle: normalizeSocialHandle(sh.handle) }));
     const oldPhoto = talentModalTargetIdx !== null ? (currentTalents[talentModalTargetIdx].photo || '') : '';
 
     if (talentModalTargetIdx !== null) currentTalents[talentModalTargetIdx] = draft;
@@ -3962,7 +3973,7 @@
     document.getElementById('teamMemberModalRoleSelect').value = teamMemberModalDraft.role || 'makeup_artist';
     document.getElementById('teamMemberModalNameInput').value = teamMemberModalDraft.name || '';
     document.getElementById('teamMemberModalSocialPlatform').value = teamMemberModalDraft.socialPlatform || 'instagram';
-    document.getElementById('teamMemberModalSocialInput').value = teamMemberModalDraft.socialHandle || '';
+    document.getElementById('teamMemberModalSocialInput').value = teamMemberModalDraft.socialHandle || '@';
   }
 
   function openTeamMemberModal(idx) {
@@ -4008,6 +4019,7 @@
   document.getElementById('saveTeamMemberModalBtn').addEventListener('click', () => {
     const draft = teamMemberModalDraft;
     draft.name = document.getElementById('teamMemberModalNameInput').value.trim();
+    draft.socialHandle = normalizeSocialHandle(draft.socialHandle);
 
     if (teamMemberModalTargetIdx !== null) currentTeamMembers[teamMemberModalTargetIdx] = draft;
     else currentTeamMembers.push(draft);
