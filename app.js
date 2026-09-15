@@ -937,13 +937,21 @@
     return !s.archived && !!s.deadline && s.status !== 'delivered';
   }
 
+  // A mood board only realistically matters for a shoot that's actively
+  // being planned — a prospect is still too early to know if there'll even
+  // be one, and anything past "shoot ready" already happened, so there's
+  // nothing left to prep. Scoped to exactly these two statuses rather than
+  // "not yet post-capture", which used to let prospects slip through too.
+  function moodboardPending(s) {
+    return (s.status === 'planning' || s.status === 'waiting_to_shoot') && !s.moodboardComplete;
+  }
+
   function shootPendingLabels(s) {
     const labels = [];
     if (s.teamRequired === 'yes' && !s.teamFinalized) labels.push('Team');
-    // Once a shoot has moved past capture, the mood board no longer matters —
-    // don't keep flagging it as pending (the underlying value is left alone
-    // so it's exactly right again if the status ever moves back earlier).
-    if (!isPostCaptureStatus(s.status) && !s.moodboardComplete) labels.push('Moodboard');
+    // The underlying value is left alone either way, so it's exactly right
+    // again if the status ever moves back into range.
+    if (moodboardPending(s)) labels.push('Moodboard');
     return labels;
   }
 
@@ -1637,7 +1645,7 @@
       .filter(s => weekBucket(s.deadline) === 'this_week' || weekBucket(s.deadline) === 'next_week')
       .sort((a, b) => dateSortKey(a.deadline).localeCompare(dateSortKey(b.deadline)));
     const proofsPendingShoots = state.shoots.filter(s => !s.archived && s.status === 'captured')
-      .sort((a, b) => dateSortKey(a.date).localeCompare(dateSortKey(b.date)));
+      .sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
 
     const ideasCount = state.shoots.filter(STAT_BOX_FILTERS.ideas).length;
     const readyToShootCount = state.shoots.filter(STAT_BOX_FILTERS.ready).length;
@@ -8648,13 +8656,6 @@
     return formatDate(d);
   }
 
-  function effectiveYesterdayStr() {
-    const d = new Date();
-    if (d.getHours() < 5) d.setDate(d.getDate() - 1);
-    d.setDate(d.getDate() - 1);
-    return formatDate(d);
-  }
-
   function joinWithAnd(names) {
     if (names.length === 1) return names[0];
     return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
@@ -9209,7 +9210,19 @@
 
   function resumeShootModeIfActive() {
     const id = getShootModeShootId();
-    return id ? openShootMode(id) : false;
+    if (!id) return false;
+    const shoot = state.shoots.find(s => s.id === id);
+    // Left on into a new day — closed the app mid-shoot and didn't come
+    // back until later — shouldn't keep reopening yesterday's working view.
+    // Once the shoot's own day has passed, close out of it automatically
+    // so the app boots into the regular flow for today instead. Same 5am
+    // day boundary as the rest of the once-a-day logic, so shooting late
+    // into the night doesn't get kicked out mid-shoot at midnight.
+    if (shoot && shoot.date && shoot.date < effectiveReportDateStr()) {
+      setShootModeShootId(null);
+      return false;
+    }
+    return openShootMode(id);
   }
 
   document.getElementById('shootModeStartBtn').addEventListener('click', () => {
@@ -9249,15 +9262,19 @@
     try { lastShown = localStorage.getItem(DAY_AFTER_PROMPT_KEY); } catch (e) { lastShown = null; }
     if (lastShown === today) return;
 
-    const yStr = effectiveYesterdayStr();
-    const pendingShoots = state.shoots.filter(s => !s.archived && !POST_CAPTURE_STATUSES.includes(s.status) && s.date === yStr);
+    // Any shoot whose date has passed and hasn't been marked post-capture
+    // yet — not just ones from exactly yesterday, so skipping a day (or
+    // several) of opening the app doesn't silently drop the check-in for
+    // good. It still only asks once a day (the lastShown guard above), so
+    // whichever day you next open the app is the day it catches up.
+    const pendingShoots = state.shoots.filter(s => !s.archived && !POST_CAPTURE_STATUSES.includes(s.status) && s.date && s.date < today);
     if (!pendingShoots.length) return;
 
     try { localStorage.setItem(DAY_AFTER_PROMPT_KEY, today); } catch (e) { /* ignore */ }
 
     const names = pendingShoots.map(shootDisplayName);
     const plural = pendingShoots.length > 1;
-    document.getElementById('dayAfterPromptText').textContent = `Did ${plural ? 'these shoots' : 'this shoot'} happen yesterday: ${joinWithAnd(names)}?`;
+    document.getElementById('dayAfterPromptText').textContent = `Did ${plural ? 'these shoots' : 'this shoot'} happen: ${joinWithAnd(names)}?`;
     document.getElementById('dayAfterPromptActions').hidden = false;
     document.getElementById('dayAfterOkBtn').hidden = true;
     document.getElementById('dayAfterPromptOverlay').hidden = false;
@@ -9550,7 +9567,7 @@
     const nudges = [];
     const activeShoots = state.shoots.filter(s => !s.archived);
 
-    const moodboardPendingCount = activeShoots.filter(s => !s.moodboardComplete).length;
+    const moodboardPendingCount = activeShoots.filter(moodboardPending).length;
     if (moodboardPendingCount === 1) nudges.push('A shoot still needs a mood board!');
     else if (moodboardPendingCount === 2) nudges.push('A couple of shoots still need mood boards!');
     else if (moodboardPendingCount > 2) nudges.push(`${moodboardPendingCount} shoots still need mood boards!`);
