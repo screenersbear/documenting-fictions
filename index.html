@@ -240,7 +240,7 @@
         <button type="button" class="icon-btn share-shoot-btn" id="shareShootBtn" aria-label="Share as PDF" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
         </button>
-        <button class="icon-btn close-btn" data-close="shoot">&times;</button>
+        <button class="icon-btn close-btn" data-close="shoot"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     </div>
     <button type="button" class="enter-shoot-mode-btn" id="enterShootModeBtn" hidden>shoot mode</button>
@@ -304,10 +304,10 @@
         </label>
         <div class="time-range-row">
           <label>Start time
-            <input type="time" id="shootStartTime" />
+            <input type="time" id="shootStartTime" step="1800" />
           </label>
           <label>End time
-            <input type="time" id="shootEndTime" />
+            <input type="time" id="shootEndTime" step="1800" />
           </label>
         </div>
         <label>Location
@@ -452,7 +452,7 @@
   <div class="modal rounded-modal">
     <div class="modal-header">
       <h2 id="expandFieldTitle"></h2>
-      <button class="icon-btn close-btn" id="expandFieldCloseBtn">&times;</button>
+      <button class="icon-btn close-btn" id="expandFieldCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <textarea id="expandFieldTextarea" rows="12"></textarea>
     <button type="button" class="primary" id="expandFieldOkBtn">Okay</button>
@@ -468,7 +468,7 @@
   <div class="modal rounded-modal">
     <div class="modal-header">
       <h2 id="photographerModalTitle">Photographer information</h2>
-      <button type="button" class="icon-btn close-btn" id="photographerCloseBtn">&times;</button>
+      <button type="button" class="icon-btn close-btn" id="photographerCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <p class="field-hint" id="photographerIntroText" hidden>
       This gets referenced on your call sheets. Leave anything blank if you'd
@@ -505,7 +505,7 @@
   <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Storage usage</h2>
-      <button type="button" class="icon-btn close-btn" id="storageUsageCloseBtn">&times;</button>
+      <button type="button" class="icon-btn close-btn" id="storageUsageCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <p class="field-hint">Roughly how much space this app and everything you've added to it — photos especially — are taking up on your phone.</p>
     <div id="storageUsageBody"></div>
@@ -516,7 +516,7 @@
   <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Talent</h2>
-      <button class="icon-btn close-btn" data-close="talent">&times;</button>
+      <button class="icon-btn close-btn" data-close="talent"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div id="talentForm">
       <label>Returning talent
@@ -543,7 +543,7 @@
   <div class="modal rounded-modal team-member-modal">
     <div class="modal-header">
       <h2>Team Member</h2>
-      <button class="icon-btn close-btn" data-close="teamMember">&times;</button>
+      <button class="icon-btn close-btn" data-close="teamMember"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div id="teamMemberForm">
       <label>Returning team member
@@ -571,7 +571,7 @@
   <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Location</h2>
-      <button class="icon-btn close-btn" data-close="location">&times;</button>
+      <button class="icon-btn close-btn" data-close="location"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div id="locationForm">
       <label>Past locations
@@ -862,7 +862,7 @@
   <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Manage Locations</h2>
-      <button class="icon-btn close-btn" data-close="manageLocations">&times;</button>
+      <button class="icon-btn close-btn" data-close="manageLocations"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <p class="field-hint">Remove a location to stop it from showing up as a quick pick — it won't change any shoot that already used it.</p>
     <div id="manageLocationsList"></div>
@@ -874,7 +874,7 @@
   <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Manage Team Members</h2>
-      <button class="icon-btn close-btn" data-close="manageTeamMembers">&times;</button>
+      <button class="icon-btn close-btn" data-close="manageTeamMembers"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <p class="field-hint">Remove a name to stop it from showing up as a quick pick — it won't change any shoot that already used it.</p>
     <div id="manageTeamMembersList"></div>
@@ -886,7 +886,7 @@
   <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Manage Talents</h2>
-      <button class="icon-btn close-btn" data-close="manageTalents">&times;</button>
+      <button class="icon-btn close-btn" data-close="manageTalents"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <p class="field-hint">Remove a name to stop it from showing up as a quick pick — it won't change any shoot that already used it.</p>
     <div id="manageTalentsList"></div>
@@ -898,7 +898,7 @@
   <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Manage Lighting Setups</h2>
-      <button class="icon-btn close-btn" data-close="manageLightingSetups">&times;</button>
+      <button class="icon-btn close-btn" data-close="manageLightingSetups"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <p class="field-hint">Remove a setup to stop it from showing up as a quick pick — it won't change any shoot that already used it.</p>
     <div id="manageLightingSetupsList"></div>
@@ -910,7 +910,7 @@
   <div class="modal region-country-popup-modal">
     <div class="modal-header">
       <h2 id="regionCountryPopupTitle">Country</h2>
-      <button class="icon-btn close-btn" data-close="regionCountryPopup">&times;</button>
+      <button class="icon-btn close-btn" data-close="regionCountryPopup"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div class="stats-legend" id="regionCountryPopupList"></div>
   </div>
@@ -921,7 +921,7 @@
   <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Frameworks</h2>
-      <button class="icon-btn close-btn" data-close="frameworks">&times;</button>
+      <button class="icon-btn close-btn" data-close="frameworks"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div id="frameworksBody"></div>
     <form id="newFrameworkForm" class="quick-add-relationship">
@@ -936,7 +936,7 @@
   <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Shoot Categories</h2>
-      <button class="icon-btn close-btn" data-close="categoryVisibility">&times;</button>
+      <button class="icon-btn close-btn" data-close="categoryVisibility"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <p class="field-hint">Choose which categories show up as filters on the Shoots and Archive tabs.</p>
     <div class="tag-group" id="categoryVisibilityList"></div>
@@ -946,7 +946,7 @@
 <!-- ============ IMAGE VIEWER (mood board full view) ============ -->
 <div id="imageViewerOverlay" class="image-viewer-overlay" hidden>
   <div class="image-viewer-top">
-    <button type="button" class="image-viewer-close" id="closeImageViewer">&times;</button>
+    <button type="button" class="image-viewer-close" id="closeImageViewer"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
   </div>
   <div class="image-viewer-stage" id="imageViewerStage">
     <img id="imageViewerImg" src="" alt="" class="image-viewer-img" />
@@ -970,7 +970,7 @@
   <div class="modal crop-modal">
     <div class="modal-header">
       <h2 id="cropModalTitle">Set project photo</h2>
-      <button type="button" class="icon-btn close-btn" id="cropCloseBtn">&times;</button>
+      <button type="button" class="icon-btn close-btn" id="cropCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <p class="field-hint">Drag to reposition, pinch or use the slider to zoom</p>
     <div class="crop-stage" id="cropStage">
@@ -990,7 +990,7 @@
   <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Share as PDF</h2>
-      <button type="button" class="icon-btn close-btn" id="pdfSectionsCloseBtn">&times;</button>
+      <button type="button" class="icon-btn close-btn" id="pdfSectionsCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <p class="field-hint">Choose which sections to include.</p>
     <div class="pdf-sections-list">
@@ -1010,7 +1010,7 @@
   <div class="modal pdf-preview-modal">
     <div class="modal-header">
       <h2>Shoot PDF</h2>
-      <button type="button" class="icon-btn close-btn" id="pdfPreviewCloseBtn">&times;</button>
+      <button type="button" class="icon-btn close-btn" id="pdfPreviewCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <iframe id="pdfPreviewFrame" class="pdf-preview-frame" title="PDF preview"></iframe>
     <button type="button" class="primary" id="pdfPreviewShareBtn">Share</button>
@@ -1141,7 +1141,7 @@
   <div class="modal rounded-modal">
     <div class="modal-header">
       <h2>Select shoots to export</h2>
-      <button type="button" class="icon-btn close-btn" id="exportPreviousPickerCloseBtn">&times;</button>
+      <button type="button" class="icon-btn close-btn" id="exportPreviousPickerCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <p class="field-hint">Choose which months to include — everything shot in a checked month goes into the archive.</p>
     <div id="exportPreviousPickerList" class="export-picker-list"></div>
@@ -1194,7 +1194,7 @@
   <div class="stats-detail-panel">
     <div class="stats-detail-header">
       <h2 id="statsDetailTitle"></h2>
-      <button type="button" class="icon-btn close-btn" id="statsDetailCloseBtn">&times;</button>
+      <button type="button" class="icon-btn close-btn" id="statsDetailCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div id="statsDetailList" class="mini-list"></div>
     <p class="empty-state" id="statsDetailEmpty" hidden>No shoots in this category.</p>
@@ -1206,7 +1206,7 @@
   <div class="stat-box-detail-modal">
     <div class="modal-header">
       <h2 id="statBoxDetailTitle"></h2>
-      <button type="button" class="icon-btn close-btn" id="statBoxDetailCloseBtn">&times;</button>
+      <button type="button" class="icon-btn close-btn" id="statBoxDetailCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div id="statBoxDetailList" class="mini-list"></div>
     <p class="empty-state" id="statBoxDetailEmpty" hidden>No shoots here yet.</p>
@@ -1222,7 +1222,7 @@
         <p class="shoot-mode-eyebrow">Shoot mode</p>
         <h2 id="shootModeTitle"></h2>
       </div>
-      <button type="button" class="icon-btn close-btn" id="shootModeExitBtn" aria-label="Exit shoot mode">&times;</button>
+      <button type="button" class="icon-btn close-btn" id="shootModeExitBtn" aria-label="Exit shoot mode"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div class="shoot-mode-body">
       <h3 class="shoot-mode-section-heading heading-yellow">Quick review</h3>
@@ -1259,7 +1259,7 @@
         <p class="shoot-mode-eyebrow">Quick review</p>
         <h2 id="shootModeReviewTitle"></h2>
       </div>
-      <button type="button" class="icon-btn close-btn" id="shootModeReviewCloseBtn" aria-label="Close">&times;</button>
+      <button type="button" class="icon-btn close-btn" id="shootModeReviewCloseBtn" aria-label="Close"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div class="shoot-mode-body" id="shootModeReviewBody"></div>
     <button type="button" class="primary shoot-mode-bottom-cta" id="shootModeReviewOkBtn">OK</button>
@@ -1284,7 +1284,7 @@
       <h2 id="archiveModeTitle"></h2>
       <div class="archive-mode-header-actions">
         <button type="button" class="archive-mode-details-btn" id="archiveModeShootDetailsBtn">shoot details</button>
-        <button type="button" class="icon-btn close-btn" id="archiveModeExitBtn" aria-label="Exit archive mode">&times;</button>
+        <button type="button" class="icon-btn close-btn" id="archiveModeExitBtn" aria-label="Exit archive mode"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     </div>
     <div class="shoot-mode-body" id="archiveModeBody"></div>
@@ -1385,7 +1385,7 @@
   <div class="modal">
     <div class="modal-header">
       <h2>Journal Entry</h2>
-      <button class="icon-btn close-btn" data-close="journal">&times;</button>
+      <button class="icon-btn close-btn" data-close="journal"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
 
     <div id="journalViewMode" hidden>
@@ -1461,7 +1461,7 @@
   <div class="modal rounded-modal journal-toc-modal">
     <div class="modal-header">
       <h2>Table of contents</h2>
-      <button class="icon-btn close-btn" data-close="journalToc">&times;</button>
+      <button class="icon-btn close-btn" data-close="journalToc"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div class="journal-toc-scroll">
       <div id="journalTocList"></div>

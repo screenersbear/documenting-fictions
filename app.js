@@ -1572,20 +1572,33 @@
   // stayed listed until you closed and reopened the popup by hand.
   let activeStatBoxKey = null;
 
-  let statBoxScrollLockY = 0;
+  // Reference-counted rather than a single on/off flag — the stat box detail
+  // popup and the shoot modal can be open at once (a shoot opened from a stat
+  // box list stacks on top rather than closing it first, see the z-index
+  // comment above), so the second lock must not stomp the first one's saved
+  // scroll position, and the page should only actually unlock once both are
+  // closed again.
+  let bodyScrollLockY = 0;
+  let bodyScrollLockCount = 0;
   function lockBodyScroll() {
-    statBoxScrollLockY = window.scrollY;
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${statBoxScrollLockY}px`;
-    document.body.style.left = '0';
-    document.body.style.right = '0';
+    if (bodyScrollLockCount === 0) {
+      bodyScrollLockY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${bodyScrollLockY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+    }
+    bodyScrollLockCount++;
   }
   function unlockBodyScroll() {
-    document.body.style.position = '';
-    document.body.style.top = '';
-    document.body.style.left = '';
-    document.body.style.right = '';
-    window.scrollTo(0, statBoxScrollLockY);
+    bodyScrollLockCount = Math.max(0, bodyScrollLockCount - 1);
+    if (bodyScrollLockCount === 0) {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      window.scrollTo(0, bodyScrollLockY);
+    }
   }
 
   // Split out from openStatBoxDetail so a later refresh (see closeShootModal)
@@ -2516,7 +2529,7 @@
         const thumb = document.createElement('div');
         thumb.className = 'moodboard-thumb';
         thumb.innerHTML = `<img src="${img.src}" alt="" data-idx="${idx}" />` +
-          (editable ? `<button type="button" class="final-thumb-delete" data-idx="${idx}">&times;</button>` : '');
+          (editable ? `<button type="button" class="final-thumb-delete" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>` : '');
         grid.appendChild(thumb);
       });
       if (editable) {
@@ -3545,7 +3558,7 @@
             }).join('')}
           </div>
         ` : ''}
-        <button type="button" class="talent-summary-delete" data-idx="${idx}">&times;</button>
+        <button type="button" class="talent-summary-delete" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     `;
     }).join('');
@@ -3661,7 +3674,7 @@
     container.innerHTML = samples.map((t, idx) => `
       <div class="manage-location-row">
         <span>${escapeHtml(t.name)}</span>
-        <button type="button" class="delete-manage-location" data-idx="${idx}">&times;</button>
+        <button type="button" class="delete-manage-location" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     `).join('');
     container.querySelectorAll('.delete-manage-location').forEach(btn => {
@@ -3692,7 +3705,7 @@
           ${SOCIAL_PLATFORM_OPTIONS.map(([val, label]) => `<option value="${val}" ${sh.platform === val ? 'selected' : ''}>${label}</option>`).join('')}
         </select>
         <input type="text" class="social-handle-input" data-handle-idx="${shIdx}" placeholder="@handle" value="${escapeHtml(sh.handle || '@')}" />
-        <button type="button" class="delete-social-handle" data-handle-idx="${shIdx}">&times;</button>
+        <button type="button" class="delete-social-handle" data-handle-idx="${shIdx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     `).join('');
     container.querySelectorAll('.social-handle-platform').forEach(sel => {
@@ -3852,7 +3865,7 @@
           <span>${escapeHtml(roleLabel)}</span>
           ${hasText(tm.socialHandle) ? `<span>${escapeHtml(platformLabel)}: ${escapeHtml(tm.socialHandle)}</span>` : ''}
         </div>
-        <button type="button" class="talent-summary-delete" data-idx="${idx}">&times;</button>
+        <button type="button" class="talent-summary-delete" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     `;
     }).join('');
@@ -3954,7 +3967,7 @@
     container.innerHTML = samples.map((tm, idx) => `
       <div class="manage-location-row">
         <span>${escapeHtml(tm.name)}</span>
-        <button type="button" class="delete-manage-location" data-idx="${idx}">&times;</button>
+        <button type="button" class="delete-manage-location" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     `).join('');
     container.querySelectorAll('.delete-manage-location').forEach(btn => {
@@ -4156,7 +4169,7 @@
         <button type="button" class="shot-drag-handle" aria-label="Drag to reorder shot" tabindex="-1">&#8942;</button>
         <input type="checkbox" class="shot-check" data-idx="${item.idx}" ${item.checked ? 'checked' : ''} />
         <textarea class="shot-text" data-idx="${item.idx}" rows="1" placeholder="Describe the shot">${escapeHtml(item.text || '')}</textarea>
-        <button type="button" class="delete-shot" data-idx="${item.idx}">&times;</button>
+        <button type="button" class="delete-shot" data-idx="${item.idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     `).join('');
 
@@ -4456,7 +4469,7 @@
     container.innerHTML = samples.map((item, idx) => `
       <div class="manage-location-row">
         <span>${escapeHtml(item.name)}</span>
-        <button type="button" class="delete-manage-location" data-idx="${idx}">&times;</button>
+        <button type="button" class="delete-manage-location" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     `).join('');
     container.querySelectorAll('.delete-manage-location').forEach(btn => {
@@ -4498,7 +4511,7 @@
           <button type="button" class="lighting-setup-collapse-toggle" data-idx="${idx}" aria-label="Collapse lighting setup" aria-expanded="${collapsed ? 'false' : 'true'}">
             ${COLLAPSE_ARROW_SVG}
           </button>
-          <button type="button" class="delete-lighting-setup" data-idx="${idx}">&times;</button>
+          <button type="button" class="delete-lighting-setup" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
         </div>
         <div class="lighting-setup-card-body"${collapsed ? ' hidden' : ''}>
           <input type="text" class="lighting-setup-characteristics" data-idx="${idx}" placeholder="mood, quality, style, etc." aria-label="Characteristics" value="${escapeHtml(item.characteristics || '')}" />
@@ -4720,7 +4733,7 @@
     container.innerHTML = samples.map((loc, idx) => `
       <div class="manage-location-row">
         <span>${escapeHtml(formatLocationDisplay(loc))}</span>
-        <button type="button" class="delete-manage-location" data-idx="${idx}">&times;</button>
+        <button type="button" class="delete-manage-location" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     `).join('');
     container.querySelectorAll('.delete-manage-location').forEach(btn => {
@@ -4752,7 +4765,7 @@
       <div class="reference-row">
         <input type="text" class="reference-input" data-idx="${idx}" value="${escapeHtml(url)}" placeholder="https://…" />
         <button type="button" class="reference-open" data-idx="${idx}" aria-label="Open link">&#8599;</button>
-        <button type="button" class="delete-reference" data-idx="${idx}">&times;</button>
+        <button type="button" class="delete-reference" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     `).join('');
 
@@ -4785,13 +4798,30 @@
   });
 
   // ---------- Time range (default end time to 2h after start) ----------
+  // The step="1800" attribute keeps a native wheel/spinner picker to :00/:30
+  // stops, but a typed-in value (desktop keyboard entry, or a pasted value)
+  // can still land off-step — rounding here on commit guarantees the shoot
+  // never actually saves an odd time like 2:43 regardless of how it was entered.
+  function roundToNearestHalfHour(timeStr) {
+    const [h, m] = timeStr.split(':').map(Number);
+    const totalMinutes = ((Math.round((h * 60 + m) / 30) * 30) + 1440) % 1440;
+    return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
+  }
+
   document.getElementById('shootStartTime').addEventListener('change', () => {
     const startInput = document.getElementById('shootStartTime');
     const endInput = document.getElementById('shootEndTime');
     if (!startInput.value) return;
+    startInput.value = roundToNearestHalfHour(startInput.value);
     const [h, m] = startInput.value.split(':').map(Number);
     const endH = (h + 2) % 24;
     endInput.value = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  });
+
+  document.getElementById('shootEndTime').addEventListener('change', () => {
+    const endInput = document.getElementById('shootEndTime');
+    if (!endInput.value) return;
+    endInput.value = roundToNearestHalfHour(endInput.value);
   });
 
   // ---------- Tiered concept fields (narrative vs commercial categories) ----------
@@ -5428,6 +5458,11 @@
     // Everything above is populated by now — a saved field should read as
     // written the instant the modal opens, not only after it's touched again.
     syncAllShootFormFields();
+    // Without this, a swipe that starts anywhere in the modal that isn't
+    // itself a scrollable element (e.g. the header, or blank space around a
+    // short pane) can fall through and scroll the page underneath, which is
+    // still there and still scrollable behind the fixed overlay.
+    if (shootModalOverlay.hidden) lockBodyScroll();
     shootModalOverlay.hidden = false;
     if (!s) maybeShowStatusSwatchIntro();
 
@@ -5465,7 +5500,7 @@
         item.innerHTML = `
           <div class="moodboard-thumb">
             <img src="${img.src}" alt="" data-idx="${idx}" />
-            <button type="button" class="moodboard-thumb-delete" data-idx="${idx}">&times;</button>
+            <button type="button" class="moodboard-thumb-delete" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
           </div>
         `;
         grid.appendChild(item);
@@ -5891,7 +5926,7 @@
       images.forEach((img, idx) => {
         const thumb = document.createElement('div');
         thumb.className = 'moodboard-thumb';
-        thumb.innerHTML = `<img src="${img.src}" alt="" data-idx="${idx}" /><button type="button" class="final-thumb-delete" data-idx="${idx}">&times;</button>`;
+        thumb.innerHTML = `<img src="${img.src}" alt="" data-idx="${idx}" /><button type="button" class="final-thumb-delete" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>`;
         grid.appendChild(thumb);
       });
       grid.querySelectorAll('.final-thumb-delete').forEach(btn => {
@@ -6084,6 +6119,7 @@
         if (t.id) idbDeleteImages(talentPhotoKey(currentShootId, t.id)).catch(() => {});
       });
     }
+    if (!shootModalOverlay.hidden) unlockBodyScroll();
     shootModalOverlay.hidden = true;
     editingShootId = null;
     renderAll();
@@ -6145,6 +6181,7 @@
     if (!confirm('Delete this shoot? This can\'t be undone.')) return;
     clearTimeout(shootSaveTimer);
     deleteShootById(currentShootId);
+    if (!shootModalOverlay.hidden) unlockBodyScroll();
     shootModalOverlay.hidden = true;
     editingShootId = null;
     renderAll();
@@ -6160,6 +6197,24 @@
     if (editingShootId) openPdfSectionsModal(editingShootId);
   });
 
+  // A pane track (kebab-menu slide-over, app menu) is a horizontal row of
+  // same-width panes moved via transform, one shown at a time — as a flex
+  // row its own height still auto-sizes to the TALLEST pane regardless of
+  // which one is actually showing, so switching to a shorter pane (e.g. the
+  // theme picker vs the full app menu list) left blank space below its
+  // content, same underlying issue as the Stats carousel. Call this after
+  // every classList change that shows a different pane.
+  function syncPaneTrackHeight(track) {
+    const panes = [...track.children].filter(el => el.classList.contains('options-pane'));
+    let idx = 0;
+    if (track.classList.contains('show-fifth')) idx = 4;
+    else if (track.classList.contains('show-fourth')) idx = 3;
+    else if (track.classList.contains('show-third')) idx = 2;
+    else if (track.classList.contains('show-second')) idx = 1;
+    const active = panes[idx];
+    if (active) track.style.height = active.offsetHeight + 'px';
+  }
+
   // ---------- Shoot options (row/card kebab menu) ----------
   const shootOptionsOverlay = document.getElementById('shootOptionsOverlay');
   const shootOptionsPaneTrack = document.getElementById('shootOptionsPaneTrack');
@@ -6174,6 +6229,7 @@
     // to "reveal") so it can't stack with the transform and misalign panes.
     shootOptionsOverlay.querySelector('.modal').scrollLeft = 0;
     shootOptionsOverlay.hidden = false;
+    syncPaneTrackHeight(shootOptionsPaneTrack);
   }
 
   function closeShootOptions() {
@@ -6202,11 +6258,13 @@
     const input = document.getElementById('shootTitleRenameInput');
     input.value = s ? (s.title || '') : '';
     shootOptionsPaneTrack.classList.add('show-third');
+    syncPaneTrackHeight(shootOptionsPaneTrack);
     focusPaneInput(input);
   });
 
   document.getElementById('titleOptionsBackBtn').addEventListener('click', () => {
     shootOptionsPaneTrack.classList.remove('show-third');
+    syncPaneTrackHeight(shootOptionsPaneTrack);
   });
 
   function saveTitleOption() {
@@ -6233,6 +6291,7 @@
     const grid = document.getElementById('projectPhotoPickerGrid');
     grid.innerHTML = '';
     shootOptionsPaneTrack.classList.add('show-fourth');
+    syncPaneTrackHeight(shootOptionsPaneTrack);
     if (!id) return;
     Promise.all([idbGetImages(id), idbGetImages(finalImagesKey(id))]).then(([moodboardImages, finalImages]) => {
       const allImages = moodboardImages.concat(finalImages);
@@ -6247,11 +6306,16 @@
         });
         grid.appendChild(thumb);
       });
+      // The grid's own contents load async, and its height can change once
+      // photos land (the grid scrolls internally past a cap, but "no photos
+      // yet" vs a full row is still a real height difference).
+      syncPaneTrackHeight(shootOptionsPaneTrack);
     }).catch(() => { grid.innerHTML = ''; });
   });
 
   document.getElementById('projectPhotoBackBtn').addEventListener('click', () => {
     shootOptionsPaneTrack.classList.remove('show-fourth');
+    syncPaneTrackHeight(shootOptionsPaneTrack);
   });
 
   document.getElementById('addProjectPhotoFromDeviceBtn').addEventListener('click', () => {
@@ -6276,11 +6340,13 @@
     const input = document.getElementById('shootDeadlineRenameInput');
     input.value = s ? (s.deadline || '') : '';
     shootOptionsPaneTrack.classList.add('show-fifth');
+    syncPaneTrackHeight(shootOptionsPaneTrack);
     focusPaneInput(input);
   });
 
   document.getElementById('deadlineOptionsBackBtn').addEventListener('click', () => {
     shootOptionsPaneTrack.classList.remove('show-fifth');
+    syncPaneTrackHeight(shootOptionsPaneTrack);
   });
 
   function saveDeadlineOption() {
@@ -6335,10 +6401,12 @@
     const s = state.shoots.find(x => x.id === optionsShootId);
     renderStatusOptionsList(s ? (s.status || 'prospect') : 'prospect');
     shootOptionsPaneTrack.classList.add('show-second');
+    syncPaneTrackHeight(shootOptionsPaneTrack);
   });
 
   document.getElementById('statusOptionsBackBtn').addEventListener('click', () => {
     shootOptionsPaneTrack.classList.remove('show-second');
+    syncPaneTrackHeight(shootOptionsPaneTrack);
   });
 
   document.getElementById('statusOptionsList').addEventListener('click', (e) => {
@@ -6374,6 +6442,7 @@
     if (!confirm('Delete this shoot? This can\'t be undone.')) return;
     if (id === currentShootId && !shootModalOverlay.hidden) {
       clearTimeout(shootSaveTimer);
+      unlockBodyScroll();
       shootModalOverlay.hidden = true;
       editingShootId = null;
     }
@@ -7610,6 +7679,7 @@
       state.shoots[idx] = shoot;
     }
     saveState();
+    if (!shootModalOverlay.hidden) unlockBodyScroll();
     shootModalOverlay.hidden = true;
     editingShootId = null;
     renderAll();
@@ -7624,6 +7694,7 @@
     const idx = state.shoots.findIndex(x => x.id === currentShootId);
     if (idx !== -1) state.shoots[idx] = { ...state.shoots[idx], ...data };
     saveState();
+    if (!shootModalOverlay.hidden) unlockBodyScroll();
     shootModalOverlay.hidden = true;
     editingShootId = null;
     renderAll();
@@ -7641,13 +7712,13 @@
       <div class="framework-block" data-id="${fw.id}">
         <div class="relationship-row">
           <input type="text" class="relationship-name-input framework-name-input" data-id="${fw.id}" value="${escapeHtml(fw.name)}" />
-          <button type="button" class="delete-relationship delete-framework" data-id="${fw.id}">&times;</button>
+          <button type="button" class="delete-relationship delete-framework" data-id="${fw.id}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
         </div>
         <div class="framework-tags-list">
           ${fw.tags.map((tag, idx) => `
             <div class="relationship-row">
               <input type="text" class="relationship-name-input framework-tag-input" data-fw="${fw.id}" data-idx="${idx}" value="${escapeHtml(tag)}" />
-              <button type="button" class="delete-relationship delete-framework-tag" data-fw="${fw.id}" data-idx="${idx}">&times;</button>
+              <button type="button" class="delete-relationship delete-framework-tag" data-fw="${fw.id}" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
             </div>
           `).join('')}
         </div>
@@ -7815,6 +7886,7 @@
 
   document.getElementById('appMenuBtn').addEventListener('click', () => {
     appMenuOverlay.hidden = false;
+    syncPaneTrackHeight(appMenuPaneTrack);
   });
 
   document.getElementById('notificationBellBtn').addEventListener('click', () => {
@@ -7838,10 +7910,12 @@
     updateDisplayChoiceHighlight();
     appMenuPaneTrack.classList.remove('show-third');
     appMenuPaneTrack.classList.add('show-second');
+    syncPaneTrackHeight(appMenuPaneTrack);
   });
 
   document.getElementById('displayOptionsBackBtn').addEventListener('click', () => {
     appMenuPaneTrack.classList.remove('show-second');
+    syncPaneTrackHeight(appMenuPaneTrack);
   });
 
   document.getElementById('displayModeTalentBtn').addEventListener('click', () => {
@@ -7879,10 +7953,12 @@
     updateThemeChoiceHighlight();
     appMenuPaneTrack.classList.remove('show-second');
     appMenuPaneTrack.classList.add('show-third');
+    syncPaneTrackHeight(appMenuPaneTrack);
   });
 
   document.getElementById('themeOptionsBackBtn').addEventListener('click', () => {
     appMenuPaneTrack.classList.remove('show-third');
+    syncPaneTrackHeight(appMenuPaneTrack);
   });
 
   // The theme is already saved and applied the moment it's tapped, so this just
@@ -8522,7 +8598,23 @@
     statsDotsEl.innerHTML = STATS_PAGES.map((p, i) => `<span class="stats-dot ${i === idx ? 'active' : ''}"></span>`).join('');
   }
 
-  statsCarousel.addEventListener('scroll', () => renderStatsDots(), { passive: true });
+  // A horizontal flex row's own height, left to auto, always matches its
+  // TALLEST child regardless of which one is actually scrolled into view —
+  // .stats-carousel's align-items:flex-start stops a shorter page from
+  // being stretched to fill that height, but the row itself still needs
+  // this to actually shrink/grow with whichever page is currently showing,
+  // or scrolling past a short page's own content would still reveal blank
+  // page space trailing behind it, sized to match the tallest page.
+  function updateStatsCarouselHeight() {
+    const idx = statsCarousel.clientWidth ? Math.round(statsCarousel.scrollLeft / statsCarousel.clientWidth) : 0;
+    const activeEl = statsCarousel.querySelectorAll('.stats-page')[idx];
+    if (activeEl) statsCarousel.style.height = activeEl.offsetHeight + 'px';
+  }
+
+  statsCarousel.addEventListener('scroll', () => {
+    renderStatsDots();
+    updateStatsCarouselHeight();
+  }, { passive: true });
 
   // Delegated (survives renderStats() rebuilding the carousel's innerHTML on
   // every year-filter change, which destroys and recreates the zoom buttons)
@@ -8603,6 +8695,7 @@
     });
     if (STATS_PAGES.some(p => p.custom)) renderRegionsMap();
     renderStatsDots();
+    updateStatsCarouselHeight();
   }
 
   function openStatsDetail(pageKey, sliceKey) {
@@ -8697,7 +8790,7 @@
         <button type="button" class="shot-drag-handle" aria-label="Drag to reorder shot" tabindex="-1">&#8942;</button>
         <input type="checkbox" class="shoot-mode-shot-check" data-idx="${idx}" ${item.checked ? 'checked' : ''} />
         <textarea class="shot-text" data-idx="${idx}" rows="1" placeholder="Describe the shot">${escapeHtml(item.text || '')}</textarea>
-        <button type="button" class="delete-shot" data-idx="${idx}">&times;</button>
+        <button type="button" class="delete-shot" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     `).join('');
     document.getElementById('shootModeShotsEmpty').hidden = shots.length !== 0;

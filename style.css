@@ -340,6 +340,19 @@ h1, h2, h3 {
   display: none;
 }
 
+/* Shared × icon for every circular close/delete button. An inline SVG
+   centers exactly inside a flex-centered circle regardless of font/platform
+   — text glyphs (×, &times;) carry their own per-font vertical bias that
+   canvas-measured translateY nudges never matched reliably across real
+   devices, so this replaces that glyph everywhere it was used inside a
+   circle. Sized in em so it scales with each button's own font-size. */
+.x-icon {
+  width: 0.6em;
+  height: 0.6em;
+  display: block;
+  flex-shrink: 0;
+}
+
 /* Filled rather than a bare glyph, and a size up on the '+' it sits opposite:
    this is the only way out of a notebook and back to the picker, so it has to
    read as a button at a glance instead of as punctuation next to the title. */
@@ -1770,13 +1783,6 @@ h2.status-group-heading.heading-navy {
   width: 32px;
   height: 32px;
   font-size: 23px;
-  /* Flex-centering (inherited from .icon-btn) only centers this button's
-     line box — the × glyph itself sits visibly above true center in this
-     bold display font (measured on a canvas: ~8% of font-size), so it
-     still reads as off-center inside the circle without this nudge. em,
-     not a fixed px, so it stays correct across every .close-btn variant's
-     own font-size override (e.g. .shoot-modal-header .close-btn's 28px). */
-  transform: translateY(0.083em);
 }
 
 .share-shoot-btn {
@@ -2510,8 +2516,6 @@ h2.status-group-heading.heading-navy {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  /* Same × glyph nudge as .close-btn — see its comment. */
-  transform: translateY(0.083em);
 }
 
 .talent-summary-delete:active {
@@ -2593,7 +2597,6 @@ h2.status-group-heading.heading-navy {
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: translateY(0.03em);
 }
 
 /* ---- References (external link list) ---- */
@@ -2654,10 +2657,6 @@ h2.status-group-heading.heading-navy {
 .delete-manage-location {
   color: var(--red);
   font-size: 16px;
-  /* × glyph nudge — this pair inherits the app's body font (Courier), not
-     .close-btn's bold display font, and Courier's own bias measured much
-     smaller (~3% of font-size vs ~8%), so a lighter touch than .close-btn. */
-  transform: translateY(0.03em);
 }
 
 .manage-location-row {
@@ -2809,7 +2808,6 @@ h2.status-group-heading.heading-navy {
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: translateY(0.03em);
 }
 
 .modal-actions[hidden] {
@@ -3357,7 +3355,6 @@ h2.status-group-heading.heading-navy {
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: translateY(0.03em);
 }
 
 .quick-add-relationship {
@@ -4021,8 +4018,9 @@ h2.status-group-heading.heading-navy {
   display: flex;
   flex-shrink: 0;
   align-self: flex-start;
+  align-items: flex-start;
   width: 200%;
-  transition: transform 0.25s ease;
+  transition: transform 0.25s ease, height 0.2s ease;
 }
 
 .options-pane-track.show-second {
@@ -4235,12 +4233,24 @@ h2.status-group-heading.heading-navy {
 
 .stats-carousel {
   display: flex;
+  /* Without this, a flex row's default cross-axis stretch makes every page
+     exactly as tall as the tallest one — a short page (few categories)
+     would still be full of blank trailing space rather than ending where
+     its own content does. Paired with the JS height sync in renderStats/
+     renderStatsDots, which sets this element's own height to match
+     whichever page is actually in view (its natural height, now that this
+     stops it being stretched) — without that JS half, the row's own
+     auto height still equals the tallest page regardless of this rule,
+     since align-items only controls whether children fill that height,
+     not what the height itself is. */
+  align-items: flex-start;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
   margin: 0 -16px;
+  transition: height 0.2s ease;
 }
 
 .stats-carousel::-webkit-scrollbar {
