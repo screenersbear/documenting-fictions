@@ -49,6 +49,9 @@ html, body {
   color: var(--text);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  /* No rubber-band past the top or bottom of the page. Pull-to-refresh is its
+     own touch gesture (see setupPullToRefresh) and doesn't rely on it. */
+  overscroll-behavior-y: none;
 }
 
 /* Pull-to-refresh's rubber-band overscroll reveals whatever sits behind the
@@ -4140,36 +4143,33 @@ h2.status-group-heading.heading-navy {
   display: none;
 }
 
+/* The carousel is a fixed window, not a scroller: nothing inside it ever
+   scrolls by touch, so a horizontal drag can't drag the next page partway
+   into view, and it can't scroll vertically inside its own box either (that
+   would reveal blank space below a short page). Pages sit in a track that
+   slides by whole pages, one at a time, when JS registers a clear swipe (see
+   setupStatsSwipe). touch-action leaves vertical panning to the page. */
 .stats-carousel {
-  display: flex;
-  /* Without this, a flex row's default cross-axis stretch makes every page
-     exactly as tall as the tallest one — a short page (few categories)
-     would still be full of blank trailing space rather than ending where
-     its own content does. Paired with the JS height sync in renderStats/
-     renderStatsDots, which sets this element's own height to match
-     whichever page is actually in view (its natural height, now that this
-     stops it being stretched) — without that JS half, the row's own
-     auto height still equals the tallest page regardless of this rule,
-     since align-items only controls whether children fill that height,
-     not what the height itself is. */
-  align-items: flex-start;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  overflow: hidden;
+  touch-action: pan-y;
   margin: 0 -16px;
   transition: height 0.2s ease;
 }
 
-.stats-carousel::-webkit-scrollbar {
-  display: none;
+.stats-track {
+  display: flex;
+  /* Without this, a flex row's default cross-axis stretch makes every page
+     exactly as tall as the tallest one — a short page (few categories)
+     would still be full of blank trailing space rather than ending where
+     its own content does. The carousel's own height is set in JS to the
+     page in view. */
+  align-items: flex-start;
+  transition: transform 0.3s ease;
 }
 
 .stats-page {
   flex: 0 0 100%;
   width: 100%;
-  scroll-snap-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;

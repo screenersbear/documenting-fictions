@@ -8553,28 +8553,80 @@
   const statsDotsEl = document.getElementById('statsDots');
   const statsYearFiltersEl = document.getElementById('statsYearFilters');
 
+  // Which page is showing. Tracked directly rather than read back off a
+  // scroll position, since the carousel never scrolls — pages slide by whole
+  // steps via the track's transform.
+  let statsPageIdx = 0;
+  let statsSlideLocked = false;
+
   function renderStatsDots() {
-    const idx = statsCarousel.clientWidth ? Math.round(statsCarousel.scrollLeft / statsCarousel.clientWidth) : 0;
-    statsDotsEl.innerHTML = STATS_PAGES.map((p, i) => `<span class="stats-dot ${i === idx ? 'active' : ''}"></span>`).join('');
+    statsDotsEl.innerHTML = STATS_PAGES.map((p, i) => `<span class="stats-dot ${i === statsPageIdx ? 'active' : ''}"></span>`).join('');
   }
 
   // A horizontal flex row's own height, left to auto, always matches its
-  // TALLEST child regardless of which one is actually scrolled into view —
-  // .stats-carousel's align-items:flex-start stops a shorter page from
-  // being stretched to fill that height, but the row itself still needs
-  // this to actually shrink/grow with whichever page is currently showing,
-  // or scrolling past a short page's own content would still reveal blank
-  // page space trailing behind it, sized to match the tallest page.
+  // TALLEST child regardless of which one is actually in view — the track's
+  // align-items:flex-start stops a shorter page from being stretched to fill
+  // that height, but the carousel itself still needs this to shrink/grow with
+  // whichever page is showing, or a short page would sit above blank space
+  // sized to the tallest one.
   function updateStatsCarouselHeight() {
-    const idx = statsCarousel.clientWidth ? Math.round(statsCarousel.scrollLeft / statsCarousel.clientWidth) : 0;
-    const activeEl = statsCarousel.querySelectorAll('.stats-page')[idx];
+    const activeEl = statsCarousel.querySelectorAll('.stats-page')[statsPageIdx];
     if (activeEl) statsCarousel.style.height = activeEl.offsetHeight + 'px';
   }
 
-  statsCarousel.addEventListener('scroll', () => {
+  function positionStatsTrack() {
+    const track = statsCarousel.querySelector('.stats-track');
+    if (track) track.style.transform = `translateX(${-statsPageIdx * 100}%)`;
+  }
+
+  function goToStatsPage(idx) {
+    const clamped = Math.max(0, Math.min(STATS_PAGES.length - 1, idx));
+    if (clamped === statsPageIdx) return;
+    statsPageIdx = clamped;
+    // One page per swipe: further swipes are ignored until this slide has
+    // landed, so a quick series of flicks can't run through several pages.
+    statsSlideLocked = true;
+    setTimeout(() => { statsSlideLocked = false; }, 350);
+    positionStatsTrack();
     renderStatsDots();
     updateStatsCarouselHeight();
-  }, { passive: true });
+  }
+
+  // A page only changes on a clear, mostly-horizontal swipe, judged when the
+  // finger lifts — the page never follows the finger sideways, so nothing
+  // from the next page slides partway into view. Same thresholds as the
+  // tab-to-tab swipe. The world map scrolls sideways on its own, so a swipe
+  // that starts on it only turns the page once the map is already at its
+  // edge in that direction (mirroring how a scroll would chain).
+  (function setupStatsSwipe() {
+    let startX = null;
+    let startY = null;
+    let mapEdges = null;
+
+    statsCarousel.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { startX = null; return; }
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      const map = e.target.closest('.world-map-scroll');
+      mapEdges = map
+        ? { atLeft: map.scrollLeft <= 1, atRight: map.scrollLeft + map.clientWidth >= map.scrollWidth - 1 }
+        : null;
+    }, { passive: true });
+
+    statsCarousel.addEventListener('touchend', (e) => {
+      if (startX === null) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      startX = null;
+      if (statsSlideLocked) return;
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      const dir = dx < 0 ? 1 : -1;
+      if (mapEdges && !(dir === 1 ? mapEdges.atRight : mapEdges.atLeft)) return;
+      goToStatsPage(statsPageIdx + dir);
+    }, { passive: true });
+
+    statsCarousel.addEventListener('touchcancel', () => { startX = null; }, { passive: true });
+  })();
 
   // Delegated (survives renderStats() rebuilding the carousel's innerHTML on
   // every year-filter change, which destroys and recreates the zoom buttons)
@@ -8621,7 +8673,6 @@
     // map). Switching to Stats always calls renderAll() after un-hiding the
     // view, so skipping it here just defers the work to the moment it matters.
     if (views.stats.hidden) return;
-    const prevScrollLeft = statsCarousel.scrollLeft;
     statsSliceFilters = {};
     renderStatsYearFilters();
     const funFactEl = document.getElementById('statsFunFact');
@@ -8631,8 +8682,9 @@
     const pages = STATS_PAGES.map(page => page.custom
       ? regionsPageHtml(buildRegionsStats())
       : renderStatsPage(page, page.build()));
-    statsCarousel.innerHTML = pages.map(p => p.html).join('');
-    statsCarousel.scrollLeft = prevScrollLeft;
+    // The track's transform is set inline on the fresh element, so a re-render
+    // (year filter, data change) keeps the page you're on without animating.
+    statsCarousel.innerHTML = `<div class="stats-track" style="transform:translateX(${-statsPageIdx * 100}%)">${pages.map(p => p.html).join('')}</div>`;
     statsCarousel.querySelectorAll('.pie-slice, .stats-legend-row').forEach(el => {
       el.addEventListener('click', () => {
         const pageKey = el.closest('.stats-page').dataset.key;
