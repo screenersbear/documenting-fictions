@@ -100,74 +100,13 @@
   <!-- ============ JOURNAL ============ -->
   <section id="view-journal" class="view" hidden>
     <header class="topbar">
-      <button type="button" class="journal-back-btn" id="journalBackBtn" aria-label="Back to notebooks" hidden>&lsaquo;</button>
       <h1 id="journalTitle">Journal</h1>
-      <button class="icon-btn" id="addJournalBtn" aria-label="Add entry" hidden>+</button>
+      <button class="icon-btn" id="addJournalBtn" aria-label="Add entry">+</button>
     </header>
 
-    <div id="journalNotebookSelect" class="notebook-select">
-      <button type="button" class="notebook-tile" id="openLogNotebookBtn">
-        <svg class="notebook-cover notebook-cover-yellow" viewBox="-14 0 154 175" aria-hidden="true">
-          <rect x="1.5" y="1.5" width="137" height="172" rx="10" class="notebook-cover-bg notebook-cover-border" />
-          <path class="notebook-cover-ring" d="M 3 26 C -17 17 -17 33 4 37" />
-          <rect class="notebook-cover-bg" x="1.5" y="31" width="10" height="9" />
-          <circle class="notebook-cover-hole" cx="3" cy="26" r="2.4" />
-          <path class="notebook-cover-ring" d="M 3 50 C -17 41 -17 57 4 61" />
-          <rect class="notebook-cover-bg" x="1.5" y="55" width="10" height="9" />
-          <circle class="notebook-cover-hole" cx="3" cy="50" r="2.4" />
-          <path class="notebook-cover-ring" d="M 3 74 C -17 65 -17 81 4 85" />
-          <rect class="notebook-cover-bg" x="1.5" y="79" width="10" height="9" />
-          <circle class="notebook-cover-hole" cx="3" cy="74" r="2.4" />
-          <path class="notebook-cover-ring" d="M 3 98 C -17 89 -17 105 4 109" />
-          <rect class="notebook-cover-bg" x="1.5" y="103" width="10" height="9" />
-          <circle class="notebook-cover-hole" cx="3" cy="98" r="2.4" />
-          <path class="notebook-cover-ring" d="M 3 122 C -17 113 -17 129 4 133" />
-          <rect class="notebook-cover-bg" x="1.5" y="127" width="10" height="9" />
-          <circle class="notebook-cover-hole" cx="3" cy="122" r="2.4" />
-          <path class="notebook-cover-ring" d="M 3 146 C -17 137 -17 153 4 157" />
-          <rect class="notebook-cover-bg" x="1.5" y="151" width="10" height="9" />
-          <circle class="notebook-cover-hole" cx="3" cy="146" r="2.4" />
-        </svg>
-        <span class="notebook-tile-title">Log</span>
-        <span class="notebook-tile-sub">Automatic weekly recap</span>
-      </button>
-      <button type="button" class="notebook-tile" id="openReflectionsNotebookBtn">
-        <svg class="notebook-cover notebook-cover-navy" viewBox="-14 0 154 175" aria-hidden="true">
-          <rect x="1.5" y="1.5" width="137" height="172" rx="10" class="notebook-cover-bg notebook-cover-border" />
-          <path class="notebook-cover-ring" d="M 3 26 C -17 17 -17 33 4 37" />
-          <rect class="notebook-cover-bg" x="1.5" y="31" width="10" height="9" />
-          <circle class="notebook-cover-hole" cx="3" cy="26" r="2.4" />
-          <path class="notebook-cover-ring" d="M 3 50 C -17 41 -17 57 4 61" />
-          <rect class="notebook-cover-bg" x="1.5" y="55" width="10" height="9" />
-          <circle class="notebook-cover-hole" cx="3" cy="50" r="2.4" />
-          <path class="notebook-cover-ring" d="M 3 74 C -17 65 -17 81 4 85" />
-          <rect class="notebook-cover-bg" x="1.5" y="79" width="10" height="9" />
-          <circle class="notebook-cover-hole" cx="3" cy="74" r="2.4" />
-          <path class="notebook-cover-ring" d="M 3 98 C -17 89 -17 105 4 109" />
-          <rect class="notebook-cover-bg" x="1.5" y="103" width="10" height="9" />
-          <circle class="notebook-cover-hole" cx="3" cy="98" r="2.4" />
-          <path class="notebook-cover-ring" d="M 3 122 C -17 113 -17 129 4 133" />
-          <rect class="notebook-cover-bg" x="1.5" y="127" width="10" height="9" />
-          <circle class="notebook-cover-hole" cx="3" cy="122" r="2.4" />
-          <path class="notebook-cover-ring" d="M 3 146 C -17 137 -17 153 4 157" />
-          <rect class="notebook-cover-bg" x="1.5" y="151" width="10" height="9" />
-          <circle class="notebook-cover-hole" cx="3" cy="146" r="2.4" />
-        </svg>
-        <span class="notebook-tile-title">Reflections</span>
-        <span class="notebook-tile-sub">Your shoot reflections &amp; notes</span>
-      </button>
-    </div>
-
-    <div id="journalReflectionsView" hidden>
-      <button type="button" class="filter-toggle" id="journalTocBtn">Table of contents</button>
-      <div id="journalList" class="card-list"></div>
-      <p class="empty-state" id="journalEmpty" hidden>No journal entries yet.</p>
-    </div>
-
-    <div id="journalLogView" hidden>
-      <div id="journalLogList" class="card-list"></div>
-      <p class="empty-state" id="journalLogEmpty" hidden>No shoots logged yet — the log fills in automatically once you've marked a shoot captured or further along.</p>
-    </div>
+    <button type="button" class="filter-toggle" id="journalTocBtn">Table of contents</button>
+    <div id="journalList" class="card-list"></div>
+    <p class="empty-state" id="journalEmpty" hidden></p>
 
     <button type="button" class="scroll-top-btn" id="journalScrollTopBtn" aria-label="Scroll to top" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
@@ -1465,7 +1404,7 @@
     </div>
     <div class="journal-toc-scroll">
       <div id="journalTocList"></div>
-      <p class="empty-state" id="journalTocEmpty" hidden>No journal entries yet.</p>
+      <p class="empty-state" id="journalTocEmpty" hidden>Nothing in the journal yet.</p>
     </div>
   </div>
 </div>

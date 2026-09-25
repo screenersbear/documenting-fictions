@@ -1393,8 +1393,10 @@
       if (view !== 'archive') stopArchiveSlideshow();
       window.scrollTo(0, 0);
       renderAll();
-      if (view === 'journal') showJournalView('select');
-      showTabIntro(view);
+      // Journal's intro was rewritten when the Log and Reflections notebooks
+      // merged into one page, under a new key so anyone who dismissed the old
+      // wording sees the new one once.
+      showTabIntro(view === 'journal' ? 'journal2' : view);
     });
   });
 
@@ -1412,20 +1414,13 @@
       title: 'Archive',
       text: "shoots move here once you mark them complete, keeping your active list clean while still letting you look back. This is also where you'll find backup and restore for all your data.",
     },
-    journal: {
+    journal2: {
       title: 'Journal',
-      text: "a freeform space for notes that aren't tied to any single shoot. track reflections, ideas, or whatever's on your mind. tag entries with hashtags so you can find them again later.",
+      text: "one running page with two kinds of entries. The weekly log fills itself in for every week you shoot: which shoots happened, their categories, and the lessons learned pulled from each shoot's reflection. Tap any shoot or takeaway to see where it came from. Tap '+' to add your own reflection anytime, and tag entries with hashtags so you can find them again later. The table of contents jumps you to any entry or week.",
     },
     stats: {
       title: 'Stats',
       text: 'swipe between breakdowns of your visual languages, categories, team members, statuses, and locations. tap any slice to see exactly which shoots are behind it.',
-    },
-    // Keyed 'log2' rather than 'log' on purpose: the copy changed to cover
-    // tapping through to a shoot, so anyone who already dismissed the older
-    // version gets shown this one once.
-    'journal:log2': {
-      title: 'Log',
-      text: "this notebook fills itself in automatically — no writing required. Each week you actually shoot something gets its own entry listing which shoots happened, their categories, and your lessons learned pulled straight from each shoot's reflection. Every shoot and takeaway here is tappable: tap one to see which shoot it came from, then 'View shoot' to jump straight to that shoot's reflection. To get back to your notebooks, hit the arrow up top or just swipe right.",
     },
     // Shown once, right after the first automatic daily report is dismissed —
     // that's the moment the report exists in your head and "where did that go?"
@@ -1440,10 +1435,6 @@
     'report:bell': {
       title: 'Find this again',
       text: "that was your daily report — it turns up once a day with anything that needs attention. You can pull it back up whenever you like: tap the bell at the top of the Overview screen.",
-    },
-    'journal:reflections': {
-      title: 'Reflections',
-      text: "this is your freeform journal — just what you write here, nothing pulled in automatically. Tap '+' to add your own entry, or tap any entry to reopen and edit it. To get back to your notebooks, hit the arrow up top or just swipe right.",
     },
   };
 
@@ -2463,39 +2454,12 @@
     'When has a subject surprised you by trusting you with something vulnerable, on or off camera?',
   ];
 
-  // Which of the two Journal "notebooks" is open: 'select' (the cover
-  // picker), 'reflections' (the existing freeform entries, unchanged), or
-  // 'log' (the new read-only, auto-generated weekly recap).
-  let journalView = 'select';
-
-  function showJournalView(view) {
-    journalView = view;
-    document.getElementById('journalNotebookSelect').hidden = view !== 'select';
-    document.getElementById('journalReflectionsView').hidden = view !== 'reflections';
-    document.getElementById('journalLogView').hidden = view !== 'log';
-    document.getElementById('journalBackBtn').hidden = view === 'select';
-    document.getElementById('addJournalBtn').hidden = view !== 'reflections';
-    document.getElementById('journalTitle').textContent =
-      view === 'reflections' ? 'Reflections' : view === 'log' ? 'Log' : 'Journal';
-    if (view === 'reflections') renderJournal();
-    if (view === 'log') renderJournalLog();
-    if (view === 'reflections') showTabIntro('journal:reflections');
-    if (view === 'log') showTabIntro('journal:log2');
-    updateJournalScrollTopBtn();
-  }
-
-  document.getElementById('openReflectionsNotebookBtn').addEventListener('click', () => showJournalView('reflections'));
-  document.getElementById('openLogNotebookBtn').addEventListener('click', () => showJournalView('log'));
-  document.getElementById('journalBackBtn').addEventListener('click', () => showJournalView('select'));
-
-  // Both notebooks can run long — offers a quick way back to the top
-  // without hunting for it. Only relevant while Log or Reflections is
-  // actually the active view; hidden the instant either isn't (switching
-  // top-level tabs, or backing out to the notebook picker).
+  // The journal list can run long — offers a quick way back to the top
+  // without hunting for it. Only relevant while the Journal is the active
+  // tab; hidden the instant it isn't.
   const journalScrollTopBtn = document.getElementById('journalScrollTopBtn');
   function updateJournalScrollTopBtn() {
-    const inNotebook = !views.journal.hidden && (journalView === 'log' || journalView === 'reflections');
-    journalScrollTopBtn.hidden = !inNotebook || window.scrollY < 400;
+    journalScrollTopBtn.hidden = views.journal.hidden || window.scrollY < 400;
   }
   window.addEventListener('scroll', updateJournalScrollTopBtn, { passive: true });
   journalScrollTopBtn.addEventListener('click', () => {
@@ -2654,12 +2618,13 @@
   }
 
   // One entry, rendered inline on lined notebook paper under a coloured title
-  // banner — the same card shape the Log uses for a week, so the two notebooks
-  // read as one continuous scrolling page rather than a list of things to open.
+  // banner — the same card shape the Log uses for a week, so the two kinds of
+  // entry read as one continuous scrolling page rather than a list of things
+  // to open.
   function renderJournalEntryCard(container, e) {
     const card = document.createElement('div');
     card.className = 'card log-card journal-entry-card';
-    // Anchor the table of contents scrolls to (see scrollToJournalEntry).
+    // Anchor the table of contents scrolls to (see scrollToJournalItem).
     card.dataset.entryId = e.id;
     // Alternates within the month it lands in, so collapsing a month never
     // leaves two same-coloured banners stacked against each other.
@@ -2692,7 +2657,7 @@
       // Auto-compiled entries are never edited here — they route back to the
       // shoot's own reflection fields so the two stay in sync. Reuses the Log's
       // "this refers to" popup rather than a confirm(), so tapping a reflection
-      // behaves exactly like tapping a takeaway one notebook over.
+      // behaves exactly like tapping a weekly log takeaway.
       paper.addEventListener('click', () => showLogShootRef(e.sourceShootId));
     } else {
       // Hand-written entries open straight into the editor: the body is already
@@ -2707,7 +2672,7 @@
     });
 
     container.appendChild(card);
-    // Returned (not fire-and-forget) so scrollToJournalEntry can wait for
+    // Returned (not fire-and-forget) so scrollToJournalItem can wait for
     // every card's cover photos to finish loading before it scrolls — those
     // load from IndexedDB asynchronously and would otherwise grow cards
     // above the target after the scroll already landed, shoving it back out
@@ -2715,10 +2680,10 @@
     return renderJournalListImages(card.querySelector('.journal-entry-images'), journalEntryImagesKey(e));
   }
 
-  // Collapsible year > month nesting, shared by both Journal notebooks so the
-  // Log and Reflections fold and scroll identically. Archive grows its own copy
-  // of this shape straight from shoot dates; this one takes the date off each
-  // item via dateOf(), so it can group log weeks and journal entries alike.
+  // Collapsible year > month nesting for the Journal (and its table of
+  // contents), so log weeks and written entries fold and scroll together.
+  // Archive grows its own copy of this shape straight from shoot dates; this
+  // one takes the date off each item via dateOf(), so it can group anything.
   //
   // Order within a month is whatever order `items` arrives in — callers sort
   // first. Headings alternate colour by *visible* index so a fold never leaves
@@ -2838,46 +2803,51 @@
       .map(([e]) => e);
   }
 
-  // Nested by year > month of each entry's own createdAt (when it was
-  // actually written) — same grouping structure Archive uses for shoots,
-  // just keyed off the journal entry's date rather than a shoot's date.
-  // Returns a promise that resolves once every card's cover photos have
-  // finished loading (see renderJournalEntryCard) — most callers can ignore
-  // it, but scrollToJournalEntry needs it so the layout has stopped shifting
-  // before it scrolls.
-  // With shoot reflections no longer mirrored in here automatically, a new
-  // user's first visit is genuinely blank rather than pre-populated — this
-  // gives the empty state something to say instead of just "nothing yet".
-  // Counts this calendar week's already-shot shoots (same week window and
-  // POST_CAPTURE_STATUSES gate the Log notebook uses) so the prompt reflects
-  // what's actually been happening, not a static line.
-  function reflectionsEmptyPrompt() {
-    const { start, end } = shootWeekWindow(todayStr());
-    const startStr = formatDate(start);
-    const endStr = formatDate(end);
-    const shootsThisWeek = state.shoots.filter(s => s.date && POST_CAPTURE_STATUSES.includes(s.status) && s.date >= startStr && s.date <= endStr);
-    if (shootsThisWeek.length) {
-      const n = shootsThisWeek.length;
-      return `${n} shoot${n === 1 ? '' : 's'} this week. Anything you noticed that didn't fit a shoot's reflection?`;
+  // Every card on the Journal page, newest first: the auto-generated weekly
+  // log weeks and the entries written by hand, merged by date. A tie goes to
+  // the entry — a week is dated by its Sunday start, so anything written that
+  // day is the more recent of the two.
+  function journalFeedItems() {
+    const entries = sortJournalEntriesRecent(state.journalEntries)
+      .map(e => ({ type: 'entry', date: e.createdAt || '', entry: e }));
+    const weeks = computeWeeklyLog()
+      .map(w => ({ type: 'week', date: formatDate(w.start), week: w }));
+    const merged = [];
+    let i = 0;
+    let j = 0;
+    while (i < entries.length || j < weeks.length) {
+      if (j >= weeks.length || (i < entries.length && entries[i].date >= weeks[j].date)) merged.push(entries[i++]);
+      else merged.push(weeks[j++]);
     }
-    return 'Nothing written yet — anything on your mind?';
+    return merged;
   }
 
+  function renderJournalFeedItem(container, item) {
+    if (item.type === 'week') return renderLogWeekCard(container, item.week);
+    return renderJournalEntryCard(container, item.entry);
+  }
+
+  // Nested by year > month of each item's own date (an entry's createdAt, a
+  // log week's start) — same grouping structure Archive uses for shoots.
+  // Returns a promise that resolves once every card's cover photos have
+  // finished loading (see renderJournalEntryCard) — most callers can ignore
+  // it, but scrollToJournalItem needs it so the layout has stopped shifting
+  // before it scrolls.
   function renderJournal() {
-    // Sorted here rather than inside each month bucket, because
-    // renderYearMonthGroups keeps whatever order it's handed.
-    const items = sortJournalEntriesRecent(state.journalEntries);
+    // Sorted before grouping, because renderYearMonthGroups keeps whatever
+    // order it's handed.
+    const items = journalFeedItems();
 
     const list = document.getElementById('journalList');
     list.innerHTML = '';
     const empty = document.getElementById('journalEmpty');
     empty.hidden = items.length !== 0;
-    if (!empty.hidden) empty.textContent = reflectionsEmptyPrompt();
+    if (!empty.hidden) empty.textContent = "Nothing here yet — the weekly log fills in on its own once a shoot is marked captured, and + adds an entry of your own. Anything on your mind?";
 
     const imagePromises = renderYearMonthGroups(list, items, {
-      dateOf: e => e.createdAt,
+      dateOf: item => item.date,
       keyPrefix: 'journal',
-      renderItem: renderJournalEntryCard,
+      renderItem: renderJournalFeedItem,
       // Covers a card in a month/year that's still collapsed at this point —
       // it stays genuinely unmeasurable (real height 0) until the group
       // holding it is actually opened, which is what this re-runs for.
@@ -2892,26 +2862,26 @@
     return Promise.all(imagePromises);
   }
 
-  // ---------- Reflections table of contents ----------
+  // ---------- Journal table of contents ----------
   // Reuses renderYearMonthGroups with its own 'journalToc' keyPrefix, so
   // expanding/collapsing a year or month inside the TOC popup never disturbs
   // what's expanded in the real list underneath (and vice versa).
-  function renderJournalTocItem(container, e) {
+  function renderJournalTocItem(container, item) {
     const row = document.createElement('button');
     row.type = 'button';
-    row.className = 'journal-toc-item';
-    row.textContent = e.title || 'Untitled entry';
-    row.addEventListener('click', () => scrollToJournalEntry(e.id));
+    row.className = 'journal-toc-item' + (item.type === 'week' ? ' journal-toc-item-log' : '');
+    row.textContent = item.type === 'week' ? item.week.label : (item.entry.title || 'Untitled entry');
+    row.addEventListener('click', () => scrollToJournalItem(item));
     container.appendChild(row);
   }
 
   function openJournalToc() {
-    const items = sortJournalEntriesRecent(state.journalEntries);
+    const items = journalFeedItems();
     const list = document.getElementById('journalTocList');
     list.innerHTML = '';
     document.getElementById('journalTocEmpty').hidden = items.length !== 0;
     renderYearMonthGroups(list, items, {
-      dateOf: e => e.createdAt,
+      dateOf: item => item.date,
       keyPrefix: 'journalToc',
       renderItem: renderJournalTocItem,
     });
@@ -2920,29 +2890,30 @@
 
   document.getElementById('journalTocBtn').addEventListener('click', openJournalToc);
 
-  // Expands whichever year/month the entry actually lives under in the real
+  // Expands whichever year/month the item actually lives under in the real
   // list (that list's own 'journal' collapse keys, independent of the TOC's),
   // then scrolls it to the top of the same scrolling space.
-  function scrollToJournalEntry(id) {
-    const entry = state.journalEntries.find(e => e.id === id);
-    if (!entry) return;
-    const d = entry.createdAt;
+  function scrollToJournalItem(item) {
+    const d = item.date;
     if (d) {
       setSectionCollapsed(`journal:${d.slice(0, 4)}`, false);
       setSectionCollapsed(`journal:${d.slice(0, 4)}:${d.slice(5, 7)}`, false);
     }
     document.getElementById('journalTocOverlay').hidden = true;
+    const selector = item.type === 'week'
+      ? `.log-card[data-week-key="${item.date}"]`
+      : `.journal-entry-card[data-entry-id="${item.entry.id}"]`;
     // Wait for renderJournal's cover photos to finish loading before
     // scrolling — otherwise a photo landing above the target after the
     // scroll already happened grows that card and shoves the target back
     // down, so it lands short of the top instead of flush with it.
     renderJournal().then(() => {
-      const card = document.querySelector(`.journal-entry-card[data-entry-id="${id}"]`);
+      const card = document.querySelector(selector);
       if (card) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
     });
   }
 
-  // ---------- Journal "Log" notebook (auto-generated weekly recap) ----------
+  // ---------- Journal weekly log (auto-generated recap) ----------
   // Fully derived from state.shoots — nothing here is persisted, so editing
   // a shoot's category or lessons-learned later just updates the log the
   // next time it's opened. Weeks run Sunday-Saturday, matching weekBucket()'s
@@ -3047,12 +3018,14 @@
     if (e.target === e.currentTarget) e.currentTarget.hidden = true;
   });
 
-  // One week of the Log, on the same lined notebook paper the Reflections
-  // entries use — the Log is the other half of the same journal, so it reads
-  // as written on the same pad rather than as a report about it.
+  // One week of the Log, on the same lined notebook paper the written entries
+  // use — the Log is the other half of the same journal, so it reads as
+  // written on the same pad rather than as a report about it.
   function renderLogWeekCard(container, w) {
     const card = document.createElement('div');
     card.className = 'card log-card';
+    // Anchor the table of contents scrolls to (see scrollToJournalItem).
+    card.dataset.weekKey = formatDate(w.start);
     // Alternates within the month it lands in, so collapsing a month never
     // leaves two same-coloured banners stacked against each other.
     const headingColorClass = container.children.length % 2 === 0 ? 'heading-yellow' : 'heading-navy';
@@ -3081,21 +3054,6 @@
       li.addEventListener('click', () => showLogShootRef(li.dataset.shootId));
     });
     container.appendChild(card);
-  }
-
-  function renderJournalLog() {
-    const weeks = computeWeeklyLog();
-    const list = document.getElementById('journalLogList');
-    list.innerHTML = '';
-    document.getElementById('journalLogEmpty').hidden = weeks.length !== 0;
-
-    // computeWeeklyLog already returns newest-first, and renderYearMonthGroups
-    // keeps the order it's handed inside each month.
-    renderYearMonthGroups(list, weeks, {
-      dateOf: w => formatDate(w.start),
-      keyPrefix: 'log',
-      renderItem: renderLogWeekCard,
-    });
   }
 
   // ---------- Journal entry options (kebab menu on the list card) ----------
@@ -8733,7 +8691,6 @@
     renderShoots();
     renderArchive();
     renderJournal();
-    renderJournalLog();
     renderStats();
   }
 
@@ -10066,17 +10023,6 @@
 
       const activeTab = document.querySelector('.tab.active');
       if (!activeTab) return;
-
-      // Inside a notebook, swiping right means "back to the notebook picker"
-      // rather than "previous tab". Journal is the one tab with a level below
-      // it, and going up that level is the nearer destination — you'd otherwise
-      // have to reach for the back button to do the thing the gesture already
-      // implies. A second right swipe from the picker then leaves the tab as
-      // usual, so the hierarchy unwinds one step at a time.
-      if (activeTab.dataset.view === 'journal' && journalView !== 'select' && dx > 0) {
-        showJournalView('select');
-        return;
-      }
 
       const currentIndex = TAB_ORDER.indexOf(activeTab.dataset.view);
       if (currentIndex === -1) return;
