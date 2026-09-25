@@ -1544,8 +1544,8 @@
   document.getElementById('newShootBtn').addEventListener('click', () => openShootModal(null));
 
   const STAT_BOX_FILTERS = {
-    ideas: s => !s.archived && s.status === 'prospect',
-    ready: s => !s.archived && s.status === 'waiting_to_shoot',
+    selects: s => !s.archived && s.status === 'waiting_for_selects',
+    editing: s => !s.archived && s.status === 'editing',
     // Prospects excluded — nothing that early would realistically have a
     // team or mood board started yet, so every prospect would otherwise
     // show up here just for not having done work nobody expects yet.
@@ -1553,9 +1553,9 @@
   };
 
   const STAT_BOX_TITLES = {
-    ideas: 'Ideas + Prospects',
-    ready: 'Ready to shoot',
     pending: 'Teams + mood boards pending',
+    selects: 'Waiting for selects',
+    editing: 'In the edit',
   };
 
   document.getElementById('statsRow').addEventListener('click', (e) => {
@@ -1660,22 +1660,22 @@
     const proofsPendingShoots = state.shoots.filter(s => !s.archived && s.status === 'captured')
       .sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
 
-    const ideasCount = state.shoots.filter(STAT_BOX_FILTERS.ideas).length;
-    const readyToShootCount = state.shoots.filter(STAT_BOX_FILTERS.ready).length;
     const pendingTeamMoodboardCount = state.shoots.filter(STAT_BOX_FILTERS.pending).length;
+    const waitingForSelectsCount = state.shoots.filter(STAT_BOX_FILTERS.selects).length;
+    const inTheEditCount = state.shoots.filter(STAT_BOX_FILTERS.editing).length;
 
     document.getElementById('statsRow').innerHTML = `
-      <div class="stat-box" data-stat="ideas">
-        <span class="stat-num">${ideasCount}</span>
-        <span class="stat-label">Ideas + Prospects</span>
-      </div>
       <div class="stat-box" data-stat="pending">
         <span class="stat-num">${pendingTeamMoodboardCount}</span>
         <span class="stat-label">Teams + mood boards pending</span>
       </div>
-      <div class="stat-box" data-stat="ready">
-        <span class="stat-num">${readyToShootCount}</span>
-        <span class="stat-label">Ready to shoot</span>
+      <div class="stat-box" data-stat="selects">
+        <span class="stat-num">${waitingForSelectsCount}</span>
+        <span class="stat-label">Waiting for selects</span>
+      </div>
+      <div class="stat-box" data-stat="editing">
+        <span class="stat-num">${inTheEditCount}</span>
+        <span class="stat-label">In the edit</span>
       </div>
     `;
 
@@ -4424,16 +4424,18 @@
       // in-progress name into state.shoots — without this it would then
       // suggest itself back to whoever's still typing it.
       .filter(item => item.id !== ownId)
-      .filter(item => !query || item.name.toLowerCase().includes(query))
-      .slice(0, 6);
+      .filter(item => !query || item.name.toLowerCase().includes(query));
     if (!matches.length) {
       box.hidden = true;
       card.classList.remove('lighting-setup-suggestions-open');
       return;
     }
-    box.innerHTML = matches.map((item, i) => `
+    // Manage leads the list, and every match is listed (the box scrolls past
+    // its max-height) rather than a capped handful with Manage buried last.
+    box.innerHTML = '<button type="button" class="lighting-setup-suggestion lighting-setup-suggestion-manage">Manage saved…</button>'
+      + matches.map((item, i) => `
       <button type="button" class="lighting-setup-suggestion" data-idx="${idx}" data-match="${i}">${escapeHtml(item.name)}</button>
-    `).join('') + '<button type="button" class="lighting-setup-suggestion lighting-setup-suggestion-manage">Manage saved…</button>';
+    `).join('');
     box.querySelectorAll('.lighting-setup-suggestion:not(.lighting-setup-suggestion-manage)').forEach((btn, i) => {
       // mousedown (not click) fires before the field's blur, so the copy
       // lands before blur's own handler hides this dropdown out from
@@ -9333,12 +9335,16 @@
 
   function maybeShowShootModePrompt() {
     if (!shootModeOverlay.hidden) return;
-    const today = todayStr();
+    // Not before 5am: a shoot dated today isn't "today" yet at 1am, so this
+    // uses the same 5am-rollover day as the other once-a-day prompts. A
+    // late-night open the evening before, or a 2am open on the day itself,
+    // stays quiet until the day really starts.
+    const today = effectiveReportDateStr();
     let asked;
     try { asked = localStorage.getItem(SHOOT_MODE_ASKED_KEY); } catch (e) { asked = null; }
     if (asked === today) return;
 
-    const shoot = state.shoots.find(isToday);
+    const shoot = state.shoots.find(x => !x.archived && !POST_CAPTURE_STATUSES.includes(x.status) && x.status !== 'rescheduled' && x.status !== 'canceled' && x.date === today);
     if (!shoot) return;
     try { localStorage.setItem(SHOOT_MODE_ASKED_KEY, today); } catch (e) { /* ignore */ }
 
