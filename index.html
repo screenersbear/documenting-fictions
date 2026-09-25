@@ -104,7 +104,11 @@
       <button class="icon-btn" id="addJournalBtn" aria-label="Add entry">+</button>
     </header>
 
-    <button type="button" class="filter-toggle" id="journalTocBtn">Table of contents</button>
+    <div class="journal-toolbar">
+      <button type="button" class="filter-toggle" id="journalTocBtn">Table of contents</button>
+      <button type="button" class="filter-toggle" id="journalFilterToggle">Filter: All</button>
+    </div>
+    <div class="filters" id="journalFilters" hidden></div>
     <div id="journalList" class="card-list"></div>
     <p class="empty-state" id="journalEmpty" hidden></p>
 

@@ -929,6 +929,15 @@ h2.status-group-heading.heading-navy {
   margin-bottom: 16px;
 }
 
+/* Journal's Table of contents button and its filter toggle share a row (wrapping
+   on a narrow screen) instead of stacking, each still carrying its own
+   bottom margin from .filter-toggle. */
+.journal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+}
+
 .filters {
   display: flex;
   gap: 8px;

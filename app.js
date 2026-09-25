@@ -2803,14 +2803,45 @@
       .map(([e]) => e);
   }
 
+  // Filter chips, same pattern as the Archive's: a toggle showing the current
+  // choice, and a row of chips that opens under it and closes again on a pick.
+  // Not remembered between launches — it opens on everything each time.
+  let journalFilter = 'all';
+  const JOURNAL_FILTERS = [
+    { key: 'all', label: 'All' },
+    { key: 'log', label: 'Weekly log' },
+    { key: 'entries', label: 'My entries' },
+  ];
+
+  function renderJournalFilterChips() {
+    document.getElementById('journalFilters').innerHTML = JOURNAL_FILTERS
+      .map(f => `<button type="button" class="chip ${f.key === journalFilter ? 'active' : ''}" data-filter="${f.key}">${f.label}</button>`)
+      .join('');
+    document.getElementById('journalFilterToggle').textContent =
+      `Filter: ${JOURNAL_FILTERS.find(f => f.key === journalFilter).label}`;
+  }
+
+  document.getElementById('journalFilterToggle').addEventListener('click', () => {
+    const filters = document.getElementById('journalFilters');
+    filters.hidden = !filters.hidden;
+  });
+
+  document.getElementById('journalFilters').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip || !chip.dataset.filter) return;
+    journalFilter = chip.dataset.filter;
+    document.getElementById('journalFilters').hidden = true;
+    renderJournal();
+  });
+
   // Every card on the Journal page, newest first: the auto-generated weekly
   // log weeks and the entries written by hand, merged by date. A tie goes to
   // the entry — a week is dated by its Sunday start, so anything written that
   // day is the more recent of the two.
   function journalFeedItems() {
-    const entries = sortJournalEntriesRecent(state.journalEntries)
+    const entries = journalFilter === 'log' ? [] : sortJournalEntriesRecent(state.journalEntries)
       .map(e => ({ type: 'entry', date: e.createdAt || '', entry: e }));
-    const weeks = computeWeeklyLog()
+    const weeks = journalFilter === 'entries' ? [] : computeWeeklyLog()
       .map(w => ({ type: 'week', date: formatDate(w.start), week: w }));
     const merged = [];
     let i = 0;
@@ -2840,9 +2871,16 @@
 
     const list = document.getElementById('journalList');
     list.innerHTML = '';
+    renderJournalFilterChips();
     const empty = document.getElementById('journalEmpty');
     empty.hidden = items.length !== 0;
-    if (!empty.hidden) empty.textContent = "Nothing here yet — the weekly log fills in on its own once a shoot is marked captured, and + adds an entry of your own. Anything on your mind?";
+    if (!empty.hidden) {
+      empty.textContent = journalFilter === 'log'
+        ? "No weekly log yet — it fills in on its own once a shoot is marked captured."
+        : journalFilter === 'entries'
+          ? "No entries of your own yet — tap + to write one. Anything on your mind?"
+          : "Nothing here yet — the weekly log fills in on its own once a shoot is marked captured, and + adds an entry of your own. Anything on your mind?";
+    }
 
     const imagePromises = renderYearMonthGroups(list, items, {
       dateOf: item => item.date,
