@@ -6824,9 +6824,6 @@
     if (e.target === document.getElementById('pdfSectionsOverlay')) closePdfSectionsModal();
   });
 
-  // Calling openPdfPreview synchronously (not after an await) here matters —
-  // its own window.open('', '_blank') call needs to happen inside this
-  // click handler's user-gesture context, or mobile browsers block it.
   document.getElementById('pdfSectionsBuildBtn').addEventListener('click', () => {
     const id = pdfSectionsShootId;
     const chosenSections = {
@@ -6846,55 +6843,64 @@
   let pdfPreviewFilename = '';
   let pdfPreviewTitle = '';
 
+  // The last call sheet built, kept so reopening it with everything unchanged
+  // skips rebuilding (the slow part: laying out the pages and embedding every
+  // photo). The key covers everything that goes into the PDF — the chosen
+  // sections, the shoot's own fields (talent photos included), the photographer
+  // info, and the mood board images — so changing ANY of them, e.g. switching
+  // the mood board off, always builds a fresh one rather than showing the
+  // previous version. Only the most recent build is kept.
+  let callSheetCache = null;
+
+  function hashString(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+    return h >>> 0;
+  }
+
+  async function callSheetCacheKey(s, sections) {
+    const parts = [
+      s.id,
+      JSON.stringify(sections),
+      JSON.stringify(s),
+      JSON.stringify(normalizePhotographer(state.photographer)),
+    ];
+    // Mood board photos live in IndexedDB rather than on the shoot, so they
+    // need their own read — skipped entirely when the section is off, since
+    // they don't affect the PDF then.
+    if (sections.moodboard) {
+      const imgs = await idbGetImages(s.id);
+      parts.push(imgs.map(img => `${(img.src || '').length}:${hashString(img.src || '')}:${img.caption || ''}`).join('|'));
+    }
+    return parts.map(part => `${part.length}:${hashString(part)}`).join('/');
+  }
+
+  // Always lands on this app's own preview (with Close and Share) rather than
+  // handing straight off to the phone's share sheet — you look it over first,
+  // then Share sends it on with the right filename.
   async function openPdfPreview(id, chosenSections) {
     const s = state.shoots.find(x => x.id === id);
     if (!s) return;
-    // Web Share, tried first, is the only thing that reliably hands off a
-    // correctly-named file — Mail/Messages/etc respect the name on a File
-    // shared this way, unlike a blob: URL opened in a new tab (no filename
-    // at all) or this app's own preview modal (an extra screen sitting
-    // between "done" and the shoot screen). When it's available it's the
-    // WHOLE interaction: no tab, no modal — dismissing the OS's own share
-    // sheet lands straight back on the shoot screen underneath, nothing
-    // else to close. Probed with a throwaway file since the real PDF
-    // doesn't exist yet and this has to be decided before the popup below
-    // (which needs the same still-fresh user gesture either way).
-    const canWebShare = !!(navigator.canShare && navigator.share
-      && navigator.canShare({ files: [new File([''], 'probe.pdf', { type: 'application/pdf' })] }));
-    // Fallback path only: a PDF embedded in an iframe doesn't reliably
-    // support scrolling past page 1 on mobile browsers — their own full PDF
-    // viewer (opened as its own tab) handles multi-page scrolling and
-    // pinch-zoom properly. Opening the tab has to happen synchronously,
-    // before the "await" below, or it loses the user-gesture context and
-    // gets popup-blocked — so open it blank first, then point it at the
-    // PDF once it's built.
-    const previewWindow = canWebShare ? null : window.open('', '_blank');
     try {
-      const doc = await buildShootPdf(s, chosenSections);
-      pdfPreviewBlob = doc.output('blob');
-      const dateLabel = formatDateDots(s.date);
-      const nameOrTalent = s.title || primaryTalentName(s) || 'Shoot';
-      pdfPreviewTitle = dateLabel ? `${dateLabel} — ${nameOrTalent} call sheet` : `${nameOrTalent} call sheet`;
-      // Filename allows dots (the date format needs them) but swaps the em
-      // dash for a plain hyphen rather than dropping it, since the sanitizer
-      // strips anything that isn't word/hyphen/space/dot.
-      const safeName = pdfPreviewTitle.replace(/—/g, '-').replace(/[^\w\- .]+/g, '').trim() || 'call sheet';
-      pdfPreviewFilename = `${safeName}.pdf`;
-      if (canWebShare) {
-        const file = new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' });
-        await navigator.share({ files: [file], title: pdfPreviewTitle });
-        return;
+      const key = await callSheetCacheKey(s, chosenSections);
+      if (!callSheetCache || callSheetCache.key !== key) {
+        showToast('Building call sheet…');
+        const doc = await buildShootPdf(s, chosenSections);
+        const dateLabel = formatDateDots(s.date);
+        const nameOrTalent = s.title || primaryTalentName(s) || 'Shoot';
+        const title = dateLabel ? `${dateLabel} — ${nameOrTalent} call sheet` : `${nameOrTalent} call sheet`;
+        // Filename allows dots (the date format needs them) but swaps the em
+        // dash for a plain hyphen rather than dropping it, since the sanitizer
+        // strips anything that isn't word/hyphen/space/dot.
+        const safeName = title.replace(/—/g, '-').replace(/[^\w\- .]+/g, '').trim() || 'call sheet';
+        callSheetCache = { key, blob: doc.output('blob'), title, filename: `${safeName}.pdf` };
       }
-      if (previewWindow) previewWindow.location.href = URL.createObjectURL(pdfPreviewBlob);
-      // Shown only when Web Share isn't available — a separate object URL
-      // of its own (rather than reusing the tab's) so closing this modal's
-      // revoke doesn't pull the PDF out from under that still-open tab.
+      pdfPreviewBlob = callSheetCache.blob;
+      pdfPreviewTitle = callSheetCache.title;
+      pdfPreviewFilename = callSheetCache.filename;
       document.getElementById('pdfPreviewFrame').src = URL.createObjectURL(pdfPreviewBlob);
       document.getElementById('pdfPreviewOverlay').hidden = false;
-      if (previewWindow) showToast('Opened for viewing — use Share below to send it with the right filename');
     } catch (err) {
-      if (previewWindow) previewWindow.close();
-      if (err && err.name === 'AbortError') return;
       console.error('Failed to build shoot PDF', err);
       showToast('Could not create PDF');
     }
@@ -7046,10 +7052,13 @@
   async function openJournalEntryPdfPreview(id) {
     const entry = state.journalEntries.find(e => e.id === id);
     if (!entry) return;
-    // See openPdfPreview's matching comment: Web Share, tried first, is the
-    // only thing that reliably hands off a correctly-named file, and skips
-    // both the new tab and this app's own preview modal entirely when it's
-    // available.
+    // Web Share, tried first, is the only thing that reliably hands off a
+    // correctly-named file (Mail/Messages/etc respect the name on a File
+    // shared this way, unlike a blob: URL opened in a new tab), and skips both
+    // the new tab and this app's own preview modal when it's available.
+    // Probed with a throwaway file since the real PDF doesn't exist yet and
+    // this has to be decided before the popup below, which needs the same
+    // still-fresh user gesture either way.
     const canWebShare = !!(navigator.canShare && navigator.share
       && navigator.canShare({ files: [new File([''], 'probe.pdf', { type: 'application/pdf' })] }));
     const previewWindow = canWebShare ? null : window.open('', '_blank');
@@ -7555,11 +7564,13 @@
   }
 
   async function openExportArchivePreview(shoots) {
-    // See openPdfPreview's matching comment: Web Share, tried first, is the
-    // only thing that reliably hands off a correctly-named file, and skips
-    // both the new tab and this app's own preview modal entirely when it's
-    // available — so closing out of the OS's own share sheet lands
-    // straight back on whatever was showing before, nothing else to close.
+    // Web Share, tried first, is the only thing that reliably hands off a
+    // correctly-named file, and skips both the new tab and this app's own
+    // preview modal entirely when it's available — so closing out of the OS's
+    // own share sheet lands straight back on whatever was showing before,
+    // nothing else to close. Probed with a throwaway file since the real PDF
+    // doesn't exist yet and this has to be decided before the popup below,
+    // which needs the same still-fresh user gesture either way.
     const canWebShare = !!(navigator.canShare && navigator.share
       && navigator.canShare({ files: [new File([''], 'probe.pdf', { type: 'application/pdf' })] }));
     const previewWindow = canWebShare ? null : window.open('', '_blank');
