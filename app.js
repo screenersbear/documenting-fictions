@@ -6898,21 +6898,260 @@
       pdfPreviewBlob = callSheetCache.blob;
       pdfPreviewTitle = callSheetCache.title;
       pdfPreviewFilename = callSheetCache.filename;
-      document.getElementById('pdfPreviewFrame').src = URL.createObjectURL(pdfPreviewBlob);
-      document.getElementById('pdfPreviewOverlay').hidden = false;
+      showPdfPreview(pdfPreviewBlob);
     } catch (err) {
       console.error('Failed to build shoot PDF', err);
       showToast('Could not create PDF');
     }
   }
 
+  // ---------- PDF preview viewer ----------
+  // Draws the built PDF with pdf.js instead of an <iframe>, so it looks the
+  // same everywhere: page 1 is sized to fit the whole screen (nothing cut off
+  // to scroll to), further pages sit below it, and it zooms in where you need
+  // to — pinch, double-tap, or the +/- buttons. The viewport scrolls natively
+  // (real momentum, pans in both directions once zoomed); zoom just widens the
+  // pages and re-anchors the scroll position so the spot you're pinching on
+  // stays put. pdf.js loads the first time a preview opens, not at launch.
+  const PDF_ZOOM_MAX = 5;
+  const PDF_DOUBLE_TAP_ZOOM = 2.5;
+  const PDF_MAX_CANVAS_PX = 2600;
+  const pdfViewer = { doc: null, pages: [], zoom: 1, fitW: 0, token: 0, sharpenTimer: null };
+  let pdfjsLoadPromise = null;
+
+  function loadPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (!pdfjsLoadPromise) {
+      pdfjsLoadPromise = new Promise((resolve, reject) => {
+        const el = document.createElement('script');
+        el.src = 'lib/pdf.min.js';
+        el.onload = () => {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
+          resolve(window.pdfjsLib);
+        };
+        el.onerror = () => { pdfjsLoadPromise = null; reject(new Error('pdf.js failed to load')); };
+        document.head.appendChild(el);
+      });
+    }
+    return pdfjsLoadPromise;
+  }
+
+  const pdfViewportEl = document.getElementById('pdfPreviewViewport');
+  const pdfPagesEl = document.getElementById('pdfPreviewPages');
+  const pdfStatusEl = document.getElementById('pdfPreviewStatus');
+  const pdfPageIndicatorEl = document.getElementById('pdfPageIndicator');
+
+  // One whole page fits inside the viewport, whichever way it's limited —
+  // width on a phone, height on a wide screen.
+  function pdfFitWidth() {
+    const first = pdfViewer.pages[0];
+    if (!first) return 0;
+    const availW = pdfViewportEl.clientWidth - 16;
+    const availH = pdfViewportEl.clientHeight - 16;
+    return Math.max(80, Math.min(availW, availH * (first.w / first.h)));
+  }
+
+  async function renderPdfPage(p, pixelW) {
+    if (p.task) { try { p.task.cancel(); } catch (e) { /* already finished */ } }
+    const vp = p.page.getViewport({ scale: pixelW / p.w });
+    const off = document.createElement('canvas');
+    off.width = Math.round(vp.width);
+    off.height = Math.round(vp.height);
+    const task = p.page.render({ canvasContext: off.getContext('2d'), viewport: vp });
+    p.task = task;
+    try {
+      await task.promise;
+    } catch (err) {
+      if (err && err.name === 'RenderingCancelledException') return;
+      throw err;
+    }
+    p.canvas.width = off.width;
+    p.canvas.height = off.height;
+    p.canvas.getContext('2d').drawImage(off, 0, 0);
+    p.renderedW = off.width;
+    p.task = null;
+  }
+
+  // Pages start at a resolution good for about 1.5x zoom; once zoom settles,
+  // the pages actually in view are redrawn sharp for the size they're
+  // displayed at (capped, so a big zoom can't exhaust memory), and pages that
+  // have scrolled away drop back down.
+  function refreshPdfResolution() {
+    const dpr = window.devicePixelRatio || 1;
+    const vpRect = pdfViewportEl.getBoundingClientRect();
+    pdfViewer.pages.forEach(p => {
+      const r = p.wrap.getBoundingClientRect();
+      const visible = r.bottom > vpRect.top && r.top < vpRect.bottom;
+      const base = Math.min(PDF_MAX_CANVAS_PX, Math.max(700, Math.round(pdfViewer.fitW * dpr * 1.5)));
+      const want = visible ? Math.min(PDF_MAX_CANVAS_PX, Math.max(base, Math.round(r.width * dpr))) : base;
+      if (!p.renderedW || Math.abs(want - p.renderedW) / p.renderedW > 0.25) {
+        renderPdfPage(p, want).catch(() => {});
+      }
+    });
+  }
+
+  function schedulePdfSharpen() {
+    clearTimeout(pdfViewer.sharpenTimer);
+    pdfViewer.sharpenTimer = setTimeout(refreshPdfResolution, 220);
+  }
+
+  // Sets the zoom (1 = whole page fits) and keeps the point at (ax, ay) —
+  // viewport-relative pixels — under the same spot of the page.
+  function setPdfZoom(z, ax, ay) {
+    if (!pdfViewer.pages.length) return;
+    const zoom = Math.max(1, Math.min(PDF_ZOOM_MAX, z));
+    if (ax === undefined) ax = pdfViewportEl.clientWidth / 2;
+    if (ay === undefined) ay = pdfViewportEl.clientHeight / 2;
+    const w0 = pdfPagesEl.offsetWidth;
+    const h0 = pdfPagesEl.offsetHeight;
+    const fracX = w0 ? (pdfViewportEl.scrollLeft + ax - pdfPagesEl.offsetLeft) / w0 : 0.5;
+    const fracY = h0 ? (pdfViewportEl.scrollTop + ay - pdfPagesEl.offsetTop) / h0 : 0;
+    pdfViewer.zoom = zoom;
+    pdfPagesEl.style.width = `${pdfViewer.fitW * zoom}px`;
+    pdfViewportEl.scrollLeft = fracX * pdfPagesEl.offsetWidth + pdfPagesEl.offsetLeft - ax;
+    pdfViewportEl.scrollTop = fracY * pdfPagesEl.offsetHeight + pdfPagesEl.offsetTop - ay;
+    schedulePdfSharpen();
+    updatePdfPageIndicator();
+  }
+
+  function updatePdfPageIndicator() {
+    const n = pdfViewer.pages.length;
+    pdfPageIndicatorEl.hidden = n < 2;
+    if (n < 2) return;
+    const mid = pdfViewportEl.scrollTop + pdfViewportEl.clientHeight / 2;
+    let current = n;
+    for (let i = 0; i < n; i++) {
+      const w = pdfViewer.pages[i].wrap;
+      if (mid < w.offsetTop + w.offsetHeight + 5) { current = i + 1; break; }
+    }
+    pdfPageIndicatorEl.textContent = `Page ${current} of ${n}`;
+  }
+
+  function teardownPdfViewer() {
+    pdfViewer.token++;
+    clearTimeout(pdfViewer.sharpenTimer);
+    pdfViewer.pages.forEach(p => { if (p.task) { try { p.task.cancel(); } catch (e) { /* already finished */ } } });
+    if (pdfViewer.doc) { try { pdfViewer.doc.destroy(); } catch (e) { /* already gone */ } }
+    pdfViewer.doc = null;
+    pdfViewer.pages = [];
+    pdfViewer.zoom = 1;
+    pdfPagesEl.innerHTML = '';
+    pdfPagesEl.style.width = '';
+    pdfPageIndicatorEl.hidden = true;
+  }
+
+  async function showPdfPreview(blob) {
+    teardownPdfViewer();
+    const token = pdfViewer.token;
+    pdfStatusEl.textContent = 'Loading preview…';
+    pdfStatusEl.hidden = false;
+    document.getElementById('pdfPreviewOverlay').hidden = false;
+    try {
+      const pdfjs = await loadPdfJs();
+      const data = new Uint8Array(await blob.arrayBuffer());
+      const doc = await pdfjs.getDocument({ data }).promise;
+      if (token !== pdfViewer.token) { doc.destroy(); return; }
+      pdfViewer.doc = doc;
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i);
+        if (token !== pdfViewer.token) return;
+        const v = page.getViewport({ scale: 1 });
+        const wrap = document.createElement('div');
+        wrap.className = 'pdf-page';
+        wrap.style.aspectRatio = `${v.width} / ${v.height}`;
+        const canvas = document.createElement('canvas');
+        wrap.appendChild(canvas);
+        pdfPagesEl.appendChild(wrap);
+        pdfViewer.pages.push({ page, wrap, canvas, w: v.width, h: v.height, renderedW: 0, task: null });
+      }
+      pdfViewer.fitW = pdfFitWidth();
+      pdfPagesEl.style.width = `${pdfViewer.fitW}px`;
+      pdfViewportEl.scrollTop = 0;
+      pdfViewportEl.scrollLeft = 0;
+      pdfStatusEl.hidden = true;
+      updatePdfPageIndicator();
+      refreshPdfResolution();
+    } catch (err) {
+      if (token !== pdfViewer.token) return;
+      console.error('Failed to display PDF preview', err);
+      pdfStatusEl.textContent = "Couldn't show the preview here — you can still Share the PDF.";
+    }
+  }
+
   function closePdfPreview() {
     document.getElementById('pdfPreviewOverlay').hidden = true;
-    const frame = document.getElementById('pdfPreviewFrame');
-    if (frame.src) URL.revokeObjectURL(frame.src);
-    frame.src = '';
+    teardownPdfViewer();
     pdfPreviewBlob = null;
   }
+
+  pdfViewportEl.addEventListener('scroll', updatePdfPageIndicator, { passive: true });
+
+  window.addEventListener('resize', () => {
+    if (document.getElementById('pdfPreviewOverlay').hidden || !pdfViewer.pages.length) return;
+    pdfViewer.fitW = pdfFitWidth();
+    pdfPagesEl.style.width = `${pdfViewer.fitW * pdfViewer.zoom}px`;
+    schedulePdfSharpen();
+  });
+
+  document.getElementById('pdfZoomInBtn').addEventListener('click', () => setPdfZoom(pdfViewer.zoom * 1.5));
+  document.getElementById('pdfZoomOutBtn').addEventListener('click', () => setPdfZoom(pdfViewer.zoom / 1.5));
+
+  // Pinch and double-tap. Panning is left to native scrolling; a second finger
+  // takes over the gesture and turns it into zoom around the fingers' midpoint.
+  (function setupPdfPinchZoom() {
+    let pinch = null;
+    let lastTap = null;
+    let tapStart = null;
+
+    const touchPoint = (t) => {
+      const r = pdfViewportEl.getBoundingClientRect();
+      return { x: t.clientX - r.left, y: t.clientY - r.top };
+    };
+    const dist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+
+    pdfViewportEl.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        pinch = { d0: dist(e.touches[0], e.touches[1]) || 1, z0: pdfViewer.zoom };
+        tapStart = null;
+      } else if (e.touches.length === 1) {
+        tapStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+      }
+    }, { passive: true });
+
+    pdfViewportEl.addEventListener('touchmove', (e) => {
+      if (!pinch || e.touches.length !== 2) return;
+      if (e.cancelable) e.preventDefault();
+      const a = touchPoint(e.touches[0]);
+      const b = touchPoint(e.touches[1]);
+      setPdfZoom(pinch.z0 * dist(e.touches[0], e.touches[1]) / pinch.d0, (a.x + b.x) / 2, (a.y + b.y) / 2);
+    }, { passive: false });
+
+    pdfViewportEl.addEventListener('touchend', (e) => {
+      if (pinch) {
+        if (e.touches.length < 2) pinch = null;
+        lastTap = null;
+        return;
+      }
+      if (!tapStart || e.changedTouches.length !== 1) return;
+      const t = e.changedTouches[0];
+      const moved = Math.hypot(t.clientX - tapStart.x, t.clientY - tapStart.y);
+      const now = Date.now();
+      if (moved < 12 && now - tapStart.t < 300) {
+        if (lastTap && now - lastTap.t < 300 && Math.hypot(t.clientX - lastTap.x, t.clientY - lastTap.y) < 40) {
+          const p = touchPoint(t);
+          setPdfZoom(pdfViewer.zoom > 1.05 ? 1 : PDF_DOUBLE_TAP_ZOOM, p.x, p.y);
+          lastTap = null;
+        } else {
+          lastTap = { x: t.clientX, y: t.clientY, t: now };
+        }
+      } else {
+        lastTap = null;
+      }
+      tapStart = null;
+    }, { passive: true });
+
+    pdfViewportEl.addEventListener('touchcancel', () => { pinch = null; tapStart = null; lastTap = null; }, { passive: true });
+  })();
 
   document.getElementById('pdfPreviewCloseBtn').addEventListener('click', closePdfPreview);
 
@@ -7076,8 +7315,7 @@
         return;
       }
       if (previewWindow) previewWindow.location.href = URL.createObjectURL(pdfPreviewBlob);
-      document.getElementById('pdfPreviewFrame').src = URL.createObjectURL(pdfPreviewBlob);
-      document.getElementById('pdfPreviewOverlay').hidden = false;
+      showPdfPreview(pdfPreviewBlob);
       if (previewWindow) showToast('Opened for viewing — use Share below to send it with the right filename');
     } catch (err) {
       if (previewWindow) previewWindow.close();
@@ -7589,8 +7827,7 @@
         // so closing the modal's revoke doesn't pull the PDF out from
         // under a still-open tab.
         if (previewWindow) previewWindow.location.href = URL.createObjectURL(pdfPreviewBlob);
-        document.getElementById('pdfPreviewFrame').src = URL.createObjectURL(pdfPreviewBlob);
-        document.getElementById('pdfPreviewOverlay').hidden = false;
+        showPdfPreview(pdfPreviewBlob);
         if (previewWindow) showToast('Opened for viewing — use Share below to send it with the right filename');
       }
       // The delete-prompt is offered right away rather than gated on the

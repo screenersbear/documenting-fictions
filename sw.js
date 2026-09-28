@@ -1,10 +1,12 @@
-const CACHE_NAME = 'starky-v91';
+const CACHE_NAME = 'starky-v92';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './lib/jspdf.umd.min.js',
+  './lib/pdf.min.js',
+  './lib/pdf.worker.min.js',
   './manifest.json',
   './icon-180.png',
   './icon-512.png',

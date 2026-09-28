@@ -3521,14 +3521,89 @@ h2.status-group-heading.heading-navy {
   animation: slideUp 0.2s ease;
 }
 
-.pdf-preview-frame {
+.pdf-preview-stage {
+  position: relative;
   flex: 1;
   min-height: 0;
-  width: 100%;
+  margin-bottom: 14px;
+}
+
+/* Scrolls natively (so panning has normal momentum) at every zoom level;
+   the pages inside are laid out at a width that makes one whole page fit,
+   and zoom just widens them (see the PDF viewer in app.js). touch-action
+   leaves panning to the browser while pinch is handled in JS — the page
+   itself opts out of browser zoom. */
+.pdf-preview-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+  padding: 8px;
+  background: #d9dcdf;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+}
+
+.pdf-preview-pages {
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pdf-page {
+  width: 100%;
   background: #fff;
-  margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.pdf-page canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pdf-preview-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 16px;
+  text-align: center;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.pdf-preview-status[hidden] {
+  display: none;
+}
+
+.pdf-zoom-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.pdf-page-indicator {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(49, 61, 69, 0.85);
+  color: #fff;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.pdf-page-indicator[hidden] {
+  display: none;
 }
 
 #pdfPreviewShareBtn {

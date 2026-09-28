@@ -955,7 +955,17 @@
       <h2>Shoot PDF</h2>
       <button type="button" class="icon-btn close-btn" id="pdfPreviewCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
-    <iframe id="pdfPreviewFrame" class="pdf-preview-frame" title="PDF preview"></iframe>
+    <div class="pdf-preview-stage">
+      <div class="pdf-preview-viewport" id="pdfPreviewViewport">
+        <div class="pdf-preview-pages" id="pdfPreviewPages"></div>
+      </div>
+      <p class="pdf-preview-status" id="pdfPreviewStatus">Loading preview…</p>
+      <span class="pdf-page-indicator" id="pdfPageIndicator" hidden></span>
+      <div class="pdf-zoom-controls">
+        <button type="button" class="map-zoom-btn" id="pdfZoomOutBtn" aria-label="Zoom out">&minus;</button>
+        <button type="button" class="map-zoom-btn" id="pdfZoomInBtn" aria-label="Zoom in">+</button>
+      </div>
+    </div>
     <button type="button" class="primary" id="pdfPreviewShareBtn">Share</button>
   </div>
 </div>
