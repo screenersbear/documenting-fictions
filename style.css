@@ -4616,6 +4616,18 @@ h2.status-group-heading.heading-navy {
   display: none;
 }
 
+/* .shine-sweep's default sweep is white, meant for the dark/accent surfaces
+   it already runs on elsewhere (header logo, "+ New Shoot") — on this
+   button's own white background that would be invisible, and this button
+   sits over the folder-tab's accent-yellow band, so filling it accent
+   yellow to fix that would just blend into what's behind it instead. Tinted
+   navy (matching --text, which stays fixed across every color theme) reads
+   as a visible glint against the white pill without changing its color.
+   ID-scoped so #enterArchiveModeBtn, sharing the base class, is untouched. */
+#enterShootModeBtn::after {
+  background: linear-gradient(115deg, transparent 0%, rgba(49, 61, 69, 0.3) 50%, transparent 100%);
+}
+
 /* "archive mode" is a longer label than "shoot mode", so at this same
    right:33px/padding:9px 20px it runs noticeably further left — far enough
    on a phone-width screen to cross straight through the folder-tab

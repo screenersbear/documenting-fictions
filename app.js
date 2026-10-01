@@ -5148,11 +5148,16 @@
   }
 
   // Past capture, the mood board is moot — hide the checkbox entirely rather
-  // than let it keep tracking a value nobody's looking at anymore. The value
-  // itself is never touched here, so reverting to an earlier status brings
-  // the row (and whatever it was actually set to) right back.
+  // than let it keep tracking a value nobody's looking at anymore. Same for
+  // canceled/rescheduled, an off-track branch rather than a step further
+  // along (isPostCaptureStatus alone doesn't cover those — see its own
+  // comment). The value itself is never touched here, so reverting to an
+  // earlier status brings the row (and whatever it was actually set to)
+  // right back.
   function updateMoodboardCompleteVisibility() {
-    document.getElementById('moodboardCompleteRow').hidden = isPostCaptureStatus(document.getElementById('shootStatus').value);
+    const status = document.getElementById('shootStatus').value;
+    document.getElementById('moodboardCompleteRow').hidden =
+      isPostCaptureStatus(status) || status === 'canceled' || status === 'rescheduled';
   }
 
   document.getElementById('shootMoodboardComplete').addEventListener('change', updateMoodboardCompleteLabel);
@@ -5247,8 +5252,17 @@
   shootModalJumpMenu.addEventListener('click', (e) => {
     const item = e.target.closest('.modal-title-jump-item');
     if (!item) return;
-    const target = document.getElementById(item.dataset.jump);
     closeShootModalJumpMenu();
+    // Basic Info is the very first section, with the shoot-mode button and
+    // the folder-tab decoration sitting above its heading — scrollIntoView
+    // on the heading itself stops right at its own top edge, leaving that
+    // bit still scrolled past. Scrolling the modal to 0 always reaches the
+    // true top of the page instead.
+    if (item.dataset.jump === 'basicInfoHeading') {
+      shootModalOverlay.querySelector('.modal').scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    const target = document.getElementById(item.dataset.jump);
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
