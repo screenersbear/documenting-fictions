@@ -463,17 +463,25 @@ h1, h2, h3 {
 /* The banner above no longer carries an entry's title or date (see
    .journal-entry-binding below) — both moved onto the page itself, in the
    blank band .journal-paper.log-paper's --header-band creates above the
-   ruling, the same way a letterhead sits above a legal pad's rules rather
-   than fighting them. Title left, date right, same arrangement the banner
-   used to have. No background/padding of its own to carve out that space —
-   the paper's own background already reserves exactly enough room for it
-   (see applyJournalHeaderBand), sized to this block's real height rather
-   than guessed. */
+   ruling, written on the first visible rule the way you'd head a notebook
+   page: the heading's bottom edge sits right on that line (the top margin
+   that pushes it there is set per card in applyJournalHeaderBand), with the
+   open space above it. Title left, date right, same arrangement the banner
+   used to have.
+
+   Locked to the same 28px ruling as everything else on the paper, one line
+   box per row, so a title that wraps takes whole rows and grows UPWARD into
+   the open space — the band grows to match, so no row of it can reach the
+   rule. align-items:flex-end puts the date on the title's last row (the one
+   sitting on the rule) rather than beside its first. No background/padding
+   of its own to carve out that space — the paper's own background already
+   reserves it, sized to this block's real height rather than guessed. */
 .journal-entry-heading {
   display: flex;
-  align-items: baseline;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 10px;
+  line-height: 28px;
 }
 
 .journal-entry-title {
@@ -491,6 +499,8 @@ h1, h2, h3 {
   color: var(--text);
   opacity: 0.6;
   flex-shrink: 0;
+  /* A wrapped date would be a second row the band wasn't sized for. */
+  white-space: nowrap;
 }
 
 /* Collapses the banner to a thin binding strip once it's holding only the

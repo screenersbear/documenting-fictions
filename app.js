@@ -401,6 +401,7 @@
     test_shoot: 'Test shoot',
     event: 'Event',
     wedding: 'Wedding',
+    engagement: 'Engagement',
     family: 'Family',
     headshot: 'Headshot',
     branding: 'Branding',
@@ -410,7 +411,7 @@
     uncategorized: 'Uncategorized',
   };
 
-  const CATEGORY_FILTER_ORDER = ['commercial', 'content_shoot', 'video', 'editorial', 'lighting_test', 'portfolio_building', 'test_shoot', 'event', 'wedding', 'family', 'headshot', 'branding', 'publicity', 'maternity', 'other'];
+  const CATEGORY_FILTER_ORDER = ['commercial', 'content_shoot', 'video', 'editorial', 'lighting_test', 'portfolio_building', 'test_shoot', 'event', 'wedding', 'engagement', 'family', 'headshot', 'branding', 'publicity', 'maternity', 'other'];
 
   // Grammatical plural form of each category, for use as a countable noun in
   // a sentence (e.g. "more commercial shoots than video shoots") — CATEGORY_LABELS
@@ -425,6 +426,7 @@
     test_shoot: 'test shoots',
     event: 'event shoots',
     wedding: 'wedding shoots',
+    engagement: 'engagement shoots',
     family: 'family shoots',
     headshot: 'headshot shoots',
     branding: 'branding shoots',
@@ -504,7 +506,7 @@
     return NEW_SHOOT_TITLES[Math.floor(Math.random() * NEW_SHOOT_TITLES.length)];
   }
 
-  const VISUAL_LANGUAGE_TAGS = ['Lifestyle', 'Documentary', 'Surrealism', 'Portrait', 'Fashion', 'Fitness', 'Cinematic', 'Commercial', 'Headshot', 'Beauty', 'Other'];
+  const VISUAL_LANGUAGE_TAGS = ['Lifestyle', 'Documentary', 'Surrealism', 'Portrait', 'Fashion', 'Fitness', 'Cinematic', 'Commercial', 'Headshot', 'Beauty', 'Couples', 'Other'];
   // Tags dropped from VISUAL_LANGUAGE_TAGS. Kept as a named list because the
   // framework lives in saved state, not in the constant above — an existing
   // install has its own copy, so retiring a tag takes a migration (see
@@ -600,10 +602,11 @@
     const newVisualTags = ['Lifestyle', 'Documentary', 'Magic realism', 'Surrealism', 'Portrait', 'Fashion', 'Fitness', 'Cinematic', 'Other'];
     const newerVisualTags = ['Lifestyle', 'Documentary', 'Magic realism', 'Surrealism', 'Portrait', 'Fashion', 'Fitness', 'Cinematic', 'Commercial', 'Headshot', 'Test shoot', 'Other'];
     const priorNewestVisualTags = ['Lifestyle', 'Documentary', 'Magic realism', 'Surrealism', 'Portrait', 'Fashion', 'Fitness', 'Cinematic', 'Commercial', 'Headshot', 'Other'];
+    const beforeCouplesVisualTags = ['Lifestyle', 'Documentary', 'Surrealism', 'Portrait', 'Fashion', 'Fitness', 'Cinematic', 'Commercial', 'Headshot', 'Beauty', 'Other'];
     const vl = result.find(f => f.name === 'Visual Language');
     if (vl) {
       const current = JSON.stringify(vl.tags);
-      if (current === JSON.stringify(oldestVisualTags) || current === JSON.stringify(midVisualTags) || current === JSON.stringify(priorVisualTags) || current === JSON.stringify(laterVisualTags) || current === JSON.stringify(newVisualTags) || current === JSON.stringify(newerVisualTags) || current === JSON.stringify(priorNewestVisualTags)) {
+      if (current === JSON.stringify(oldestVisualTags) || current === JSON.stringify(midVisualTags) || current === JSON.stringify(priorVisualTags) || current === JSON.stringify(laterVisualTags) || current === JSON.stringify(newVisualTags) || current === JSON.stringify(newerVisualTags) || current === JSON.stringify(priorNewestVisualTags) || current === JSON.stringify(beforeCouplesVisualTags)) {
         vl.tags = [...VISUAL_LANGUAGE_TAGS];
       }
     }
@@ -2583,7 +2586,8 @@
   // Sizes .journal-paper's --header-band (see the CSS) to this specific
   // entry's actual title/date height, so the blank band above the ruling
   // always fully covers it — a fixed guess would either crop a long wrapped
-  // title or leave excess blank space under a short one. Reads as 0 (and is
+  // title or leave excess blank space under a short one — and sits the
+  // heading on the first visible rule, at the bottom of that band. Reads as 0 (and is
   // skipped) whenever the card isn't laid out yet — not just inside a
   // collapsed month/year group, but even a fully-visible one: renderYear-
   // MonthGroups builds a whole year's months and cards in memory before
@@ -2599,22 +2603,20 @@
     const paper = card.querySelector('.journal-paper');
     if (!heading || !paper || !heading.offsetHeight) return;
     // .journal-paper's own 14px top padding sits above the heading, plus a
-    // little breathing room below it, snapped up to the ruled-line pattern's
-    // own existing line positions (21, 49, 77, 105px, ... — see .journal-
-    // paper's 22px background-position) so the band's bottom edge lands
-    // exactly on a real rule instead of slicing one in half.
+    // little extra room for open space above the title, snapped up to the
+    // ruled-line pattern's own existing line positions (21, 49, 77, 105px,
+    // ... — see .journal-paper's 22px background-position) so the band's
+    // bottom edge lands exactly on a real rule instead of slicing one in half.
     const headingBottom = 14 + heading.offsetHeight;
     const minBand = headingBottom + 8;
     const band = Math.ceil((minBand - 21) / 28) * 28 + 21;
     paper.style.setProperty('--header-band', band + 'px');
-    // Without this, the entry's own text starts flush under the title —
-    // shorter than the band above (that's sized with extra breathing room
-    // and snapped to the rule grid, so it's rarely an exact match) — landing
-    // the body's first line inside the still-blank part of the band instead
-    // of on the first real rule below it. This margin closes exactly that
-    // gap, so "only the title sits in the header" holds regardless of how
-    // long the title is.
-    heading.style.marginBottom = (band - headingBottom) + 'px';
+    // The heading is whole 28px rows (see .journal-entry-heading), so this
+    // margin drops it to the bottom of the band: its last row sits right on
+    // the first visible rule, any extra title rows stack above it, and the
+    // entry's own text — which follows directly — starts on the first row
+    // below that rule. The leftover space lands above the title.
+    heading.style.marginTop = (band - headingBottom) + 'px';
   }
 
   // One entry, rendered inline on lined notebook paper under a coloured title
@@ -9718,6 +9720,19 @@
     return new Date(y, m - 1, d);
   }
 
+  // "X's shoot is in N days — pending: Team, Moodboard", or null when it
+  // doesn't apply (out of the 7-day window, or nothing's pending any more).
+  // Shared by the one-time build in computeDailyReportItems and the
+  // same-day refresh of the cached report, so both agree on what's pending.
+  function sevenDayReminderText(s, today) {
+    if (!s.date) return null;
+    const daysUntil = Math.round((parseShootDate(s.date) - today) / 86400000);
+    const pending = shootPendingLabels(s);
+    if (daysUntil < 0 || daysUntil > 7 || !pending.length) return null;
+    const when = daysUntil === 0 ? 'today' : `in ${daysUntil} day${daysUntil === 1 ? '' : 's'}`;
+    return `${shootDisplayName(s)}'s shoot is ${when} — pending: ${pending.join(', ')}`;
+  }
+
   function computeDailyReportItems() {
     const items = [];
     // Collected across the loop and emitted as a single line at the end —
@@ -9732,11 +9747,9 @@
 
       // 7 days out and still missing team/moodboard — one-time per shoot.
       if (s.date && !POST_CAPTURE_STATUSES.includes(s.status) && !s.sevenDayReminderShown) {
-        const daysUntil = Math.round((parseShootDate(s.date) - today) / 86400000);
-        const pending = shootPendingLabels(s);
-        if (daysUntil >= 0 && daysUntil <= 7 && pending.length > 0) {
-          const when = daysUntil === 0 ? 'today' : `in ${daysUntil} day${daysUntil === 1 ? '' : 's'}`;
-          items.push({ shootId: s.id, text: `${shootDisplayName(s)}'s shoot is ${when} — pending: ${pending.join(', ')}` });
+        const text = sevenDayReminderText(s, today);
+        if (text) {
+          items.push({ shootId: s.id, kind: 'sevenDay', text });
           s.sevenDayReminderShown = true;
         }
       }
@@ -10038,9 +10051,40 @@
     });
   }
 
+  // The cache keeps today's report from re-rolling or re-firing one-time
+  // reminders, but everything in it describes the moment it was built — a
+  // shoot moved past planning since then (captured, delivered, rescheduled…)
+  // would otherwise keep its "needs a mood board" line until tomorrow. So on
+  // every read, the pending-based lines are checked against the data as it is
+  // now: a seven-day reminder is dropped or reworded to what's still
+  // pending, and the nudge is kept only if it's still true (otherwise a
+  // fresh one is picked, or none if nothing's left). Everything else —
+  // the fun fact, the editing check-in, the reflection list — stays as built.
+  function refreshCachedDailyReportContent(cached) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const items = [];
+    cached.items.forEach(item => {
+      if (item.kind !== 'sevenDay') { items.push(item); return; }
+      const s = state.shoots.find(x => x.id === item.shootId);
+      if (!s || s.archived || POST_CAPTURE_STATUSES.includes(s.status)) return;
+      const text = sevenDayReminderText(s, today);
+      if (text) items.push({ ...item, text });
+    });
+    return countActiveDeliveredShootsMissingFinalImages().then(finalImagesMissingCount => {
+      const current = computeDailyReportNudges(finalImagesMissingCount);
+      const nudge = cached.nudge && current.includes(cached.nudge)
+        ? cached.nudge
+        : (current.length ? current[Math.floor(Math.random() * current.length)] : null);
+      const content = { ...cached, items, nudge };
+      try { localStorage.setItem(DAILY_REPORT_CONTENT_KEY, JSON.stringify(content)); } catch (e) { /* ignore */ }
+      return content;
+    });
+  }
+
   function getTodaysDailyReportContent() {
     const cached = loadCachedDailyReportContent();
-    return cached ? Promise.resolve(cached) : buildTodaysDailyReportContent();
+    return cached ? refreshCachedDailyReportContent(cached) : buildTodaysDailyReportContent();
   }
 
   function renderDailyReportOverlay(content) {
