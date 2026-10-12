@@ -254,6 +254,14 @@
             <input type="time" id="shootEndTime" step="1800" />
           </label>
         </div>
+        <div class="time-range-row" id="videoCallTimesRow" hidden>
+          <label>Crew call
+            <input type="time" id="shootCrewCallTime" step="1800" />
+          </label>
+          <label>Talent call
+            <input type="time" id="shootTalentCallTime" step="1800" />
+          </label>
+        </div>
         <label>Location
           <button type="button" id="shootLocationBtn" class="location-field-btn">Tap to add location</button>
         </label>
@@ -294,6 +302,24 @@
             <textarea id="shootGoals" rows="6" maxlength="1000" placeholder="What this shoot needs to accomplish" readonly></textarea>
           </label>
 
+          <div id="videoDeliverablesBlock" hidden>
+            <label>Deliverables
+              <textarea id="shootDeliverables" rows="3" maxlength="1000" placeholder="How many videos and how long each runs, e.g. 1 x 60s brand film, 3 x 15s cutdowns" readonly></textarea>
+            </label>
+            <div class="aspect-ratio-field">
+              <span class="aspect-ratio-field-label">Aspect ratios</span>
+              <div class="tag-group" id="shootAspectRatios">
+                <label class="tag-check"><input type="checkbox" value="16:9" /> 16:9</label>
+                <label class="tag-check"><input type="checkbox" value="9:16" /> 9:16</label>
+                <label class="tag-check"><input type="checkbox" value="1:1" /> 1:1</label>
+                <label class="tag-check"><input type="checkbox" value="4:5" /> 4:5</label>
+              </div>
+            </div>
+            <label>Where it's going
+              <input type="text" id="shootDeliverableDestinations" maxlength="200" placeholder="Reels, YouTube, client website..." />
+            </label>
+          </div>
+
           <label><span id="shootPremiseLabelText">Concept</span>
             <textarea id="shootPremise" rows="6" maxlength="200" placeholder="visual narrative or message" readonly></textarea>
           </label>
@@ -330,7 +356,7 @@
         </div>
 
         <div class="moodboard-section">
-          <span class="moodboard-label">Mood board</span>
+          <span class="moodboard-label" id="moodboardSectionLabel">Mood board</span>
           <button type="button" id="addMoodboardPhotos" class="primary small-btn">+ Add photos</button>
           <input type="file" id="moodboardFileInput" accept="image/*" multiple hidden />
           <div id="moodboardGrid" class="moodboard-grid"></div>
@@ -372,7 +398,7 @@
             <textarea id="shootLessonsLearned" rows="3" maxlength="1000" readonly></textarea>
           </label>
 
-          <div class="moodboard-section">
+          <div class="moodboard-section" id="finalImagesSection">
             <span class="moodboard-label">Final images</span>
             <button type="button" id="addFinalPhotos" class="post-shoot-toggle">+ Add photos</button>
             <input type="file" id="finalImagesFileInput" accept="image/*" multiple hidden />
@@ -940,10 +966,11 @@
     <div class="pdf-sections-list">
       <label class="checkbox-row"><input type="checkbox" id="pdfSectionTalent" checked /> Talent</label>
       <label class="checkbox-row"><input type="checkbox" id="pdfSectionLogistics" checked /> Logistics</label>
+      <label class="checkbox-row" id="pdfSectionDeliverablesRow" hidden><input type="checkbox" id="pdfSectionDeliverables" checked /> Deliverables</label>
       <label class="checkbox-row"><input type="checkbox" id="pdfSectionDirection" /> Direction</label>
       <label class="checkbox-row"><input type="checkbox" id="pdfSectionReferences" /> References</label>
       <label class="checkbox-row"><input type="checkbox" id="pdfSectionTeam" checked /> Team</label>
-      <label class="checkbox-row"><input type="checkbox" id="pdfSectionMoodboard" checked /> Mood board</label>
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionMoodboard" checked /> <span id="pdfSectionMoodboardLabel">Mood board</span></label>
     </div>
     <button type="button" class="primary modal-cta" id="pdfSectionsBuildBtn">Build PDF</button>
   </div>
@@ -1193,7 +1220,7 @@
         <textarea id="shootModeShootingNotes" rows="1" maxlength="2000" placeholder="Anything to remember on the day — settings, timings, things to try"></textarea>
       </label>
 
-      <h3 class="shoot-mode-section-heading heading-yellow">Mood board</h3>
+      <h3 class="shoot-mode-section-heading heading-yellow" id="shootModeMoodboardHeading">Mood board</h3>
       <div id="shootModeMoodboard" class="moodboard-grid"></div>
       <p class="shoot-mode-empty" id="shootModeMoodEmpty" hidden>No mood board images for this shoot.</p>
     </div>

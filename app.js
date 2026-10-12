@@ -39,13 +39,20 @@
 
   // The key `rescheduled` is what's saved in shoots and backup files, so it
   // stays as is; only the label shown to the user is "Postponed".
+  // Order matters: isPostCaptureStatus treats everything from 'captured'
+  // onward (bar Postponed/Canceled) as post-capture, so the video edit steps
+  // sit between 'captured' and 'delivered'. Which category sees which keys is
+  // decided by PHOTO_ONLY_STATUSES / VIDEO_ONLY_STATUSES below.
   const STATUS_LABELS = {
     prospect: 'Prospect',
     planning: 'Active planning',
     waiting_to_shoot: 'Shoot ready',
     captured: 'Captured',
-    waiting_for_selects: 'Waiting for selects',
-    editing: 'Editing',
+    waiting_for_selects: 'Waiting for selects', // photo only
+    editing: 'Editing',                         // photo only
+    rough_cut: 'Rough cut',                     // video only
+    client_review: 'Client review',             // video only
+    revisions: 'Revisions',                     // video only
     delivered: 'Delivered',
     rescheduled: 'Postponed',
     canceled: 'Canceled',
@@ -59,10 +66,122 @@
     document.getElementById('statusSwatchDisplay').textContent = `Status: ${STATUS_LABELS[value] || ''}`;
   }
 
-  // Shared by the upcoming/today filters (exclude), the in-edit bucket
-  // (include, minus delivered), and the day-after check-in (exclude) — a
-  // single list so a new post-capture status only has to be added once.
-  const POST_CAPTURE_STATUSES = ['captured', 'waiting_for_selects', 'editing', 'delivered'];
+  // Every status from Captured onward (both the photo and the video edit
+  // steps), minus the off-track Postponed/Canceled. Excludes these shoots from
+  // upcoming/today/day-after/7-day/shoot-mode, and includes them in the
+  // reflection badge, the weekly Journal log and the fun facts — a single list
+  // so a new post-capture status only has to be added once. Must agree with
+  // isPostCaptureStatus, which is order-based on STATUS_LABELS.
+  const POST_CAPTURE_STATUSES = ['captured', 'waiting_for_selects', 'editing', 'rough_cut', 'client_review', 'revisions', 'delivered'];
+
+  // ---------- Video shoots ----------
+  // Video swaps the photo-only post-capture steps (Waiting for selects,
+  // Editing) for its own (Rough cut, Client review, Revisions); everything
+  // else, Delivered included, is shared, so archive/complete-shoot work off
+  // 'delivered' for both. It also calls its mood board a "Storyboard" (same
+  // images, same complete/pending logic), has no final images, and gets a few
+  // fields of its own (Crew/Talent call, Deliverables).
+  // These are declared here, above `let state = loadState()`, because loading
+  // saved data already uses them (a later const would throw there, and
+  // loadState's catch would then start the app empty).
+  const PHOTO_ONLY_STATUSES = ['waiting_for_selects', 'editing'];
+  const VIDEO_ONLY_STATUSES = ['rough_cut', 'client_review', 'revisions'];
+  // Overview's "In the edit" bucket (also the deadline prompt, the weekly
+  // editing check-in and editingAt): photo Editing, and every video step after
+  // Captured and before Delivered.
+  const IN_THE_EDIT_STATUSES = ['editing', 'rough_cut', 'client_review', 'revisions'];
+  const VIDEO_ASPECT_RATIOS = ['16:9', '9:16', '1:1', '4:5'];
+
+  function isVideoCategory(category) {
+    return category === 'video';
+  }
+
+  function isVideoShoot(s) {
+    return !!s && isVideoCategory(s.category);
+  }
+
+  function isInTheEditStatus(status) {
+    return IN_THE_EDIT_STATUSES.includes(status);
+  }
+
+  // "Mood board" vs "Storyboard" for wording that belongs to one shoot.
+  // Capitalised; lower-case it mid-sentence.
+  function moodboardTerm(category) {
+    return isVideoCategory(category) ? 'Storyboard' : 'Mood board';
+  }
+
+  // Status keys offered for a category, in STATUS_LABELS order.
+  function statusKeysForCategory(category) {
+    const excluded = isVideoCategory(category) ? PHOTO_ONLY_STATUSES : VIDEO_ONLY_STATUSES;
+    return Object.keys(STATUS_LABELS).filter(k => !excluded.includes(k));
+  }
+
+  // Same, but always keeps the shoot's current status in the list (in its
+  // usual place) even when it doesn't belong to the category: a <select>
+  // whose value has no matching <option> reads back as '', which the next
+  // autosave would then store.
+  function statusOptionKeys(category, currentStatus) {
+    const keys = statusKeysForCategory(category);
+    if (!currentStatus || keys.includes(currentStatus)) return keys;
+    return STATUS_LABELS[currentStatus]
+      ? Object.keys(STATUS_LABELS).filter(k => k === currentStatus || keys.includes(k))
+      : keys.concat(currentStatus);
+  }
+
+  // Nearest equivalent when a status doesn't exist for a category. Both sides
+  // of every swap are post-capture, so a remap never triggers the reflection
+  // prompt or clears a reflection.
+  function remapStatusForCategory(status, category) {
+    if (isVideoCategory(category)) return PHOTO_ONLY_STATUSES.includes(status) ? 'rough_cut' : status;
+    return VIDEO_ONLY_STATUSES.includes(status) ? 'editing' : status;
+  }
+
+  // Load/import pass: a video shoot in Waiting for selects/Editing moves to
+  // Rough cut, and a non-video shoot holding a video-only step moves to
+  // Editing. Idempotent. Runs outside migrateShoot, which returns early for
+  // shoots that are already current. A shoot moved INTO the edit this way
+  // (Waiting for selects -> Rough cut) never went through a status change,
+  // so it gets its edit-start date here — otherwise the weekly "How's
+  // editing going" check-in would skip it until its status next changed.
+  function normalizeShootStatuses(shoots) {
+    shoots.forEach(s => {
+      if (!s || !s.status) return;
+      const next = remapStatusForCategory(s.status, s.category);
+      if (next === s.status) return;
+      s.status = next;
+      if (isInTheEditStatus(next) && !s.editingAt) s.editingAt = new Date().toISOString();
+    });
+  }
+
+  // Rebuilds the Edit Shoot status <select> for a category and selects
+  // currentStatus. new Option() so a stored value never needs escaping.
+  function renderShootStatusSelectOptions(category, currentStatus) {
+    const select = document.getElementById('shootStatus');
+    const status = currentStatus || 'prospect';
+    select.innerHTML = '';
+    statusOptionKeys(category, status).forEach(key => {
+      select.add(new Option(STATUS_LABELS[key] || key, key));
+    });
+    select.value = status;
+  }
+
+  // Canonical order, unknown values dropped, tolerant of a missing or garbled
+  // field (already-migrated saves and imported backups never get a default).
+  function normalizeAspectRatios(list) {
+    return Array.isArray(list) ? VIDEO_ASPECT_RATIOS.filter(r => list.includes(r)) : [];
+  }
+
+  // [label, value] pairs for the Deliverables block, shared by the call sheet,
+  // the archive PDF and Archive mode. Empty for non-video shoots, so a shoot
+  // switched away from video never prints its leftover values.
+  function videoDeliverableFields(s) {
+    if (!isVideoShoot(s)) return [];
+    return [
+      ['Videos', s.deliverables || ''],
+      ['Aspect ratios', normalizeAspectRatios(s.aspectRatios).join(', ')],
+      ["Where it's going", s.deliverableDestinations || ''],
+    ].filter(([, value]) => hasText(value)).map(([label, value]) => [label, value.trim()]);
+  }
 
   const COLLAPSE_ARROW_SVG = '<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
 
@@ -697,10 +816,15 @@
       location: normalizeLocation(s.location, s.region),
       startTime: s.startTime || s.time || '',
       endTime: s.endTime || '',
+      crewCallTime: s.crewCallTime || '',
+      talentCallTime: s.talentCallTime || '',
       premise: s.premise !== undefined ? s.premise : (s.concept || ''),
       character: s.character || '',
       shootGoals: s.shootGoals || '',
       elevatorPitch: s.elevatorPitch || '',
+      deliverables: s.deliverables || '',
+      aspectRatios: normalizeAspectRatios(s.aspectRatios),
+      deliverableDestinations: s.deliverableDestinations || '',
       emotionalBeats: s.emotionalBeats || [],
       worldNotes: s.worldNotes || '',
       lightingNotes: s.lightingNotes || '',
@@ -732,6 +856,7 @@
       const frameworks = migrateFrameworks(rawFrameworks);
       const shoots = (parsed.shoots || []).map(s => migrateShoot(s, frameworks));
       migrateIdeaPhaseStatus(shoots);
+      normalizeShootStatuses(shoots);
       removeFramework(shoots, retiredLightingFwId);
       renameFrameworkTag(shoots, frameworks, 'Visual Language', 'Surreal', 'Surrealism');
       removeFrameworkTags(shoots, frameworks, 'Visual Language', RETIRED_VISUAL_LANGUAGE_TAGS, VISUAL_LANGUAGE_TAGS);
@@ -956,7 +1081,7 @@
     if (s.teamRequired === 'yes' && !s.teamFinalized) labels.push('Team');
     // The underlying value is left alone either way, so it's exactly right
     // again if the status ever moves back into range.
-    if (moodboardPending(s)) labels.push('Moodboard');
+    if (moodboardPending(s)) labels.push(isVideoShoot(s) ? 'Storyboard' : 'Moodboard');
     return labels;
   }
 
@@ -997,13 +1122,14 @@
     // re-stated there (it's implied by being in Archive), but if it's
     // missing final images that's worth flagging — resolved async below
     // since it requires an IndexedDB lookup, unlike every other badge part.
-    const checkFinalImages = !!(showBadge && opts && opts.checkFinalImages && s.status === 'delivered');
+    const checkFinalImages = !!(showBadge && opts && opts.checkFinalImages && s.status === 'delivered' && !isVideoShoot(s));
     const statusLabel = (showBadge && opts && opts.showStatus && !checkFinalImages) ? (STATUS_LABELS[s.status] || '') : '';
     const pendingLabels = (showBadge && opts && opts.showPending) ? shootPendingLabels(s) : [];
     const pendingText = pendingLabels.length ? `Pending: ${escapeHtml(pendingLabels.join(', '))}` : '';
     // Proofs are only "pending" for the captured step itself — once a shoot
-    // moves to waiting_for_selects, proofs have already gone out.
-    const proofsPendingText = (showBadge && s.status === 'captured') ? 'Pending: Proofs' : '';
+    // moves to waiting_for_selects, proofs have already gone out. Video has
+    // no proofs step at all (after Captured it goes to Rough cut).
+    const proofsPendingText = (showBadge && s.status === 'captured' && !isVideoShoot(s)) ? 'Pending: Proofs' : '';
     // Once a shoot's captured there's a reflection worth writing eventually —
     // flag it if that's never happened yet, same idea as missing final images.
     // Applies on the Shoots page too, not just Archive, now that reflections
@@ -1575,7 +1701,10 @@
 
   const STAT_BOX_FILTERS = {
     selects: s => !s.archived && s.status === 'waiting_for_selects',
-    editing: s => !s.archived && s.status === 'editing',
+    // Photo shoots in Editing, plus every video step after Captured and
+    // before Delivered (Rough cut, Client review, Revisions): video has no
+    // separate selects stage, so its whole edit lives in this one tile.
+    editing: s => !s.archived && isInTheEditStatus(s.status),
     // Only shoots still being planned or waiting to shoot. Prospects are too
     // early for anyone to have a team or mood board started, and a shoot
     // that's captured, in selects/editing, delivered, postponed or canceled
@@ -1690,7 +1819,8 @@
     const deadlineShoots = state.shoots.filter(isUpcomingDeadline)
       .filter(s => weekBucket(s.deadline) === 'this_week' || weekBucket(s.deadline) === 'next_week')
       .sort((a, b) => dateSortKey(a.deadline).localeCompare(dateSortKey(b.deadline)));
-    const proofsPendingShoots = state.shoots.filter(s => !s.archived && s.status === 'captured')
+    // Video has no proofs step, so a captured video shoot isn't listed here.
+    const proofsPendingShoots = state.shoots.filter(s => !s.archived && s.status === 'captured' && !isVideoShoot(s))
       .sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
 
     const pendingTeamMoodboardCount = state.shoots.filter(STAT_BOX_FILTERS.pending).length;
@@ -1914,13 +2044,14 @@
   }
 
   // Default — grouped by status, same as always: every group orders by
-  // shoot date except Editing, which orders by deadline since that's the
-  // date that actually matters once a shoot's already been captured.
+  // shoot date except the edit stages (Editing, and video's Rough cut/Client
+  // review/Revisions), which order by deadline since that's the date that
+  // actually matters once a shoot's already been captured.
   function renderShootsByStatus(list, items) {
     let visibleIndex = 0;
     Object.keys(STATUS_LABELS).forEach(statusKey => {
       const group = items.filter(s => (s.status || 'prospect') === statusKey)
-        .sort((a, b) => statusKey === 'editing'
+        .sort((a, b) => isInTheEditStatus(statusKey)
           ? dateSortKey(a.deadline).localeCompare(dateSortKey(b.deadline))
           : dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
       if (!group.length) return;
@@ -2014,11 +2145,12 @@
     archiveSlideshowTimer = null;
   }
 
-  // Pulls final images across every shoot (any status) and cycles through
-  // them; skips a rebuild if the image set hasn't actually changed so the
-  // animation doesn't restart every time renderAll() runs.
+  // Pulls final images across every non-video shoot (any status) and cycles
+  // through them; skips a rebuild if the image set hasn't actually changed so
+  // the animation doesn't restart every time renderAll() runs. Video shoots
+  // have no final images (any left from before a switch to video are hidden).
   function renderArchiveSlideshow() {
-    const shoots = state.shoots;
+    const shoots = state.shoots.filter(s => !isVideoShoot(s));
     Promise.all(shoots.map(s => idbGetImages(finalImagesKey(s.id)))).then(results => {
       const images = [];
       results.forEach((imgs, i) => {
@@ -5132,16 +5264,46 @@
     endInput.value = roundToNearestHalfHour(endInput.value);
   });
 
+  // Video-only call times (crew/talent) snap to :00/:30 the same way.
+  ['shootCrewCallTime', 'shootTalentCallTime'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      const input = document.getElementById(id);
+      if (!input.value) return;
+      input.value = roundToNearestHalfHour(input.value);
+    });
+  });
+
   // ---------- Tiered concept fields (narrative vs commercial categories) ----------
   const COMMERCIAL_TIER_CATEGORIES = ['commercial', 'video', 'lighting_test', 'headshot', 'event'];
 
   function updateCategoryTierUI() {
-    const isCommercialTier = COMMERCIAL_TIER_CATEGORIES.includes(document.getElementById('shootCategory').value);
+    const category = document.getElementById('shootCategory').value;
+    const isCommercialTier = COMMERCIAL_TIER_CATEGORIES.includes(category);
     document.getElementById('narrativeFieldsBlock').hidden = isCommercialTier;
     document.getElementById('shootPremiseLabelText').textContent = isCommercialTier ? 'Concept (if applicable)' : 'Concept';
+    // Video-only fields: Deliverables (Direction) and Crew/Talent call times
+    // (Logistics). Hiding never clears them, so flipping away from Video and
+    // back keeps whatever was filled in.
+    const isVideo = isVideoCategory(category);
+    const deliverablesBlock = document.getElementById('videoDeliverablesBlock');
+    deliverablesBlock.hidden = !isVideo;
+    document.getElementById('videoCallTimesRow').hidden = !isVideo;
+    if (isVideo) deliverablesBlock.querySelectorAll('input, textarea').forEach(syncFieldFilledState);
   }
 
   document.getElementById('shootCategory').addEventListener('change', updateCategoryTierUI);
+
+  // Video swaps "Mood board" for "Storyboard" and has no Final images (the
+  // section's hidden, never cleared — flipping back to a photo category
+  // brings any images uploaded before the switch right back).
+  function updateVideoCategoryUI() {
+    const category = document.getElementById('shootCategory').value;
+    document.getElementById('moodboardSectionLabel').textContent = moodboardTerm(category);
+    updateMoodboardCompleteLabel();
+    document.getElementById('finalImagesSection').hidden = isVideoCategory(category);
+  }
+
+  document.getElementById('shootCategory').addEventListener('change', updateVideoCategoryUI);
 
   // ---------- Progressive reveal (new-shoot onboarding only) ----------
   // Only the Direction fields still gate behind a prompt, since which ones
@@ -5237,6 +5399,7 @@
     shootTeamDirections: 'Directions for team',
     shootShootingNotes: 'Shooting notes',
     shootLocationDirections: 'Location directions',
+    shootDeliverables: 'Deliverables',
   };
   let expandFieldOnSave = null;
 
@@ -5308,17 +5471,23 @@
     'shootElevatorPitch',
     'shootWentRight', 'shootCouldBeBetter', 'shootLessonsLearned',
     'shootTalentDirections', 'shootTeamDirections', 'shootLocationDirections',
-    'shootShootingNotes',
+    'shootShootingNotes', 'shootDeliverables',
   ].forEach(fieldId => {
     document.getElementById(fieldId).addEventListener('click', () => openExpandField(fieldId));
   });
 
   // ---------- Post-shoot reflection (gated behind captured-or-later status) ----------
   let previousStatusValue = 'prospect';
+  // The status swap the last category flip made ({ from, to }), so flipping
+  // the category straight back restores the original status (a mis-tap on
+  // the category dropdown stays lossless). Reset per modal open.
+  let categoryRemap = null;
 
   function isPostCaptureStatus(status) {
     // Postponed (key: rescheduled)/canceled are an off-track branch, not a step further along
     // the capture pipeline, regardless of where they sit in STATUS_LABELS.
+    // Must agree with POST_CAPTURE_STATUSES; the video edit keys sit between
+    // captured and delivered in STATUS_LABELS for this reason.
     if (status === 'rescheduled' || status === 'canceled') return false;
     const order = Object.keys(STATUS_LABELS);
     return order.indexOf(status) >= order.indexOf('captured');
@@ -5365,8 +5534,9 @@
     maybeOpenDeadlinePrompt();
   });
 
-  // ---------- Add deadline prompt (shown once a shoot moves into "editing"
-  // without a deadline set yet — chained after the post-shoot reflection
+  // ---------- Add deadline prompt (shown once a shoot moves into the edit —
+  // Editing, or any of a video's Rough cut/Client review/Revisions — without
+  // a deadline set yet — chained after the post-shoot reflection
   // prompt when both apply, e.g. a shoot logged retroactively straight into
   // "editing", so the two never show stacked on top of each other). ----------
   function openDeadlinePrompt() {
@@ -5375,7 +5545,7 @@
   }
 
   function maybeOpenDeadlinePrompt() {
-    if (document.getElementById('shootStatus').value === 'editing' && !hasText(document.getElementById('shootDeadline').value)) {
+    if (isInTheEditStatus(document.getElementById('shootStatus').value) && !hasText(document.getElementById('shootDeadline').value)) {
       openDeadlinePrompt();
     }
   }
@@ -5419,6 +5589,8 @@
       document.getElementById('shootDate').value = '';
       document.getElementById('shootStartTime').value = '';
       document.getElementById('shootEndTime').value = '';
+      document.getElementById('shootCrewCallTime').value = '';
+      document.getElementById('shootTalentCallTime').value = '';
     }
 
     const wasPostCapture = isPostCaptureStatus(previousStatusValue);
@@ -5441,8 +5613,11 @@
         e.target.value = previousStatusValue;
       }
     } else {
+      // Only on entering the edit bucket: a video stepping Rough cut ->
+      // Client review -> Revisions shouldn't re-ask at every step.
+      const wasInTheEdit = isInTheEditStatus(previousStatusValue);
       previousStatusValue = newValue;
-      if (newValue === 'editing') maybeOpenDeadlinePrompt();
+      if (isInTheEditStatus(newValue) && !wasInTheEdit) maybeOpenDeadlinePrompt();
     }
 
     const isArchived = !document.getElementById('unarchiveShootBtn').hidden;
@@ -5452,9 +5627,42 @@
     updateEnterShootModeBtnVisibility();
   });
 
+  // ---------- Category -> status options (video has its own edit steps) ----------
+  // Flipping a shoot to or from Video rebuilds the status select for the new
+  // category and swaps a category-specific status for its nearest equivalent
+  // (Waiting for selects/Editing -> Rough cut; Rough cut/Client review/
+  // Revisions -> Editing), so the select never goes blank. Both sides of
+  // every swap are post-capture, so no reflection prompt/confirm is involved.
+  // Flipping straight back restores the original status (see categoryRemap).
+  function syncStatusSelectToCategory() {
+    const category = document.getElementById('shootCategory').value;
+    const current = document.getElementById('shootStatus').value || previousStatusValue || 'prospect';
+    // Looked up fresh: autosaveShoot replaces the shoot object on every save.
+    const live = state.shoots.find(x => x.id === currentShootId);
+    let next = remapStatusForCategory(current, category);
+    if (categoryRemap && current === categoryRemap.to && remapStatusForCategory(categoryRemap.from, category) === categoryRemap.from) {
+      next = categoryRemap.from;
+      // The flip's save may have stamped an edit-start date (Waiting for
+      // selects -> Rough cut counts as entering the edit). Flipping straight
+      // back puts it back how it was, so a mis-tap doesn't start the weekly
+      // editing check-in clock early. The next autosave writes it.
+      if (live) {
+        if (categoryRemap.editingAt) live.editingAt = categoryRemap.editingAt;
+        else delete live.editingAt;
+      }
+    }
+    if (next !== current) categoryRemap = { from: current, to: next, editingAt: live ? live.editingAt : undefined };
+    renderShootStatusSelectOptions(category, next);
+    previousStatusValue = next;
+    updateStatusSwatchDisplay();
+  }
+
+  document.getElementById('shootCategory').addEventListener('change', syncStatusSelectToCategory);
+
   function updateMoodboardCompleteLabel() {
     const checked = document.getElementById('shootMoodboardComplete').checked;
-    document.getElementById('moodboardCompleteLabel').textContent = checked ? 'Mood board complete or not required' : 'Mood board complete or not required?';
+    const term = moodboardTerm(document.getElementById('shootCategory').value);
+    document.getElementById('moodboardCompleteLabel').textContent = `${term} complete or not required${checked ? '' : '?'}`;
   }
 
   // Past capture, the mood board is moot — hide the checkbox entirely rather
@@ -5591,7 +5799,7 @@
     { id: 'logisticsHeading', title: 'Logistics', text: 'Shoot date, deadline, time, and location — the when and where.' },
     { id: 'teamHeading', title: 'Team', text: "Who's on the shoot and how to reach them." },
     { id: 'directionHeading', title: 'Direction', text: "Concept, character, and creative direction — the story you're telling, plus what you'll be asking of the talent and the team on the day." },
-    { id: 'visualsHeading', title: 'Visuals', text: 'Mood board, references, and frameworks — the visual language for the shoot.', nestedIds: ['lightingSetupsHeading'] },
+    { id: 'visualsHeading', title: 'Visuals', text: () => `${moodboardTerm(document.getElementById('shootCategory').value)}, references, and frameworks — the visual language for the shoot.`, nestedIds: ['lightingSetupsHeading'] },
     { id: 'shotListHeading', title: 'Shot list', text: 'Every shot you want to come away with. Tap a line to write, Enter to start the next one, and tick them off as you go.' },
     { id: 'postShootHeading', title: 'Reflection', text: 'What went right, what could be better, and lessons for next time — filled in after the shoot.' },
   ];
@@ -5617,7 +5825,7 @@
     const step = SHOOT_TOUR_STEPS[shootTourStepIndex];
     document.getElementById('shootTourStep').textContent = `Step ${shootTourStepIndex + 1} of ${SHOOT_TOUR_STEPS.length}`;
     document.getElementById('shootTourTitle').textContent = step.title;
-    document.getElementById('shootTourText').textContent = step.text;
+    document.getElementById('shootTourText').textContent = typeof step.text === 'function' ? step.text() : step.text;
     document.getElementById('shootTourBackBtn').hidden = shootTourStepIndex === 0;
     document.getElementById('shootTourNextBtn').textContent = shootTourStepIndex === SHOOT_TOUR_STEPS.length - 1 ? 'Done' : 'Next';
     expandShootFormSection(step.id);
@@ -5712,14 +5920,20 @@
     document.getElementById('completeShootBtn').hidden = !s || isArchived || s.status !== 'delivered';
 
     document.getElementById('shootTitle').value = s ? (s.title || '') : '';
-    document.getElementById('shootStatus').value = s ? (s.status || 'prospect') : 'prospect';
+    // Options depend on category (video swaps in its own edit steps), and the
+    // category select isn't populated until further down, so the category is
+    // read straight off the shoot here.
+    renderShootStatusSelectOptions(s ? (s.category || '') : '', s ? (s.status || 'prospect') : 'prospect');
     previousStatusValue = document.getElementById('shootStatus').value;
+    categoryRemap = null;
     updateStatusSwatchDisplay();
     updateEnterShootModeBtnVisibility();
     document.getElementById('shootDate').value = s ? (s.date || '') : '';
     document.getElementById('shootDeadline').value = s ? (s.deadline || '') : '';
     document.getElementById('shootStartTime').value = s ? (s.startTime || '') : '';
     document.getElementById('shootEndTime').value = s ? (s.endTime || '') : '';
+    document.getElementById('shootCrewCallTime').value = s ? (s.crewCallTime || '') : '';
+    document.getElementById('shootTalentCallTime').value = s ? (s.talentCallTime || '') : '';
     currentShootLocation = s ? normalizeLocation(s.location) : { name: '', street: '', city: '', state: '', zip: '', country: state.defaultCountry || '' };
     updateLocationBtnDisplay();
     // Talents saved before they had ids get one assigned on load — needed as
@@ -5752,9 +5966,17 @@
     document.getElementById('shootWorldNotes').value = s ? (s.worldNotes || '') : '';
     document.getElementById('shootGoals').value = s ? (s.shootGoals || '') : '';
     document.getElementById('shootElevatorPitch').value = s ? (s.elevatorPitch || '') : '';
+    document.getElementById('shootDeliverables').value = s ? (s.deliverables || '') : '';
+    document.getElementById('shootDeliverableDestinations').value = s ? (s.deliverableDestinations || '') : '';
+    const savedAspectRatios = s ? normalizeAspectRatios(s.aspectRatios) : [];
+    document.querySelectorAll('#shootAspectRatios input[type="checkbox"]').forEach(cb => {
+      cb.checked = savedAspectRatios.includes(cb.value);
+    });
     initProgressiveReveal(s);
     document.getElementById('shootMoodboardComplete').checked = s ? !!s.moodboardComplete : false;
-    updateMoodboardCompleteLabel();
+    // Also sets the Mood board/Storyboard wording (incl. the complete
+    // checkbox label) and hides Final images for video.
+    updateVideoCategoryUI();
     updateMoodboardCompleteVisibility();
     currentReferences = s && Array.isArray(s.references) ? [...s.references] : [];
     renderReferences();
@@ -6297,6 +6519,9 @@
     const files = [...e.target.files];
     e.target.value = '';
     if (!files.length) return;
+    // Belt-and-braces: the section is hidden for video, but a picker opened
+    // just before a category flip could still land here.
+    if (isVideoCategory(document.getElementById('shootCategory').value)) return;
     Promise.all(files.map(f => resizeImageFile(f, 1280, 0.72)))
       .then(newImages => idbGetImages(finalImagesKey(currentShootId)).then(existing => {
         const shouldSetCover = existing.length === 0 && newImages.length > 0;
@@ -6333,6 +6558,8 @@
       deadline: document.getElementById('shootDeadline').value,
       startTime: document.getElementById('shootStartTime').value,
       endTime: document.getElementById('shootEndTime').value,
+      crewCallTime: document.getElementById('shootCrewCallTime').value,
+      talentCallTime: document.getElementById('shootTalentCallTime').value,
       location: { ...currentShootLocation },
       talents: currentTalents.map(t => ({ id: t.id, name: t.name.trim(), socialHandles: [...t.socialHandles], photo: t.photo || '' })),
       category: document.getElementById('shootCategory').value,
@@ -6340,6 +6567,11 @@
       character: document.getElementById('shootCharacter').value.trim(),
       shootGoals: document.getElementById('shootGoals').value.trim(),
       elevatorPitch: document.getElementById('shootElevatorPitch').value.trim(),
+      // Video-only, but kept (not cleared) while hidden for other categories
+      // so a flip away from Video and back doesn't lose them.
+      deliverables: document.getElementById('shootDeliverables').value.trim(),
+      aspectRatios: normalizeAspectRatios([...document.querySelectorAll('#shootAspectRatios input[type="checkbox"]:checked')].map(cb => cb.value)),
+      deliverableDestinations: document.getElementById('shootDeliverableDestinations').value.trim(),
       worldNotes: document.getElementById('shootWorldNotes').value.trim(),
       moodboardComplete: document.getElementById('shootMoodboardComplete').checked,
       teamRequired,
@@ -6377,7 +6609,10 @@
     // something" here or every untouched New Shoot would silently save.
     const loc = data.location;
     const locationEffectivelyBlank = !hasText(loc.name) && !hasText(loc.street) && !hasText(loc.city) && !hasText(loc.zip) && !hasText(loc.state);
-    return !hasText(data.title) && locationEffectivelyBlank && !hasText(data.startTime) && !hasText(data.endTime) && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0 && !hasText(t.photo)) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals) && !hasText(data.elevatorPitch)
+    return !hasText(data.title) && locationEffectivelyBlank && !hasText(data.startTime) && !hasText(data.endTime)
+      && !hasText(data.crewCallTime) && !hasText(data.talentCallTime)
+      && !hasText(data.deliverables) && data.aspectRatios.length === 0 && !hasText(data.deliverableDestinations)
+      && data.talents.every(t => !hasText(t.name) && t.socialHandles.length === 0 && !hasText(t.photo)) && !hasText(data.premise) && !hasText(data.character) && !hasText(data.shootGoals) && !hasText(data.elevatorPitch)
       && !hasText(data.worldNotes) && !hasText(data.deadline)
       && !hasText(data.whatWentRight) && !hasText(data.couldBeBetter) && !hasText(data.lessonsLearned)
       && !hasText(data.talentDirections) && !hasText(data.teamDirections) && !hasText(data.locationDirections)
@@ -6388,7 +6623,8 @@
       && !data.projectPhoto;
   }
 
-  // Records the first time a shoot reaches "captured" and "editing" so the
+  // Records the first time a shoot reaches "captured" and the edit (Editing
+  // for photo shoots; Rough cut/Client review/Revisions for video) so the
   // daily report can compute "N days since capture" / "N days since editing".
   // Never overwrites an already-set timestamp, even if status bounces back
   // and forth, so it always reflects the first time each milestone was hit.
@@ -6397,7 +6633,7 @@
     if (isPostCaptureStatus(newStatus) && !shoot.capturedAt) {
       shoot.capturedAt = new Date().toISOString();
     }
-    if (newStatus === 'editing' && !shoot.editingAt) {
+    if (isInTheEditStatus(newStatus) && !shoot.editingAt) {
       shoot.editingAt = new Date().toISOString();
     }
   }
@@ -6636,7 +6872,11 @@
     shootOptionsPaneTrack.classList.add('show-fourth');
     syncPaneTrackHeight(shootOptionsPaneTrack);
     if (!id) return;
-    Promise.all([idbGetImages(id), idbGetImages(finalImagesKey(id))]).then(([moodboardImages, finalImages]) => {
+    // Video has no final images (any left from before a switch to video
+    // stay hidden), so only its storyboard is offered.
+    const pickerShoot = state.shoots.find(x => x.id === id);
+    const finalImagesPromise = isVideoShoot(pickerShoot) ? Promise.resolve([]) : idbGetImages(finalImagesKey(id));
+    Promise.all([idbGetImages(id), finalImagesPromise]).then(([moodboardImages, finalImages]) => {
       const allImages = moodboardImages.concat(finalImages);
       grid.innerHTML = allImages.length ? '' : '<p class="empty-hint">No photos yet.</p>';
       allImages.forEach(img => {
@@ -6707,10 +6947,13 @@
   document.getElementById('saveDeadlineOptionBtn').addEventListener('click', saveDeadlineOption);
 
   // ---------- Change status (kebab menu slide-over) ----------
-  function renderStatusOptionsList(currentStatus) {
+  // Filtered by the shoot's category — video swaps Waiting for selects/
+  // Editing for Rough cut/Client review/Revisions.
+  function renderStatusOptionsList(s) {
+    const currentStatus = s ? (s.status || 'prospect') : 'prospect';
     const list = document.getElementById('statusOptionsList');
-    list.innerHTML = Object.entries(STATUS_LABELS).map(([key, label]) => `
-      <button type="button" class="options-item choice-item${key === currentStatus ? ' active' : ''}" data-status="${key}">${escapeHtml(label)}</button>
+    list.innerHTML = statusOptionKeys(s ? s.category : '', currentStatus).map(key => `
+      <button type="button" class="options-item choice-item${key === currentStatus ? ' active' : ''}" data-status="${escapeHtml(key)}">${escapeHtml(STATUS_LABELS[key] || key)}</button>
     `).join('');
   }
 
@@ -6734,6 +6977,8 @@
       shoot.date = '';
       shoot.startTime = '';
       shoot.endTime = '';
+      shoot.crewCallTime = '';
+      shoot.talentCallTime = '';
     }
     state.shoots[idx] = shoot;
     saveState();
@@ -6745,7 +6990,7 @@
 
   document.getElementById('changeStatusOptionBtn').addEventListener('click', () => {
     const s = state.shoots.find(x => x.id === optionsShootId);
-    renderStatusOptionsList(s ? (s.status || 'prospect') : 'prospect');
+    renderStatusOptionsList(s);
     shootOptionsPaneTrack.classList.add('show-second');
     syncPaneTrackHeight(shootOptionsPaneTrack);
   });
@@ -6850,7 +7095,8 @@
   }
 
   async function buildShootPdf(s, chosenSections) {
-    const sections = chosenSections || { talent: true, logistics: true, direction: false, references: false, team: true, moodboard: true };
+    const sections = chosenSections || { talent: true, logistics: true, deliverables: true, direction: false, references: false, team: true, moodboard: true };
+    const isVideo = isVideoShoot(s);
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -7014,15 +7260,34 @@
 
     const timeRange = shootTimeRange(s);
     const locationDisplay = formatLocationDisplayNoCountry(s.location);
-    if ((s.date || timeRange || locationDisplay || hasText(s.talentDirections) || hasText(s.teamDirections)) && sections.logistics) {
+    // Video call sheets also carry separate crew and talent call times.
+    const crewCall = isVideo ? prettyTime(s.crewCallTime) : '';
+    const talentCall = isVideo ? prettyTime(s.talentCallTime) : '';
+    if ((s.date || timeRange || crewCall || talentCall || locationDisplay || hasText(s.locationDirections) || hasText(s.talentDirections) || hasText(s.teamDirections)) && sections.logistics) {
       sectionHeading('Logistics:');
       doc.setFontSize(11);
       if (s.date) drawLabeledLine('Date: ', prettyDate(s.date), 16);
       if (timeRange) drawLabeledLine('Time: ', timeRange, 16);
+      if (crewCall) drawLabeledLine('Crew call: ', crewCall, 16);
+      if (talentCall) drawLabeledLine('Talent call: ', talentCall, 16);
       if (locationDisplay) { drawLabeledLine('Location: ', locationDisplay, 14); y += 2; }
       if (hasText(s.locationDirections)) { drawLabeledLine('Location instructions: ', s.locationDirections, 14); y += 2; }
       if (hasText(s.talentDirections)) { drawLabeledLine('Directions for talent: ', s.talentDirections, 14); y += 2; }
       if (hasText(s.teamDirections)) { drawLabeledLine('Directions for team: ', s.teamDirections, 14); y += 2; }
+      y += 8;
+    }
+
+    // Video only: what's being made and where it's going. On by default in
+    // the sections popup (unlike Direction): crew frame a 9:16 Reel
+    // differently from a 16:9 film, so the call sheet is where they need it.
+    const deliverableFields = videoDeliverableFields(s);
+    if (deliverableFields.length && sections.deliverables) {
+      sectionHeading('Deliverables:');
+      doc.setFontSize(11);
+      deliverableFields.forEach(([label, value]) => {
+        drawLabeledLine(`${label}: `, value, 14);
+        y += 6;
+      });
       y += 8;
     }
 
@@ -7130,7 +7395,7 @@
         rows.push({ items, height: Math.max(...items.map(it => it.h)) });
       }
 
-      sectionHeading('Mood board:', rows[0].height);
+      sectionHeading(`${moodboardTerm(s.category)}:`, rows[0].height);
 
       rows.forEach(row => {
         ensureSpace(row.height);
@@ -7149,17 +7414,22 @@
   // opt out of sections they don't want in this particular share). Direction
   // and References default to OFF — Direction is internal creative planning
   // and References are inspiration links, neither of which usually belongs in
-  // the copy that goes out to a client or talent, so they're opt-in. ----------
+  // the copy that goes out to a client or talent, so they're opt-in.
+  // Deliverables only shows for video shoots, and defaults ON. ----------
   let pdfSectionsShootId = null;
 
   function openPdfSectionsModal(id) {
     pdfSectionsShootId = id;
+    const s = state.shoots.find(x => x.id === id);
     document.getElementById('pdfSectionTalent').checked = true;
     document.getElementById('pdfSectionLogistics').checked = true;
+    document.getElementById('pdfSectionDeliverables').checked = true;
+    document.getElementById('pdfSectionDeliverablesRow').hidden = !isVideoShoot(s);
     document.getElementById('pdfSectionDirection').checked = false;
     document.getElementById('pdfSectionReferences').checked = false;
     document.getElementById('pdfSectionTeam').checked = true;
     document.getElementById('pdfSectionMoodboard').checked = true;
+    document.getElementById('pdfSectionMoodboardLabel').textContent = moodboardTerm(s && s.category);
     document.getElementById('pdfSectionsOverlay').hidden = false;
   }
 
@@ -7178,6 +7448,7 @@
     const chosenSections = {
       talent: document.getElementById('pdfSectionTalent').checked,
       logistics: document.getElementById('pdfSectionLogistics').checked,
+      deliverables: document.getElementById('pdfSectionDeliverables').checked,
       direction: document.getElementById('pdfSectionDirection').checked,
       references: document.getElementById('pdfSectionReferences').checked,
       team: document.getElementById('pdfSectionTeam').checked,
@@ -8021,14 +8292,28 @@
       // ---- Logistics ----
       const timeRange = shootTimeRange(s);
       const locationDisplay = formatLocationDisplayNoCountry(s.location);
-      if (timeRange || locationDisplay || hasText(s.talentDirections) || hasText(s.teamDirections)) {
+      const isVideo = isVideoShoot(s);
+      const crewCall = isVideo ? prettyTime(s.crewCallTime) : '';
+      const talentCall = isVideo ? prettyTime(s.talentCallTime) : '';
+      if (timeRange || crewCall || talentCall || locationDisplay || hasText(s.locationDirections) || hasText(s.talentDirections) || hasText(s.teamDirections)) {
         sectionHeading('Logistics:');
         doc.setFontSize(11);
         if (timeRange) drawLabeledLine('Time: ', timeRange, 14);
+        if (crewCall) drawLabeledLine('Crew call: ', crewCall, 14);
+        if (talentCall) drawLabeledLine('Talent call: ', talentCall, 14);
         if (locationDisplay) { drawLabeledLine('Location: ', locationDisplay, 14); y += 2; }
         if (hasText(s.locationDirections)) { drawLabeledLine('Location instructions: ', s.locationDirections, 14); y += 2; }
         if (hasText(s.talentDirections)) { drawLabeledLine('Directions for talent: ', s.talentDirections, 14); y += 2; }
         if (hasText(s.teamDirections)) { drawLabeledLine('Directions for team: ', s.teamDirections, 14); y += 2; }
+        y += 6;
+      }
+
+      // ---- Deliverables (video only) ----
+      const deliverableFields = videoDeliverableFields(s);
+      if (deliverableFields.length) {
+        sectionHeading('Deliverables:');
+        doc.setFontSize(11);
+        deliverableFields.forEach(([label, value]) => { drawLabeledLine(`${label}: `, value, 14); y += 4; });
         y += 6;
       }
 
@@ -8139,11 +8424,14 @@
         y += 6;
       }
 
-      // ---- Photos: cover, talent, mood board, final/delivered ----
+      // ---- Photos: cover, talent, mood board/storyboard, final/delivered ----
+      // Final images stay ungated even for video: a shoot switched to video
+      // can still hold images from before, and this export may be followed
+      // by deleting the shoot's photos — skipping them here would lose them.
       const images = await gatherArchiveImages(s);
       if (images.cover) await drawImageGrid('Cover photo:', [{ src: images.cover }]);
       if (images.talentPhotos.length) await drawImageGrid('Talent photos:', images.talentPhotos);
-      if (images.moodboard.length) await drawImageGrid('Mood board:', images.moodboard);
+      if (images.moodboard.length) await drawImageGrid(`${moodboardTerm(s.category)}:`, images.moodboard);
       if (images.finalImages.length) await drawImageGrid('Final images:', images.finalImages);
     }
 
@@ -8694,8 +8982,15 @@
     if (!payload) return;
     const imageWrites = Object.entries(payload.images || {}).map(([key, imgs]) => idbSetImages(key, imgs));
     Promise.all(imageWrites).then(() => {
+      const importedShoots = Array.isArray(payload.state.shoots) ? payload.state.shoots : [];
+      // Import bypasses loadState's migrations, so the status-level fixes run
+      // here too. Otherwise an old backup's video shoot in "Editing" (or a
+      // retired idea_phase) sits in a status its category doesn't offer until
+      // the next reload.
+      migrateIdeaPhaseStatus(importedShoots);
+      normalizeShootStatuses(importedShoots);
       state = {
-        shoots: payload.state.shoots || [],
+        shoots: importedShoots,
         frameworks: (Array.isArray(payload.state.frameworks) && payload.state.frameworks.length) ? payload.state.frameworks : seedFrameworks(),
         journalEntries: Array.isArray(payload.state.journalEntries) ? payload.state.journalEntries : [],
         titleDisplayMode: payload.state.titleDisplayMode === 'title' ? 'title' : 'talent',
@@ -9617,6 +9912,9 @@
   }
 
   function renderShootModeMoodboard(shoot) {
+    const term = moodboardTerm(shoot.category);
+    document.getElementById('shootModeMoodboardHeading').textContent = term;
+    document.getElementById('shootModeMoodEmpty').textContent = `No ${term.toLowerCase()} images for this shoot.`;
     const grid = document.getElementById('shootModeMoodboard');
     grid.innerHTML = '';
     idbGetImages(shoot.id).then(images => {
@@ -9788,6 +10086,17 @@
       body.appendChild(archiveModeSectionHeading('Reflection', 'heading-navy'));
       reflectionFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
     }
+
+    // Video's counterpart to final images in this report: what was made and
+    // where it went, in the same label-over-value fields as above. Video has
+    // no final images — any stored from before the shoot was switched to
+    // video stay in IndexedDB, just aren't shown.
+    const deliverableFields = videoDeliverableFields(shoot);
+    if (deliverableFields.length) {
+      body.appendChild(archiveModeSectionHeading('Deliverables', 'heading-yellow'));
+      deliverableFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
+    }
+    if (isVideoShoot(shoot)) return;
 
     const finalImagesGrid = document.createElement('div');
     finalImagesGrid.className = 'moodboard-grid archive-mode-final-images';
@@ -9995,7 +10304,7 @@
     const overlay = document.getElementById('shootModePromptOverlay');
     overlay.dataset.shootId = shoot.id;
     document.getElementById('shootModePromptText').textContent =
-      `you're shooting ${shootDisplayName(shoot)} today. Shoot mode strips the app back to just your shot list and your mood board, so you can tick shots off as you go without digging through the planner. It stays on until you end it.`;
+      `you're shooting ${shootDisplayName(shoot)} today. Shoot mode strips the app back to just your shot list and your ${moodboardTerm(shoot.category).toLowerCase()}, so you can tick shots off as you go without digging through the planner. It stays on until you end it.`;
     overlay.hidden = false;
   }
 
@@ -10099,8 +10408,9 @@
         }
       }
 
-      // Editing check-in — repeats weekly for as long as status stays "editing".
-      if (s.status === 'editing' && s.editingAt) {
+      // Editing check-in — repeats weekly for as long as the shoot stays in the
+      // edit (Editing, or a video's Rough cut/Client review/Revisions).
+      if (isInTheEditStatus(s.status) && s.editingAt) {
         const daysSinceEditing = Math.floor((Date.now() - new Date(s.editingAt).getTime()) / 86400000);
         const daysSinceLastReminder = s.lastEditingReminderAt
           ? Math.floor((Date.now() - new Date(s.lastEditingReminderAt).getTime()) / 86400000)
@@ -10222,8 +10532,10 @@
       facts.push(`${roleLabel} is the team role you book most often.`);
     }
 
-    const moodboardDone = count(s => s.moodboardComplete);
+    const moodboardDone = count(s => s.moodboardComplete && !isVideoShoot(s));
     if (moodboardDone > 0) facts.push(`${moodboardDone} of your shoots have a finished mood board.`);
+    const storyboardDone = count(s => s.moodboardComplete && isVideoShoot(s));
+    if (storyboardDone > 0) facts.push(`${storyboardDone} of your video shoots have a finished storyboard.`);
 
     const talentCounts = {};
     shoots.forEach(s => (s.talents || []).forEach(talent => {
@@ -10299,7 +10611,7 @@
       facts.push(`You've checked off ${Math.round((checkedShots / totalShots) * 100)}% of your planned shots.`);
     }
 
-    const editingCount = count(s => s.status === 'editing');
+    const editingCount = count(s => isInTheEditStatus(s.status));
     if (editingCount > 0) facts.push(`${editingCount} shoot${editingCount === 1 ? ' is' : 's are'} currently in post.`);
     const selectsCount = count(s => s.status === 'waiting_for_selects');
     if (selectsCount > 0) facts.push(`${selectsCount} shoot${selectsCount === 1 ? '' : 's'} waiting on selects.`);
@@ -10321,10 +10633,18 @@
     const nudges = [];
     const activeShoots = state.shoots.filter(s => !s.archived);
 
-    const moodboardPendingCount = activeShoots.filter(moodboardPending).length;
-    if (moodboardPendingCount === 1) nudges.push('A shoot still needs a mood board!');
-    else if (moodboardPendingCount === 2) nudges.push('A couple of shoots still need mood boards!');
-    else if (moodboardPendingCount > 2) nudges.push(`${moodboardPendingCount} shoots still need mood boards!`);
+    const moodboardPendingShoots = activeShoots.filter(moodboardPending);
+    const moodboardPendingCount = moodboardPendingShoots.length;
+    const videoBoardCount = moodboardPendingShoots.filter(isVideoShoot).length;
+    // All photo shoots -> the original wording (so an already-cached nudge
+    // still matches in refreshCachedDailyReportContent); all video ->
+    // storyboard; a mix -> both.
+    const allVideo = videoBoardCount > 0 && videoBoardCount === moodboardPendingCount;
+    const boardNoun = videoBoardCount === 0 ? 'mood board' : (allVideo ? 'storyboard' : 'mood board or storyboard');
+    const boardNounPlural = videoBoardCount === 0 ? 'mood boards' : (allVideo ? 'storyboards' : 'mood boards or storyboards');
+    if (moodboardPendingCount === 1) nudges.push(`A shoot still needs a ${boardNoun}!`);
+    else if (moodboardPendingCount === 2) nudges.push(`A couple of shoots still need ${boardNounPlural}!`);
+    else if (moodboardPendingCount > 2) nudges.push(`${moodboardPendingCount} shoots still need ${boardNounPlural}!`);
 
     const teamPendingCount = activeShoots.filter(s => s.teamRequired === 'yes' && !s.teamFinalized).length;
     if (teamPendingCount === 1) nudges.push("There's teams yet to be assembled!");
@@ -10347,7 +10667,8 @@
   // IndexedDB lookup, so it's resolved async and awaited before the report
   // gets assembled.
   function countActiveDeliveredShootsMissingFinalImages() {
-    const deliveredShoots = state.shoots.filter(s => !s.archived && s.status === 'delivered');
+    // Video has no final images, so a delivered video never counts here.
+    const deliveredShoots = state.shoots.filter(s => !s.archived && s.status === 'delivered' && !isVideoShoot(s));
     if (!deliveredShoots.length) return Promise.resolve(0);
     return Promise.all(deliveredShoots.map(s => idbGetImages(finalImagesKey(s.id)).then(images => images.length === 0)))
       .then(flags => flags.filter(Boolean).length);

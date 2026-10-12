@@ -1734,6 +1734,8 @@ h2.status-group-heading.heading-navy {
 
 #formSection2[hidden],
 #narrativeFieldsBlock[hidden],
+#videoDeliverablesBlock[hidden],
+#finalImagesSection[hidden],
 #postShootContent[hidden],
 #postShootBody[hidden],
 #basicInfoBody[hidden],
@@ -1758,6 +1760,7 @@ h2.status-group-heading.heading-navy {
 #teamMemberForm,
 #photographerForm,
 #narrativeFieldsBlock,
+#videoDeliverablesBlock,
 #postShootContent,
 #postShootBody,
 #basicInfoBody,
@@ -2272,6 +2275,22 @@ h2.status-group-heading.heading-navy {
   width: auto;
 }
 
+/* Video's Aspect ratios chips in the shoot form. */
+.aspect-ratio-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Same look as a #shootForm label. It's a span because a <label> wrapping
+   four checkboxes would toggle the first one when its text is tapped. */
+.aspect-ratio-field-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
 .tag-other-input {
   flex-basis: 100%;
   background: var(--surface-2);
@@ -2372,6 +2391,10 @@ h2.status-group-heading.heading-navy {
 
 .time-range-row label {
   flex: 1;
+}
+
+#videoCallTimesRow[hidden] {
+  display: none;
 }
 
 #teamDetailsBlock[hidden] {
