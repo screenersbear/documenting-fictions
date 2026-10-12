@@ -1076,9 +1076,19 @@
     return (s.status === 'planning' || s.status === 'waiting_to_shoot') && !s.moodboardComplete;
   }
 
+  // Same cut-off for an unfinalized team: once a shoot is past "shoot ready"
+  // (captured onward, postponed or canceled) there's no team left to
+  // assemble. Prospects keep it, as before — unlike a mood board, a team can
+  // reasonably be lined up before the shoot is even confirmed.
+  function teamPending(s) {
+    const status = s.status || 'prospect';
+    return (status === 'prospect' || status === 'planning' || status === 'waiting_to_shoot')
+      && s.teamRequired === 'yes' && !s.teamFinalized;
+  }
+
   function shootPendingLabels(s) {
     const labels = [];
-    if (s.teamRequired === 'yes' && !s.teamFinalized) labels.push('Team');
+    if (teamPending(s)) labels.push('Team');
     // The underlying value is left alone either way, so it's exactly right
     // again if the status ever moves back into range.
     if (moodboardPending(s)) labels.push(isVideoShoot(s) ? 'Storyboard' : 'Moodboard');
@@ -10646,7 +10656,7 @@
     else if (moodboardPendingCount === 2) nudges.push(`A couple of shoots still need ${boardNounPlural}!`);
     else if (moodboardPendingCount > 2) nudges.push(`${moodboardPendingCount} shoots still need ${boardNounPlural}!`);
 
-    const teamPendingCount = activeShoots.filter(s => s.teamRequired === 'yes' && !s.teamFinalized).length;
+    const teamPendingCount = activeShoots.filter(teamPending).length;
     if (teamPendingCount === 1) nudges.push("There's teams yet to be assembled!");
     else if (teamPendingCount > 1) nudges.push('Are all your teams set?');
 
