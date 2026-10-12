@@ -37,6 +37,8 @@
     saveCollapsedSections();
   }
 
+  // The key `rescheduled` is what's saved in shoots and backup files, so it
+  // stays as is; only the label shown to the user is "Postponed".
   const STATUS_LABELS = {
     prospect: 'Prospect',
     planning: 'Active planning',
@@ -45,7 +47,7 @@
     waiting_for_selects: 'Waiting for selects',
     editing: 'Editing',
     delivered: 'Delivered',
-    rescheduled: 'Rescheduled',
+    rescheduled: 'Postponed',
     canceled: 'Canceled',
   };
 
@@ -1298,22 +1300,56 @@
   // Reads every shoot's photos back onto the in-memory state so that all the
   // render code can keep reading shoot.projectPhoto / talent.photo
   // synchronously, exactly as it did when they were stored inline.
+  //
+  // Each result is written onto whatever shoot/talent currently has that id in
+  // `state` (looked up when the read lands, not captured up front) — `state`
+  // gets swapped by a pull-to-refresh and shoot objects get replaced by copies
+  // on every autosave, so a captured reference can already be an orphan by
+  // then. It only fills a photo that's missing, so a late read can never put
+  // an older copy over one that was just added, and one read failing no longer
+  // ends the whole batch early (which used to let the caller repaint before
+  // the other reads had landed). Resolves to how many photos it filled in, so
+  // a caller can skip a repaint when nothing changed.
   function hydratePhotos() {
+    let filled = 0;
     const jobs = [];
     state.shoots.forEach(shoot => {
-      jobs.push(idbGetImages(projectPhotoKey(shoot.id)).then(entries => {
+      const shootId = shoot.id;
+      jobs.push(idbGetImages(projectPhotoKey(shootId)).then(entries => {
         const src = photoFromEntries(entries);
-        if (src) shoot.projectPhoto = src;
-      }));
+        const cur = state.shoots.find(x => x.id === shootId);
+        if (src && cur && !cur.projectPhoto) { cur.projectPhoto = src; filled++; }
+      }).catch(() => {}));
       (shoot.talents || []).forEach(talent => {
         if (!talent.id) return;
-        jobs.push(idbGetImages(talentPhotoKey(shoot.id, talent.id)).then(entries => {
+        const talentId = talent.id;
+        jobs.push(idbGetImages(talentPhotoKey(shootId, talentId)).then(entries => {
           const src = photoFromEntries(entries);
-          if (src) talent.photo = src;
-        }));
+          const cur = state.shoots.find(x => x.id === shootId);
+          const t = cur && (cur.talents || []).find(x => x.id === talentId);
+          if (src && t && !t.photo) { t.photo = src; filled++; }
+        }).catch(() => {}));
       });
     });
-    return Promise.all(jobs).catch(() => {});
+    return Promise.all(jobs).then(() => filled);
+  }
+
+  // Re-attaches the photos already held in memory onto a freshly rebuilt state
+  // (matched by id), so reloading `state` from storage — which never has
+  // photos, see stripPhotos — can't cause even a single frame of empty
+  // thumbnails while IndexedDB is re-read.
+  function carryPhotosOver(from, to) {
+    const previous = new Map((from.shoots || []).map(s => [s.id, s]));
+    (to.shoots || []).forEach(s => {
+      const old = previous.get(s.id);
+      if (!old) return;
+      if (old.projectPhoto && !s.projectPhoto) s.projectPhoto = old.projectPhoto;
+      const oldTalents = new Map((old.talents || []).filter(t => t.id).map(t => [t.id, t]));
+      (s.talents || []).forEach(t => {
+        const o = t.id && oldTalents.get(t.id);
+        if (o && o.photo && !t.photo) t.photo = o.photo;
+      });
+    });
   }
 
   // One-time move for data saved before photos lived in IDB: anything still
@@ -1540,10 +1576,13 @@
   const STAT_BOX_FILTERS = {
     selects: s => !s.archived && s.status === 'waiting_for_selects',
     editing: s => !s.archived && s.status === 'editing',
-    // Prospects excluded — nothing that early would realistically have a
-    // team or mood board started yet, so every prospect would otherwise
-    // show up here just for not having done work nobody expects yet.
-    pending: s => !s.archived && s.status !== 'prospect' && shootPendingLabels(s).length > 0,
+    // Only shoots still being planned or waiting to shoot. Prospects are too
+    // early for anyone to have a team or mood board started, and a shoot
+    // that's captured, in selects/editing, delivered, postponed or canceled
+    // is past needing either — it used to sneak into this count (and list)
+    // through an unfinalized team alone, under a title that says "mood
+    // boards pending".
+    pending: s => !s.archived && (s.status === 'planning' || s.status === 'waiting_to_shoot') && shootPendingLabels(s).length > 0,
   };
 
   const STAT_BOX_TITLES = {
@@ -3650,6 +3689,11 @@
     talentModalDraft.name = t.name || '';
     talentModalDraft.socialHandles = (t.socialHandles || []).map(sh => ({ ...sh }));
     talentModalDraft.photo = t.photo || '';
+    // This card now shows someone else, so its own photo is replaced outright
+    // (even by none) — but that's not a request to strip the photo off that
+    // person's other shoots, and any earlier Remove press no longer applies.
+    talentModalDraft.photoRemoved = false;
+    talentModalDraft.photoSwapped = true;
     // Picking a returning talent links this draft to their identity (by
     // name, same matching getAllPastTalents already uses) — saveTalentModalBtn
     // uses this to propagate any edits back to every other shoot's copy of
@@ -3745,6 +3789,10 @@
     const removeBtn = document.getElementById('talentModalPhotoRemoveBtn');
     if (removeBtn) removeBtn.addEventListener('click', () => {
       talentModalDraft.photo = '';
+      // The one thing that means "this person has no photo now" — a draft that
+      // merely doesn't have one (never added, or not loaded yet) must not be
+      // taken for it (see saveTalentModalBtn).
+      talentModalDraft.photoRemoved = true;
       renderTalentModalPhoto();
     });
   }
@@ -3793,6 +3841,15 @@
     draft.name = document.getElementById('talentModalNameInput').value.trim();
     draft.socialHandles = draft.socialHandles.map(sh => ({ ...sh, handle: normalizeSocialHandle(sh.handle) }));
     const oldPhoto = talentModalTargetIdx !== null ? (currentTalents[talentModalTargetIdx].photo || '') : '';
+    const photoRemoved = !!draft.photoRemoved;
+    const photoSwapped = !!draft.photoSwapped;
+    delete draft.photoRemoved;
+    delete draft.photoSwapped;
+    // A draft with no photo only means "no photo" if the user said so (Remove,
+    // or picking a different person). Otherwise it's empty because the photo
+    // simply hadn't reached memory when the popup opened, and saving it must
+    // not turn that into a deletion.
+    if (!draft.photo && oldPhoto && !photoRemoved && !photoSwapped) draft.photo = oldPhoto;
 
     if (talentModalTargetIdx !== null) currentTalents[talentModalTargetIdx] = draft;
     else currentTalents.push(draft);
@@ -3827,9 +3884,17 @@
           const oldTalentPhoto = t.photo || '';
           t.name = draft.name;
           t.socialHandles = draft.socialHandles.map(sh => ({ ...sh }));
-          t.photo = draft.photo || '';
-          if (draft.photo) savePhotoToIdb(talentPhotoKey(s.id, t.id), draft.photo).catch(() => {});
-          else if (oldTalentPhoto) idbDeleteImages(talentPhotoKey(s.id, t.id)).catch(() => {});
+          if (draft.photo) {
+            t.photo = draft.photo;
+            savePhotoToIdb(talentPhotoKey(s.id, t.id), draft.photo).catch(() => {});
+          } else if (photoRemoved) {
+            t.photo = '';
+            if (oldTalentPhoto) idbDeleteImages(talentPhotoKey(s.id, t.id)).catch(() => {});
+          }
+          // Otherwise this copy simply has no photo to share, which says
+          // nothing about the other shoots' — their photo and stored image
+          // are left alone. (Saving a photo-less copy used to permanently
+          // delete every other copy's photo.)
         });
       });
       saveState();
@@ -4111,8 +4176,10 @@
   //
   // Only free-text fields qualify. Date, time and select are pickers: stripping
   // their frame would read as broken rather than as written-in, and there's no
-  // typing to reveal. The shot and lighting rows are skipped too — they already
-  // carry this look permanently via .shot-text, and their own renderers size them.
+  // typing to reveal. The shot rows are skipped too — they already carry this
+  // look permanently via .shot-text, and their own renderer sizes them. The
+  // lighting fields (no .shot-text) do qualify, which is why their renderer
+  // re-syncs them itself after rebuilding.
   function isBoxSheddingField(el) {
     if (el.classList.contains('shot-text')) return false;
     if (el.tagName === 'TEXTAREA') return true;
@@ -4367,6 +4434,178 @@
     scheduleShootAutosave();
   });
 
+  // ---------- Drag-to-reorder for lists of rows that differ in height ----------
+  // Same press-and-drag feel as the shot list, but built for rows of very
+  // different heights (a collapsed lighting setup is ~46px, an open one a few
+  // hundred), which the shot list's version isn't:
+  //   - 'edge' crossing: the dragged row's leading edge against the
+  //     neighbour's midline. Comparing centres can't reach the end slots once
+  //     the clamp stops a tall row's centre short of a short neighbour's.
+  //   - the scroller auto-scrolls near its visible edge, and any scroll is
+  //     folded into the drag so the row stays under the finger.
+  //   - the transform is re-derived right after every swap, so moving past
+  //     several neighbours in one go can't over-swap.
+  //   - the neighbour hops over the dragged row, so the dragged node is never
+  //     detached (it keeps its pointer capture).
+  //   - a drop that changes nothing commits nothing: no re-render, no save.
+  const DRAG_SWAP_BIAS = 6;         // px past a neighbour's midline before a swap (stops flip-flopping at the boundary)
+  const DRAG_EDGE_ZONE = 56;        // px inside the scroller's visible edge where auto-scroll starts
+  const DRAG_MAX_SCROLL_STEP = 14;  // px per 16ms tick at the very edge
+  const DRAG_EDGE_INTENT = 12;      // px a grab inside an edge zone must move toward that edge before it scrolls
+
+  // opts: { container, rowSelector, draggingClass, scroll?: { el, bounds() -> {top, bottom} },
+  //         onStart?(row), onCommit(rowsInNewDomOrder) }. Rows must be direct children of container.
+  function wireRowDragReorder(handle, opts) {
+    const { container, rowSelector, draggingClass, scroll, onStart, onCommit } = opts;
+    // Android's long-press would otherwise raise a context menu and cancel the pointer mid-grab.
+    handle.addEventListener('contextmenu', (e) => e.preventDefault());
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      e.preventDefault();
+      const row = handle.closest(rowSelector);
+      if (!row || container.querySelector('.' + draggingClass)) return; // one drag at a time
+      const pointerId = e.pointerId;
+      if (onStart) onStart(row); // before any measuring: it may blur a field / close a dropdown
+
+      const startRows = Array.from(container.querySelectorAll(rowSelector));
+      const startRects = startRows.map(r => r.getBoundingClientRect());
+      const limitTop0 = Math.min(...startRects.map(r => r.top));
+      const limitBottom0 = Math.max(...startRects.map(r => r.bottom));
+
+      const scrollEl = scroll ? scroll.el : null;
+      const scrollStart = scrollEl ? scrollEl.scrollTop : 0;
+      let lastScrollTop = scrollStart;
+      // Chrome's scroll anchoring can nudge scrollTop when two rows of different heights swap.
+      const prevOverflowAnchor = scrollEl ? scrollEl.style.overflowAnchor : '';
+      if (scrollEl) scrollEl.style.overflowAnchor = 'none';
+
+      const startClientY = e.clientY;
+      let lastClientY = e.clientY;
+      let baseClientY = e.clientY;
+      let baseTranslateY = 0;
+      let appliedTransform = 0;
+      let armed = false; // auto-scroll only once the finger has actually moved a few px
+      // Each edge arms separately. A card grabbed while it's already inside an
+      // edge zone (common: the first card sits right under the sticky header)
+      // must not start scrolling toward that edge just because the finger
+      // drifted — it arms once the finger has been clear of the zone, or has
+      // deliberately moved toward the edge from where it grabbed.
+      let topArmed = true;
+      let bottomArmed = true;
+      if (scroll) {
+        const b0 = scroll.bounds();
+        topArmed = e.clientY >= b0.top + DRAG_EDGE_ZONE;
+        bottomArmed = e.clientY <= b0.bottom - DRAG_EDGE_ZONE;
+      }
+
+      row.classList.add(draggingClass);
+      if (navigator.vibrate) navigator.vibrate(15);
+      handle.classList.add('shot-drag-pulse');
+      handle.addEventListener('animationend', () => handle.classList.remove('shot-drag-pulse'), { once: true });
+      try { handle.setPointerCapture(pointerId); } catch (err) { /* capture is a nice-to-have, not required */ }
+
+      function update(clientY) {
+        // Anything that scrolled the scroller since the last pass (our
+        // auto-scroll, a wheel, the browser) moved the row's layout slot
+        // under a stationary finger: fold it into the baseline.
+        if (scrollEl && scrollEl.scrollTop !== lastScrollTop) {
+          baseTranslateY += scrollEl.scrollTop - lastScrollTop;
+          lastScrollTop = scrollEl.scrollTop;
+        }
+        const scrolled = scrollEl ? scrollEl.scrollTop - scrollStart : 0;
+        const raw = row.getBoundingClientRect();
+        const layoutTop = raw.top - appliedTransform;
+        const minDy = (limitTop0 - scrolled) - layoutTop;
+        const maxDy = (limitBottom0 - scrolled - raw.height) - layoutTop;
+        const dy = Math.min(maxDy, Math.max(minDy, baseTranslateY + (clientY - baseClientY)));
+        row.style.transform = `translateY(${dy}px)`;
+        appliedTransform = dy;
+
+        for (let guard = 0; guard < 100; guard++) {
+          const rows = Array.from(container.querySelectorAll(rowSelector));
+          const i = rows.indexOf(row);
+          const r = row.getBoundingClientRect();
+          const next = rows[i + 1];
+          const prev = rows[i - 1];
+          let neighbor = null;
+          let neighborIsPrev = false;
+          if (next) {
+            const n = next.getBoundingClientRect();
+            // >= (not >): the clamp can park the leading edge exactly on the last slot's midline.
+            if (r.bottom - DRAG_SWAP_BIAS >= n.top + n.height / 2) neighbor = next;
+          }
+          if (!neighbor && prev) {
+            const pr = prev.getBoundingClientRect();
+            if (r.top + DRAG_SWAP_BIAS <= pr.top + pr.height / 2) { neighbor = prev; neighborIsPrev = true; }
+          }
+          if (!neighbor) break;
+
+          const visualTop = r.top;
+          // Move the NEIGHBOUR over the dragged row, never the dragged row itself.
+          if (neighborIsPrev) container.insertBefore(neighbor, row.nextSibling);
+          else container.insertBefore(neighbor, row);
+          // The swap shifted the row's layout slot; re-derive the transform
+          // now so the next pass sees the row exactly where the finger left it.
+          row.style.transform = 'none';
+          baseTranslateY = visualTop - row.getBoundingClientRect().top;
+          baseClientY = clientY;
+          row.style.transform = `translateY(${baseTranslateY}px)`;
+          appliedTransform = baseTranslateY;
+        }
+      }
+
+      function onMove(ev) {
+        if (ev.pointerId !== pointerId) return;
+        lastClientY = ev.clientY;
+        if (!armed && Math.abs(ev.clientY - startClientY) > 4) armed = true;
+        update(ev.clientY);
+      }
+
+      // setInterval, not rAF: rAF doesn't fire in a backgrounded test tab.
+      let scrollTimer = null;
+      if (scrollEl) {
+        scrollTimer = setInterval(() => {
+          const { top, bottom } = scroll.bounds();
+          if (!topArmed && (lastClientY >= top + DRAG_EDGE_ZONE || startClientY - lastClientY >= DRAG_EDGE_INTENT)) topArmed = true;
+          if (!bottomArmed && (lastClientY <= bottom - DRAG_EDGE_ZONE || lastClientY - startClientY >= DRAG_EDGE_INTENT)) bottomArmed = true;
+          let step = 0;
+          if (armed) {
+            if (topArmed && lastClientY < top + DRAG_EDGE_ZONE) {
+              step = -DRAG_MAX_SCROLL_STEP * Math.min(1, (top + DRAG_EDGE_ZONE - lastClientY) / DRAG_EDGE_ZONE);
+            } else if (bottomArmed && lastClientY > bottom - DRAG_EDGE_ZONE) {
+              step = DRAG_MAX_SCROLL_STEP * Math.min(1, (lastClientY - (bottom - DRAG_EDGE_ZONE)) / DRAG_EDGE_ZONE);
+            }
+          }
+          if (step) scrollEl.scrollTop += Math.sign(step) * Math.max(1, Math.round(Math.abs(step)));
+          if (scrollEl.scrollTop !== lastScrollTop) update(lastClientY);
+        }, 16);
+      }
+
+      function onEnd(ev) {
+        if (ev && ev.pointerId !== undefined && ev.pointerId !== pointerId) return;
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onEnd);
+        window.removeEventListener('pointercancel', onEnd);
+        clearInterval(scrollTimer);
+        row.classList.remove(draggingClass);
+        row.style.transform = '';
+        const endRows = Array.from(container.querySelectorAll(rowSelector));
+        const changed = endRows.some((r, i) => r !== startRows[i]);
+        try {
+          if (changed) onCommit(endRows);
+        } finally {
+          if (scrollEl) scrollEl.style.overflowAnchor = prevOverflowAnchor;
+        }
+      }
+
+      // window, not the handle: once the row hits its clamp it stops being
+      // under the finger, and hit-testing a stationary handle would miss it.
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onEnd);
+      window.addEventListener('pointercancel', onEnd);
+    });
+  }
+
   // ---------- Lighting setups (nested bubble cards, in Visuals) ----------
   // Collapsible outlined card per setup (same visual pattern Talent used to
   // use before its own popup redesign) instead of the old single-field
@@ -4497,13 +4736,75 @@
     document.getElementById('manageLightingSetupsOverlay').hidden = false;
   }
 
+  function closeLightingSuggestions() {
+    document.querySelectorAll('#lightingSetupsItems .lighting-setup-suggestions').forEach(box => { box.hidden = true; });
+    document.querySelectorAll('#lightingSetupsItems .lighting-setup-suggestions-open')
+      .forEach(card => card.classList.remove('lighting-setup-suggestions-open'));
+  }
+
+  // The part of the modal a dragged card can actually be seen in: below the
+  // sticky header, above the sticky Save bar, and above the iOS keyboard.
+  function lightingDragScrollBounds(modalEl) {
+    const m = modalEl.getBoundingClientRect();
+    const header = modalEl.querySelector('.shoot-modal-header');
+    const actions = modalEl.querySelector('.modal-actions');
+    const vv = window.visualViewport;
+    return {
+      top: Math.max(m.top, header ? header.getBoundingClientRect().bottom : m.top),
+      bottom: Math.min(m.bottom, actions ? actions.getBoundingClientRect().top : m.bottom, vv ? vv.offsetTop + vv.height : m.bottom),
+    };
+  }
+
+  function commitLightingReorder(cards) {
+    // The modal was closed mid-drag: closeShootModal already saved the old order.
+    if (shootModalOverlay.hidden) return;
+    const container = document.getElementById('lightingSetupsItems');
+    const modalEl = shootModalOverlay.querySelector('.modal');
+    const savedScrollTop = modalEl ? modalEl.scrollTop : undefined;
+    // Each card's data-idx is its PRE-drag index (renderLightingSetups stamps
+    // it), so DOM order maps straight back onto the array. The SAME setup
+    // objects are reused, so every id (and the collapsed state keyed by it)
+    // follows its card.
+    const reordered = cards.map(c => currentLightingSetups[Number(c.dataset.idx)]);
+    if (reordered.length === currentLightingSetups.length && reordered.every(Boolean)) {
+      currentLightingSetups = reordered;
+      // Reordering fires no input event, so nothing else would save it.
+      scheduleShootAutosave();
+    }
+    // Renumbers data-idx and the "Setup N" placeholders, and re-binds the
+    // handlers that captured their index at render time.
+    renderLightingSetups();
+    restoreAfterListReorder(container, undefined, savedScrollTop);
+  }
+
+  function wireLightingDragHandle(handle) {
+    const container = document.getElementById('lightingSetupsItems');
+    const modalEl = shootModalOverlay.querySelector('.modal');
+    wireRowDragReorder(handle, {
+      container,
+      rowSelector: '.lighting-setup-card',
+      draggingClass: 'lighting-dragging',
+      scroll: { el: modalEl, bounds: () => lightingDragScrollBounds(modalEl) },
+      onStart: () => {
+        // On iOS tapping a button never blurs a focused field, and a swap
+        // would move that field mid-drag (dropping the keyboard at a random
+        // moment) — so blur it now, which also hides its open suggestions.
+        const active = document.activeElement;
+        if (active && active !== document.body && container.contains(active)) active.blur();
+        closeLightingSuggestions();
+      },
+      onCommit: commitLightingReorder,
+    });
+  }
+
   function renderLightingSetups() {
     const container = document.getElementById('lightingSetupsItems');
     container.innerHTML = currentLightingSetups.map((item, idx) => {
       const collapsed = isSectionCollapsed(lightingSetupCollapseKey(item));
       return `
-      <div class="team-member-card lighting-setup-card${collapsed ? ' lighting-setup-card-collapsed' : ''}">
+      <div class="team-member-card lighting-setup-card${collapsed ? ' lighting-setup-card-collapsed' : ''}" data-idx="${idx}">
         <div class="lighting-setup-card-bar">
+          <button type="button" class="shot-drag-handle lighting-drag-handle" aria-label="Drag to reorder lighting setup" tabindex="-1">&#8942;</button>
           <div class="lighting-setup-name-wrap">
             <input type="text" class="lighting-setup-name" data-idx="${idx}" placeholder="Setup ${idx + 1}" aria-label="Lighting setup ${idx + 1} name" value="${escapeHtml(item.name || '')}" autocomplete="off" />
             <div class="lighting-setup-suggestions" hidden></div>
@@ -4576,6 +4877,13 @@
         autoSizeTextarea(textarea);
       });
     });
+    container.querySelectorAll('.lighting-drag-handle').forEach(wireLightingDragHandle);
+    // The fields were just rebuilt, so they have no .is-filled class until
+    // something re-syncs them (renderReferences does the same) — otherwise
+    // every re-render, a reorder included, made filled fields look empty.
+    // Only these fields: re-measuring every textarea in the form would briefly
+    // shrink the long note boxes and could clamp the modal's scroll position.
+    container.querySelectorAll('input, textarea').forEach(syncFieldFilledState);
   }
 
   document.getElementById('addLightingSetupBtn').addEventListener('click', () => {
@@ -5009,7 +5317,7 @@
   let previousStatusValue = 'prospect';
 
   function isPostCaptureStatus(status) {
-    // Rescheduled/canceled are an off-track branch, not a step further along
+    // Postponed (key: rescheduled)/canceled are an off-track branch, not a step further along
     // the capture pipeline, regardless of where they sit in STATUS_LABELS.
     if (status === 'rescheduled' || status === 'canceled') return false;
     const order = Object.keys(STATUS_LABELS);
@@ -5105,7 +5413,7 @@
   document.getElementById('shootStatus').addEventListener('change', (e) => {
     const newValue = e.target.value;
 
-    // Rescheduled/canceled shoots no longer have a date to keep — clear it
+    // Postponed (key: rescheduled)/canceled shoots no longer have a date to keep — clear it
     // in the form itself so the very next autosave doesn't resurrect it.
     if (newValue === 'rescheduled' || newValue === 'canceled') {
       document.getElementById('shootDate').value = '';
@@ -5151,7 +5459,7 @@
 
   // Past capture, the mood board is moot — hide the checkbox entirely rather
   // than let it keep tracking a value nobody's looking at anymore. Same for
-  // canceled/rescheduled, an off-track branch rather than a step further
+  // canceled/postponed (key: rescheduled), an off-track branch rather than a step further
   // along (isPostCaptureStatus alone doesn't cover those — see its own
   // comment). The value itself is never touched here, so reverting to an
   // earlier status brings the row (and whatever it was actually set to)
@@ -5379,10 +5687,14 @@
     // auto-claimed as the cover over an existing one it just hasn't seen
     // yet. Guarded against a since-closed/reopened modal.
     if (s && !s.projectPhoto) {
-      idbGetImages(projectPhotoKey(s.id)).then(entries => {
+      const shootId = s.id;
+      idbGetImages(projectPhotoKey(shootId)).then(entries => {
         const src = photoFromEntries(entries);
-        if (!src || currentShootId !== s.id) return;
-        s.projectPhoto = src;
+        if (!src || currentShootId !== shootId) return;
+        // By id, not the captured `s` — an autosave since opening replaces
+        // the shoot object, which would leave `s` an orphan.
+        const live = state.shoots.find(x => x.id === shootId);
+        if (live && !live.projectPhoto) live.projectPhoto = src;
         pendingProjectPhoto = src;
       }).catch(() => {});
     }
@@ -5415,6 +5727,23 @@
     currentTalents = s && Array.isArray(s.talents)
       ? s.talents.map(t => ({ id: t.id || uid(), name: t.name || '', socialHandles: (t.socialHandles || []).map(sh => ({ ...sh })), photo: t.photo || '' }))
       : [];
+    // Same safety net as the cover above: a talent whose photo hasn't reached
+    // memory yet would show a blank card here and then have that blank saved
+    // back over the in-memory talent on the next autosave. Only talents that
+    // already had a saved id can have a stored photo to find.
+    if (s) {
+      const shootId = s.id;
+      const savedTalentIds = new Set((s.talents || []).filter(t => t.id).map(t => t.id));
+      currentTalents.forEach(ct => {
+        if (ct.photo || !savedTalentIds.has(ct.id)) return;
+        idbGetImages(talentPhotoKey(shootId, ct.id)).then(entries => {
+          const src = photoFromEntries(entries);
+          if (!src || currentShootId !== shootId) return;
+          const cur = currentTalents.find(x => x.id === ct.id);
+          if (cur && !cur.photo) { cur.photo = src; renderTalents(); }
+        }).catch(() => {});
+      });
+    }
     renderTalents();
     document.getElementById('shootCategory').value = s ? (s.category || '') : '';
     updateCategoryTierUI();
@@ -6409,6 +6738,9 @@
     state.shoots[idx] = shoot;
     saveState();
     renderAll();
+    // A stat box popup left open underneath would otherwise keep listing a
+    // shoot that no longer belongs in it.
+    refreshOpenStatBoxDetail();
   }
 
   document.getElementById('changeStatusOptionBtn').addEventListener('click', () => {
@@ -6447,6 +6779,7 @@
     state.shoots[idx] = { ...state.shoots[idx], archived: !state.shoots[idx].archived };
     saveState();
     renderAll();
+    refreshOpenStatBoxDetail();
   });
 
   document.getElementById('deleteShootOptionBtn').addEventListener('click', () => {
@@ -10053,7 +10386,7 @@
 
   // The cache keeps today's report from re-rolling or re-firing one-time
   // reminders, but everything in it describes the moment it was built — a
-  // shoot moved past planning since then (captured, delivered, rescheduled…)
+  // shoot moved past planning since then (captured, delivered, postponed…)
   // would otherwise keep its "needs a mood board" line until tomorrow. So on
   // every read, the pending-based lines are checked against the data as it is
   // now: a seven-day reminder is dropped or reworded to what's still
@@ -10373,8 +10706,17 @@
       refreshing = true;
       setTransform(14);
       const minDelay = new Promise(resolve => setTimeout(resolve, MIN_VISIBLE_MS));
+      const previousState = state;
       state = loadState();
+      // loadState() rebuilds every shoot from the saved blob, which has no
+      // photos in it (they live in IndexedDB) — without this every thumbnail
+      // went blank on a refresh and stayed that way until the app was
+      // relaunched. Carrying them across means the repaint below already has
+      // them; the re-read after is only a backstop for anything not in memory
+      // yet (e.g. a pull while the launch-time read is still running).
+      carryPhotosOver(previousState, state);
       renderAll();
+      hydratePhotos().then(filled => { if (filled) renderAll(); }).catch(() => {});
       minDelay.then(() => {
         refreshing = false;
         indicator.style.transition = 'transform 0.2s ease';

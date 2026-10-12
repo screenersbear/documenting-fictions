@@ -2158,6 +2158,37 @@ h2.status-group-heading.heading-navy {
   font-weight: 700;
 }
 
+/* ---- Lighting setups: drag-to-reorder ---- */
+/* .shot-drag-handle supplies touch-action:none, the callout/select
+   suppression, the cursor and the grab pulse. Its colour is var(--text),
+   which is the same navy as this bar's --ink background by default, so it's
+   forced to white here like the collapse arrow and the delete button. */
+.lighting-setup-card-bar .lighting-drag-handle {
+  width: 28px;
+  height: 34px;
+  border-radius: 0;
+  color: #fff;
+  font-size: 20px;
+}
+
+.lighting-setup-card-bar .lighting-drag-handle.shot-drag-pulse {
+  animation: lighting-drag-pulse 220ms ease-out;
+}
+
+@keyframes lighting-drag-pulse {
+  0% { transform: scale(1); color: #fff; }
+  40% { transform: scale(1.25); color: var(--accent); }
+  100% { transform: scale(1); color: #fff; }
+}
+
+/* z-index 1: above sibling cards but under the sticky modal header and Save
+   bar (z-index 2). The card itself is never scaled — the drag math reads its
+   rect — and has no transform transition, which would lag behind the finger. */
+.lighting-setup-card.lighting-dragging {
+  z-index: 1;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
 #shootForm .lighting-setup-card-bar .lighting-setup-name::placeholder {
   color: rgba(255, 255, 255, 0.6);
   opacity: 1;
@@ -2262,6 +2293,14 @@ h2.status-group-heading.heading-navy {
   font-weight: 700;
   text-transform: none !important;
   letter-spacing: normal !important;
+}
+
+/* .checkbox-row's own display:flex !important beats the browser's built-in
+   [hidden]{display:none}, so without this a row hidden via the hidden
+   attribute (e.g. #moodboardCompleteRow once a shoot is past planning)
+   stayed fully visible. */
+.checkbox-row[hidden] {
+  display: none !important;
 }
 
 .checkbox-row input[type="checkbox"] {
