@@ -11237,7 +11237,7 @@
   // ---------- Reflection helper ("Need help reflecting?") ----------
   // Under Reflection: a few short questions for each of its three fields,
   // picked by the shoot's category (REFLECTION_FLOWS). Back and Next move
-  // freely, any question can be skipped, and Finish (or "Finish now") writes
+  // freely, any question can be skipped, and Finish (or Close, partway) writes
   // whatever was answered straight into the matching fields — one sentence
   // per answer, each from its question's `say` ({a} = the answer; `lower`
   // lowercases a capital the answer starts a sentence with).
@@ -11865,7 +11865,6 @@
     input.value = h.answers[h.index] || '';
     document.getElementById('reflectHelperBackBtn').hidden = h.index === 0;
     document.getElementById('reflectHelperNextBtn').textContent = isLast ? 'Finish' : 'Next';
-    document.getElementById('reflectHelperFinishBtn').hidden = isLast;
   }
 
   function goReflectHelper(step) {
@@ -11919,10 +11918,12 @@
         .slice(0, field.maxLength > 0 ? field.maxLength : 1000);
       return { key, field, text };
     }).filter(fill => fill.text);
-    const replacing = fills.filter(fill => hasText(fill.field.value) && fill.field.value.trim() !== fill.text)
-      .map(fill => REFLECTION_FIELDS[fill.key].label);
-    if (replacing.length && !confirm(`Replace what's already in ${conceptHelperJoin(replacing)}?`)) return;
-    fills.forEach(({ field, text }) => {
+    const replacing = fills.filter(fill => hasText(fill.field.value) && fill.field.value.trim() !== fill.text);
+    // Cancel keeps what's there, but still fills the fields that were empty
+    // — and closes either way, so Close is never a dead end.
+    const keepExisting = replacing.length
+      && !confirm(`Replace what's already in ${conceptHelperJoin(replacing.map(fill => REFLECTION_FIELDS[fill.key].label))}?`);
+    fills.filter(fill => !(keepExisting && replacing.includes(fill))).forEach(({ field, text }) => {
       field.value = text;
       field.dispatchEvent(new Event('input', { bubbles: true }));
       syncFieldFilledState(field);
@@ -11944,8 +11945,8 @@
   document.getElementById('reflectHelperBtn').addEventListener('click', openReflectHelper);
   document.getElementById('reflectHelperBackBtn').addEventListener('click', () => goReflectHelper(-1));
   document.getElementById('reflectHelperNextBtn').addEventListener('click', () => goReflectHelper(1));
-  document.getElementById('reflectHelperFinishBtn').addEventListener('click', finishReflectHelper);
-  document.getElementById('reflectHelperCloseBtn').addEventListener('click', closeReflectHelper);
+  // Close keeps what's been answered so far: same as Finish.
+  document.getElementById('reflectHelperCloseBtn').addEventListener('click', finishReflectHelper);
 
   // Enter moves on (Shift+Enter still makes a new line; see the concept
   // helper's input for keyCode 229).
