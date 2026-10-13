@@ -886,11 +886,16 @@
     const byId = new Map();
     (Array.isArray(rawProjects) ? rawProjects : []).forEach(p => {
       if (!p || typeof p !== 'object' || !isValidProjectId(p.id) || byId.has(p.id)) return;
-      byId.set(p.id, {
+      const record = {
         id: p.id,
         name: (typeof p.name === 'string' && p.name.trim()) || UNTITLED_PROJECT_NAME,
         createdAt: (typeof p.createdAt === 'string' && p.createdAt) || todayStr(),
-      });
+      };
+      // A multi-day project's lead day and the signature of what was last
+      // mirrored from it (see syncProjectMirrors).
+      if (isValidProjectId(p.leadShootId)) record.leadShootId = p.leadShootId;
+      if (typeof p.mirrorSig === 'number') record.mirrorSig = p.mirrorSig;
+      byId.set(p.id, record);
     });
     const membersById = new Map();
     shoots.forEach(s => {
@@ -971,6 +976,10 @@
   }
 
   function saveState() {
+    // Every save first brings multi-day projects in line: a change to a lead
+    // day is mirrored onto the days following it, and a following day that
+    // was changed by hand stops following (see syncProjectMirrors).
+    syncProjectMirrors();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state, stripPhotos));
   }
 
@@ -1948,9 +1957,207 @@
     const idx = state.shoots.findIndex(x => x.id === shootId);
     if (idx === -1) return null;
     if (projectId && !findProject(projectId)) return null;
-    state.shoots[idx] = { ...state.shoots[idx], projectId: projectId || '' };
+    const prev = state.shoots[idx];
+    // A shoot that changes projects (or leaves one) is no longer one of a
+    // multi-day project's following days — it never follows another lead.
+    const moving = (prev.projectId || '') !== (projectId || '');
+    state.shoots[idx] = { ...prev, projectId: projectId || '', ...(moving ? { followsLead: false } : {}) };
     pruneEmptyProjects();
     return state.shoots[idx];
+  }
+
+  // ---------- Multi-day mirroring ----------
+  // A project made with "Multi-day shoot" has a lead day — the shoot it was
+  // made from (project.leadShootId) — and its other days follow it
+  // (shoot.followsLead). Everything planned on the lead is mirrored onto
+  // the following days, now and on every later change: title, category,
+  // talent, team, location and directions, the concept fields, shooting
+  // notes, deliverables, deadline, references, frameworks, lighting setups,
+  // the mood board and its cover. Each day keeps its own date, times,
+  // status, shot list, reflection and final images. Changing any mirrored
+  // detail on a following day by hand makes that day its own from then on
+  // (followsLead off), and the lead's later changes skip it.
+  //
+  // The text/list details are compared by signature on every save (run from
+  // saveState), so every way of editing a shoot — the form, the ⋮ menu,
+  // Shoot mode, the talent popup — is covered without hooks of its own.
+  // Photos live in IndexedDB, so mood board and cover changes are reported
+  // separately through onShootImagesChanged().
+
+  // The lead day, if the project has one that's still in it.
+  function projectLeadOf(project) {
+    if (!project || !project.leadShootId) return null;
+    const lead = state.shoots.find(s => s.id === project.leadShootId);
+    return lead && lead.projectId === project.id ? lead : null;
+  }
+
+  // The shoots currently following a project's lead.
+  function projectFollowers(project, lead) {
+    return state.shoots.filter(s => s.projectId === project.id && s.followsLead && s.id !== lead.id);
+  }
+
+  // The mirrored text/list details as one comparable number, normalized the
+  // way the Edit Shoot form round-trips them (trimmed references, tags in a
+  // fixed order, no list ids, the team platform defaulted), so opening a
+  // following day and closing it untouched never reads as an edit. Photos
+  // are left out on purpose: at launch they arrive from IndexedDB a moment
+  // after everything else, which would look like a change.
+  function mirrorSignature(s) {
+    const loc = normalizeLocation(s.location);
+    // Only tags the form can actually show (their framework and tag still
+    // exist — Manage Frameworks can delete or rename them without touching
+    // shoots), once each, since a re-save through the form drops the rest.
+    const frameworkTags = [...new Set((s.frameworkTags || [])
+      .filter(t => (state.frameworks || []).some(fw => fw.id === t.frameworkId && (fw.tags || []).includes(t.tag)))
+      .map(t => `${t.frameworkId}|${t.tag}`))].sort();
+    return hashString(JSON.stringify([
+      // Trimmed like the form saves them (Shoot mode stores text as typed).
+      ['title', 'teamRequired', 'talentDirections', 'teamDirections', 'locationDirections',
+        'premise', 'character', 'worldNotes', 'shootGoals', 'elevatorPitch', 'shootingNotes',
+        'deliverables', 'deliverableDestinations', 'deadline'].map(k => (typeof s[k] === 'string' ? s[k].trim() : '')),
+      // A category the form has no option for (e.g. an old shoot's 'client')
+      // reads back from the form as none at all.
+      CATEGORY_LABELS[s.category] ? s.category : '',
+      !!s.teamFinalized,
+      !!s.moodboardComplete,
+      (s.talents || []).map(t => [(t.name || '').trim(), (t.socialHandles || []).map(h => [h.platform || '', h.handle || ''])]),
+      (s.teamMembers || []).map(tm => [tm.name || '', tm.role || '', tm.socialPlatform || 'instagram', tm.socialHandle || '']),
+      [loc.name, loc.street, loc.city, loc.state, loc.zip, loc.country],
+      normalizeAspectRatios(s.aspectRatios),
+      (s.references || []).map(r => (typeof r === 'string' ? r.trim() : '')).filter(Boolean),
+      frameworkTags,
+      (s.lightingSetups || []).map(l => [l.name || '', l.characteristics || '', l.description !== undefined ? l.description : (l.text || '')]),
+    ]));
+  }
+
+  // Copies the lead's mirrored details onto one following day — in place,
+  // since Shoot mode and the form hold live references to shoot objects. A
+  // category change brings the day's status along to its nearest
+  // equivalent, the same as flipping the category in the form does.
+  function applyLeadDetails(lead, day) {
+    ['title', 'category', 'teamRequired', 'talentDirections', 'teamDirections', 'locationDirections',
+      'premise', 'character', 'worldNotes', 'shootGoals', 'elevatorPitch', 'shootingNotes',
+      'deliverables', 'deliverableDestinations', 'deadline'].forEach(k => { day[k] = lead[k] || ''; });
+    day.teamFinalized = !!lead.teamFinalized;
+    day.moodboardComplete = !!lead.moodboardComplete;
+    day.teamMembers = (lead.teamMembers || []).map(tm => ({ ...tm }));
+    day.location = normalizeLocation(lead.location);
+    day.aspectRatios = normalizeAspectRatios(lead.aspectRatios);
+    day.references = [...(lead.references || [])];
+    day.frameworkTags = (lead.frameworkTags || []).map(t => ({ ...t }));
+    day.lightingSetups = (lead.lightingSetups || []).map(item => ({
+      id: uid(),
+      name: item.name || '',
+      characteristics: item.characteristics || '',
+      description: item.description !== undefined ? item.description : (item.text || ''),
+    }));
+    // Same people (same talent ids) as the lead. A photo the lead hasn't got
+    // in memory keeps the day's own copy rather than blanking it; a new or
+    // changed one is written to this day's own IndexedDB row too, so it
+    // survives a reload.
+    const previous = new Map((day.talents || []).map(t => [t.id, t]));
+    day.talents = (lead.talents || []).map(t => {
+      const id = t.id || uid();
+      const prev = previous.get(id);
+      const photo = t.photo || (prev && prev.photo) || '';
+      if (t.photo && (!prev || prev.photo !== t.photo)) savePhotoToIdb(talentPhotoKey(day.id, id), t.photo).catch(() => {});
+      return { id, name: t.name || '', socialHandles: (t.socialHandles || []).map(h => ({ ...h })), photo };
+    });
+    day.status = remapStatusForCategory(day.status || 'prospect', day.category);
+  }
+
+  // Lets the user know a day just stopped following, and refreshes its
+  // Multi-day row if that day's the one open.
+  function announceDayDetached(day, lead) {
+    const info = projectDayInfo(day);
+    const leadInfo = projectDayInfo(lead);
+    const dayName = info ? `Day ${info.day}` : 'This day';
+    const leadName = leadInfo ? `Day ${leadInfo.day}` : 'the first day';
+    showToast(`${dayName} now has its own changes, so later edits to ${leadName} won't copy to it`);
+    if (!shootModalOverlay.hidden && currentShootId === day.id) updateMultiDayRow();
+  }
+
+  // Run by saveState before every save. For each project with a lead: a
+  // following day whose details no longer match what was last mirrored onto
+  // it was edited by hand, so it stops following — unless it now matches
+  // the lead anyway (the talent popup updates a person on every shoot at
+  // once). Then, if the lead itself changed since the last mirror, its
+  // details are copied onto every day still following it.
+  function syncProjectMirrors() {
+    if (!state || !Array.isArray(state.shoots) || !Array.isArray(state.projects)) return;
+    state.projects.forEach(project => {
+      const lead = projectLeadOf(project);
+      if (!lead) return;
+      const leadSig = mirrorSignature(lead);
+      projectFollowers(project, lead).forEach(day => {
+        const sig = mirrorSignature(day);
+        if (sig === day.mirrorSig) return;
+        if (sig === leadSig) { day.mirrorSig = sig; return; }
+        day.followsLead = false;
+        delete day.mirrorSig;
+        announceDayDetached(day, lead);
+      });
+      if (leadSig === project.mirrorSig) return;
+      projectFollowers(project, lead).forEach(day => {
+        applyLeadDetails(lead, day);
+        day.mirrorSig = mirrorSignature(day);
+      });
+      project.mirrorSig = leadSig;
+    });
+  }
+
+  // Called once a shoot's mood board ({ board: true }) and/or cover
+  // ({ cover: true }) has been changed by hand — both live in IndexedDB,
+  // outside the signature above. On a lead day it copies what changed onto
+  // every following day; on a following day it counts as making that day
+  // its own. A cover set from a day's own final images is never reported:
+  // it belongs to that day.
+  function onShootImagesChanged(shootId, what) {
+    const shoot = state.shoots.find(s => s.id === shootId);
+    if (!shoot || !shoot.projectId) return;
+    const project = findProject(shoot.projectId);
+    const lead = projectLeadOf(project);
+    if (!lead) return;
+    if (shoot.id === lead.id) {
+      mirrorLeadImages(project, lead, what || { board: true });
+      return;
+    }
+    if (!shoot.followsLead) return;
+    shoot.followsLead = false;
+    delete shoot.mirrorSig;
+    announceDayDetached(shoot, lead);
+    saveState();
+  }
+
+  // The lead's mood board and/or cover (per `what`), copied onto each
+  // following day's own IndexedDB rows — or just onto `targets` — and the
+  // cover onto the in-memory shoot for the lists too. A day that already
+  // has final images of its own keeps its cover: once it's been shot, its
+  // cover is its own photo, not the plan's.
+  function mirrorLeadImages(project, lead, what, targets) {
+    const days = targets || projectFollowers(project, lead);
+    const wantBoard = !!(what && what.board);
+    const wantCover = !!(what && what.cover);
+    if (!days.length || (!wantBoard && !wantCover)) return Promise.resolve();
+    return Promise.all([
+      wantBoard ? idbGetImages(lead.id).catch(() => null) : Promise.resolve(null),
+      wantCover ? idbGetImages(projectPhotoKey(lead.id)).catch(() => null) : Promise.resolve(null),
+    ]).then(([board, coverRows]) => {
+      const cover = wantCover ? (photoFromEntries(coverRows) || lead.projectPhoto || '') : '';
+      return Promise.all(days.map(day => {
+        const writes = [];
+        if (board) writes.push(idbSetImages(day.id, board.map(img => ({ ...img }))));
+        if (cover) {
+          writes.push(idbGetImages(finalImagesKey(day.id)).catch(() => []).then(finals => {
+            if (finals.length) return;
+            const live = state.shoots.find(x => x.id === day.id);
+            if (live) live.projectPhoto = cover;
+            return savePhotoToIdb(projectPhotoKey(day.id), cover);
+          }));
+        }
+        return Promise.all(writes.map(w => w.catch(() => {})));
+      }));
+    }).then(() => renderAll()).catch(() => {});
   }
 
   // Every field a saved shoot carries — the Edit Shoot form's own set
@@ -2011,11 +2218,11 @@
   // overrides read are `date` and `projectId`.
   //   'day':   the next day of the same shoot. Carries over what stays the
   //            same from day to day — title, talent (with their photos),
-  //            team, location, times, directions, the concept, video
-  //            deliverables, deadline, references, frameworks, lighting
-  //            setups (fresh ids), the mood board and the cover photo — and
-  //            nothing that belongs to a day that already happened: no date
-  //            (that's overrides.date), reflection, shooting notes, final
+  //            team, location, times, directions, the concept, shooting
+  //            notes, video deliverables, deadline, references, frameworks,
+  //            lighting setups (fresh ids), the mood board and the cover
+  //            photo — and nothing that belongs to a day that already
+  //            happened: no date (that's overrides.date), reflection, final
   //            images, capture/edit timestamps or reminder flags. A source
   //            that's already been shot hands over the shots it didn't tick
   //            off as the new day's list; otherwise the list starts empty.
@@ -2067,6 +2274,7 @@
       shoot.locationDirections = source.locationDirections || '';
       shoot.talentDirections = source.talentDirections || '';
       shoot.teamDirections = source.teamDirections || '';
+      shoot.shootingNotes = source.shootingNotes || '';
       shoot.teamRequired = source.teamRequired || '';
       shoot.teamFinalized = !!source.teamFinalized;
       shoot.teamMembers = (source.teamMembers || []).map(tm => ({ socialPlatform: 'instagram', ...tm }));
@@ -2460,8 +2668,9 @@
   // the same job refreshOpenStatBoxDetail does for the stat boxes.
   let activeProjectId = null;
   let projectPopupHideTimer = null;
-  // Guards "+ Add a day" / "+ Add a shoot" against a double tap starting a
-  // second copy while the first is still awaiting its IndexedDB writes.
+  // Guards "+ Add a day" against a double tap starting a second copy while
+  // the first is still awaiting its IndexedDB writes (and Archive/Ungroup
+  // against changing the project mid-copy).
   let projectPopupBusy = false;
 
   // Title, summary and member list only — the rename row is left exactly
@@ -2556,17 +2765,30 @@
     const members = projectMembers(project.id);
     if (!members.length) return;
     // projectMembers is date-sorted with undated shoots last, so the last
-    // dated member is the latest day.
+    // dated member is the latest day — the new one is dated the day after.
     const dated = members.filter(s => s.date);
-    const source = dated.length ? dated[dated.length - 1] : members[members.length - 1];
+    const latest = dated.length ? dated[dated.length - 1] : members[members.length - 1];
     let nextDate = '';
-    if (source.date) {
-      const [y, m, d] = source.date.split('-').map(Number);
+    if (latest.date) {
+      const [y, m, d] = latest.date.split('-').map(Number);
       nextDate = formatDate(new Date(y, m - 1, d + 1));
     }
     projectPopupBusy = true;
     try {
-      const shoot = await copyShootForProject(source, 'day', { date: nextDate });
+      // Carries the latest day forward (its times, status, any shots it
+      // didn't get to)...
+      const shoot = await copyShootForProject(latest, 'day', { date: nextDate });
+      // ...and in a multi-day project, then takes on the lead's mirrored
+      // details, mood board and cover as they are now (read after the copy,
+      // so an edit made to Day 1 meanwhile isn't missed) and follows it.
+      const liveProject = findProject(project.id);
+      const lead = projectLeadOf(liveProject);
+      if (lead && shoot.projectId === project.id) {
+        applyLeadDetails(lead, shoot);
+        await mirrorLeadImages(liveProject, lead, { board: true, cover: true }, [shoot]);
+        shoot.followsLead = true;
+        shoot.mirrorSig = mirrorSignature(shoot);
+      }
       saveState();
       renderAll();
       refreshOpenStatBoxDetail();
@@ -2582,31 +2804,6 @@
       if (shootModalOverlay.hidden) openShootModal(shoot.id);
     } catch (err) {
       showToast("Couldn't add a day. Please try again.");
-    } finally {
-      projectPopupBusy = false;
-    }
-  });
-
-  // A different shoot in the same project (e.g. another video for the same
-  // series): only the brief carries over, nothing day-specific.
-  document.getElementById('projectAddShootBtn').addEventListener('click', async () => {
-    const project = findProject(activeProjectId);
-    if (!project || projectPopupBusy) return;
-    const members = projectMembers(project.id);
-    if (!members.length) return;
-    // Same representative shoot the lists use for this project's box.
-    const source = projectRepresentative(members) || members[0];
-    projectPopupBusy = true;
-    try {
-      const shoot = await copyShootForProject(source, 'brief', {});
-      saveState();
-      renderAll();
-      refreshOpenStatBoxDetail();
-      // A row tapped while the copy was still being written may already
-      // have the shoot modal open — re-filling it would drop unsaved typing.
-      if (shootModalOverlay.hidden) openShootModal(shoot.id);
-    } catch (err) {
-      showToast("Couldn't add a shoot. Please try again.");
     } finally {
       projectPopupBusy = false;
     }
@@ -4915,7 +5112,11 @@
     // boxes are 4:5, so it drops in without any odd object-fit cropping.
     if (draft.photo && !pendingProjectPhoto) {
       pendingProjectPhoto = draft.photo;
-      if (currentShootId) savePhotoToIdb(projectPhotoKey(currentShootId), draft.photo).catch(() => {});
+      const coverShootId = currentShootId;
+      if (coverShootId) {
+        savePhotoToIdb(projectPhotoKey(coverShootId), draft.photo).catch(() => {})
+          .then(() => onShootImagesChanged(coverShootId, { cover: true }));
+      }
     }
 
     // A talent picked from "returning talent" (or reopened from a card that
@@ -4948,7 +5149,12 @@
           // delete every other copy's photo.)
         });
       });
-      saveState();
+      // The open shoot's own copy is committed in the same save, so a
+      // multi-day lead and the days following it change together — saved
+      // apart, the following days would look edited by hand and stop
+      // mirroring (see syncProjectMirrors).
+      clearTimeout(shootSaveTimer);
+      if (!autosaveShoot()) saveState();
       renderAll();
     }
 
@@ -6996,10 +7202,14 @@
       grid.querySelectorAll('.moodboard-thumb-delete').forEach(btn => {
         btn.addEventListener('click', () => {
           if (!confirm("Delete this photo? This can't be undone.")) return;
-          idbGetImages(currentShootId).then(imgs => {
+          const shootId = currentShootId;
+          idbGetImages(shootId).then(imgs => {
             imgs.splice(Number(btn.dataset.idx), 1);
-            return idbSetImages(currentShootId, imgs);
-          }).then(renderMoodboard);
+            return idbSetImages(shootId, imgs);
+          }).then(() => {
+            renderMoodboard();
+            onShootImagesChanged(shootId, { board: true });
+          });
         });
       });
       grid.querySelectorAll('.moodboard-thumb img').forEach(imgEl => {
@@ -7018,23 +7228,46 @@
     const files = [...e.target.files];
     e.target.value = '';
     if (!files.length) return;
+    // The photos belong to the shoot they were picked on, even if resizing
+    // takes long enough for that shoot to be closed and another opened.
+    const uploadShootId = currentShootId;
+    const stillOpen = () => currentShootId === uploadShootId && !shootModalOverlay.hidden;
+    let coverSet = false;
     Promise.all(files.map(f => resizeImageFile(f, 1280, 0.72)))
-      .then(newImages => idbGetImages(currentShootId).then(existing => {
-        const shouldAutoSetProjectPhoto = existing.length === 0 && !pendingProjectPhoto && newImages.length > 0;
-        const combined = existing.concat(newImages.map(src => ({ src, caption: '' })));
-        return idbSetImages(currentShootId, combined).then(() => {
-          if (shouldAutoSetProjectPhoto) {
-            return resizeDataUrlThumb(newImages[0], 200, 0.6).then(thumb => {
-              pendingProjectPhoto = thumb;
-              return savePhotoToIdb(projectPhotoKey(currentShootId), thumb);
-            });
-          }
+      .then(newImages => {
+        // A never-saved draft that was closed in the meantime is gone (its
+        // rows were cleared on close) — don't leave orphaned photos behind.
+        if (!stillOpen() && !state.shoots.some(x => x.id === uploadShootId)) return null;
+        return idbGetImages(uploadShootId).then(existing => {
+          const savedShoot = state.shoots.find(x => x.id === uploadShootId);
+          const hasCover = stillOpen() ? !!pendingProjectPhoto : !!(savedShoot && savedShoot.projectPhoto);
+          const shouldAutoSetProjectPhoto = existing.length === 0 && !hasCover && newImages.length > 0;
+          const combined = existing.concat(newImages.map(src => ({ src, caption: '' })));
+          return idbSetImages(uploadShootId, combined).then(() => {
+            if (shouldAutoSetProjectPhoto) {
+              return resizeDataUrlThumb(newImages[0], 200, 0.6).then(thumb => {
+                coverSet = true;
+                if (stillOpen()) pendingProjectPhoto = thumb;
+                else {
+                  const live = state.shoots.find(x => x.id === uploadShootId);
+                  if (live) live.projectPhoto = thumb;
+                }
+                return savePhotoToIdb(projectPhotoKey(uploadShootId), thumb);
+              });
+            }
+          }).then(() => true);
         });
-      }))
-      .then(() => {
-        shootHasImages = true;
-        scheduleShootAutosave();
-        renderMoodboard();
+      })
+      .then((uploaded) => {
+        if (!uploaded) return;
+        if (stillOpen()) {
+          shootHasImages = true;
+          scheduleShootAutosave();
+          renderMoodboard();
+        } else {
+          renderAll();
+        }
+        onShootImagesChanged(uploadShootId, { board: true, cover: coverSet });
       })
       .catch(() => {});
   });
@@ -7113,13 +7346,24 @@
   function saveViewerCaption(newCaption) {
     // No collection key means nothing to write back to (see renderViewerCaption).
     if (!viewerStorageKey) return;
-    idbGetImages(viewerStorageKey).then(imgs => {
-      if (imgs[viewerIndex]) imgs[viewerIndex].caption = newCaption;
+    const key = viewerStorageKey;
+    const index = viewerIndex;
+    idbGetImages(key).then(imgs => {
+      // Opening the caption box and leaving it as it was isn't an edit —
+      // nothing to write, and (for a multi-day project) nothing to mirror.
+      if (!imgs[index] || (imgs[index].caption || '') === newCaption) {
+        renderViewerCaption();
+        return;
+      }
+      imgs[index].caption = newCaption;
       viewerImages = imgs;
-      return idbSetImages(viewerStorageKey, imgs);
-    }).then(() => {
-      renderViewerCaption();
-      if (viewerOnUpdate) viewerOnUpdate();
+      return idbSetImages(key, imgs).then(() => {
+        renderViewerCaption();
+        if (viewerOnUpdate) viewerOnUpdate();
+        // A mood board's key is its shoot id (final images and journal
+        // photos use other keys, which onShootImagesChanged ignores).
+        onShootImagesChanged(key, { board: true });
+      });
     });
   }
 
@@ -7148,12 +7392,14 @@
     if (!viewerImages[viewerIndex]) return;
     if (!confirm("Delete this image? This can't be undone.")) return;
     const deletedIndex = viewerIndex;
-    idbGetImages(viewerStorageKey).then(imgs => {
+    const key = viewerStorageKey;
+    idbGetImages(key).then(imgs => {
       imgs.splice(deletedIndex, 1);
-      return idbSetImages(viewerStorageKey, imgs).then(() => imgs);
+      return idbSetImages(key, imgs).then(() => imgs);
     }).then(imgs => {
       viewerImages = imgs;
       if (viewerOnUpdate) viewerOnUpdate();
+      onShootImagesChanged(key, { board: true });
       if (!imgs.length) {
         closeImageViewer();
         return;
@@ -7351,7 +7597,8 @@
       if (idx !== -1) {
         state.shoots[idx] = { ...state.shoots[idx], projectPhoto: dataUrl };
         saveState();
-        savePhotoToIdb(projectPhotoKey(targetId), dataUrl).catch(() => {});
+        savePhotoToIdb(projectPhotoKey(targetId), dataUrl).catch(() => {})
+          .then(() => onShootImagesChanged(targetId, { cover: true }));
         renderAll();
       }
       closeProjectPhotoCrop();
@@ -7359,7 +7606,11 @@
     } else {
       pendingProjectPhoto = dataUrl;
       scheduleShootAutosave();
-      if (currentShootId) savePhotoToIdb(projectPhotoKey(currentShootId), dataUrl).catch(() => {});
+      const coverShootId = currentShootId;
+      if (coverShootId) {
+        savePhotoToIdb(projectPhotoKey(coverShootId), dataUrl).catch(() => {})
+          .then(() => onShootImagesChanged(coverShootId, { cover: true }));
+      }
       closeProjectPhotoCrop();
       closeImageViewer();
     }
@@ -7699,7 +7950,19 @@
     }
     const info = projectDayInfo(membership.shoot);
     document.getElementById('shootMultiDay').checked = true;
-    label.textContent = `Part of ${membership.project.name}${info ? ` · Day ${info.day} of ${info.total}` : ''}`;
+    // Says how this day relates to its project's lead day, when it has one:
+    // the lead, a day mirroring it, or a day that's been made its own.
+    const lead = projectLeadOf(membership.project);
+    let mirrorText = '';
+    if (lead && lead.id === membership.shoot.id) {
+      mirrorText = ' · mirrored to the other days';
+    } else if (lead) {
+      const leadInfo = projectDayInfo(lead);
+      mirrorText = membership.shoot.followsLead
+        ? ` · mirrors ${leadInfo ? `Day ${leadInfo.day}` : 'the first day'}`
+        : ' · has its own changes';
+    }
+    label.textContent = `Part of ${membership.project.name}${info ? ` · Day ${info.day} of ${info.total}` : ''}${mirrorText}`;
   }
 
   // Keeps the Last day picker's allowed range anchored to the shoot date:
@@ -7829,7 +8092,7 @@
     multiDayPromptDates = dates;
     const term = moodboardTerm(document.getElementById('shootCategory').value).toLowerCase();
     document.getElementById('multiDayPromptText').textContent =
-      `This makes a separate shoot for each day — ${multiDayDatesText(dates)}. Each one copies this shoot's talent, team, location, times, concept, ${term} and lighting setups. You can change anything on any day later.`;
+      `This makes a separate shoot for each day — ${multiDayDatesText(dates)}. Everything on Day 1 (talent, team, location, concept, notes, ${term} and lighting setups) is mirrored to the other days, including any changes you make to Day 1 later. Each day keeps its own date, times, status, shot list and reflection. Note: if you change anything on another day yourself, that day keeps its own version and won't pick up later changes to Day 1.`;
     // Read off the form rather than saved state — a brand-new draft has
     // nothing saved yet, and an existing shoot may have unsaved edits.
     const talent = currentTalents.find(t => hasText(t.name));
@@ -7889,11 +8152,24 @@
         // state.shoots (and their IndexedDB rows) in the same order as
         // their days.
         for (const date of dates.slice(1)) {
-          await copyShootForProject(source, 'day', { date, projectId: project.id });
+          const day = await copyShootForProject(source, 'day', { date, projectId: project.id });
+          // Each new day follows Day 1 (see syncProjectMirrors).
+          if (day && day.projectId === project.id) {
+            day.followsLead = true;
+            day.mirrorSig = mirrorSignature(day);
+          }
         }
       } catch (err) {
         // An IndexedDB write failing part-way (e.g. storage full) keeps the
         // days that did get made; the toast below says how many that was.
+      }
+      // Day 1 becomes the lead the other days mirror; its current details
+      // are what they were just copied from.
+      const liveProject = findProject(project.id);
+      const lead = state.shoots.find(x => x.id === sourceId);
+      if (liveProject && lead) {
+        liveProject.leadShootId = sourceId;
+        liveProject.mirrorSig = mirrorSignature(lead);
       }
       saveState();
     } finally {
