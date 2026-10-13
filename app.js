@@ -7978,7 +7978,7 @@
           "type": "short",
           "text": "Where's it set?",
           "hint": "A real spot or just the kind of place.",
-          "placeholder": "e.g. a sunlit bedroom",
+          "placeholder": "e.g. a sunlit greenhouse",
           "key": "place",
           "next": "testshoot_refs"
         },
@@ -8350,7 +8350,7 @@
           "type": "short",
           "text": "Where does it play out, in a few words?",
           "hint": "Bonus points if the place means something to them.",
-          "placeholder": "e.g. a roadside motel",
+          "placeholder": "e.g. a roadside diner",
           "key": "setting",
           "next": "people_look"
         },
