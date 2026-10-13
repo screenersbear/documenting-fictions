@@ -4727,6 +4727,8 @@
       const fwId = heading.dataset.fwId;
       const body = container.querySelector(`.framework-subsection-body[data-fw-body="${fwId}"]`);
       heading.addEventListener('click', () => {
+        // Borrowed onto the wizard's Visual language slide: no folding there.
+        if (heading.closest('#shootWizard')) return;
         const nowCollapsed = !body.hidden;
         setSectionCollapsed(`shoot:framework:${fwId}`, nowCollapsed);
         body.hidden = nowCollapsed;
@@ -6088,8 +6090,12 @@
 
   function renderLightingSetups() {
     const container = document.getElementById('lightingSetupsItems');
+    // On the wizard's Lighting setups slide every card is open and its fold
+    // toggle is hidden (style.css) — no folding in the wizard. Its
+    // enter/leave re-render, so the page gets each card's own fold back.
+    const inWizard = !!container.closest('#shootWizard');
     container.innerHTML = currentLightingSetups.map((item, idx) => {
-      const collapsed = isSectionCollapsed(lightingSetupCollapseKey(item));
+      const collapsed = !inWizard && isSectionCollapsed(lightingSetupCollapseKey(item));
       return `
       <div class="team-member-card lighting-setup-card${collapsed ? ' lighting-setup-card-collapsed' : ''}" data-idx="${idx}">
         <div class="lighting-setup-card-bar">
@@ -7086,10 +7092,11 @@
     return hasText(document.getElementById(fieldId).value);
   }
 
-  // The framework tag groups are collapsible (and the fold is remembered),
-  // but a slide that's only there to tick tags shouldn't open on a closed
-  // heading — open while on the slide, then back to whatever's remembered
-  // (including a fold the user tapped while on it, which the heading saves).
+  // The framework tag groups are collapsible on the page (and the fold is
+  // remembered), but the wizard has no folding at all — it's already in
+  // bite-sized pieces. So every group is open while on the slide, its heading
+  // doesn't fold there (see renderFrameworkTagGroup, and the arrow's hidden in
+  // style.css), and on the way out each goes back to its remembered fold.
   function setShootWizardFrameworkGroupsOpen(forceOpen) {
     const selector = FRAMEWORK_TAG_CONTAINER_IDS.map(id => `#${id} .framework-subsection-body`).join(', ');
     document.querySelectorAll(selector).forEach(body => {
@@ -7147,8 +7154,8 @@
       key: 'goals',
       title: 'Goals',
       hint: () => (isVideoCategory(document.getElementById('shootCategory').value)
-        ? "What the shoot needs to accomplish, and what you're delivering at the end."
-        : 'What does this shoot need to accomplish?'),
+        ? "Be concrete and specific with what you and everyone involved should hope to expect from the shoot, and what you're delivering at the end."
+        : 'Be concrete and specific with what you and everyone involved should hope to expect from the shoot.'),
       blocks: () => [
         shootWizardBlock('shootGoals', 'label'),
         shootWizardBlock('videoDeliverablesBlock'),
@@ -7157,9 +7164,11 @@
     {
       key: 'idea',
       title: 'The idea',
-      hint: 'The concept behind the shoot, then the whole thing in a single line.',
+      hint: 'The concept and a one-line pitch. The button below can ask you a few questions and fill this in from your answers.',
       blocks: () => [
-        // Wizard-only: walks through a few questions and writes a concept.
+        // "Need to think it through?" — walks through a few questions and
+        // writes the concept and pitch (and, on narrative shoots, The
+        // story's two boxes). Sits just above Concept on the page too.
         shootWizardBlock('conceptHelperBtn'),
         shootWizardBlock('shootPremise', 'label'),
         shootWizardBlock('shootElevatorPitch', 'label'),
@@ -7218,6 +7227,9 @@
       // The section's body only — its heading stays on the page with the
       // jump menu/scrollspy/tour anchors. Shown here even if folded there.
       blocks: () => [shootWizardBlock('lightingSetupsBody')],
+      // Every setup card open while it's here (see renderLightingSetups).
+      enter: () => renderLightingSetups(),
+      leave: () => renderLightingSetups(),
     },
     {
       key: 'shotList',
@@ -7334,8 +7346,8 @@
     document.getElementById('shootWizardDontShowBtn').hidden = inPlay.indexOf(step) !== 0;
     // Forward is always possible, filled in or not. On the last slide the
     // forward button is the shoot page's own Save — same varying text as the
-    // page's button (picked when the shoot opened) — and the separate "Go to
-    // shoot page" row, on every other slide, steps aside.
+    // page's button (picked when the shoot opened) — and the separate "Skip
+    // to shoot page" row, on every other slide, steps aside.
     const nextBtn = document.getElementById('shootWizardNextBtn');
     nextBtn.textContent = isLast ? document.getElementById('saveShootBtn').textContent : 'Next';
     nextBtn.classList.toggle('shoot-wizard-save', isLast);
@@ -7451,7 +7463,7 @@
     startShootWizard();
   }
 
-  // Every way out: Done, "Go to shoot page", the post-shoot prompt's Yes,
+  // Every way out: Done, "Skip to shoot page", the post-shoot prompt's Yes,
   // closeShootModal and openShootModal. Idempotent. `closing` skips the
   // landing-on-the-page work, since a close/reopen does its own next.
   function endShootWizard(opts) {
@@ -7508,7 +7520,7 @@
     else closeShootModal();
   });
 
-  // Leaving early always asks first — from "Go to shoot page" or a tap on
+  // Leaving early always asks first — from "Skip to shoot page" or a tap on
   // the dim around the card. (Finishing on the last slide, or "Don't show
   // again", don't: those say what they do.)
   function askLeaveShootWizard() {
@@ -7563,22 +7575,42 @@
   // Lands on the shoot page with everything so far, then says where the
   // switch lives so the guide isn't gone for good by accident.
   // ---------- Concept helper ("Need to think it through?") ----------
-  // From The idea slide: a short decision tree of yes/no and short-answer
-  // questions, picked by the shoot's category (CONCEPT_FLOWS), whose answers
-  // are dropped mad-lib style into a concept summary at the end — editable,
-  // then either used as the Concept or left for the user to write their own.
+  // From The idea slide and the Direction section: a short decision tree of
+  // yes/no and short-answer questions, picked by the shoot's category
+  // (CONCEPT_FLOWS), whose answers are dropped mad-lib style into a concept
+  // and an elevator pitch at the end — plus Character/Personality and
+  // World-building notes on shoots that have those boxes, if the user opts
+  // into a few more questions. Each is editable, then either used to fill
+  // the page's fields or left for the user to write their own.
   //
   // Flow format: { id, label, categories (keys; '' = no category yet),
   // start, nodes: [{ id, type: 'yesno'|'short', text, hint?, placeholder?,
   // key, yes/no (yesno: next id or 'END'), yesValue/noValue? (stored instead
-  // of true/false), next (short), categoryText? ({category: text}) }],
-  // summaries: [{ when: {key: value}, template }] } — the first summary whose
-  // `when` all match is used. Templates: {key} inserts an answer, {category}
-  // the shoot type, and [[ ... ]] is dropped whole if any {key} in it is blank.
-  // The Concept box's own limit, so a compiled concept that won't fit is
-  // caught here (see updateConceptHelperCount) rather than cut off by it.
-  const conceptHelperMax = () => document.getElementById('shootPremise').maxLength || 300;
+  // of true/false), yesLabel/noLabel? (the buttons' text when the question
+  // is a choice between two things rather than a yes or no), next (short),
+  // categoryText? ({category: text}), section? ('deeper') }],
+  // deeper?: [{ when, start }],
+  // summaries: [{ when: {key: value}, template, pitch?, character?, world? }] }
+  // — the first summary whose `when` all match is used. Templates: {key}
+  // inserts an answer, {category} the shoot type, and [[ ... ]] is dropped
+  // whole if any {key} in it is blank. pitch/character/world are lists of
+  // templates (see conceptHelperPick). `deeper` is where the main questions
+  // hand over, when they run out, to the opt-in Character/World ones
+  // (section 'deeper': a yes/no gate keyed `deeper`, then its questions) —
+  // only on shoots whose page shows those two boxes.
   let conceptHelper = null; // { flow, nodeId, history: [nodeId], answers: {nodeId: value}, ended }
+
+  // The end screen's boxes, each filling the page field of the same name.
+  // Each box is checked against its field's own limit, so a compiled text
+  // that won't fit is caught there (see updateConceptHelperCount) rather
+  // than cut off by the field.
+  const CONCEPT_HELPER_OUTPUTS = [
+    { key: 'concept', boxId: 'conceptHelperSummary', countId: 'conceptHelperCount', fieldId: 'shootPremise', label: 'Concept', fallbackMax: 300 },
+    { key: 'character', boxId: 'conceptHelperCharacter', countId: 'conceptHelperCharacterCount', fieldId: 'shootCharacter', label: 'Character/Personality', fallbackMax: 1000 },
+    { key: 'world', boxId: 'conceptHelperWorld', countId: 'conceptHelperWorldCount', fieldId: 'shootWorldNotes', label: 'World-building notes', fallbackMax: 1000 },
+    { key: 'pitch', boxId: 'conceptHelperPitch', countId: 'conceptHelperPitchCount', fieldId: 'shootElevatorPitch', label: 'Elevator pitch', fallbackMax: 150 },
+  ];
+  const conceptHelperMax = (out) => document.getElementById(out.fieldId).maxLength || out.fallbackMax;
 
   // The questions behind "Need to think it through?" — one flow per kind of
   // shoot (see the format notes above openConceptHelper), each leaning on
@@ -7599,13 +7631,15 @@
         {
           "id": "editorial_mode",
           "type": "yesno",
-          "text": "Is this spread more of a vibe than a story with a beginning, middle and end?",
+          "text": "Is this spread a story with a beginning, middle and end, or more of a vibe?",
           "hint": "Either is great. Some of the best spreads are all vibe.",
           "key": "mode",
           "yes": "editorial_mood",
           "no": "editorial_who",
           "yesValue": "vibe",
-          "noValue": "story"
+          "noValue": "story",
+          "noLabel": "A story",
+          "yesLabel": "A vibe"
         },
         {
           "id": "editorial_who",
@@ -7628,13 +7662,14 @@
         {
           "id": "editorial_after",
           "type": "yesno",
-          "text": "Are we meeting them just after something big happened?",
-          "hint": "Say no if the big thing is still coming.",
+          "text": "Are we meeting them just before something big happens, or just after?",
           "key": "timing",
           "yes": "editorial_moment",
           "no": "editorial_moment",
           "yesValue": "just after",
-          "noValue": "just before"
+          "noValue": "just before",
+          "noLabel": "Before",
+          "yesLabel": "After"
         },
         {
           "id": "editorial_moment",
@@ -7692,7 +7727,7 @@
           "id": "editorial_refs",
           "type": "short",
           "text": "Any era, movie or reference it's borrowing from?",
-          "hint": "A decade, a film, a painter, a photographer.",
+          "hint": "A decade, a film, a painter, a photographer. Or just say none.",
           "placeholder": "e.g. '90s fashion mags",
           "key": "refs",
           "next": "editorial_leave"
@@ -7708,13 +7743,122 @@
         {
           "id": "editorial_styling",
           "type": "yesno",
-          "text": "Last one: are wardrobe and styling a big part of this?",
-          "hint": "Say no if it's stripped-back and real.",
+          "text": "Last one: should the styling be stripped-back and real, or fashion-forward?",
           "key": "styling",
           "yes": "END",
           "no": "END",
           "yesValue": "fashion-forward",
-          "noValue": "stripped-back"
+          "noValue": "stripped-back",
+          "noLabel": "Stripped-back",
+          "yesLabel": "Fashion-forward"
+        },
+        {
+          "id": "editorial_deeper_story",
+          "type": "yesno",
+          "text": "That's your concept. Want to flesh out the character and their world too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "editorial_dp_want",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "editorial_dp_want",
+          "type": "short",
+          "text": "Finish this: more than anything, they want…",
+          "placeholder": "e.g. to be anywhere but here",
+          "key": "want",
+          "next": "editorial_dp_secret",
+          "section": "deeper"
+        },
+        {
+          "id": "editorial_dp_secret",
+          "type": "short",
+          "text": "Finish this: what they'd never say out loud is…",
+          "placeholder": "e.g. she still loves him",
+          "key": "secret",
+          "next": "editorial_dp_detail",
+          "section": "deeper"
+        },
+        {
+          "id": "editorial_dp_detail",
+          "type": "short",
+          "text": "What's one detail of how they look that tells their story?",
+          "placeholder": "e.g. a veil she won't take off",
+          "key": "detail",
+          "next": "editorial_dp_props",
+          "section": "deeper"
+        },
+        {
+          "id": "editorial_dp_props",
+          "type": "short",
+          "text": "What's around them that hints at what happened?",
+          "placeholder": "e.g. a melting cake on the hood",
+          "key": "props",
+          "next": "editorial_dp_after",
+          "section": "deeper"
+        },
+        {
+          "id": "editorial_dp_after",
+          "type": "short",
+          "text": "Last one: what happens right after the last frame?",
+          "placeholder": "e.g. she drives off alone",
+          "key": "after",
+          "next": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "editorial_deeper_vibe",
+          "type": "yesno",
+          "text": "That's your concept. Want to sketch out who's in it and the world around them too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "editorial_dp_figure",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "editorial_dp_figure",
+          "type": "short",
+          "text": "Who's in the frame, in a few words?",
+          "placeholder": "e.g. a debutante who left early",
+          "key": "figure",
+          "next": "editorial_dp_inner",
+          "section": "deeper"
+        },
+        {
+          "id": "editorial_dp_inner",
+          "type": "short",
+          "text": "Finish this: deep down, they're feeling…",
+          "placeholder": "e.g. a little forgotten",
+          "key": "inner",
+          "next": "editorial_dp_vdetail",
+          "section": "deeper"
+        },
+        {
+          "id": "editorial_dp_vdetail",
+          "type": "short",
+          "text": "What's one detail of how they look that sets the mood?",
+          "placeholder": "e.g. smudged lipstick, one glove",
+          "key": "detail",
+          "next": "editorial_dp_era",
+          "section": "deeper"
+        },
+        {
+          "id": "editorial_dp_era",
+          "type": "short",
+          "text": "What era or time of day does it live in?",
+          "placeholder": "e.g. the '80s, just past midnight",
+          "key": "era",
+          "next": "editorial_dp_vprops",
+          "section": "deeper"
+        },
+        {
+          "id": "editorial_dp_vprops",
+          "type": "short",
+          "text": "Last one: what's around them that sets the scene?",
+          "placeholder": "e.g. deflating balloons",
+          "key": "props",
+          "next": "END",
+          "section": "deeper"
         }
       ],
       "summaries": [
@@ -7722,17 +7866,54 @@
           "when": {
             "mode": "story"
           },
-          "template": "An editorial[[ about {character}]][[, caught {action}]][[ {timing} {moment}]][[, set in {world}]][[, with {styling} styling]].[[ It should feel {feeling}.]]"
+          "template": "An editorial[[ about {character}]][[, caught {action}]][[ {timing} {moment}]][[, set in {world}]][[, with {styling} styling]].[[ It should feel {feeling}.]]",
+          "pitch": [
+            "[[{character}]][[, caught {action}]][[ {timing} {moment}]][[, in {world}]].",
+            "[[{character}]][[, caught {action}]][[ {timing} {moment}]].",
+            "[[{character}]][[, caught {action}]].",
+            "[[{character}]][[ in {world}]]."
+          ],
+          "character": [
+            "[[{character}]][[, caught {action}]].[[ More than anything, they want {want}.]][[ What they'd never say out loud: {secret}.]][[ The detail that gives them away: {detail}.]]"
+          ],
+          "world": [
+            "[[Set in {world}]][[, {timing} {moment}]].[[ In the frame: {props}.]][[ Right after the last frame, {after}.]]"
+          ]
         },
         {
           "when": {
             "mode": "vibe"
           },
-          "template": "[[{mood}: ]]a mood piece[[ set in {place}]][[, bathed in {light}]][[, with {styling} styling]].[[ Think {refs}.]][[ It should leave you {takeaway}.]]"
+          "template": "[[{mood}: ]]a mood piece[[ set in {place}]][[, bathed in {light}]][[, with {styling} styling]].[[ Think {refs}.]][[ It should leave you {takeaway}.]]",
+          "pitch": [
+            "[[{place}]][[, bathed in {light}]][[: {mood}]].",
+            "[[{place}]][[: {mood}]].",
+            "[[{place}]][[, bathed in {light}]]."
+          ],
+          "character": [
+            "[[{figure}]].[[ Deep down, they're feeling {inner}.]][[ The detail that sets the mood: {detail}.]]"
+          ],
+          "world": [
+            "[[Set in {place}]][[, bathed in {light}]].[[ When: {era}.]][[ In the frame: {props}.]][[ Think {refs}.]]"
+          ]
         },
         {
           "when": {},
           "template": "An editorial[[ with {styling} styling]].[[ It should feel {feeling}.]][[ It should feel {mood}.]]"
+        }
+      ],
+      "deeper": [
+        {
+          "when": {
+            "mode": "story"
+          },
+          "start": "editorial_deeper_story"
+        },
+        {
+          "when": {
+            "mode": "vibe"
+          },
+          "start": "editorial_deeper_vibe"
         }
       ]
     },
@@ -7747,13 +7928,15 @@
         {
           "id": "portfolio_mode",
           "type": "yesno",
-          "text": "Is this portfolio piece more of a vibe than a story with a beginning, middle and end?",
+          "text": "Is this portfolio piece a story with a beginning, middle and end, or more of a vibe?",
           "hint": "Either works. Go with whatever's closest to what's in your head.",
           "key": "mode",
           "yes": "portfolio_mood",
           "no": "portfolio_who",
           "yesValue": "vibe",
-          "noValue": "story"
+          "noValue": "story",
+          "noLabel": "A story",
+          "yesLabel": "A vibe"
         },
         {
           "id": "portfolio_who",
@@ -7776,13 +7959,14 @@
         {
           "id": "portfolio_after",
           "type": "yesno",
-          "text": "Are we meeting them just after something big happened?",
-          "hint": "Say no if the big thing is still coming.",
+          "text": "Are we meeting them just before something big happens, or just after?",
           "key": "timing",
           "yes": "portfolio_moment",
           "no": "portfolio_moment",
           "yesValue": "just after",
-          "noValue": "just before"
+          "noValue": "just before",
+          "noLabel": "Before",
+          "yesLabel": "After"
         },
         {
           "id": "portfolio_moment",
@@ -7840,7 +8024,7 @@
           "id": "portfolio_refs",
           "type": "short",
           "text": "Any era, movie or reference it's borrowing from?",
-          "hint": "A decade, a film, a painter, a photographer.",
+          "hint": "A decade, a film, a painter, a photographer. Or just say none.",
           "placeholder": "e.g. Edward Hopper",
           "key": "refs",
           "next": "portfolio_leave"
@@ -7861,6 +8045,114 @@
           "placeholder": "e.g. cinematic color",
           "key": "showoff",
           "next": "END"
+        },
+        {
+          "id": "portfolio_deeper_story",
+          "type": "yesno",
+          "text": "That's your concept. Want to flesh out the character and their world too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "portfolio_dp_want",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "portfolio_dp_want",
+          "type": "short",
+          "text": "Finish this: more than anything, they want…",
+          "placeholder": "e.g. one more standing ovation",
+          "key": "want",
+          "next": "portfolio_dp_secret",
+          "section": "deeper"
+        },
+        {
+          "id": "portfolio_dp_secret",
+          "type": "short",
+          "text": "Finish this: what they'd never say out loud is…",
+          "placeholder": "e.g. he's scared of what's next",
+          "key": "secret",
+          "next": "portfolio_dp_detail",
+          "section": "deeper"
+        },
+        {
+          "id": "portfolio_dp_detail",
+          "type": "short",
+          "text": "What's one detail of how they look that tells their story?",
+          "placeholder": "e.g. a perfectly tied bow tie",
+          "key": "detail",
+          "next": "portfolio_dp_props",
+          "section": "deeper"
+        },
+        {
+          "id": "portfolio_dp_props",
+          "type": "short",
+          "text": "What's around them that hints at what happened?",
+          "placeholder": "e.g. a dusty, empty rabbit cage",
+          "key": "props",
+          "next": "portfolio_dp_after",
+          "section": "deeper"
+        },
+        {
+          "id": "portfolio_dp_after",
+          "type": "short",
+          "text": "Last one: what happens right after the last frame?",
+          "placeholder": "e.g. he leaves the stage lights on",
+          "key": "after",
+          "next": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "portfolio_deeper_vibe",
+          "type": "yesno",
+          "text": "That's your concept. Want to sketch out who's in it and the world around them too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "portfolio_dp_figure",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "portfolio_dp_figure",
+          "type": "short",
+          "text": "Who's in the frame, in a few words?",
+          "placeholder": "e.g. a night-shift nurse",
+          "key": "figure",
+          "next": "portfolio_dp_inner",
+          "section": "deeper"
+        },
+        {
+          "id": "portfolio_dp_inner",
+          "type": "short",
+          "text": "Finish this: deep down, they're feeling…",
+          "placeholder": "e.g. too tired to go home",
+          "key": "inner",
+          "next": "portfolio_dp_vdetail",
+          "section": "deeper"
+        },
+        {
+          "id": "portfolio_dp_vdetail",
+          "type": "short",
+          "text": "What's one detail of how they look that sets the mood?",
+          "placeholder": "e.g. scrubs under a winter coat",
+          "key": "detail",
+          "next": "portfolio_dp_era",
+          "section": "deeper"
+        },
+        {
+          "id": "portfolio_dp_era",
+          "type": "short",
+          "text": "What era or time of day does it live in?",
+          "placeholder": "e.g. a winter night in the '90s",
+          "key": "era",
+          "next": "portfolio_dp_vprops",
+          "section": "deeper"
+        },
+        {
+          "id": "portfolio_dp_vprops",
+          "type": "short",
+          "text": "Last one: what's around them that sets the scene?",
+          "placeholder": "e.g. one dryer still spinning",
+          "key": "props",
+          "next": "END",
+          "section": "deeper"
         }
       ],
       "summaries": [
@@ -7868,17 +8160,54 @@
           "when": {
             "mode": "story"
           },
-          "template": "A story[[ about {character}]][[, caught {action}]][[ {timing} {moment}]][[, set in {world}]].[[ It should feel {feeling}.]][[ Made to show off {showoff}.]]"
+          "template": "A story[[ about {character}]][[, caught {action}]][[ {timing} {moment}]][[, set in {world}]].[[ It should feel {feeling}.]][[ Made to show off {showoff}.]]",
+          "pitch": [
+            "[[{character}]][[, caught {action}]][[ {timing} {moment}]][[, in {world}]].",
+            "[[{character}]][[, caught {action}]][[ {timing} {moment}]].",
+            "[[{character}]][[, caught {action}]].",
+            "[[{character}]][[ in {world}]]."
+          ],
+          "character": [
+            "[[{character}]][[, caught {action}]].[[ More than anything, they want {want}.]][[ What they'd never say out loud: {secret}.]][[ The detail that gives them away: {detail}.]]"
+          ],
+          "world": [
+            "[[Set in {world}]][[, {timing} {moment}]].[[ In the frame: {props}.]][[ Right after the last frame, {after}.]]"
+          ]
         },
         {
           "when": {
             "mode": "vibe"
           },
-          "template": "[[{mood}: ]]a mood piece[[ set in {place}]][[, bathed in {light}]].[[ Think {refs}.]][[ It should leave you {takeaway}.]][[ Made to show off {showoff}.]]"
+          "template": "[[{mood}: ]]a mood piece[[ set in {place}]][[, bathed in {light}]].[[ Think {refs}.]][[ It should leave you {takeaway}.]][[ Made to show off {showoff}.]]",
+          "pitch": [
+            "[[{place}]][[, bathed in {light}]][[: {mood}]].",
+            "[[{place}]][[: {mood}]].",
+            "[[{place}]][[, bathed in {light}]]."
+          ],
+          "character": [
+            "[[{figure}]].[[ Deep down, they're feeling {inner}.]][[ The detail that sets the mood: {detail}.]]"
+          ],
+          "world": [
+            "[[Set in {place}]][[, bathed in {light}]].[[ When: {era}.]][[ In the frame: {props}.]][[ Think {refs}.]]"
+          ]
         },
         {
           "when": {},
           "template": "A portfolio piece[[ made to show off {showoff}]].[[ It should feel {feeling}.]][[ It should feel {mood}.]]"
+        }
+      ],
+      "deeper": [
+        {
+          "when": {
+            "mode": "story"
+          },
+          "start": "portfolio_deeper_story"
+        },
+        {
+          "when": {
+            "mode": "vibe"
+          },
+          "start": "portfolio_deeper_vibe"
         }
       ]
     },
@@ -7893,13 +8222,15 @@
         {
           "id": "testshoot_mode",
           "type": "yesno",
-          "text": "Is this {category} more of a vibe than a story with a beginning, middle and end?",
+          "text": "Is this {category} a story with a beginning, middle and end, or more of a vibe?",
           "hint": "Tests are a great place to chase a pure vibe. No wrong answer.",
           "key": "mode",
           "yes": "testshoot_mood",
           "no": "testshoot_who",
           "yesValue": "vibe",
-          "noValue": "story"
+          "noValue": "story",
+          "noLabel": "A story",
+          "yesLabel": "A vibe"
         },
         {
           "id": "testshoot_who",
@@ -7922,13 +8253,14 @@
         {
           "id": "testshoot_after",
           "type": "yesno",
-          "text": "Are we meeting them just after something big happened?",
-          "hint": "Say no if the big thing is still coming.",
+          "text": "Are we meeting them just before something big happens, or just after?",
           "key": "timing",
           "yes": "testshoot_moment",
           "no": "testshoot_moment",
           "yesValue": "just after",
-          "noValue": "just before"
+          "noValue": "just before",
+          "noLabel": "Before",
+          "yesLabel": "After"
         },
         {
           "id": "testshoot_moment",
@@ -7986,7 +8318,7 @@
           "id": "testshoot_refs",
           "type": "short",
           "text": "Any era, movie or reference it's borrowing from?",
-          "hint": "A decade, a film, a painter, a photographer.",
+          "hint": "A decade, a film, a painter, a photographer. Or just say none.",
           "placeholder": "e.g. Sofia Coppola",
           "key": "refs",
           "next": "testshoot_leave"
@@ -8007,6 +8339,114 @@
           "placeholder": "e.g. a new film stock",
           "key": "testing",
           "next": "END"
+        },
+        {
+          "id": "testshoot_deeper_story",
+          "type": "yesno",
+          "text": "That's your concept. Want to flesh out the character and their world too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "testshoot_dp_want",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "testshoot_dp_want",
+          "type": "short",
+          "text": "Finish this: more than anything, they want…",
+          "placeholder": "e.g. to be seen without the sash",
+          "key": "want",
+          "next": "testshoot_dp_secret",
+          "section": "deeper"
+        },
+        {
+          "id": "testshoot_dp_secret",
+          "type": "short",
+          "text": "Finish this: what they'd never say out loud is…",
+          "placeholder": "e.g. she's relieved it's over",
+          "key": "secret",
+          "next": "testshoot_dp_detail",
+          "section": "deeper"
+        },
+        {
+          "id": "testshoot_dp_detail",
+          "type": "short",
+          "text": "What's one detail of how they look that tells their story?",
+          "placeholder": "e.g. mascara running, smile fixed",
+          "key": "detail",
+          "next": "testshoot_dp_props",
+          "section": "deeper"
+        },
+        {
+          "id": "testshoot_dp_props",
+          "type": "short",
+          "text": "What's around them that hints at what happened?",
+          "placeholder": "e.g. a deflated balloon arch",
+          "key": "props",
+          "next": "testshoot_dp_after",
+          "section": "deeper"
+        },
+        {
+          "id": "testshoot_dp_after",
+          "type": "short",
+          "text": "Last one: what happens right after the last frame?",
+          "placeholder": "e.g. she eats the whole cake",
+          "key": "after",
+          "next": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "testshoot_deeper_vibe",
+          "type": "yesno",
+          "text": "That's your concept. Want to sketch out who's in it and the world around them too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "testshoot_dp_figure",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "testshoot_dp_figure",
+          "type": "short",
+          "text": "Who's in the frame, in a few words?",
+          "placeholder": "e.g. a girl skipping summer school",
+          "key": "figure",
+          "next": "testshoot_dp_inner",
+          "section": "deeper"
+        },
+        {
+          "id": "testshoot_dp_inner",
+          "type": "short",
+          "text": "Finish this: deep down, they're feeling…",
+          "placeholder": "e.g. restless but lazy",
+          "key": "inner",
+          "next": "testshoot_dp_vdetail",
+          "section": "deeper"
+        },
+        {
+          "id": "testshoot_dp_vdetail",
+          "type": "short",
+          "text": "What's one detail of how they look that sets the mood?",
+          "placeholder": "e.g. a sunburn and a slip dress",
+          "key": "detail",
+          "next": "testshoot_dp_era",
+          "section": "deeper"
+        },
+        {
+          "id": "testshoot_dp_era",
+          "type": "short",
+          "text": "What era or time of day does it live in?",
+          "placeholder": "e.g. a '70s summer afternoon",
+          "key": "era",
+          "next": "testshoot_dp_vprops",
+          "section": "deeper"
+        },
+        {
+          "id": "testshoot_dp_vprops",
+          "type": "short",
+          "text": "Last one: what's around them that sets the scene?",
+          "placeholder": "e.g. half-drunk lemonade",
+          "key": "props",
+          "next": "END",
+          "section": "deeper"
         }
       ],
       "summaries": [
@@ -8014,17 +8454,54 @@
           "when": {
             "mode": "story"
           },
-          "template": "A story[[ about {character}]][[, caught {action}]][[ {timing} {moment}]][[, set in {world}]].[[ It should feel {feeling}.]][[ Trying out {testing}.]]"
+          "template": "A story[[ about {character}]][[, caught {action}]][[ {timing} {moment}]][[, set in {world}]].[[ It should feel {feeling}.]][[ Trying out {testing}.]]",
+          "pitch": [
+            "[[{character}]][[, caught {action}]][[ {timing} {moment}]][[, in {world}]].",
+            "[[{character}]][[, caught {action}]][[ {timing} {moment}]].",
+            "[[{character}]][[, caught {action}]].",
+            "[[{character}]][[ in {world}]]."
+          ],
+          "character": [
+            "[[{character}]][[, caught {action}]].[[ More than anything, they want {want}.]][[ What they'd never say out loud: {secret}.]][[ The detail that gives them away: {detail}.]]"
+          ],
+          "world": [
+            "[[Set in {world}]][[, {timing} {moment}]].[[ In the frame: {props}.]][[ Right after the last frame, {after}.]]"
+          ]
         },
         {
           "when": {
             "mode": "vibe"
           },
-          "template": "[[{mood}: ]]a mood piece[[ set in {place}]][[, bathed in {light}]].[[ Think {refs}.]][[ It should leave you {takeaway}.]][[ Trying out {testing}.]]"
+          "template": "[[{mood}: ]]a mood piece[[ set in {place}]][[, bathed in {light}]].[[ Think {refs}.]][[ It should leave you {takeaway}.]][[ Trying out {testing}.]]",
+          "pitch": [
+            "[[{place}]][[, bathed in {light}]][[: {mood}]].",
+            "[[{place}]][[: {mood}]].",
+            "[[{place}]][[, bathed in {light}]]."
+          ],
+          "character": [
+            "[[{figure}]].[[ Deep down, they're feeling {inner}.]][[ The detail that sets the mood: {detail}.]]"
+          ],
+          "world": [
+            "[[Set in {place}]][[, bathed in {light}]].[[ When: {era}.]][[ In the frame: {props}.]][[ Think {refs}.]]"
+          ]
         },
         {
           "when": {},
           "template": "A test shoot[[ to try out {testing}]].[[ It should feel {feeling}.]][[ It should feel {mood}.]]"
+        }
+      ],
+      "deeper": [
+        {
+          "when": {
+            "mode": "story"
+          },
+          "start": "testshoot_deeper_story"
+        },
+        {
+          "when": {
+            "mode": "vibe"
+          },
+          "start": "testshoot_deeper_vibe"
         }
       ]
     },
@@ -8040,13 +8517,15 @@
         {
           "id": "story_mode",
           "type": "yesno",
-          "text": "Is the idea more of a vibe than a story with a beginning, middle and end?",
+          "text": "Is the idea a story with a beginning, middle and end, or more of a vibe?",
           "hint": "No wrong answer. Some ideas are a whole plot, some are just a feeling.",
           "key": "mode",
           "yes": "story_mood",
           "no": "story_who",
           "yesValue": "vibe",
-          "noValue": "story"
+          "noValue": "story",
+          "noLabel": "A story",
+          "yesLabel": "A vibe"
         },
         {
           "id": "story_who",
@@ -8069,13 +8548,14 @@
         {
           "id": "story_after",
           "type": "yesno",
-          "text": "Are we meeting them just after something big happened?",
-          "hint": "Say no if the big thing is still coming.",
+          "text": "Are we meeting them just before something big happens, or just after?",
           "key": "timing",
           "yes": "story_moment",
           "no": "story_moment",
           "yesValue": "just after",
-          "noValue": "just before"
+          "noValue": "just before",
+          "noLabel": "Before",
+          "yesLabel": "After"
         },
         {
           "id": "story_moment",
@@ -8106,13 +8586,14 @@
         {
           "id": "story_frames",
           "type": "yesno",
-          "text": "Last one: does the whole story live in a single frame?",
-          "hint": "Say no if it plays out across a few frames.",
+          "text": "Last one: is the story told across a few frames, or just one?",
           "key": "storyFormat",
           "yes": "END",
           "no": "END",
           "yesValue": "told in a single frame",
-          "noValue": "told across a few frames"
+          "noValue": "told across a few frames",
+          "noLabel": "A few",
+          "yesLabel": "Just one"
         },
         {
           "id": "story_mood",
@@ -8144,7 +8625,7 @@
           "id": "story_refs",
           "type": "short",
           "text": "Any era, movie or reference it's borrowing from?",
-          "hint": "A decade, a film, a painter, a photographer.",
+          "hint": "A decade, a film, a painter, a photographer. Or just say none.",
           "placeholder": "e.g. '80s home videos",
           "key": "refs",
           "next": "story_leave"
@@ -8160,13 +8641,122 @@
         {
           "id": "story_vibe_frames",
           "type": "yesno",
-          "text": "Last one: does the whole vibe live in a single image?",
-          "hint": "Say no if it's a set or a series.",
+          "text": "Last one: is the vibe built as a series, or captured in one image?",
           "key": "vibeFormat",
           "yes": "END",
           "no": "END",
           "yesValue": "captured in a single image",
-          "noValue": "built as a series"
+          "noValue": "built as a series",
+          "noLabel": "A series",
+          "yesLabel": "One image"
+        },
+        {
+          "id": "story_deeper_story",
+          "type": "yesno",
+          "text": "That's your concept. Want to flesh out the character and their world too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "story_dp_want",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "story_dp_want",
+          "type": "short",
+          "text": "Finish this: more than anything, they want…",
+          "placeholder": "e.g. to hear his voice",
+          "key": "want",
+          "next": "story_dp_secret",
+          "section": "deeper"
+        },
+        {
+          "id": "story_dp_secret",
+          "type": "short",
+          "text": "Finish this: what they'd never say out loud is…",
+          "placeholder": "e.g. she's terrified",
+          "key": "secret",
+          "next": "story_dp_detail",
+          "section": "deeper"
+        },
+        {
+          "id": "story_dp_detail",
+          "type": "short",
+          "text": "What's one detail of how they look that tells their story?",
+          "placeholder": "e.g. pearls over her apron",
+          "key": "detail",
+          "next": "story_dp_props",
+          "section": "deeper"
+        },
+        {
+          "id": "story_dp_props",
+          "type": "short",
+          "text": "What's around them that hints at what happened?",
+          "placeholder": "e.g. the TV left on, too loud",
+          "key": "props",
+          "next": "story_dp_after",
+          "section": "deeper"
+        },
+        {
+          "id": "story_dp_after",
+          "type": "short",
+          "text": "Last one: what happens right after the last frame?",
+          "placeholder": "e.g. the phone finally rings",
+          "key": "after",
+          "next": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "story_deeper_vibe",
+          "type": "yesno",
+          "text": "That's your concept. Want to sketch out who's in it and the world around them too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "story_dp_figure",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "story_dp_figure",
+          "type": "short",
+          "text": "Who's in the frame, in a few words?",
+          "placeholder": "e.g. a teenager on her first date",
+          "key": "figure",
+          "next": "story_dp_inner",
+          "section": "deeper"
+        },
+        {
+          "id": "story_dp_inner",
+          "type": "short",
+          "text": "Finish this: deep down, they're feeling…",
+          "placeholder": "e.g. giddy and nervous",
+          "key": "inner",
+          "next": "story_dp_vdetail",
+          "section": "deeper"
+        },
+        {
+          "id": "story_dp_vdetail",
+          "type": "short",
+          "text": "What's one detail of how they look that sets the mood?",
+          "placeholder": "e.g. glitter on her cheeks",
+          "key": "detail",
+          "next": "story_dp_era",
+          "section": "deeper"
+        },
+        {
+          "id": "story_dp_era",
+          "type": "short",
+          "text": "What era or time of day does it live in?",
+          "placeholder": "e.g. a Friday night in 1985",
+          "key": "era",
+          "next": "story_dp_vprops",
+          "section": "deeper"
+        },
+        {
+          "id": "story_dp_vprops",
+          "type": "short",
+          "text": "Last one: what's around them that sets the scene?",
+          "placeholder": "e.g. a disco ball and sticky floors",
+          "key": "props",
+          "next": "END",
+          "section": "deeper"
         }
       ],
       "summaries": [
@@ -8174,17 +8764,54 @@
           "when": {
             "mode": "story"
           },
-          "template": "A story[[ about {character}]][[, caught {action}]][[ {timing} {moment}]][[, set in {world}]][[, {storyFormat}]].[[ It should feel {feeling}.]]"
+          "template": "A story[[ about {character}]][[, caught {action}]][[ {timing} {moment}]][[, set in {world}]][[, {storyFormat}]].[[ It should feel {feeling}.]]",
+          "pitch": [
+            "[[{character}]][[, caught {action}]][[ {timing} {moment}]][[, in {world}]].",
+            "[[{character}]][[, caught {action}]][[ {timing} {moment}]].",
+            "[[{character}]][[, caught {action}]].",
+            "[[{character}]][[ in {world}]]."
+          ],
+          "character": [
+            "[[{character}]][[, caught {action}]].[[ More than anything, they want {want}.]][[ What they'd never say out loud: {secret}.]][[ The detail that gives them away: {detail}.]]"
+          ],
+          "world": [
+            "[[Set in {world}]][[, {timing} {moment}]].[[ In the frame: {props}.]][[ Right after the last frame, {after}.]]"
+          ]
         },
         {
           "when": {
             "mode": "vibe"
           },
-          "template": "[[{mood}: ]]a mood piece[[ set in {place}]][[, bathed in {light}]][[, {vibeFormat}]].[[ Think {refs}.]][[ It should leave you {takeaway}.]]"
+          "template": "[[{mood}: ]]a mood piece[[ set in {place}]][[, bathed in {light}]][[, {vibeFormat}]].[[ Think {refs}.]][[ It should leave you {takeaway}.]]",
+          "pitch": [
+            "[[{place}]][[, bathed in {light}]][[: {mood}]].",
+            "[[{place}]][[: {mood}]].",
+            "[[{place}]][[, bathed in {light}]]."
+          ],
+          "character": [
+            "[[{figure}]].[[ Deep down, they're feeling {inner}.]][[ The detail that sets the mood: {detail}.]]"
+          ],
+          "world": [
+            "[[Set in {place}]][[, bathed in {light}]].[[ When: {era}.]][[ In the frame: {props}.]][[ Think {refs}.]]"
+          ]
         },
         {
           "when": {},
           "template": "A narrative portrait shoot[[, {storyFormat}]][[, {vibeFormat}]].[[ It should feel {feeling}.]][[ It should feel {mood}.]]"
+        }
+      ],
+      "deeper": [
+        {
+          "when": {
+            "mode": "story"
+          },
+          "start": "story_deeper_story"
+        },
+        {
+          "when": {
+            "mode": "vibe"
+          },
+          "start": "story_deeper_vibe"
         }
       ]
     },
@@ -8201,16 +8828,18 @@
         {
           "id": "people_q1",
           "type": "yesno",
-          "text": "Do you want to catch them as they really are, more candid than posed?",
-          "hint": "Say no if you're picturing a styled idea, a theme or a little story.",
+          "text": "Should it be styled, or candid, catching them as they really are?",
+          "hint": "Pick styled if you're picturing an idea, a theme or a little story.",
           "key": "style",
           "yes": "people_them",
           "no": "people_story",
           "categoryText": {
-            "engagement": "Do you want to catch the two of them as they really are, more candid than posed?",
-            "family": "Do you want to catch this family as they really are, chaos and all?",
-            "maternity": "Do you want to catch this season as it really is, more candid than posed?"
-          }
+            "engagement": "Should it be styled, or candid, catching the two of them as they really are?",
+            "family": "Should it be styled, or candid, catching this family as they really are, chaos and all?",
+            "maternity": "Should it be styled, or candid, catching this season as it really is?"
+          },
+          "noLabel": "Styled",
+          "yesLabel": "Candid"
         },
         {
           "id": "people_them",
@@ -8358,7 +8987,7 @@
           "id": "people_look",
           "type": "short",
           "text": "Any era, movie or reference it's borrowing from?",
-          "hint": "A decade, a film, a painter, a photographer.",
+          "hint": "A decade, a film, a painter, a photographer. Or just say none.",
           "placeholder": "e.g. '70s family snapshots",
           "key": "look",
           "next": "people_feel"
@@ -8370,6 +8999,159 @@
           "placeholder": "e.g. warm and a little messy",
           "key": "feel",
           "next": "END"
+        },
+        {
+          "id": "people_deeper_candid",
+          "type": "yesno",
+          "text": "That's your concept. Want to sketch out who they are and their world too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "people_whos_who",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "people_whos_who",
+          "type": "short",
+          "text": "Who's who? A few words on each of them.",
+          "placeholder": "e.g. she plans, he jokes",
+          "key": "who",
+          "next": "people_love",
+          "section": "deeper"
+        },
+        {
+          "id": "people_love",
+          "type": "short",
+          "text": "Finish this: you can tell they love each other because…",
+          "placeholder": "e.g. they still hold hands",
+          "key": "love",
+          "next": "people_wear",
+          "section": "deeper"
+        },
+        {
+          "id": "people_wear",
+          "type": "short",
+          "text": "What would they wear on a perfect day off?",
+          "placeholder": "e.g. matching thrifted sweaters",
+          "key": "wear",
+          "next": "people_home",
+          "section": "deeper"
+        },
+        {
+          "id": "people_home",
+          "type": "short",
+          "text": "What's their world like, day to day?",
+          "placeholder": "e.g. a tiny flat full of plants",
+          "key": "home",
+          "next": "people_season",
+          "section": "deeper"
+        },
+        {
+          "id": "people_season",
+          "type": "short",
+          "text": "Last one: what time of day or season feels most like them?",
+          "placeholder": "e.g. slow summer evenings",
+          "key": "season",
+          "next": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "people_deeper_story",
+          "type": "yesno",
+          "text": "That's your concept. Want to flesh out the characters and their world too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "people_roles",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "people_roles",
+          "type": "short",
+          "text": "Who are they playing in the story?",
+          "placeholder": "e.g. two runaways on the lam",
+          "key": "roles",
+          "next": "people_want",
+          "section": "deeper"
+        },
+        {
+          "id": "people_want",
+          "type": "short",
+          "text": "Finish this: more than anything, they want…",
+          "placeholder": "e.g. to make it to the coast",
+          "key": "want",
+          "next": "people_truth",
+          "section": "deeper"
+        },
+        {
+          "id": "people_truth",
+          "type": "short",
+          "text": "What's real about them that should shine through?",
+          "placeholder": "e.g. how they bicker over the map",
+          "key": "truth",
+          "next": "people_era",
+          "section": "deeper"
+        },
+        {
+          "id": "people_era",
+          "type": "short",
+          "text": "What era or time of day is it?",
+          "placeholder": "e.g. 1972, golden hour",
+          "key": "era",
+          "next": "people_props",
+          "section": "deeper"
+        },
+        {
+          "id": "people_props",
+          "type": "short",
+          "text": "Last one: what's around them that tells the story?",
+          "placeholder": "e.g. a map nobody can fold",
+          "key": "props",
+          "next": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "people_deeper_theme",
+          "type": "yesno",
+          "text": "That's your concept. Want to flesh out who they're playing and their world too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "people_theme_roles",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "people_theme_roles",
+          "type": "short",
+          "text": "Who are they being, inside the theme?",
+          "placeholder": "e.g. newlyweds in 1955",
+          "key": "roles",
+          "next": "people_theme_truth",
+          "section": "deeper"
+        },
+        {
+          "id": "people_theme_truth",
+          "type": "short",
+          "text": "What's real about them that should shine through?",
+          "placeholder": "e.g. how she bosses him around",
+          "key": "truth",
+          "next": "people_theme_era",
+          "section": "deeper"
+        },
+        {
+          "id": "people_theme_era",
+          "type": "short",
+          "text": "What era or time of day is it?",
+          "placeholder": "e.g. a Sunday afternoon in 1955",
+          "key": "era",
+          "next": "people_theme_props",
+          "section": "deeper"
+        },
+        {
+          "id": "people_theme_props",
+          "type": "short",
+          "text": "Last one: what's around them that sets the scene?",
+          "placeholder": "e.g. a checkered blanket",
+          "key": "props",
+          "next": "END",
+          "section": "deeper"
         }
       ],
       "summaries": [
@@ -8377,25 +9159,81 @@
           "when": {
             "style": true
           },
-          "template": "A candid session[[ of them being {them}]][[, built around {ritual}]][[ at {place}]].[[ Don't miss {moment}.]][[ It should feel {feel}.]]"
+          "template": "A candid session[[ of them being {them}]][[, built around {ritual}]][[ at {place}]].[[ Don't miss {moment}.]][[ It should feel {feel}.]]",
+          "pitch": [
+            "[[{ritual}]][[ at {place}]][[: just them, {them}]].",
+            "[[{ritual}]][[: just them, {them}]].",
+            "[[Just them, {them}]]."
+          ],
+          "character": [
+            "[[Who's who: {who}.]][[ Day to day, they're {them}.]][[ You can tell they love each other because {love}.]][[ What they'd wear on a perfect day off: {wear}.]]"
+          ],
+          "world": [
+            "[[Their world: {home}.]][[ The place that means something: {place}.]][[ Their thing together: {ritual}.]][[ Most like them: {season}.]]"
+          ]
         },
         {
           "when": {
             "style": false,
             "story": true
           },
-          "template": "A styled little story[[ about {plot}]][[, {real}]][[, set at {setting}]][[, with the look of {look}]].[[ It should feel {feel}.]]"
+          "template": "A styled little story[[ about {plot}]][[, {real}]][[, set at {setting}]][[, with the look of {look}]].[[ It should feel {feel}.]]",
+          "pitch": [
+            "[[{plot}]][[ at {setting}]][[, shot like {look}]].",
+            "[[{plot}]][[ at {setting}]].",
+            "[[{plot}]]."
+          ],
+          "character": [
+            "[[In the story, they're {roles}.]][[ More than anything, they want {want}.]][[ What's really them: {truth}.]]"
+          ],
+          "world": [
+            "[[The story: {plot}.]][[ Set at {setting}.]][[ When: {era}.]][[ In the frame: {props}.]][[ The look: {look}.]]"
+          ]
         },
         {
           "when": {
             "style": false,
             "story": false
           },
-          "template": "A styled session[[ built around {theme}]][[, a nod to {link}]][[, set at {setting}]][[, with the look of {look}]].[[ It should feel {feel}.]]"
+          "template": "A styled session[[ built around {theme}]][[, a nod to {link}]][[, set at {setting}]][[, with the look of {look}]].[[ It should feel {feel}.]]",
+          "pitch": [
+            "[[{theme}]][[ at {setting}]][[, a nod to {link}]].",
+            "[[{theme}]][[, a nod to {link}]].",
+            "[[{theme}]][[ at {setting}]].",
+            "[[{theme}]]."
+          ],
+          "character": [
+            "[[Inside the theme, they're {roles}.]][[ What's really them: {truth}.]]"
+          ],
+          "world": [
+            "[[The theme: {theme}.]][[ Set at {setting}.]][[ When: {era}.]][[ In the frame: {props}.]][[ The look: {look}.]][[ A nod to {link}.]]"
+          ]
         },
         {
           "when": {},
           "template": "A session that's true to who they are[[, set at {setting}]][[ at {place}]].[[ It should feel {feel}.]]"
+        }
+      ],
+      "deeper": [
+        {
+          "when": {
+            "style": true
+          },
+          "start": "people_deeper_candid"
+        },
+        {
+          "when": {
+            "style": false,
+            "story": true
+          },
+          "start": "people_deeper_story"
+        },
+        {
+          "when": {
+            "style": false,
+            "story": false
+          },
+          "start": "people_deeper_theme"
         }
       ]
     },
@@ -8410,22 +9248,26 @@
         {
           "id": "wedding_q1",
           "type": "yesno",
-          "text": "Is this a real wedding day, not a styled shoot?",
+          "text": "Is this a styled shoot, or a real wedding day?",
           "hint": "Real days aren't yours to direct, so we'll find a theme to follow, not a plot.",
           "key": "real",
           "yes": "wedding_approach",
-          "no": "wedding_story"
+          "no": "wedding_story",
+          "noLabel": "Styled",
+          "yesLabel": "Real day"
         },
         {
           "id": "wedding_approach",
           "type": "yesno",
-          "text": "Do you want to lean more candid and documentary than posed?",
+          "text": "Should it lean more posed, or more candid and documentary?",
           "hint": "Either way you're following the day. This is just how much you step in.",
           "key": "approach",
           "yes": "wedding_thread",
           "no": "wedding_thread",
           "yesValue": "documentary-style",
-          "noValue": "polished, editorial"
+          "noValue": "polished, editorial",
+          "noLabel": "Posed",
+          "yesLabel": "Documentary"
         },
         {
           "id": "wedding_thread",
@@ -8457,7 +9299,7 @@
           "id": "wedding_ritual",
           "type": "short",
           "text": "Which ones, in a few words?",
-          "placeholder": "e.g. the tea ceremony",
+          "placeholder": "e.g. the vow exchange",
           "key": "ritual",
           "next": "wedding_feel"
         },
@@ -8499,7 +9341,7 @@
           "id": "wedding_look",
           "type": "short",
           "text": "Any era, movie or reference it's borrowing from?",
-          "hint": "A decade, a film, a painter, a photographer.",
+          "hint": "A decade, a film, a painter, a photographer. Or just say none.",
           "placeholder": "e.g. a '90s bridal magazine",
           "key": "look",
           "next": "wedding_feel"
@@ -8511,6 +9353,159 @@
           "placeholder": "e.g. romantic and a little wild",
           "key": "feel",
           "next": "END"
+        },
+        {
+          "id": "wedding_deeper_real",
+          "type": "yesno",
+          "text": "That's your concept. Want to sketch out the couple and the world of the day too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "wedding_couple",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_couple",
+          "type": "short",
+          "text": "How would you describe the two of them, in a few words?",
+          "placeholder": "e.g. quiet nerds who dance badly",
+          "key": "couple",
+          "next": "wedding_love",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_love",
+          "type": "short",
+          "text": "Finish this: you can tell they love each other because…",
+          "placeholder": "e.g. he saves her the last bite",
+          "key": "love",
+          "next": "wedding_people",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_people",
+          "type": "short",
+          "text": "Who else matters most on the day?",
+          "placeholder": "e.g. her grandma and his twin",
+          "key": "people",
+          "next": "wedding_venue",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_venue",
+          "type": "short",
+          "text": "What's the venue like, in a few words?",
+          "placeholder": "e.g. a barn full of fairy lights",
+          "key": "venue",
+          "next": "wedding_when",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_when",
+          "type": "short",
+          "text": "Last one: what time of day and season is it?",
+          "placeholder": "e.g. late afternoon in October",
+          "key": "era",
+          "next": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_deeper_story",
+          "type": "yesno",
+          "text": "That's your concept. Want to flesh out the characters and their world too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "wedding_roles",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_roles",
+          "type": "short",
+          "text": "Who are the two of them in the story?",
+          "placeholder": "e.g. a bride and a getaway driver",
+          "key": "roles",
+          "next": "wedding_want",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_want",
+          "type": "short",
+          "text": "Finish this: more than anything, they want…",
+          "placeholder": "e.g. to get away before sunrise",
+          "key": "want",
+          "next": "wedding_detail",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_detail",
+          "type": "short",
+          "text": "What's one detail of how they look that tells their story?",
+          "placeholder": "e.g. a torn hem and muddy heels",
+          "key": "detail",
+          "next": "wedding_era",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_era",
+          "type": "short",
+          "text": "What era or time of day is it?",
+          "placeholder": "e.g. 1968, just before dawn",
+          "key": "era",
+          "next": "wedding_props",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_props",
+          "type": "short",
+          "text": "Last one: what's around them that tells the story?",
+          "placeholder": "e.g. tin cans tied to the bumper",
+          "key": "props",
+          "next": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_deeper_theme",
+          "type": "yesno",
+          "text": "That's your concept. Want to flesh out who they're playing and their world too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "wedding_theme_roles",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_theme_roles",
+          "type": "short",
+          "text": "Who are the two of them, inside the theme?",
+          "placeholder": "e.g. a flapper and a bootlegger",
+          "key": "roles",
+          "next": "wedding_theme_detail",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_theme_detail",
+          "type": "short",
+          "text": "What's one detail of how they look that sells the theme?",
+          "placeholder": "e.g. a beaded headband",
+          "key": "detail",
+          "next": "wedding_theme_era",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_theme_era",
+          "type": "short",
+          "text": "What era or time of day is it?",
+          "placeholder": "e.g. 1926, after midnight",
+          "key": "era",
+          "next": "wedding_theme_props",
+          "section": "deeper"
+        },
+        {
+          "id": "wedding_theme_props",
+          "type": "short",
+          "text": "Last one: what's around them that sets the scene?",
+          "placeholder": "e.g. a hidden door, coupe glasses",
+          "key": "props",
+          "next": "END",
+          "section": "deeper"
         }
       ],
       "summaries": [
@@ -8518,25 +9513,80 @@
           "when": {
             "real": true
           },
-          "template": "A[[ {approach}]] take on their wedding day[[, centered on {thread}]][[, honoring {ritual}]].[[ Don't miss {moment}.]][[ It should feel {feel}.]]"
+          "template": "A[[ {approach}]] take on their wedding day[[, centered on {thread}]][[, honoring {ritual}]].[[ Don't miss {moment}.]][[ It should feel {feel}.]]",
+          "pitch": [
+            "Their wedding day[[, following {thread}]][[, honoring {ritual}]].",
+            "Their wedding day[[, following {thread}]].",
+            "Their wedding day[[, honoring {ritual}]]."
+          ],
+          "character": [
+            "[[The two of them: {couple}.]][[ You can tell they love each other because {love}.]][[ Who else matters most: {people}.]]"
+          ],
+          "world": [
+            "[[The venue: {venue}.]][[ When: {era}.]][[ The thread through the day: {thread}.]][[ Traditions to honor: {ritual}.]]"
+          ]
         },
         {
           "when": {
             "real": false,
             "story": true
           },
-          "template": "A styled wedding story[[ about {plot}]][[, set at {setting}]][[, with the look of {look}]].[[ It should feel {feel}.]]"
+          "template": "A styled wedding story[[ about {plot}]][[, set at {setting}]][[, with the look of {look}]].[[ It should feel {feel}.]]",
+          "pitch": [
+            "[[{plot}]][[ at {setting}]][[, shot like {look}]].",
+            "[[{plot}]][[ at {setting}]].",
+            "[[{plot}]]."
+          ],
+          "character": [
+            "[[In the story: {roles}.]][[ More than anything, they want {want}.]][[ The detail that gives them away: {detail}.]]"
+          ],
+          "world": [
+            "[[The story: {plot}.]][[ Set at {setting}.]][[ When: {era}.]][[ In the frame: {props}.]][[ The look: {look}.]]"
+          ]
         },
         {
           "when": {
             "real": false,
             "story": false
           },
-          "template": "A styled wedding shoot[[ built around {theme}]][[, set at {setting}]][[, with the look of {look}]].[[ It should feel {feel}.]]"
+          "template": "A styled wedding shoot[[ built around {theme}]][[, set at {setting}]][[, with the look of {look}]].[[ It should feel {feel}.]]",
+          "pitch": [
+            "[[{theme}]][[ at {setting}]][[, shot like {look}]].",
+            "[[{theme}]][[ at {setting}]].",
+            "[[{theme}]]."
+          ],
+          "character": [
+            "[[Inside the theme: {roles}.]][[ The detail that sells it: {detail}.]]"
+          ],
+          "world": [
+            "[[The theme: {theme}.]][[ Set at {setting}.]][[ When: {era}.]][[ In the frame: {props}.]][[ The look: {look}.]]"
+          ]
         },
         {
           "when": {},
           "template": "A wedding shoot that's true to the couple[[, centered on {thread}]][[, built around {theme}]].[[ It should feel {feel}.]]"
+        }
+      ],
+      "deeper": [
+        {
+          "when": {
+            "real": true
+          },
+          "start": "wedding_deeper_real"
+        },
+        {
+          "when": {
+            "real": false,
+            "story": true
+          },
+          "start": "wedding_deeper_story"
+        },
+        {
+          "when": {
+            "real": false,
+            "story": false
+          },
+          "start": "wedding_deeper_theme"
         }
       ]
     },
@@ -8578,11 +9628,13 @@
         {
           "id": "event_side",
           "type": "yesno",
-          "text": "Are you telling it from the crowd's side, rather than the stage's?",
-          "hint": "Say no if you'll be with the performers: on stage, in the wings, backstage.",
+          "text": "Are you telling it from the stage's side, or the crowd's?",
+          "hint": "Pick the stage if you'll be with the performers: on stage, in the wings, backstage.",
           "key": "crowd",
           "yes": "event_crowd_motif",
-          "no": "event_stage_motif"
+          "no": "event_stage_motif",
+          "noLabel": "The stage",
+          "yesLabel": "The crowd"
         },
         {
           "id": "event_crowd_motif",
@@ -8676,13 +9728,14 @@
         {
           "id": "event_candid",
           "type": "yesno",
-          "text": "Last one: will you stay fly-on-the-wall, with no posing or directing?",
-          "hint": "Say no if you'll also grab group shots or quick portraits.",
+          "text": "Last one: will you grab some posed shots too, or keep it all candid?",
           "key": "candid",
           "yes": "END",
           "no": "END",
           "yesValue": "fly-on-the-wall",
-          "noValue": "mostly candid"
+          "noValue": "mostly candid",
+          "noLabel": "Some posed",
+          "yesLabel": "All candid"
         }
       ],
       "summaries": [
@@ -8691,28 +9744,46 @@
             "stage": true,
             "crowd": true
           },
-          "template": "[[{theme}: ]]a[[ {candid}]] look[[ at {what}]], told from the crowd.[[ Keep coming back to {motif}.]][[ Don't miss {moment}.]]"
+          "template": "[[{theme}: ]]a[[ {candid}]] look[[ at {what}]], told from the crowd.[[ Keep coming back to {motif}.]][[ Don't miss {moment}.]]",
+          "pitch": [
+            "[[{what}]], from the crowd[[: {theme}]].",
+            "[[{what}]], from the crowd."
+          ]
         },
         {
           "when": {
             "stage": true,
             "crowd": false
           },
-          "template": "[[{theme}: ]]a[[ {candid}]] look[[ at {what}]], told from the stage and the wings.[[ Keep coming back to {motif}.]][[ Don't miss {moment}.]]"
+          "template": "[[{theme}: ]]a[[ {candid}]] look[[ at {what}]], told from the stage and the wings.[[ Keep coming back to {motif}.]][[ Don't miss {moment}.]]",
+          "pitch": [
+            "[[{what}]], from the stage and the wings[[: {theme}]].",
+            "[[{what}]], from the stage and the wings."
+          ]
         },
         {
           "when": {
             "stage": false,
             "planned": true
           },
-          "template": "[[{theme}: ]]a[[ {candid}]] look[[ at {what}]][[, through the eyes of {who}]].[[ Keep coming back to {motif}.]][[ Don't miss {moment}.]]"
+          "template": "[[{theme}: ]]a[[ {candid}]] look[[ at {what}]][[, through the eyes of {who}]].[[ Keep coming back to {motif}.]][[ Don't miss {moment}.]]",
+          "pitch": [
+            "[[{what}]][[ through the eyes of {who}]][[: {theme}]].",
+            "[[{what}]][[: {theme}]].",
+            "[[{what}]][[ through the eyes of {who}]]."
+          ]
         },
         {
           "when": {
             "stage": false,
             "planned": false
           },
-          "template": "[[{theme}: ]]a[[ {candid}]] look[[ at {what}]][[, through the eyes of {who}]].[[ Keep coming back to {motif}.]][[ Watch the in-between: {inbetween}.]]"
+          "template": "[[{theme}: ]]a[[ {candid}]] look[[ at {what}]][[, through the eyes of {who}]].[[ Keep coming back to {motif}.]][[ Watch the in-between: {inbetween}.]]",
+          "pitch": [
+            "[[{what}]][[ through the eyes of {who}]][[: {theme}]].",
+            "[[{what}]][[: {theme}]].",
+            "[[{what}]][[ through the eyes of {who}]]."
+          ]
         },
         {
           "when": {},
@@ -8733,16 +9804,18 @@
         {
           "id": "brand_q1",
           "type": "yesno",
-          "text": "Should it feel like real life, more than clean shots with one clear star?",
-          "hint": "Say no for clean, front-and-center shots.",
+          "text": "Should it be clean shots with one clear star, or feel like real life?",
+          "hint": "Clean means front-and-center shots, nothing going on around them.",
           "key": "lifestyle",
           "yes": "brand_scene",
           "no": "brand_hero",
           "categoryText": {
-            "branding": "Should it show the brand in real-life moments, not just clean portraits or product shots?",
-            "commercial": "Should we see the product in use in real life, not just shot on its own?",
-            "content_shoot": "Should the content feel like real life in motion, not clean, posed setups?"
-          }
+            "branding": "Should it be clean portraits or product shots, or the brand in real-life moments?",
+            "commercial": "Should the product be shot on its own, or in use in real life?",
+            "content_shoot": "Should the content be clean, posed setups, or real life in motion?"
+          },
+          "noLabel": "Clean",
+          "yesLabel": "Real life"
         },
         {
           "id": "brand_scene",
@@ -8828,16 +9901,63 @@
         {
           "id": "brand_polish",
           "type": "yesno",
-          "text": "Last one: should it look polished and high-end, rather than raw and real?",
+          "text": "Last one: should it look raw and real, or polished and high-end?",
           "key": "polish",
           "yes": "END",
           "no": "END",
           "yesValue": "polished",
           "noValue": "raw, natural",
           "categoryText": {
-            "commercial": "Last one: should it look glossy and high-end, rather than raw and real?",
-            "content_shoot": "Last one: should it look polished, rather than raw and shot-on-a-phone?"
-          }
+            "commercial": "Last one: should it look raw and real, or glossy and high-end?",
+            "content_shoot": "Last one: should it look raw and shot-on-a-phone, or polished?"
+          },
+          "noLabel": "Raw",
+          "yesLabel": "Polished"
+        },
+        {
+          "id": "brand_deeper",
+          "type": "yesno",
+          "text": "That's your concept. Want to sketch out who's in it and the brand's world too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "brand_cast",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "brand_cast",
+          "type": "short",
+          "text": "Who's in the shots, in a few words?",
+          "placeholder": "e.g. the founder and her regulars",
+          "key": "cast",
+          "next": "brand_persona",
+          "section": "deeper"
+        },
+        {
+          "id": "brand_persona",
+          "type": "short",
+          "text": "Finish this: if the brand were a person, they'd be…",
+          "placeholder": "e.g. the friend who brings snacks",
+          "key": "persona",
+          "next": "brand_home",
+          "section": "deeper"
+        },
+        {
+          "id": "brand_home",
+          "type": "short",
+          "text": "Where does the brand live, in a few words?",
+          "placeholder": "e.g. a sunny corner café",
+          "key": "home",
+          "next": "brand_props",
+          "section": "deeper"
+        },
+        {
+          "id": "brand_props",
+          "type": "short",
+          "text": "Last one: what should always be in the frame?",
+          "placeholder": "e.g. steam, linen and real hands",
+          "key": "props",
+          "next": "END",
+          "section": "deeper"
         }
       ],
       "summaries": [
@@ -8845,17 +9965,45 @@
           "when": {
             "lifestyle": true
           },
-          "template": "A[[ {polish}]] lifestyle shoot[[ for {subject}]][[, built around {scene}]][[, aimed at {audience}]].[[ It should feel {words}.]][[ The message: {takeaway}.]]"
+          "template": "A[[ {polish}]] lifestyle shoot[[ for {subject}]][[, built around {scene}]][[, aimed at {audience}]].[[ It should feel {words}.]][[ The message: {takeaway}.]]",
+          "pitch": [
+            "[[{scene}]][[ for {subject}]][[. The message: {takeaway}]].",
+            "[[{scene}]][[ for {subject}]].",
+            "[[{scene}]][[. The message: {takeaway}]]."
+          ],
+          "character": [
+            "[[In the shots: {cast}.]][[ If the brand were a person, they'd be {persona}.]][[ Its personality: {words}.]]"
+          ],
+          "world": [
+            "[[The brand's world: {home}.]][[ Built around {scene}.]][[ Always in the frame: {props}.]][[ Made for {audience}.]]"
+          ]
         },
         {
           "when": {
             "lifestyle": false
           },
-          "template": "A[[ {polish}]] shoot[[ for {subject}]][[, with {hero} front and center]][[, aimed at {audience}]].[[ It should feel {words}.]][[ The message: {takeaway}.]]"
+          "template": "A[[ {polish}]] shoot[[ for {subject}]][[, with {hero} front and center]][[, aimed at {audience}]].[[ It should feel {words}.]][[ The message: {takeaway}.]]",
+          "pitch": [
+            "[[{subject}]][[, with {hero} front and center]][[. The message: {takeaway}]].",
+            "[[{subject}]][[, with {hero} front and center]].",
+            "[[{hero} front and center]][[. The message: {takeaway}]]."
+          ],
+          "character": [
+            "[[In the shots: {cast}.]][[ If the brand were a person, they'd be {persona}.]][[ Its personality: {words}.]]"
+          ],
+          "world": [
+            "[[The brand's world: {home}.]][[ Built around {scene}.]][[ Always in the frame: {props}.]][[ Made for {audience}.]]"
+          ]
         },
         {
           "when": {},
           "template": "A[[ {polish}]] shoot[[ for {subject}]][[, aimed at {audience}]].[[ It should feel {words}.]][[ The message: {takeaway}.]]"
+        }
+      ],
+      "deeper": [
+        {
+          "when": {},
+          "start": "brand_deeper"
         }
       ]
     },
@@ -8930,23 +10078,27 @@
         {
           "id": "headshot_setting",
           "type": "yesno",
-          "text": "Should it be on a clean backdrop, rather than in their own space?",
+          "text": "Should it be in their own space, or on a clean backdrop?",
           "hint": "Their own space means their office, studio, shop, wherever they work.",
           "key": "setting",
           "yes": "headshot_polish",
           "no": "headshot_polish",
           "yesValue": "on a clean backdrop",
-          "noValue": "in their own space"
+          "noValue": "in their own space",
+          "noLabel": "Own space",
+          "yesLabel": "Backdrop"
         },
         {
           "id": "headshot_polish",
           "type": "yesno",
-          "text": "Should it feel classic and polished, rather than relaxed and natural?",
+          "text": "Should it feel relaxed and natural, or classic and polished?",
           "key": "polish",
           "yes": "headshot_words",
           "no": "headshot_words",
           "yesValue": "classic, polished",
-          "noValue": "relaxed, natural"
+          "noValue": "relaxed, natural",
+          "noLabel": "Relaxed",
+          "yesLabel": "Polished"
         },
         {
           "id": "headshot_words",
@@ -8962,13 +10114,23 @@
           "when": {
             "acting": true
           },
-          "template": "Casting headshots[[ for {who}]][[, to land {roles}]].[[ {looks}.]][[ They should come across {words}.]]"
+          "template": "Casting headshots[[ for {who}]][[, to land {roles}]].[[ {looks}.]][[ They should come across {words}.]]",
+          "pitch": [
+            "[[{who}]][[, ready for {roles}]][[: {words}]].",
+            "[[{who}]][[, ready for {roles}]].",
+            "[[{who}]][[: {words}]]."
+          ]
         },
         {
           "when": {
             "acting": false
           },
-          "template": "A[[ {polish}]] headshot[[ for {who}]][[, {setting}]].[[ It should say {takeaway}.]][[ They should come across {words}.]][[ Made for {where}.]]"
+          "template": "A[[ {polish}]] headshot[[ for {who}]][[, {setting}]].[[ At a glance: {takeaway}.]][[ They should come across {words}.]][[ Made for {where}.]]",
+          "pitch": [
+            "[[{who}]][[: {words}]][[. At a glance: {takeaway}]].",
+            "[[{who}]][[. At a glance: {takeaway}]].",
+            "[[{who}]][[: {words}]]."
+          ]
         },
         {
           "when": {},
@@ -9012,11 +10174,13 @@
         {
           "id": "publicity_scene",
           "type": "yesno",
-          "text": "Should we put them in a scene, rather than on a simple backdrop?",
+          "text": "Should they be on a simple backdrop, or in a scene?",
           "hint": "A scene builds a world around them. A backdrop keeps it all about them.",
           "key": "scene",
           "yes": "publicity_world",
-          "no": "publicity_takeaway"
+          "no": "publicity_takeaway",
+          "noLabel": "Backdrop",
+          "yesLabel": "A scene"
         },
         {
           "id": "publicity_world",
@@ -9046,12 +10210,104 @@
         {
           "id": "publicity_polish",
           "type": "yesno",
-          "text": "Last one: should it look glossy and polished, rather than raw and lived-in?",
+          "text": "Last one: should it look raw and lived-in, or glossy and polished?",
           "key": "polish",
           "yes": "END",
           "no": "END",
           "yesValue": "polished",
-          "noValue": "raw, lived-in"
+          "noValue": "raw, lived-in",
+          "noLabel": "Lived-in",
+          "yesLabel": "Glossy"
+        },
+        {
+          "id": "publicity_deeper",
+          "type": "yesno",
+          "text": "That's your concept. Want to sketch out their persona and world too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "publicity_persona",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "publicity_persona",
+          "type": "short",
+          "text": "Finish this: in these photos, they're the kind of person who…",
+          "placeholder": "e.g. never explains the joke",
+          "key": "persona",
+          "next": "publicity_detail",
+          "section": "deeper"
+        },
+        {
+          "id": "publicity_detail",
+          "type": "short",
+          "text": "What's one signature detail of their look?",
+          "placeholder": "e.g. a red guitar strap",
+          "key": "detail",
+          "next": "publicity_props",
+          "section": "deeper"
+        },
+        {
+          "id": "publicity_props",
+          "type": "short",
+          "text": "What's around them that says who they are?",
+          "placeholder": "e.g. stacks of vinyl, a busted amp",
+          "key": "props",
+          "next": "publicity_era",
+          "section": "deeper"
+        },
+        {
+          "id": "publicity_era",
+          "type": "short",
+          "text": "Last one: what era or time of day does it feel like?",
+          "placeholder": "e.g. the '70s, last call",
+          "key": "era",
+          "next": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "publicity_bd_deeper",
+          "type": "yesno",
+          "text": "That's your concept. Want to sketch out their persona and look too? It's a few more questions.",
+          "key": "deeper",
+          "yes": "publicity_bd_persona",
+          "no": "END",
+          "section": "deeper"
+        },
+        {
+          "id": "publicity_bd_persona",
+          "type": "short",
+          "text": "Finish this: in these photos, they're the kind of person who…",
+          "placeholder": "e.g. never explains the joke",
+          "key": "persona",
+          "next": "publicity_bd_detail",
+          "section": "deeper"
+        },
+        {
+          "id": "publicity_bd_detail",
+          "type": "short",
+          "text": "What's one signature detail of their look?",
+          "placeholder": "e.g. a red guitar strap",
+          "key": "detail",
+          "next": "publicity_bd_props",
+          "section": "deeper"
+        },
+        {
+          "id": "publicity_bd_props",
+          "type": "short",
+          "text": "What could they hold or have with them that says who they are?",
+          "placeholder": "e.g. a battered setlist",
+          "key": "props",
+          "next": "publicity_bd_era",
+          "section": "deeper"
+        },
+        {
+          "id": "publicity_bd_era",
+          "type": "short",
+          "text": "Last one: what era does their styling nod to?",
+          "placeholder": "e.g. '70s folk records",
+          "key": "era",
+          "next": "END",
+          "section": "deeper"
         }
       ],
       "summaries": [
@@ -9059,17 +10315,54 @@
           "when": {
             "scene": true
           },
-          "template": "[[{polish} ]]press photos[[ of {who}]][[ for {news}]][[, set in {world}]].[[ At a glance: {takeaway}.]][[ Their persona: {words}.]]"
+          "template": "[[{polish} ]]press photos[[ of {who}]][[ for {news}]][[, set in {world}]].[[ At a glance: {takeaway}.]][[ Their persona: {words}.]]",
+          "pitch": [
+            "[[{who}]][[ in {world}]][[, for {news}]][[: {takeaway}]].",
+            "[[{who}]][[ in {world}]][[, for {news}]].",
+            "[[{who}]][[, for {news}]][[: {takeaway}]].",
+            "[[{who}]][[, for {news}]]."
+          ],
+          "character": [
+            "[[{who}]].[[ They're the kind of person who {persona}.]][[ Their public persona: {words}.]][[ Signature detail: {detail}.]]"
+          ],
+          "world": [
+            "[[Set in {world}]].[[ When: {era}.]][[ Around them: {props}.]][[ At a glance: {takeaway}.]]"
+          ]
         },
         {
           "when": {
             "scene": false
           },
-          "template": "[[{polish} ]]press portraits[[ of {who}]][[ for {news}]], on a simple backdrop.[[ At a glance: {takeaway}.]][[ Their persona: {words}.]]"
+          "template": "[[{polish} ]]press portraits[[ of {who}]][[ for {news}]], on a simple backdrop.[[ At a glance: {takeaway}.]][[ Their persona: {words}.]]",
+          "pitch": [
+            "[[{who}]][[, for {news}]][[: {takeaway}]].",
+            "[[{who}]][[, for {news}]].",
+            "[[{who}]][[: {takeaway}]]."
+          ],
+          "character": [
+            "[[{who}]].[[ They're the kind of person who {persona}.]][[ Their public persona: {words}.]][[ Signature detail: {detail}.]]"
+          ],
+          "world": [
+            "On a simple backdrop.[[ Styling nods to {era}.]][[ With them: {props}.]][[ At a glance: {takeaway}.]]"
+          ]
         },
         {
           "when": {},
           "template": "[[{polish} ]]press photos[[ of {who}]][[ for {news}]].[[ At a glance: {takeaway}.]][[ Their persona: {words}.]]"
+        }
+      ],
+      "deeper": [
+        {
+          "when": {
+            "scene": true
+          },
+          "start": "publicity_deeper"
+        },
+        {
+          "when": {
+            "scene": false
+          },
+          "start": "publicity_bd_deeper"
         }
       ]
     },
@@ -9151,13 +10444,15 @@
         {
           "id": "video_words",
           "type": "yesno",
-          "text": "Last one: will it be mostly wordless, carried by visuals, music and sound?",
-          "hint": "Say no if people talk it through on camera.",
+          "text": "Last one: will it be carried by dialogue, or mostly wordless, with visuals, music and sound?",
+          "hint": "Dialogue means people talk it through on camera.",
           "key": "dialogue",
           "yes": "END",
           "no": "END",
           "yesValue": "mostly wordless",
-          "noValue": "dialogue-driven"
+          "noValue": "dialogue-driven",
+          "noLabel": "Dialogue",
+          "yesLabel": "Wordless"
         },
         {
           "id": "video_promo",
@@ -9228,13 +10523,15 @@
         {
           "id": "video_style",
           "type": "yesno",
-          "text": "Will you mostly follow along as things happen, without directing?",
-          "hint": "Say no if you'll stage or re-create some scenes.",
+          "text": "Will you lightly direct it, or mostly follow along as things happen?",
+          "hint": "Direct it if you'll stage or re-create some scenes.",
           "key": "style",
           "yes": "video_focus",
           "no": "video_focus",
           "yesValue": "shot fly-on-the-wall",
-          "noValue": "lightly directed"
+          "noValue": "lightly directed",
+          "noLabel": "Direct it",
+          "yesLabel": "Follow"
         },
         {
           "id": "video_focus",
@@ -9268,28 +10565,47 @@
             "narrative": true,
             "arc": true
           },
-          "template": "A[[ {dialogue}]] short film[[ about {character}]][[, caught {situation}]][[, until {turn}]][[, set in {setting}]].[[ It should feel {feeling}.]]"
+          "template": "A[[ {dialogue}]] short film[[ about {character}]][[, caught {situation}]][[, until {turn}]][[, set in {setting}]].[[ It should feel {feeling}.]]",
+          "pitch": [
+            "[[{character}]][[ {situation}]][[ in {setting}]][[, until {turn}]].",
+            "[[{character}]][[ {situation}]][[, until {turn}]].",
+            "[[{character}]][[ {situation}]]."
+          ]
         },
         {
           "when": {
             "narrative": true,
             "arc": false
           },
-          "template": "A[[ {dialogue}]] mood piece[[ about {character}]][[, caught {situation}]][[, set in {setting}]].[[ It lingers on {image}.]][[ It should feel {feeling}.]]"
+          "template": "A[[ {dialogue}]] mood piece[[ about {character}]][[, caught {situation}]][[, set in {setting}]].[[ It lingers on {image}.]][[ It should feel {feeling}.]]",
+          "pitch": [
+            "[[{character}]][[ {situation}]][[ in {setting}]][[: {feeling}]].",
+            "[[{character}]][[ {situation}]][[ in {setting}]].",
+            "[[{character}]][[ {situation}]]."
+          ]
         },
         {
           "when": {
             "narrative": false,
             "promo": true
           },
-          "template": "[[{tone}: ]]a promo[[ for {product}]][[, aimed at {audience}]][[ on {platform}]].[[ It opens on {hook}.]][[ The message: {message}.]]"
+          "template": "[[{tone}: ]]a promo[[ for {product}]][[, aimed at {audience}]][[ on {platform}]].[[ It opens on {hook}.]][[ The message: {message}.]]",
+          "pitch": [
+            "A promo[[ for {product}]][[ aimed at {audience}]][[: {message}]].",
+            "A promo[[ for {product}]][[: {message}]].",
+            "A promo[[ for {product}]]."
+          ]
         },
         {
           "when": {
             "narrative": false,
             "promo": false
           },
-          "template": "[[{feeling}: ]]a mini-doc[[ capturing {subject}]][[, {style}]].[[ It keeps coming back to {focus}.]][[ Don't miss {moment}.]]"
+          "template": "[[{feeling}: ]]a mini-doc[[ capturing {subject}]][[, {style}]].[[ It keeps coming back to {focus}.]][[ Don't miss {moment}.]]",
+          "pitch": [
+            "[[{subject}]][[, always coming back to {focus}]].",
+            "[[{subject}]][[: {feeling}]]."
+          ]
         },
         {
           "when": {},
@@ -9387,13 +10703,22 @@
           "when": {
             "multi": true
           },
-          "template": "A side-by-side lighting test[[ of {compare}]][[, shot {sitter}]].[[ It should feel {mood}.]][[ The goal: figure out {learn}.]][[ Think {ref}.]]"
+          "template": "A side-by-side lighting test[[ of {compare}]][[, shot {sitter}]].[[ It should feel {mood}.]][[ The goal: figure out {learn}.]][[ Think {ref}.]]",
+          "pitch": [
+            "[[Testing {compare}]][[, to figure out {learn}]].",
+            "[[Testing {compare}]][[: {mood}]]."
+          ]
         },
         {
           "when": {
             "multi": false
           },
-          "template": "A lighting test[[ of {look}]][[, shot {sitter}]].[[ It should feel {mood}.]][[ The goal: figure out {learn}.]][[ Think {ref}.]]"
+          "template": "A lighting test[[ of {look}]][[, shot {sitter}]].[[ It should feel {mood}.]][[ The goal: figure out {learn}.]][[ Think {ref}.]]",
+          "pitch": [
+            "[[Testing {look}]][[ like {ref}]][[, to figure out {learn}]].",
+            "[[Testing {look}]][[, to figure out {learn}]].",
+            "[[Testing {look}]][[: {mood}]]."
+          ]
         },
         {
           "when": {},
@@ -9438,61 +10763,198 @@
     return out;
   }
 
+  // A short answer that means "nothing" ("no" to "Any era, movie or
+  // reference…?") — treated as left blank rather than written in.
+  const CONCEPT_HELPER_NONE = /^(no|nope|nah|none|nothing|not really|not sure|idk|n\/?a|-+)$/i;
+
+  // What {key} stands for: the answer, trimmed of its closing punctuation —
+  // '' when it's blank, a "nothing" answer or a plain yes/no.
+  function conceptHelperValue(key, answers) {
+    if (key === 'category') return conceptHelperCategoryLabel();
+    const v = answers[key];
+    if (typeof v !== 'string') return '';
+    const text = v.trim().replace(/[.!?…]+$/, '');
+    return CONCEPT_HELPER_NONE.test(text) ? '' : text;
+  }
+
+  // Where-answers that bring their own preposition ("on a rooftop", "at the
+  // beach") take the place of the template's "in"/"at"/"on", rather than
+  // reading "at at the beach".
+  const CONCEPT_HELPER_PLACE_KEYS = /\b(in|at|on)\s+\{(world|place|setting)\}/gi;
+  const CONCEPT_HELPER_HAS_PREPOSITION = /^(in|at|on|inside|outside|by|near|under|underneath|beneath|over|across|around|aboard|along|off|behind|beside|within|atop|up|down|through|from)\b/i;
+
   function conceptHelperFill(template, answers) {
-    const value = (key) => {
-      if (key === 'category') return conceptHelperCategoryLabel();
-      const v = answers[key];
-      if (typeof v !== 'string') return '';
-      return v.trim().replace(/[.!?…]+$/, '');
-    };
-    let text = template.replace(/\[\[([\s\S]*?)\]\]/g, (_, inner) => {
+    const value = (key) => conceptHelperValue(key, answers);
+    let text = template.replace(CONCEPT_HELPER_PLACE_KEYS, (match, prep, key) => (
+      CONCEPT_HELPER_HAS_PREPOSITION.test(value(key)) ? `{${key}}` : match));
+    text = text.replace(/\[\[([\s\S]*?)\]\]/g, (_, inner) => {
       const keys = [...inner.matchAll(/\{(\w+)\}/g)].map(m => m[1]);
       return keys.every(k => value(k)) ? inner : '';
     });
     text = text.replace(/\{(\w+)\}/g, (_, k) => value(k));
     text = text.replace(/\s+/g, ' ').replace(/\s+([,.;:!?])/g, '$1').replace(/([,;:])\1+/g, '$1')
       .replace(/,\s*\./g, '.').replace(/…\./g, '.').replace(/\.{2,}/g, '.').trim();
+    // A template whose opening segment was dropped (", caught …", ". When:
+    // …") would otherwise start on that segment's leftover punctuation.
+    text = text.replace(/^[\s,;:.]+/, '');
     if (!text) return '';
     text = text.charAt(0).toUpperCase() + text.slice(1);
     if (!/[.!?]$/.test(text)) text += '.';
     return text;
   }
 
-  function conceptHelperSummaryText() {
+  // The answers a template actually gets to use: the keys in the [[ ... ]]
+  // segments that survive, plus any bare {key} that's filled.
+  function conceptHelperFilledKeys(template, answers) {
+    const keys = new Set();
+    for (const [, inner] of template.matchAll(/\[\[([\s\S]*?)\]\]/g)) {
+      const segKeys = [...inner.matchAll(/\{(\w+)\}/g)].map(m => m[1]);
+      if (segKeys.every(k => conceptHelperValue(k, answers))) segKeys.forEach(k => keys.add(k));
+    }
+    const bare = template.replace(/\[\[[\s\S]*?\]\]/g, '');
+    for (const [, k] of bare.matchAll(/\{(\w+)\}/g)) {
+      if (conceptHelperValue(k, answers)) keys.add(k);
+    }
+    keys.delete('category');
+    return keys;
+  }
+
+  // A summary's pitch/character/world: a few templates, fullest first, the
+  // shorter ones there for long answers. Picks the one that uses the most
+  // answers and still fits `max` (the earliest on a tie) — or, if none fits,
+  // the shortest, which its box's count then flags. One that uses no answer
+  // at all ("Their wedding day.") says nothing, so it's never picked; nor,
+  // given `requireKeys`, one that uses none of those.
+  function conceptHelperPick(templates, answers, max, requireKeys) {
+    const results = [].concat(templates || [])
+      .map(t => {
+        const keys = conceptHelperFilledKeys(t, answers);
+        return { text: conceptHelperFill(t, answers), used: keys.size, keys };
+      })
+      .filter(r => r.text && r.used > 0 && (!requireKeys || [...r.keys].some(k => requireKeys.has(k))));
+    const fits = results.filter(r => r.text.length <= max);
+    if (fits.length) return fits.reduce((best, r) => (r.used > best.used ? r : best)).text;
+    return results.length ? results.reduce((a, b) => (b.text.length < a.text.length ? b : a)).text : '';
+  }
+
+  // Character/Personality and World-building notes are only on the page for
+  // narrative categories (see updateCategoryTierUI).
+  function conceptHelperHasStoryFields() {
+    return !document.getElementById('narrativeFieldsBlock').hidden;
+  }
+
+  // Where the opt-in Character/World questions start once the main ones run
+  // out — null if they've already been reached, the page has no boxes for
+  // them, or the flow has none for the path taken.
+  function conceptHelperDeeperStart() {
+    const h = conceptHelper;
+    if (!h.flow.deeper || !conceptHelperHasStoryFields()) return null;
+    const inDeeper = [...h.history, h.nodeId].some(id => {
+      const node = id && conceptHelperNode(id);
+      return node && node.section === 'deeper';
+    });
+    if (inDeeper) return null;
     const answers = conceptHelperAnswers();
-    const match = conceptHelper.flow.summaries.find(sum => Object.entries(sum.when || {})
+    const match = h.flow.deeper.find(d => Object.entries(d.when || {}).every(([key, val]) => answers[key] === val));
+    return match && conceptHelperNode(match.start) ? match.start : null;
+  }
+
+  function conceptHelperOutputEl(out) {
+    return document.getElementById(out.boxId).closest('.concept-helper-output');
+  }
+
+  function conceptHelperShownOutputs() {
+    return CONCEPT_HELPER_OUTPUTS.filter(out => !conceptHelperOutputEl(out).hidden);
+  }
+
+  // Compiles every box for the path taken. Character/World only once the
+  // user's said yes to their questions and actually answered one of them —
+  // otherwise all they'd hold is the Concept again. Any box but Concept
+  // stays off the end screen when there's nothing to put in it.
+  function fillConceptHelperOutputs() {
+    const h = conceptHelper;
+    const answers = conceptHelperAnswers();
+    const summary = h.flow.summaries.find(sum => Object.entries(sum.when || {})
       .every(([key, val]) => answers[key] === val));
-    return match ? conceptHelperFill(match.template, answers) : '';
+    const deeperKeys = new Set([...h.history, h.nodeId]
+      .map(id => id && conceptHelperNode(id))
+      .filter(node => node && node.section === 'deeper' && node.type === 'short' && conceptHelperValue(node.key, answers))
+      .map(node => node.key));
+    const withStory = answers.deeper === true && deeperKeys.size > 0 && conceptHelperHasStoryFields();
+    CONCEPT_HELPER_OUTPUTS.forEach(out => {
+      let text = '';
+      if (summary && out.key === 'concept') text = conceptHelperFill(summary.template, answers);
+      else if (summary && out.key === 'pitch') text = conceptHelperPick(summary.pitch, answers, conceptHelperMax(out));
+      else if (summary && withStory) text = conceptHelperPick(summary[out.key], answers, conceptHelperMax(out), deeperKeys);
+      document.getElementById(out.boxId).value = text;
+      conceptHelperOutputEl(out).hidden = out.key !== 'concept' && !text;
+      // On a shoot that already has its own text there, say how to keep it.
+      const field = document.getElementById(out.fieldId);
+      conceptHelperOutputEl(out).querySelector('.concept-helper-keep').hidden = !(text && hasText(field.value) && field.value.trim() !== text);
+    });
   }
 
   function updateConceptHelperCount() {
-    const len = document.getElementById('conceptHelperSummary').value.trim().length;
-    const count = document.getElementById('conceptHelperCount');
-    const over = len > conceptHelperMax();
-    count.textContent = over
-      ? `${len}/${conceptHelperMax()} — trim a little to fit the Concept box`
-      : `${len}/${conceptHelperMax()}`;
-    count.classList.toggle('over', over);
-    document.getElementById('conceptHelperUseBtn').disabled = over || len === 0;
+    let over = false;
+    let any = false;
+    conceptHelperShownOutputs().forEach(out => {
+      const len = document.getElementById(out.boxId).value.trim().length;
+      const max = conceptHelperMax(out);
+      const count = document.getElementById(out.countId);
+      const outOver = len > max;
+      count.textContent = outOver ? `${len}/${max} — trim a little to fit the ${out.label} box` : `${len}/${max}`;
+      count.classList.toggle('over', outOver);
+      over = over || outOver;
+      any = any || len > 0;
+    });
+    document.getElementById('conceptHelperUseBtn').disabled = over || !any;
   }
 
   function renderConceptHelper() {
     const h = conceptHelper;
     const show = (id, on) => { document.getElementById(id).hidden = !on; };
     const input = document.getElementById('conceptHelperInput');
+    show('conceptHelperLeaveRow', !!h.leaving);
+    if (h.leaving) {
+      // Leaving before every question's answered (see askConceptHelperLeave).
+      const blanks = conceptHelperBlankIds().length;
+      const plural = blanks === 1 ? '' : 's';
+      document.getElementById('conceptHelperStep').textContent = '';
+      document.getElementById('conceptHelperTitle').textContent = h.leaving === 'close' ? 'Not done yet'
+        : (blanks === 1 ? 'One left blank' : 'A few left blank');
+      document.getElementById('conceptHelperText').textContent = h.leaving === 'close'
+        ? `${blanks ? `You've left ${blanks} question${plural} blank, and there are` : 'There are'} a few more to go. If you leave now, your answers won't be kept.`
+        : `You left ${blanks} question${plural} blank. Answer ${blanks === 1 ? 'it' : 'them'} for a fuller result, or go ahead without.`;
+      document.getElementById('conceptHelperLeaveFirstBtn').textContent = !blanks ? 'Keep going'
+        : (blanks === 1 ? 'Take me to it' : 'Go to the first one');
+      document.getElementById('conceptHelperLeaveAnywayBtn').textContent = h.leaving !== 'use' ? 'Leave anyway'
+        : (conceptHelperShownOutputs().length > 1 ? 'Use these anyway' : 'Use this anyway');
+      ['conceptHelperHint', 'conceptHelperInput', 'conceptHelperOutputs', 'conceptHelperYesNo', 'conceptHelperNextRow',
+        'conceptHelperEndRow', 'conceptHelperEndNavRow', 'conceptHelperBackBtn', 'conceptHelperCloseRow'].forEach(id => show(id, false));
+      return;
+    }
     if (h.ended) {
+      const several = conceptHelperShownOutputs().length > 1;
       document.getElementById('conceptHelperStep').textContent = '';
       document.getElementById('conceptHelperTitle').textContent = "Here's your concept";
-      document.getElementById('conceptHelperText').textContent = 'Change anything you like, then use it as your concept or write your own.';
+      document.getElementById('conceptHelperText').textContent = several
+        ? 'Change anything you like, then use these or write your own.'
+        : 'Change anything you like, then use it as your concept or write your own.';
+      document.getElementById('conceptHelperUseBtn').textContent = several ? 'Use these' : 'Use this';
       show('conceptHelperHint', false);
       show('conceptHelperInput', false);
-      show('conceptHelperSummary', true);
-      show('conceptHelperCount', true);
+      show('conceptHelperOutputs', true);
       show('conceptHelperYesNo', false);
       show('conceptHelperNextRow', false);
       show('conceptHelperEndRow', true);
-      show('conceptHelperBackBtn', true);
-      show('conceptHelperRestartBtn', true);
+      // Back/Start over as a pair of buttons, and no Close: "Use this" and
+      // "I'll write it myself" both close it already.
+      show('conceptHelperEndNavRow', true);
+      show('conceptHelperBackBtn', false);
+      show('conceptHelperCloseRow', false);
+      // Each box as tall as its text (the card scrolls), so nothing's
+      // hidden inside a box of its own.
+      conceptHelperShownOutputs().forEach(out => autoSizeTextarea(document.getElementById(out.boxId)));
       updateConceptHelperCount();
       return;
     }
@@ -9506,39 +10968,132 @@
     hint.textContent = node.hint || '';
     show('conceptHelperHint', !!node.hint);
     const isShort = node.type === 'short';
+    // "Posed" / "Documentary" rather than No / Yes when it's an either/or.
+    document.getElementById('conceptHelperYesBtn').textContent = node.yesLabel || 'Yes';
+    document.getElementById('conceptHelperNoBtn').textContent = node.noLabel || 'No';
     show('conceptHelperInput', isShort);
-    show('conceptHelperSummary', false);
-    show('conceptHelperCount', false);
+    show('conceptHelperOutputs', false);
     show('conceptHelperYesNo', !isShort);
     show('conceptHelperNextRow', isShort);
     show('conceptHelperEndRow', false);
+    show('conceptHelperEndNavRow', false);
     show('conceptHelperBackBtn', h.history.length > 0);
-    show('conceptHelperRestartBtn', false);
+    show('conceptHelperCloseRow', true);
     if (isShort) {
       input.placeholder = node.placeholder || '';
       const prev = h.answers[h.nodeId];
       input.value = typeof prev === 'string' ? prev : '';
     }
+    // Two answers side by side while both fit their half. The labels never
+    // wrap (style.css), so one that doesn't fit ("Documentary", or most on a
+    // narrow phone) widens its button and squeezes the other — then the pair
+    // stacks full width instead. A few px of slack: the white button's
+    // border alone makes it ~2px wider.
+    const yesNo = document.getElementById('conceptHelperYesNo');
+    yesNo.classList.remove('concept-helper-choice-stacked');
+    const rowWidth = yesNo.getBoundingClientRect().width;
+    if (!isShort && rowWidth) {
+      const half = (rowWidth - (parseFloat(getComputedStyle(yesNo).columnGap) || 0)) / 2;
+      const widest = Math.max(
+        document.getElementById('conceptHelperYesBtn').getBoundingClientRect().width,
+        document.getElementById('conceptHelperNoBtn').getBoundingClientRect().width);
+      if (widest > half + 3) yesNo.classList.add('concept-helper-choice-stacked');
+    }
+  }
+
+  // Where a question leads: the next one, or — when the flow runs out — the
+  // opt-in Character/World questions, or null for the end.
+  function conceptHelperResolve(nextId) {
+    return (!nextId || nextId === 'END' || !conceptHelperNode(nextId)) ? conceptHelperDeeperStart() : nextId;
+  }
+
+  // The branch a question's saved answer leads down — null when it has none
+  // (or a blank one), which is where a resumed run stops.
+  function conceptHelperSavedNext(node) {
+    const answer = conceptHelper.answers[node.id];
+    if (node.type === 'short') return typeof answer === 'string' && answer.trim() ? (node.next || 'END') : null;
+    if (answer === undefined) return null;
+    if (answer === (node.yesValue !== undefined ? node.yesValue : true)) return node.yes || 'END';
+    if (answer === (node.noValue !== undefined ? node.noValue : false)) return node.no || 'END';
+    return null;
   }
 
   function goConceptHelper(nextId) {
     const h = conceptHelper;
     h.history.push(h.nodeId);
-    if (!nextId || nextId === 'END' || !conceptHelperNode(nextId)) {
+    let id = conceptHelperResolve(nextId);
+    // After "Go to the first one": straight past everything that's
+    // already answered, to the next gap (or the end).
+    while (id && h.resume) {
+      const saved = conceptHelperSavedNext(conceptHelperNode(id));
+      if (!saved) break;
+      h.history.push(id);
+      h.nodeId = id;
+      id = conceptHelperResolve(saved);
+    }
+    if (!id) {
       h.ended = true;
-      document.getElementById('conceptHelperSummary').value = conceptHelperSummaryText();
+      h.resume = false;
+      fillConceptHelperOutputs();
     } else {
-      h.nodeId = nextId;
+      h.nodeId = id;
     }
     renderConceptHelper();
+  }
+
+  // Questions already passed that were left empty. "None" and the like
+  // count as answered — that was an answer. The question on screen isn't
+  // "left" yet.
+  function conceptHelperBlankIds() {
+    const h = conceptHelper;
+    return h.history.filter((id, i) => {
+      const node = conceptHelperNode(id);
+      const answer = h.answers[id];
+      return h.history.indexOf(id) === i && node && node.type === 'short' && !(typeof answer === 'string' && answer.trim());
+    });
+  }
+
+  // Back to a question, picking up from there; answering it then skips on
+  // past whatever's already answered (see goConceptHelper).
+  function jumpConceptHelperTo(id) {
+    const h = conceptHelper;
+    const at = h.history.indexOf(id);
+    if (at >= 0) h.history = h.history.slice(0, at);
+    h.nodeId = id;
+    h.ended = false;
+    h.leaving = null;
+    h.resume = true;
+    renderConceptHelper();
+  }
+
+  // Every question's meant to be answered: leaving before the end (Close),
+  // or using what's there with some left blank, asks first — with a way
+  // straight to the first one that's missing.
+  function askConceptHelperLeave(action) {
+    const h = conceptHelper;
+    if (!h) return false;
+    if (action === 'close' ? h.ended : !conceptHelperBlankIds().length) return false;
+    const node = !h.ended && conceptHelperNode(h.nodeId);
+    // The box's value only means something on a short question (it keeps
+    // its old text while hidden on a yes/no one).
+    const typed = node && node.type === 'short' ? document.getElementById('conceptHelperInput').value.trim() : '';
+    // Nothing answered yet (opened by mistake, say): nothing to lose.
+    const anyAnswer = Object.values(h.answers).some(a => (typeof a === 'string' ? a.trim() : a !== undefined));
+    if (action === 'close' && !typed && !anyAnswer) return false;
+    // What's in the box on screen — even emptied — is what "Keep going" shows.
+    if (node && node.type === 'short') h.answers[node.id] = typed;
+    h.leaving = action;
+    renderConceptHelper();
+    return true;
   }
 
   function openConceptHelper() {
     if (!CONCEPT_FLOWS.length) return;
     const flow = conceptFlowFor(conceptHelperCategory());
     conceptHelper = { flow, nodeId: flow.start, history: [], answers: {}, ended: false };
-    renderConceptHelper();
+    // Shown first: renderConceptHelper measures the answer buttons.
     document.getElementById('conceptHelperOverlay').hidden = false;
+    renderConceptHelper();
   }
 
   function closeConceptHelper() {
@@ -9566,24 +11121,34 @@
     if (!conceptHelper || conceptHelper.ended) return;
     const node = conceptHelperNode(conceptHelper.nodeId);
     if (node.type !== 'short') return;
-    // Blank is fine — that part of the summary is simply left out.
+    // Left blank, it's flagged when they try to leave or use the result (see
+    // askConceptHelperLeave); that part of the summary is just left out.
     conceptHelper.answers[node.id] = document.getElementById('conceptHelperInput').value.trim();
     goConceptHelper(node.next);
   }
 
   document.getElementById('conceptHelperNextBtn').addEventListener('click', nextConceptHelperShort);
 
+  // keyCode 229: Safari sends the Enter that confirms an IME composition
+  // (Japanese, Chinese…) after compositionend, with isComposing already false.
   document.getElementById('conceptHelperInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); nextConceptHelperShort(); }
+    if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
+    e.preventDefault();
+    nextConceptHelperShort();
   });
 
-  document.getElementById('conceptHelperBackBtn').addEventListener('click', () => {
+  // The small Back link on a question, or the end screen's Back button.
+  function backConceptHelper() {
     const h = conceptHelper;
     if (!h || !h.history.length) return;
     h.nodeId = h.history.pop();
     h.ended = false;
+    h.resume = false;
     renderConceptHelper();
-  });
+  }
+
+  document.getElementById('conceptHelperBackBtn').addEventListener('click', backConceptHelper);
+  document.getElementById('conceptHelperEndBackBtn').addEventListener('click', backConceptHelper);
 
   document.getElementById('conceptHelperRestartBtn').addEventListener('click', () => {
     if (!conceptHelper) return;
@@ -9592,30 +11157,803 @@
     renderConceptHelper();
   });
 
-  document.getElementById('conceptHelperSummary').addEventListener('input', updateConceptHelperCount);
+  CONCEPT_HELPER_OUTPUTS.forEach(out => {
+    document.getElementById(out.boxId).addEventListener('input', (e) => {
+      autoSizeTextarea(e.target);
+      updateConceptHelperCount();
+    });
+  });
 
-  // Fills the Concept field (the real one — on the wizard slide it's typed
-  // into directly) and lets the form's own input listener save it.
+  // "Concept", "Concept and Elevator pitch", "Concept, World-building notes
+  // and Elevator pitch".
+  function conceptHelperJoin(labels) {
+    return labels.length > 1 ? `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}` : labels[0];
+  }
+
+  // Fills each page field that has something in its box (the real fields —
+  // on a wizard slide they're typed into directly) and lets the form's own
+  // input listener save them. A box emptied on purpose leaves its field be.
+  function useConceptHelperOutputs() {
+    const picks = conceptHelperShownOutputs()
+      .map(out => ({ out, text: document.getElementById(out.boxId).value.trim(), field: document.getElementById(out.fieldId) }))
+      .filter(pick => pick.text);
+    if (!picks.length || picks.some(pick => pick.text.length > conceptHelperMax(pick.out))) return;
+    const replacing = picks.filter(pick => hasText(pick.field.value) && pick.field.value.trim() !== pick.text)
+      .map(pick => pick.out.label);
+    if (replacing.length && !confirm(`Replace what's already in ${conceptHelperJoin(replacing)}? To keep one, cancel and clear its box.`)) return;
+    picks.forEach(({ field, text }) => {
+      field.value = text;
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      syncFieldFilledState(field);
+    });
+    closeConceptHelper();
+  }
+
   document.getElementById('conceptHelperUseBtn').addEventListener('click', () => {
-    const text = document.getElementById('conceptHelperSummary').value.trim();
-    if (!text || text.length > conceptHelperMax()) return;
-    const premise = document.getElementById('shootPremise');
-    if (hasText(premise.value) && premise.value.trim() !== text
-      && !confirm('Replace what\'s already in Concept with this?')) return;
-    premise.value = text;
-    premise.dispatchEvent(new Event('input', { bubbles: true }));
-    syncFieldFilledState(premise);
-    closeConceptHelper();
+    if (!askConceptHelperLeave('use')) useConceptHelperOutputs();
   });
 
-  // "Now that you've got it": back to the slide with the Concept box ready.
+  // "Now that you've got it": straight into writing the Concept — typed in
+  // place on the wizard slide, or through its expand popup on the page,
+  // where the field itself is read-only.
+  function writeConceptHelperOwn() {
+    closeConceptHelper();
+    const premise = document.getElementById('shootPremise');
+    if (premise.readOnly) openExpandField('shootPremise');
+    else premise.focus();
+  }
+
   document.getElementById('conceptHelperWriteBtn').addEventListener('click', () => {
-    closeConceptHelper();
-    const premise = document.getElementById('shootPremise');
-    if (!premise.readOnly) premise.focus();
+    if (!askConceptHelperLeave('write')) writeConceptHelperOwn();
   });
 
-  document.getElementById('conceptHelperCloseBtn').addEventListener('click', closeConceptHelper);
+  document.getElementById('conceptHelperCloseBtn').addEventListener('click', () => {
+    if (!askConceptHelperLeave('close')) closeConceptHelper();
+  });
+
+  document.getElementById('conceptHelperLeaveFirstBtn').addEventListener('click', () => {
+    const h = conceptHelper;
+    if (!h) return;
+    // A real blank: go there. Otherwise ("Keep going") just carry on where
+    // they were, stepping through as before.
+    const target = conceptHelperBlankIds()[0];
+    if (target) jumpConceptHelperTo(target);
+    else { h.leaving = null; renderConceptHelper(); }
+  });
+
+  document.getElementById('conceptHelperLeaveAnywayBtn').addEventListener('click', () => {
+    const h = conceptHelper;
+    if (!h) return;
+    const action = h.leaving;
+    h.leaving = null;
+    if (action === 'write') writeConceptHelperOwn();
+    else if (action === 'use') {
+      // Back to the end screen first, in case the replace check is cancelled.
+      renderConceptHelper();
+      useConceptHelperOutputs();
+    } else closeConceptHelper();
+  });
+
+  // ---------- Reflection helper ("Need help reflecting?") ----------
+  // Under Reflection: a few short questions for each of its three fields,
+  // picked by the shoot's category (REFLECTION_FLOWS). Back and Next move
+  // freely, any question can be skipped, and Finish (or "Finish now") writes
+  // whatever was answered straight into the matching fields — one sentence
+  // per answer, each from its question's `say` ({a} = the answer; `lower`
+  // lowercases a capital the answer starts a sentence with).
+  const REFLECTION_FIELDS = {
+    right: { fieldId: 'shootWentRight', label: 'What went right' },
+    better: { fieldId: 'shootCouldBeBetter', label: "What could've gone better" },
+    lessons: { fieldId: 'shootLessonsLearned', label: 'Lessons for next time' },
+  };
+
+  // One flow per kind of shoot, like CONCEPT_FLOWS ('' = no category yet):
+  // what went right, what could've gone better, lessons — three each.
+  const REFLECTION_FLOWS = [
+    {
+      "id": "story",
+      "categories": [
+        "editorial",
+        "portfolio_building",
+        "test_shoot",
+        "other",
+        ""
+      ],
+      "questions": [
+        {
+          "field": "right",
+          "text": "Which frame or moment came out best?",
+          "placeholder": "e.g. the shot through the motel window",
+          "say": "Best frame: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What part of the idea came through strongest?",
+          "placeholder": "e.g. the loneliness, in the empty pool",
+          "say": "What came through: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What worked with the talent, styling or light?",
+          "placeholder": "e.g. her stillness between takes",
+          "say": "What worked: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What slowed you down or got in the way?",
+          "placeholder": "e.g. wardrobe changes took forever",
+          "say": "What got in the way: {a}."
+        },
+        {
+          "field": "better",
+          "text": "Which shot didn't come out the way you pictured?",
+          "placeholder": "e.g. the car scene felt staged",
+          "say": "Didn't land: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What do you wish you'd had on set?",
+          "placeholder": "e.g. a haze machine for the hallway",
+          "say": "Wish I'd had: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "Finish this: next time, I'll…",
+          "placeholder": "e.g. scout at the same hour I shoot",
+          "say": "Next time, I'll {a}.",
+          "lower": true,
+          "sayOwn": "Next time, {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What's one thing you'll keep doing?",
+          "placeholder": "e.g. shooting the warm-up frames",
+          "say": "Keep doing: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What would you tell yourself the night before?",
+          "placeholder": "e.g. simplify the shot list",
+          "say": "Note to self: {a}."
+        }
+      ]
+    },
+    {
+      "id": "people",
+      "categories": [
+        "engagement",
+        "family",
+        "maternity"
+      ],
+      "questions": [
+        {
+          "field": "right",
+          "text": "Which moment or expression came out best?",
+          "placeholder": "e.g. the quiet laugh by the window",
+          "say": "Best moment: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What got them relaxed and being themselves?",
+          "placeholder": "e.g. letting the kids pick the music",
+          "say": "What got them comfortable: {a}."
+        },
+        {
+          "field": "right",
+          "text": "Which prompt or idea worked better than expected?",
+          "placeholder": "e.g. the 'whisper a secret' prompt",
+          "say": "Prompt that worked: {a}."
+        },
+        {
+          "field": "better",
+          "text": "When, if ever, did things stall or feel stiff?",
+          "placeholder": "e.g. the posed group shots at the start",
+          "say": "Where it stalled: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What about the timing, light or location made it harder?",
+          "placeholder": "e.g. the sun dropped behind the trees early",
+          "say": "What made it harder: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What did you miss or run out of time for?",
+          "placeholder": "e.g. a photo with just the grandparents",
+          "say": "Missed: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "Finish this: next time, I'll…",
+          "placeholder": "e.g. start with movement, not posing",
+          "say": "Next time, I'll {a}.",
+          "lower": true,
+          "sayOwn": "Next time, {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What will you tell clients like them before the shoot?",
+          "placeholder": "e.g. bring snacks for the kids",
+          "say": "Tell clients beforehand: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What's one thing you'll keep doing?",
+          "placeholder": "e.g. starting with a walk to warm up",
+          "say": "Keep doing: {a}."
+        }
+      ]
+    },
+    {
+      "id": "wedding",
+      "categories": [
+        "wedding"
+      ],
+      "questions": [
+        {
+          "field": "right",
+          "text": "Which moment of the day came out best?",
+          "placeholder": "e.g. dad seeing her for the first time",
+          "say": "Best moment: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What went smoothly with the timeline or the team?",
+          "placeholder": "e.g. the planner kept portraits on time",
+          "say": "What ran smoothly: {a}."
+        },
+        {
+          "field": "right",
+          "text": "Which usually-hard part of the day did you nail?",
+          "placeholder": "e.g. the dark reception, with off-camera flash",
+          "say": "Nailed: {a}."
+        },
+        {
+          "field": "better",
+          "text": "Where, if anywhere, did the timeline slip or squeeze you?",
+          "placeholder": "e.g. portraits got cut to ten minutes",
+          "say": "Where the timeline slipped: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What was hard about the light or the venue?",
+          "placeholder": "e.g. a dark church with no flash allowed",
+          "say": "Light or venue trouble: {a}."
+        },
+        {
+          "field": "better",
+          "text": "Which moment or must-have shot did you miss?",
+          "placeholder": "e.g. the cake cutting, I was outside",
+          "say": "Missed: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "Finish this: next time, I'll…",
+          "placeholder": "e.g. ask for 20 minutes at golden hour",
+          "say": "Next time, I'll {a}.",
+          "lower": true,
+          "sayOwn": "Next time, {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What will you ask the couple or planner for earlier?",
+          "placeholder": "e.g. the full family formals list",
+          "say": "Ask earlier: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What would you bring or set up differently?",
+          "placeholder": "e.g. a second body with a wide lens",
+          "say": "Bring or set up differently: {a}."
+        }
+      ]
+    },
+    {
+      "id": "event",
+      "categories": [
+        "event"
+      ],
+      "questions": [
+        {
+          "field": "right",
+          "text": "Which moment came out best?",
+          "placeholder": "e.g. the surprise toast, right on cue",
+          "say": "Best moment: {a}."
+        },
+        {
+          "field": "right",
+          "text": "When were you in the right place at the right time?",
+          "placeholder": "e.g. by the stage door for the entrance",
+          "say": "Right place, right time: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What captured the energy of it best?",
+          "placeholder": "e.g. wide shots from the balcony",
+          "say": "What captured the energy: {a}."
+        },
+        {
+          "field": "better",
+          "text": "Where were you out of position, or what did you miss?",
+          "placeholder": "e.g. stuck at the bar during the speech",
+          "say": "Missed: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What made the light or the room hard to work with?",
+          "placeholder": "e.g. purple uplights on every face",
+          "say": "Light or room trouble: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What slowed you down?",
+          "placeholder": "e.g. swapping lenses in a crowd",
+          "say": "What slowed me down: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "Finish this: next time, I'll…",
+          "placeholder": "e.g. get the run-of-show a day early",
+          "say": "Next time, I'll {a}.",
+          "lower": true,
+          "sayOwn": "Next time, {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What will you ask the host or organizer beforehand?",
+          "placeholder": "e.g. who the VIPs are",
+          "say": "Ask beforehand: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What would you bring or set up differently?",
+          "placeholder": "e.g. a flash with a bounce card",
+          "say": "Bring or set up differently: {a}."
+        }
+      ]
+    },
+    {
+      "id": "brand",
+      "categories": [
+        "branding",
+        "commercial",
+        "content_shoot"
+      ],
+      "questions": [
+        {
+          "field": "right",
+          "text": "Which shot will the client love most?",
+          "placeholder": "e.g. the founder laughing at the counter",
+          "say": "Client favorite: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What did you nail from the brief?",
+          "placeholder": "e.g. the warm, honest feel",
+          "say": "Nailed from the brief: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What went smoothly on set?",
+          "placeholder": "e.g. product swaps between setups",
+          "say": "What ran smoothly: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What from the brief or shot list didn't get covered?",
+          "placeholder": "e.g. the vertical cuts for stories",
+          "say": "Not covered: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What slowed you down or got in the way?",
+          "placeholder": "e.g. waiting on approvals between setups",
+          "say": "What got in the way: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What would you shoot differently for how it'll be used?",
+          "placeholder": "e.g. more room for text overlays",
+          "say": "Shoot differently: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "Finish this: next time, I'll…",
+          "placeholder": "e.g. lock the shot list with the client first",
+          "say": "Next time, I'll {a}.",
+          "lower": true,
+          "sayOwn": "Next time, {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What will you ask the client before the next shoot?",
+          "placeholder": "e.g. where every image will run",
+          "say": "Ask the client first: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What's one thing you'll keep doing?",
+          "placeholder": "e.g. tethering so they can see live",
+          "say": "Keep doing: {a}."
+        }
+      ]
+    },
+    {
+      "id": "headshot",
+      "categories": [
+        "headshot"
+      ],
+      "questions": [
+        {
+          "field": "right",
+          "text": "Which expression or look came out best?",
+          "placeholder": "e.g. the half-smile in the second look",
+          "say": "Best look: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What got them comfortable in front of the camera?",
+          "placeholder": "e.g. talking about their dog",
+          "say": "What got them comfortable: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What worked about the setup or light?",
+          "placeholder": "e.g. the big window plus a white bounce",
+          "say": "What worked: {a}."
+        },
+        {
+          "field": "better",
+          "text": "When did they tense up, or what didn't land?",
+          "placeholder": "e.g. the serious, arms-crossed shots",
+          "say": "What didn't land: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What slowed you down?",
+          "placeholder": "e.g. re-lighting for each outfit",
+          "say": "What slowed me down: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What about the background, styling or retouching would you fix?",
+          "placeholder": "e.g. a wrinkled collar",
+          "say": "To fix: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "Finish this: next time, I'll…",
+          "placeholder": "e.g. send a what-to-wear guide",
+          "say": "Next time, I'll {a}.",
+          "lower": true,
+          "sayOwn": "Next time, {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What will you tell the next client beforehand?",
+          "placeholder": "e.g. bring two tops in solid colors",
+          "say": "Tell clients beforehand: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What's one thing you'll keep doing?",
+          "placeholder": "e.g. showing them the back of the camera",
+          "say": "Keep doing: {a}."
+        }
+      ]
+    },
+    {
+      "id": "publicity",
+      "categories": [
+        "publicity"
+      ],
+      "questions": [
+        {
+          "field": "right",
+          "text": "Which shot sums them up best?",
+          "placeholder": "e.g. the one laughing off-stage",
+          "say": "Sums them up: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What about their persona came through?",
+          "placeholder": "e.g. the dry humor",
+          "say": "What came through: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What worked with the look, styling or set?",
+          "placeholder": "e.g. the red jacket against the brick",
+          "say": "What worked: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What part of the brief or persona didn't come through?",
+          "placeholder": "e.g. the darker, moodier side",
+          "say": "Didn't come through: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What slowed you down or got in the way?",
+          "placeholder": "e.g. the manager cutting the time short",
+          "say": "What got in the way: {a}."
+        },
+        {
+          "field": "better",
+          "text": "Which looks or crops are missing from the set?",
+          "placeholder": "e.g. a clean horizontal for press",
+          "say": "Missing: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "Finish this: next time, I'll…",
+          "placeholder": "e.g. get the press uses in writing",
+          "say": "Next time, I'll {a}.",
+          "lower": true,
+          "sayOwn": "Next time, {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What will you ask their team before the next shoot?",
+          "placeholder": "e.g. which crops the outlets need",
+          "say": "Ask their team first: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What's one thing you'll keep doing?",
+          "placeholder": "e.g. a playlist they picked",
+          "say": "Keep doing: {a}."
+        }
+      ]
+    },
+    {
+      "id": "video",
+      "categories": [
+        "video"
+      ],
+      "questions": [
+        {
+          "field": "right",
+          "text": "Which shot or scene came out best?",
+          "placeholder": "e.g. the slow push-in at the gym door",
+          "say": "Best shot: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What went smoothly with the crew or the schedule?",
+          "placeholder": "e.g. we wrapped the interviews early",
+          "say": "What ran smoothly: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What worked better than planned?",
+          "placeholder": "e.g. the handheld, run-and-gun bits",
+          "say": "Better than planned: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What went wrong with sound, light or footage?",
+          "placeholder": "e.g. wind noise on the outdoor takes",
+          "say": "Sound, light or footage trouble: {a}."
+        },
+        {
+          "field": "better",
+          "text": "Where, if anywhere, did the schedule slip?",
+          "placeholder": "e.g. the company move took an hour",
+          "say": "Where the schedule slipped: {a}."
+        },
+        {
+          "field": "better",
+          "text": "Which shot from the list didn't you get?",
+          "placeholder": "e.g. the wide establishing shot",
+          "say": "Didn't get: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "Finish this: next time, I'll…",
+          "placeholder": "e.g. record room tone at every location",
+          "say": "Next time, I'll {a}.",
+          "lower": true,
+          "sayOwn": "Next time, {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What would you change about the crew or gear?",
+          "placeholder": "e.g. add a dedicated sound person",
+          "say": "Crew or gear change: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What's one thing you'll keep doing?",
+          "placeholder": "e.g. a shot list per location",
+          "say": "Keep doing: {a}."
+        }
+      ]
+    },
+    {
+      "id": "lighting",
+      "categories": [
+        "lighting_test"
+      ],
+      "questions": [
+        {
+          "field": "right",
+          "text": "Which setup won, and why?",
+          "placeholder": "e.g. the bare bulb, for the hard edges",
+          "say": "Winner: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What surprised you in a good way?",
+          "placeholder": "e.g. how flattering the bounce was",
+          "say": "Nice surprise: {a}."
+        },
+        {
+          "field": "right",
+          "text": "What settings or placement do you want to remember?",
+          "placeholder": "e.g. key at 45°, f/8, 1/125",
+          "say": "Worth remembering: {a}."
+        },
+        {
+          "field": "better",
+          "text": "Which setup didn't work, and why?",
+          "placeholder": "e.g. the softbox looked flat",
+          "say": "Didn't work: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What got in the way of a clean test?",
+          "placeholder": "e.g. the window light kept changing",
+          "say": "What got in the way: {a}."
+        },
+        {
+          "field": "better",
+          "text": "What would you change about how you ran the test?",
+          "placeholder": "e.g. change one thing at a time",
+          "say": "Run it differently: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "Finish this: next time, I'll…",
+          "placeholder": "e.g. label every frame with the setup",
+          "say": "Next time, I'll {a}.",
+          "lower": true,
+          "sayOwn": "Next time, {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "Where will you use what you learned?",
+          "placeholder": "e.g. the moody portrait series",
+          "say": "Where I'll use it: {a}."
+        },
+        {
+          "field": "lessons",
+          "text": "What do you still want to test?",
+          "placeholder": "e.g. a grid on the hair light",
+          "say": "Still to test: {a}."
+        }
+      ]
+    }
+  ];
+
+  let reflectHelper = null; // { flow, index, answers: [text per question] }
+
+  function reflectFlowFor(category) {
+    return REFLECTION_FLOWS.find(f => f.categories.includes(category))
+      || REFLECTION_FLOWS.find(f => f.categories.includes(''))
+      || REFLECTION_FLOWS[0];
+  }
+
+  function storeReflectAnswer() {
+    reflectHelper.answers[reflectHelper.index] = document.getElementById('reflectHelperInput').value.trim();
+  }
+
+  function renderReflectHelper() {
+    const h = reflectHelper;
+    const questions = h.flow.questions;
+    const q = questions[h.index];
+    const isLast = h.index === questions.length - 1;
+    document.getElementById('reflectHelperStep').textContent = `Question ${h.index + 1} of ${questions.length}`;
+    document.getElementById('reflectHelperTitle').textContent = REFLECTION_FIELDS[q.field].label;
+    document.getElementById('reflectHelperText').textContent = q.text;
+    // Said once, up front: nothing here has to be answered.
+    const hint = document.getElementById('reflectHelperHint');
+    hint.textContent = h.index === 0 ? "Answer what you can. Anything you skip is just left out." : '';
+    hint.hidden = !hint.textContent;
+    const input = document.getElementById('reflectHelperInput');
+    input.placeholder = q.placeholder || '';
+    input.value = h.answers[h.index] || '';
+    document.getElementById('reflectHelperBackBtn').hidden = h.index === 0;
+    document.getElementById('reflectHelperNextBtn').textContent = isLast ? 'Finish' : 'Next';
+    document.getElementById('reflectHelperFinishBtn').hidden = isLast;
+  }
+
+  function goReflectHelper(step) {
+    const h = reflectHelper;
+    if (!h) return;
+    storeReflectAnswer();
+    const next = h.index + step;
+    if (next >= h.flow.questions.length) { finishReflectHelper(); return; }
+    h.index = Math.max(0, next);
+    renderReflectHelper();
+  }
+
+  // "Nothing really", "Nope, all good", "It didn't" — an answer that says
+  // there's nothing to say.
+  const REFLECTION_NOTHING = /^(no|nope|nah|none|nothing|nowhere|never|not really|not much|n\/?a|all good|it didn['’]?t|didn['’]?t)([\s,;:!.—–-]+(really|at all|all good|it didn['’]?t|nothing|it was fine|all fine|went fine))*$/i;
+
+  // One answer as a sentence: trimmed of its closing punctuation, a leading
+  // "yes" dropped, "no"-type answers left out, then put into its question's
+  // `say`. For "Finish this: next time, I'll…", a retyped "next time" /
+  // "I'll" isn't doubled, and an answer with its own "I…" ("I need to…")
+  // uses `sayOwn` instead.
+  function reflectSentence(q, answer) {
+    let text = (answer || '').trim().replace(/[.!?…]+$/, '')
+      .replace(/^(yes|yeah|yep|yup|definitely)\b[\s,;:!.—–-]*/i, '');
+    if (!text || CONCEPT_HELPER_NONE.test(text) || REFLECTION_NOTHING.test(text)) return '';
+    let say = q.say;
+    if (q.sayOwn) {
+      text = text.replace(/^(\.{2,}|…)\s*/, '').replace(/^next time[,:]?\s*/i, '');
+      const withoutLeadIn = text.replace(/^(i['’]ll|i will)\s+/i, '');
+      if (withoutLeadIn !== text && withoutLeadIn) text = withoutLeadIn;
+      else if (/^I(\s|['’])/.test(text)) say = q.sayOwn;
+      if (!text) return '';
+    }
+    if (q.lower && say === q.say && /^[A-Z][a-z]/.test(text)) text = text.charAt(0).toLowerCase() + text.slice(1);
+    // A function, so a "$" in the answer is never read as a pattern.
+    const sentence = say.replace('{a}', () => text);
+    return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+  }
+
+  // Writes each field from its own answers — a field with none is left as
+  // it is. Replacing text that's already there asks first.
+  function finishReflectHelper() {
+    const h = reflectHelper;
+    if (!h) return;
+    storeReflectAnswer();
+    const fills = Object.keys(REFLECTION_FIELDS).map(key => {
+      const field = document.getElementById(REFLECTION_FIELDS[key].fieldId);
+      const text = h.flow.questions
+        .map((q, i) => (q.field === key ? reflectSentence(q, h.answers[i]) : ''))
+        .filter(Boolean).join(' ')
+        .slice(0, field.maxLength > 0 ? field.maxLength : 1000);
+      return { key, field, text };
+    }).filter(fill => fill.text);
+    const replacing = fills.filter(fill => hasText(fill.field.value) && fill.field.value.trim() !== fill.text)
+      .map(fill => REFLECTION_FIELDS[fill.key].label);
+    if (replacing.length && !confirm(`Replace what's already in ${conceptHelperJoin(replacing)}?`)) return;
+    fills.forEach(({ field, text }) => {
+      field.value = text;
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      syncFieldFilledState(field);
+    });
+    closeReflectHelper();
+  }
+
+  function openReflectHelper() {
+    reflectHelper = { flow: reflectFlowFor(document.getElementById('shootCategory').value || ''), index: 0, answers: [] };
+    renderReflectHelper();
+    document.getElementById('reflectHelperOverlay').hidden = false;
+  }
+
+  function closeReflectHelper() {
+    document.getElementById('reflectHelperOverlay').hidden = true;
+    reflectHelper = null;
+  }
+
+  document.getElementById('reflectHelperBtn').addEventListener('click', openReflectHelper);
+  document.getElementById('reflectHelperBackBtn').addEventListener('click', () => goReflectHelper(-1));
+  document.getElementById('reflectHelperNextBtn').addEventListener('click', () => goReflectHelper(1));
+  document.getElementById('reflectHelperFinishBtn').addEventListener('click', finishReflectHelper);
+  document.getElementById('reflectHelperCloseBtn').addEventListener('click', closeReflectHelper);
+
+  // Enter moves on (Shift+Enter still makes a new line; see the concept
+  // helper's input for keyCode 229).
+  document.getElementById('reflectHelperInput').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.shiftKey || e.isComposing || e.keyCode === 229) return;
+    e.preventDefault();
+    goReflectHelper(1);
+  });
 
   document.getElementById('shootWizardDontShowBtn').addEventListener('click', () => {
     setNewShootGuideOn(false);

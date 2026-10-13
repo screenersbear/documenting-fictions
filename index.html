@@ -318,6 +318,10 @@
             </label>
           </div>
 
+          <!-- The concept helper (see CONCEPT_FLOWS in app.js); The idea
+               slide of the new-shoot guide borrows it from here. -->
+          <button type="button" class="primary small-btn" id="conceptHelperBtn">Need to think it through?</button>
+
           <label><span id="shootPremiseLabelText">Concept</span>
             <textarea id="shootPremise" rows="6" maxlength="300" placeholder="visual narrative or message" readonly></textarea>
           </label>
@@ -392,6 +396,8 @@
         <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
         <h3 class="shoot-section-heading status-group-heading heading-yellow" id="postShootHeading">Reflection<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
         <div id="postShootBody">
+          <!-- The reflection helper (see REFLECTION_FLOWS in app.js). -->
+          <button type="button" class="primary small-btn" id="reflectHelperBtn">Need help reflecting?</button>
           <label>What went right
             <textarea id="shootWentRight" rows="3" maxlength="1000" readonly></textarea>
           </label>
@@ -438,16 +444,11 @@
             <button type="button" class="primary" id="shootWizardNextBtn">Next</button>
           </div>
           <div class="shoot-tour-skip-row" id="shootWizardExitRow">
-            <button type="button" class="secondary journal-block-btn" id="shootWizardExitBtn">Go to shoot page</button>
+            <button type="button" class="secondary journal-block-btn" id="shootWizardExitBtn">Skip to shoot page</button>
           </div>
           <!-- First slide only (see renderShootWizardChrome); the same small
                underlined link look as the Visuals "Manage" link. -->
           <button type="button" class="manage-link" id="shootWizardDontShowBtn" hidden>Don't show again</button>
-        </div>
-        <!-- Wizard-only blocks, borrowed onto a slide like the page's own
-             (see SHOOT_WIZARD_STEPS) and kept out of sight here otherwise. -->
-        <div id="shootWizardHolder" hidden>
-          <button type="button" class="primary small-btn" id="conceptHelperBtn">Need to think it through?</button>
         </div>
       </div>
     </form>
@@ -1187,7 +1188,8 @@
 
 <!-- ============ CONCEPT HELPER ("Need to think it through?") ============ -->
 <!-- A short decision tree of yes/no and short-answer questions (see
-     CONCEPT_FLOWS in app.js), compiled into a concept at the end. -->
+     CONCEPT_FLOWS in app.js), compiled at the end into a concept, an
+     elevator pitch and — when asked for — Character/World notes. -->
 <div id="conceptHelperOverlay" class="modal-overlay intro-overlay" hidden>
   <div class="modal intro-modal concept-helper-modal">
     <p class="mi-sub" id="conceptHelperStep"></p>
@@ -1195,8 +1197,33 @@
     <p id="conceptHelperText"></p>
     <p class="field-hint concept-helper-hint" id="conceptHelperHint"></p>
     <input type="text" id="conceptHelperInput" class="deadline-prompt-input" maxlength="40" autocomplete="off" autocapitalize="none" />
-    <textarea id="conceptHelperSummary" class="deadline-prompt-input" rows="5"></textarea>
-    <p class="mi-sub concept-helper-count" id="conceptHelperCount"></p>
+    <!-- One box per page field it fills (CONCEPT_HELPER_OUTPUTS). -->
+    <div id="conceptHelperOutputs">
+      <div class="concept-helper-output">
+        <label class="concept-helper-label" for="conceptHelperSummary">Concept</label>
+        <textarea id="conceptHelperSummary" class="deadline-prompt-input" rows="5"></textarea>
+        <p class="concept-helper-keep" hidden>Already filled in on the page. To keep that instead, clear this box.</p>
+        <p class="mi-sub concept-helper-count" id="conceptHelperCount"></p>
+      </div>
+      <div class="concept-helper-output">
+        <label class="concept-helper-label" for="conceptHelperCharacter">Character/Personality</label>
+        <textarea id="conceptHelperCharacter" class="deadline-prompt-input" rows="5"></textarea>
+        <p class="concept-helper-keep" hidden>Already filled in on the page. To keep that instead, clear this box.</p>
+        <p class="mi-sub concept-helper-count" id="conceptHelperCharacterCount"></p>
+      </div>
+      <div class="concept-helper-output">
+        <label class="concept-helper-label" for="conceptHelperWorld">World-building notes</label>
+        <textarea id="conceptHelperWorld" class="deadline-prompt-input" rows="5"></textarea>
+        <p class="concept-helper-keep" hidden>Already filled in on the page. To keep that instead, clear this box.</p>
+        <p class="mi-sub concept-helper-count" id="conceptHelperWorldCount"></p>
+      </div>
+      <div class="concept-helper-output">
+        <label class="concept-helper-label" for="conceptHelperPitch">Elevator pitch</label>
+        <textarea id="conceptHelperPitch" class="deadline-prompt-input" rows="2"></textarea>
+        <p class="concept-helper-keep" hidden>Already filled in on the page. To keep that instead, clear this box.</p>
+        <p class="mi-sub concept-helper-count" id="conceptHelperPitchCount"></p>
+      </div>
+    </div>
     <div class="modal-actions" id="conceptHelperYesNo">
       <button type="button" class="secondary" id="conceptHelperNoBtn">No</button>
       <button type="button" class="primary" id="conceptHelperYesBtn">Yes</button>
@@ -1208,10 +1235,40 @@
       <button type="button" class="primary" id="conceptHelperUseBtn">Use this</button>
       <button type="button" class="secondary" id="conceptHelperWriteBtn">I'll write it myself</button>
     </div>
+    <!-- End screen only: side by side, together as wide as one button above. -->
+    <div class="modal-actions" id="conceptHelperEndNavRow" hidden>
+      <button type="button" class="secondary" id="conceptHelperEndBackBtn">Back</button>
+      <button type="button" class="secondary" id="conceptHelperRestartBtn">Start over</button>
+    </div>
+    <!-- Leaving with questions unanswered (see askConceptHelperLeave). -->
+    <div class="modal-actions" id="conceptHelperLeaveRow" hidden>
+      <button type="button" class="primary" id="conceptHelperLeaveFirstBtn">Go to the first one</button>
+      <button type="button" class="secondary" id="conceptHelperLeaveAnywayBtn">Leave anyway</button>
+    </div>
     <button type="button" class="manage-link concept-helper-link" id="conceptHelperBackBtn">Back</button>
-    <button type="button" class="manage-link concept-helper-link" id="conceptHelperRestartBtn">Start over</button>
-    <div class="shoot-tour-skip-row">
+    <div class="shoot-tour-skip-row" id="conceptHelperCloseRow">
       <button type="button" class="secondary journal-block-btn" id="conceptHelperCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ REFLECTION HELPER ("Need help reflecting?") ============ -->
+<!-- A few questions per Reflection field (see REFLECTION_FLOWS in app.js),
+     written straight into the fields on Finish. -->
+<div id="reflectHelperOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal reflect-helper-modal">
+    <p class="mi-sub" id="reflectHelperStep"></p>
+    <h2 id="reflectHelperTitle"></h2>
+    <p id="reflectHelperText"></p>
+    <p class="field-hint concept-helper-hint" id="reflectHelperHint"></p>
+    <textarea id="reflectHelperInput" class="deadline-prompt-input" rows="3" maxlength="200"></textarea>
+    <div class="modal-actions" id="reflectHelperNav">
+      <button type="button" class="secondary" id="reflectHelperBackBtn">Back</button>
+      <button type="button" class="primary" id="reflectHelperNextBtn">Next</button>
+    </div>
+    <button type="button" class="manage-link concept-helper-link" id="reflectHelperFinishBtn">Finish now</button>
+    <div class="shoot-tour-skip-row">
+      <button type="button" class="secondary journal-block-btn" id="reflectHelperCloseBtn">Close</button>
     </div>
   </div>
 </div>
