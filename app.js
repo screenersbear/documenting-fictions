@@ -646,9 +646,15 @@
 
   const THEME_KEYS = ['default', 'pink', 'purple', 'red', 'blue', 'green'];
 
+  // Up here with THEME_KEYS for the same reason: normalizeProjects (run by
+  // loadState) uses it, and a const declared any further down would throw
+  // there and start the app empty.
+  const UNTITLED_PROJECT_NAME = 'Untitled project';
+
   function defaultState() {
     return {
       shoots: [],
+      projects: [],
       frameworks: seedFrameworks(),
       journalEntries: [],
       titleDisplayMode: 'talent',
@@ -846,6 +852,67 @@
     };
   }
 
+  // A project id (and a shoot's projectId, when it has one) is any non-empty
+  // string.
+  function isValidProjectId(id) {
+    return typeof id === 'string' && id.trim() !== '';
+  }
+
+  // The projects that still have at least one shoot. Takes its inputs rather
+  // than reading `state`, so loadState can use it too — pruneEmptyProjects is
+  // the live-state version.
+  function projectsWithMembers(projects, shoots) {
+    const used = new Set();
+    shoots.forEach(s => {
+      if (s && isValidProjectId(s.projectId)) used.add(s.projectId);
+    });
+    return projects.filter(p => used.has(p.id));
+  }
+
+  // Load/import pass for state.projects (see "Projects" further down for what
+  // a project is). Keeps well-formed { id, name, createdAt } records — the
+  // first of any repeated id wins, names are trimmed and a blank one becomes
+  // "Untitled project" — and clears a shoot's projectId that isn't a usable
+  // id. A shoot whose project has no record gets the record rebuilt rather
+  // than its projectId stripped: an older cached build (whose loadState
+  // doesn't know about state.projects) drops every record on its next save
+  // but keeps each shoot's projectId, since shoots are saved whole — so
+  // rebuilding here brings the grouping back, named after the project's
+  // earliest shoot that has a title. Projects left with no shoots are dropped.
+  // Called from loadState, so it must not touch `state`, and anything it reads
+  // has to be a function declaration or a const declared above
+  // `let state = loadState()`.
+  function normalizeProjects(rawProjects, shoots) {
+    const byId = new Map();
+    (Array.isArray(rawProjects) ? rawProjects : []).forEach(p => {
+      if (!p || typeof p !== 'object' || !isValidProjectId(p.id) || byId.has(p.id)) return;
+      byId.set(p.id, {
+        id: p.id,
+        name: (typeof p.name === 'string' && p.name.trim()) || UNTITLED_PROJECT_NAME,
+        createdAt: (typeof p.createdAt === 'string' && p.createdAt) || todayStr(),
+      });
+    });
+    const membersById = new Map();
+    shoots.forEach(s => {
+      if (!s || s.projectId === undefined || s.projectId === '') return;
+      if (!isValidProjectId(s.projectId)) {
+        s.projectId = '';
+        return;
+      }
+      if (!membersById.has(s.projectId)) membersById.set(s.projectId, []);
+      membersById.get(s.projectId).push(s);
+    });
+    membersById.forEach((members, id) => {
+      if (byId.has(id)) return;
+      const named = members
+        .slice()
+        .sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)))
+        .find(s => typeof s.title === 'string' && s.title.trim());
+      byId.set(id, { id, name: named ? named.title.trim() : UNTITLED_PROJECT_NAME, createdAt: todayStr() });
+    });
+    return projectsWithMembers([...byId.values()], shoots);
+  }
+
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -860,6 +927,9 @@
       removeFramework(shoots, retiredLightingFwId);
       renameFrameworkTag(shoots, frameworks, 'Visual Language', 'Surreal', 'Surrealism');
       removeFrameworkTags(shoots, frameworks, 'Visual Language', RETIRED_VISUAL_LANGUAGE_TAGS, VISUAL_LANGUAGE_TAGS);
+      // Needs the shoots in their final shape: it rebuilds any project record
+      // a shoot still points at and drops projects left with no shoots.
+      const projects = normalizeProjects(parsed.projects, shoots);
       // sourceShootId entries were auto-mirrored from a shoot's own reflection
       // fields — that mirroring is gone (Reflections now only ever shows
       // entries written there directly), so any left over from before are
@@ -870,6 +940,7 @@
         .map(migrateJournalEntry);
       return {
         shoots,
+        projects,
         frameworks,
         journalEntries,
         titleDisplayMode: parsed.titleDisplayMode === 'title' ? 'title' : 'talent',
@@ -963,11 +1034,13 @@
   // section: each week-bucket subheading (This week / Next week / Later)
   // toggles just its own rows, independent of its sibling buckets and of
   // the outer section — same isSectionCollapsed persistence, one key per
-  // bucket (e.g. "overview:upcoming:this_week").
-  function renderBucketedShoots(container, shoots, buckets, dateField, collapsePrefix, rowOpts) {
+  // bucket (e.g. "overview:upcoming:this_week"). Takes collapseProjects()
+  // items rather than bare shoots, so a project's box is drawn once and
+  // lands in the bucket of its own date for this list (see listItemDate).
+  function renderBucketedShoots(container, items, buckets, dateField, collapsePrefix, rowOpts) {
     buckets.forEach(bucketKey => {
-      const bucketShoots = shoots.filter(s => weekBucket(s[dateField]) === bucketKey);
-      if (!bucketShoots.length) return;
+      const bucketItems = items.filter(item => weekBucket(listItemDate(item, dateField)) === bucketKey);
+      if (!bucketItems.length) return;
 
       const collapseKey = `${collapsePrefix}:${bucketKey}`;
       const collapsed = isSectionCollapsed(collapseKey);
@@ -980,7 +1053,7 @@
       const rowsWrap = document.createElement('div');
       rowsWrap.className = 'upcoming-subheading-rows';
       rowsWrap.hidden = collapsed;
-      bucketShoots.forEach(s => renderShootRow(rowsWrap, s, rowOpts));
+      bucketItems.forEach(item => renderListItem(rowsWrap, item, rowOpts));
       container.appendChild(rowsWrap);
 
       heading.addEventListener('click', () => {
@@ -1163,6 +1236,13 @@
     const statusHtml = statusLabel
       ? `<span class="shoot-row-status-pill">${escapeHtml(statusLabel)}</span>`
       : '';
+    // Opt-in (Today only): "Desert Western · Day 2 of 3" under the date for
+    // a shoot that's part of a project, in the date line's own style.
+    const rowProject = (opts && opts.showProjectLine && s.projectId) ? findProject(s.projectId) : null;
+    const rowDayInfo = rowProject ? projectDayInfo(s) : null;
+    const projectLineHtml = rowProject
+      ? `<span class="shoot-row-date-line">${escapeHtml(rowProject.name)}${rowDayInfo ? ` · Day ${rowDayInfo.day} of ${rowDayInfo.total}` : ''}</span>`
+      : '';
     const div = document.createElement('div');
     div.className = 'shoot-row';
     div.innerHTML = `
@@ -1170,6 +1250,7 @@
       <div class="shoot-row-body">
         <span class="shoot-row-title"><strong>${escapeHtml(shootDisplayName(s))}</strong></span>
         <span class="shoot-row-date-line">${shootDateLabel(s, prettyDateShort)}</span>
+        ${projectLineHtml}
         ${dueHtml}
         ${statusHtml}
         <span class="badge"${badgeHtml ? '' : ' hidden'}>${badgeHtml}</span>
@@ -1201,7 +1282,9 @@
   // A smaller, photo-free row for tight spaces (the Overview counter
   // popups) — title, status, and shoot date, each on its own line, so
   // nothing is ever squeezed side-by-side against anything else.
-  function renderCompactShootRow(container, s) {
+  // opts.openArchiveMode (the project popup, for archived days) opens the
+  // read-only Archive mode recap instead, same as a row on the Archive tab.
+  function renderCompactShootRow(container, s, opts) {
     const statusLabel = STATUS_LABELS[s.status] || '';
     const div = document.createElement('div');
     div.className = 'shoot-row-compact';
@@ -1213,12 +1296,207 @@
       </div>
       <button type="button" class="row-options-btn" aria-label="Options">&#8942;</button>
     `;
-    div.addEventListener('click', () => openShootModal(s.id));
+    div.addEventListener('click', () => {
+      if (opts && opts.openArchiveMode) { openArchiveMode(s.id); return; }
+      openShootModal(s.id);
+    });
     div.querySelector('.row-options-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       openShootOptions(s.id);
     });
     container.appendChild(div);
+  }
+
+  // ---------- Projects in lists ----------
+  // Every list of shoot rows (Overview, the counter popups, Shoots, Archive)
+  // runs its shoots through collapseProjects() first, so a project's members
+  // show as ONE box per list instead of a row per day. The helpers below read
+  // either kind of item the same way. Today, Stats and the Journal stay
+  // per-shoot and never see project boxes.
+
+  // The shoot an item is sorted and filed by: a plain shoot is its own; a
+  // project box uses its rep (collapseProjects: its next day ahead, else its
+  // first day).
+  function listItemRep(item) {
+    return item.kind === 'project' ? item.rep : item.shoot;
+  }
+
+  // The date a list item is filed under for a given shoot field ('date' or
+  // 'deadline') — a shoot's own value, or a project box's rep's, except for
+  // 'deadline', where a project files under the earliest still-owed deadline
+  // among its listed members: the same one its Due line shows.
+  function listItemDate(item, field) {
+    if (item.kind !== 'project') return item.shoot[field] || '';
+    if (field === 'deadline') return projectNextDeadline(item.members);
+    return item.rep[field] || '';
+  }
+
+  // Shoots-tab Status-sort group: a shoot's own status, or for a project box
+  // the least-advanced status among its listed members, so the box sits with
+  // whatever's still left to do.
+  function listItemStatusKey(item) {
+    return item.kind === 'project' ? projectGroupStatusKey(item.members) : (item.shoot.status || 'prospect');
+  }
+
+  // Short dot-date range in prettyDateShort's locale-ordered numeral style —
+  // "10.14–10.16.26" on an M/D/Y device. Two ends in the same year write the
+  // year once, on whichever end the locale puts it (the end for M/D/Y and
+  // D/M/Y, the start for Y/M/D), so the range still reads in the device's own
+  // field order; different years spell out both ends in full; a single date
+  // (or two equal ones) is just that date.
+  function prettyDateRangeShort(startStr, endStr) {
+    if (!startStr || !endStr || startStr === endStr) return prettyDateShort(startStr || endStr);
+    if (startStr.slice(0, 4) !== endStr.slice(0, 4)) return `${prettyDateShort(startStr)}–${prettyDateShort(endStr)}`;
+    const numeralParts = (dateStr) => {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      return new Intl.DateTimeFormat(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' })
+        .formatToParts(new Date(y, m - 1, d))
+        .filter(p => p.type !== 'literal');
+    };
+    const startParts = numeralParts(startStr);
+    const endParts = numeralParts(endStr);
+    const join = (parts, withYear) => parts.filter(p => withYear || p.type !== 'year').map(p => p.value).join('.');
+    const yearFirst = startParts.length > 0 && startParts[0].type === 'year';
+    return yearFirst
+      ? `${join(startParts, true)}–${join(endParts, false)}`
+      : `${join(startParts, false)}–${join(endParts, true)}`;
+  }
+
+  // First-to-last date span of the given members ('' when none has a date).
+  // Undated members are simply left out of the span.
+  function projectDateRangeText(members) {
+    const dates = members.map(s => s.date).filter(Boolean).sort();
+    return dates.length ? prettyDateRangeShort(dates[0], dates[dates.length - 1]) : '';
+  }
+
+  // A project box's version of shootDateLabel: the same "Shoots:"/"Shot:"
+  // prefix ("Shoots" while its last listed day is still ahead or today,
+  // "Shot" once every listed day has passed) over the span of its listed
+  // members' dates. "Date TBD" when none of them has a date yet.
+  function projectDateRangeLabel(members) {
+    const range = projectDateRangeText(members);
+    if (!range) return 'Date TBD';
+    const last = members.map(s => s.date).filter(Boolean).sort().pop();
+    return `${last >= todayStr() ? 'Shoots' : 'Shot'}: ${range}`;
+  }
+
+  // Earliest still-owed deadline among the given members, by the same rule
+  // as Upcoming deadlines (isUpcomingDeadline): overdue still counts (and
+  // shows in red), delivered or archived doesn't. '' when there's none.
+  function projectNextDeadline(members) {
+    return members.filter(isUpcomingDeadline).map(s => s.deadline).sort()[0] || '';
+  }
+
+  // One box standing in for a project's members in a list. It uses the same
+  // .shoot-row markup and classes as renderShootRow (same 96px thumb, accent
+  // strip and 120px body floor) but is filled from the project:
+  // - its name, and its rep's cover (else the first member's that has one);
+  // - the date span of the members in THIS list;
+  // - a "N shoots" line in the date line's style. N counts every member,
+  //   archived ones included, so it reads the same in every list, plus
+  //   "· 2 of 3 shot" while the project is part-way through capture;
+  // - the earliest still-owed deadline, and the union of its listed members'
+  //   Pending labels.
+  // The same opts as renderShootRow switch the status pill and Pending line
+  // on or off. Title + date + count + due + one pill/badge line still fits
+  // inside the 120px min-height, so the box lines up with the shoot rows
+  // around it. Like a shoot row, it only grows when a long Pending line wraps
+  // on a narrow screen. Tapping the box, or its ⋮, opens the project popup,
+  // never one shoot; each day is reachable from there.
+  function renderProjectRow(container, item, opts) {
+    const { project, members, rep } = item;
+    const allMembers = projectMembers(project.id);
+    const showBadge = !opts || opts.showBadge !== false;
+    const statusKey = (showBadge && opts && opts.showStatus) ? projectGroupStatusKey(members) : '';
+    const statusLabel = statusKey ? (STATUS_LABELS[statusKey] || '') : '';
+    const pendingLabels = (showBadge && opts && opts.showPending)
+      ? [...new Set([].concat(...members.map(s => shootPendingLabels(s))))]
+      : [];
+    const pendingText = pendingLabels.length ? `Pending: ${escapeHtml(pendingLabels.join(', '))}` : '';
+    // The same per-day reminders a shoot row adds whenever its badge shows
+    // (proofs owed on a captured photo day, a reflection never written),
+    // said once for the box when any listed day has them.
+    const proofsPendingText = (showBadge && members.some(s => s.status === 'captured' && !isVideoShoot(s))) ? 'Pending: Proofs' : '';
+    const reflectionPendingText = (showBadge && members.some(s => POST_CAPTURE_STATUSES.includes(s.status)
+      && !hasText(s.whatWentRight) && !hasText(s.couldBeBetter) && !hasText(s.lessonsLearned))) ? 'Pending: Reflection' : '';
+    const badgeHtml = [pendingText, proofsPendingText, reflectionPendingText].filter(Boolean).join('<br>');
+    // "· 2 of 3 shot" only while the project is part-way through capture
+    // (projectShotProgressLabel is the same test projectStatusLabel uses); a
+    // project entirely ahead or entirely shot already says so through its
+    // dates and the list it sits in.
+    const progress = projectShotProgressLabel(allMembers);
+    const progressText = progress ? ` · ${progress}` : '';
+    const countText = `${allMembers.length} ${allMembers.length === 1 ? 'shoot' : 'shoots'}${progressText}`;
+    const deadline = projectNextDeadline(members);
+    const isOverdue = !!deadline && deadline < todayStr();
+    const dueHtml = deadline
+      ? `<span class="shoot-row-date-line shoot-row-due${isOverdue ? ' overdue' : ''}">Due: ${prettyDateShort(deadline)}</span>`
+      : '';
+    const statusHtml = statusLabel
+      ? `<span class="shoot-row-status-pill">${escapeHtml(statusLabel)}</span>`
+      : '';
+    const coverShoot = (rep && rep.projectPhoto) ? rep : allMembers.find(s => s.projectPhoto);
+    const div = document.createElement('div');
+    div.className = 'shoot-row';
+    div.innerHTML = `
+      ${shootThumbHtml(coverShoot || {})}
+      <div class="shoot-row-body">
+        <span class="shoot-row-title"><strong>${escapeHtml(project.name || UNTITLED_PROJECT_NAME)}</strong></span>
+        <span class="shoot-row-date-line">${escapeHtml(projectDateRangeLabel(members))}</span>
+        <span class="shoot-row-date-line">${escapeHtml(countText)}</span>
+        ${dueHtml}
+        ${statusHtml}
+        <span class="badge"${badgeHtml ? '' : ' hidden'}>${badgeHtml}</span>
+      </div>
+      <div class="shoot-row-accent-strip">
+        <button type="button" class="row-options-btn" aria-label="Project options">&#8942;</button>
+      </div>
+    `;
+    div.addEventListener('click', () => openProjectPopup(project.id));
+    div.querySelector('.row-options-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openProjectPopup(project.id);
+    });
+    container.appendChild(div);
+  }
+
+  // renderCompactShootRow's counterpart for the Overview counter popups: the
+  // project's name, its derived status in the status slot, and the date span
+  // of its listed members. The status comes from the listed members only:
+  // in "In the edit" that's the days actually in the edit, not a later day
+  // still being planned. Tap or ⋮ opens the project popup, which stacks
+  // above this one.
+  function renderCompactProjectRow(container, item) {
+    const { project, members } = item;
+    const statusLabel = projectStatusLabel(members);
+    const div = document.createElement('div');
+    div.className = 'shoot-row-compact';
+    div.innerHTML = `
+      <div class="shoot-row-compact-body">
+        <span class="shoot-row-compact-title">${escapeHtml(project.name || UNTITLED_PROJECT_NAME)}</span>
+        ${statusLabel ? `<span class="badge">${escapeHtml(statusLabel)}</span>` : ''}
+        <span class="mi-sub">${escapeHtml(projectDateRangeLabel(members))}</span>
+      </div>
+      <button type="button" class="row-options-btn" aria-label="Project options">&#8942;</button>
+    `;
+    div.addEventListener('click', () => openProjectPopup(project.id));
+    div.querySelector('.row-options-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openProjectPopup(project.id);
+    });
+    container.appendChild(div);
+  }
+
+  // Draws one collapseProjects() item: a normal shoot row, or a project box.
+  function renderListItem(container, item, opts) {
+    if (item.kind === 'project') renderProjectRow(container, item, opts);
+    else renderShootRow(container, item.shoot, opts);
+  }
+
+  // Compact (counter popup) version of renderListItem.
+  function renderCompactListItem(container, item) {
+    if (item.kind === 'project') renderCompactProjectRow(container, item);
+    else renderCompactShootRow(container, item.shoot);
   }
 
   // ---------- mood board / final image storage (IndexedDB) ----------
@@ -1504,6 +1782,355 @@
     return Promise.all(jobs).then(() => saveState()).catch(() => {});
   }
 
+  // ---------- Projects (groups of shoots) ----------
+  // A project groups shoots that belong together — the days of a multi-day
+  // shoot, or several shoots that make up one video. Membership lives only on
+  // the shoot (shoot.projectId; '' or missing = no project, and a shoot is in
+  // at most one), so a record in state.projects is just { id, name,
+  // createdAt }: deleting, archiving or importing a shoot needs no project
+  // bookkeeping, and a project left with no shoots is simply dropped
+  // (pruneEmptyProjects). Projects own no photos — lists borrow a member
+  // shoot's cover — so there are no IndexedDB rows of their own to hydrate,
+  // export or clean up. Always go through projectsList() rather than reading
+  // state.projects directly.
+
+  // Always an array, even on a state object built before projects existed.
+  function projectsList() {
+    if (!Array.isArray(state.projects)) state.projects = [];
+    return state.projects;
+  }
+
+  function findProject(id) {
+    if (!id) return undefined;
+    return projectsList().find(p => p.id === id);
+  }
+
+  // Every shoot in the project, archived ones included, in shoot-date order
+  // (date TBD last, same as every other date-sorted list).
+  function projectMembers(projectId) {
+    if (!projectId) return [];
+    return state.shoots
+      .filter(s => s.projectId === projectId)
+      .sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+  }
+
+  // Postponed (key: rescheduled) and Canceled shoots are off the schedule —
+  // applyStatusChange clears their date — so they don't count as a day of
+  // the project or toward its progress.
+  function isProjectLiveShoot(s) {
+    return s.status !== 'rescheduled' && s.status !== 'canceled';
+  }
+
+  // "Day 2 of 3": a shoot's place among its project's distinct shoot dates
+  // (two shoots on the same date are the same day). null when there's
+  // nothing useful to say — not in a project, no date yet, postponed or
+  // canceled, or a project that only spans one date.
+  function projectDayInfo(shoot) {
+    if (!shoot || !shoot.projectId || !findProject(shoot.projectId)) return null;
+    if (!shoot.date || !isProjectLiveShoot(shoot)) return null;
+    const dates = [...new Set(projectMembers(shoot.projectId)
+      .filter(s => s.date && isProjectLiveShoot(s))
+      .map(s => s.date))].sort();
+    const idx = dates.indexOf(shoot.date);
+    if (dates.length < 2 || idx === -1) return null;
+    return { day: idx + 1, total: dates.length };
+  }
+
+  // The least-advanced status among the given shoots, in STATUS_LABELS order
+  // (a missing status reads as Prospect, same as everywhere else).
+  function projectLeastAdvancedStatus(shoots) {
+    const order = Object.keys(STATUS_LABELS);
+    let best = -1;
+    shoots.forEach(s => {
+      const idx = order.indexOf(s.status || 'prospect');
+      if (idx !== -1 && (best === -1 || idx < best)) best = idx;
+    });
+    return best === -1 ? 'prospect' : order[best];
+  }
+
+  // "2 of 3 shot" while a project is part-way through its shoot days (some
+  // of its live shoots captured or later, some not yet); '' otherwise. Split
+  // out of projectStatusLabel because list boxes show only this part next to
+  // the shoot count.
+  function projectShotProgressLabel(members) {
+    const live = (members || []).filter(isProjectLiveShoot);
+    const shotCount = live.filter(s => isPostCaptureStatus(s.status)).length;
+    return shotCount && shotCount < live.length ? `${shotCount} of ${live.length} shot` : '';
+  }
+
+  // One status for a whole project: its progress while it's part-shot,
+  // otherwise the status of the shoot furthest behind (a project is only as
+  // far along as its slowest day). With every shoot off the schedule it's
+  // Canceled if they all are, else Postponed. '' for no shoots at all.
+  function projectStatusLabel(members) {
+    const list = members || [];
+    if (!list.length) return '';
+    const live = list.filter(isProjectLiveShoot);
+    if (!live.length) return list.every(s => s.status === 'canceled') ? STATUS_LABELS.canceled : STATUS_LABELS.rescheduled;
+    return projectShotProgressLabel(live) || STATUS_LABELS[projectLeastAdvancedStatus(live)] || '';
+  }
+
+  // Which Shoots-tab Status group a project's box goes in — the same rule as
+  // projectStatusLabel, as a status key.
+  function projectGroupStatusKey(members) {
+    const list = members || [];
+    const live = list.filter(isProjectLiveShoot);
+    if (!live.length) return list.length && list.every(s => s.status === 'canceled') ? 'canceled' : 'rescheduled';
+    return projectLeastAdvancedStatus(live);
+  }
+
+  // The shoot that stands in for a project in a list (its thumbnail, its
+  // placement by date or category): the next shoot day from today on, else
+  // the earliest-dated one, else simply the first one given.
+  function projectRepresentative(members) {
+    if (!members || !members.length) return null;
+    const today = todayStr();
+    const dated = members
+      .filter(s => s.date)
+      .sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+    return dated.find(s => s.date >= today) || dated[0] || members[0];
+  }
+
+  // Folds a list of shoots into list items, in the order each first appears:
+  // a shoot outside any project stays { kind: 'shoot', shoot }, and a
+  // project's shoots become one { kind: 'project', project, members, rep }
+  // where the first of them was. `members` is only the project's shoots that
+  // are in THIS list, in list order (projectMembers() has all of them), and
+  // `rep` is projectRepresentative() of those. A projectId whose record is
+  // missing reads as no project.
+  function collapseProjects(shoots) {
+    const projectsById = new Map(projectsList().map(p => [p.id, p]));
+    const items = [];
+    const projectItems = new Map();
+    (shoots || []).forEach(s => {
+      const project = s.projectId ? projectsById.get(s.projectId) : undefined;
+      if (!project) {
+        items.push({ kind: 'shoot', shoot: s });
+        return;
+      }
+      let item = projectItems.get(project.id);
+      if (!item) {
+        item = { kind: 'project', project, members: [], rep: null };
+        projectItems.set(project.id, item);
+        items.push(item);
+      }
+      item.members.push(s);
+    });
+    projectItems.forEach(item => { item.rep = projectRepresentative(item.members); });
+    return items;
+  }
+
+  // Doesn't save. Link a shoot to it (setShootProject) straight away — until
+  // one is, the next pruneEmptyProjects() drops it again.
+  function createProject(name) {
+    const project = {
+      id: uid(),
+      name: (typeof name === 'string' && name.trim()) || UNTITLED_PROJECT_NAME,
+      createdAt: todayStr(),
+    };
+    projectsList().push(project);
+    return project;
+  }
+
+  // Doesn't save. Run after anything that can take a project's last shoot
+  // away (deleting a shoot, taking one out, moving one to another project).
+  function pruneEmptyProjects() {
+    state.projects = projectsWithMembers(projectsList(), state.shoots);
+  }
+
+  // Puts a shoot in a project ('' takes it out), replacing the shoot object
+  // the same way every other shoot edit does. Every later save keeps it:
+  // autosaveShoot spreads the old shoot under the form's data, and the form
+  // never gathers projectId. Then drops any project this left empty. Doesn't
+  // save or render. Returns the updated shoot, or null (and changes nothing)
+  // when the shoot isn't in state.shoots yet or the project doesn't exist.
+  function setShootProject(shootId, projectId) {
+    const idx = state.shoots.findIndex(x => x.id === shootId);
+    if (idx === -1) return null;
+    if (projectId && !findProject(projectId)) return null;
+    state.shoots[idx] = { ...state.shoots[idx], projectId: projectId || '' };
+    pruneEmptyProjects();
+    return state.shoots[idx];
+  }
+
+  // Every field a saved shoot carries — the Edit Shoot form's own set
+  // (gatherShootFormData) plus the older ones migrateShoot fills in — each at
+  // its empty default, so a shoot made in code reads exactly like one saved
+  // through the form. Location starts with the default country, same as a
+  // new shoot draft. projectPhoto lives in memory only (see stripPhotos),
+  // like on every other shoot.
+  function blankShootRecord(id) {
+    return {
+      id,
+      title: '',
+      status: 'prospect',
+      date: '',
+      deadline: '',
+      startTime: '',
+      endTime: '',
+      crewCallTime: '',
+      talentCallTime: '',
+      location: normalizeLocation({ country: state.defaultCountry || '' }),
+      talents: [],
+      category: '',
+      premise: '',
+      character: '',
+      shootGoals: '',
+      elevatorPitch: '',
+      deliverables: '',
+      aspectRatios: [],
+      deliverableDestinations: '',
+      worldNotes: '',
+      moodboardComplete: false,
+      teamRequired: '',
+      teamFinalized: false,
+      teamMembers: [],
+      references: [],
+      frameworkTags: [],
+      whatWentRight: '',
+      couldBeBetter: '',
+      lessonsLearned: '',
+      talentDirections: '',
+      teamDirections: '',
+      shootingNotes: '',
+      locationDirections: '',
+      shotList: [],
+      lightingSetups: [],
+      emotionalBeats: [],
+      lightingNotes: '',
+      wardrobeNotes: '',
+      generalNotes: '',
+      projectPhoto: null,
+      archived: false,
+      projectId: '',
+    };
+  }
+
+  // Makes a new shoot in the source's project (or overrides.projectId) and
+  // adds it to state.shoots; the caller saves and renders. The only
+  // overrides read are `date` and `projectId`.
+  //   'day':   the next day of the same shoot. Carries over what stays the
+  //            same from day to day — title, talent (with their photos),
+  //            team, location, times, directions, the concept, video
+  //            deliverables, deadline, references, frameworks, lighting
+  //            setups (fresh ids), the mood board and the cover photo — and
+  //            nothing that belongs to a day that already happened: no date
+  //            (that's overrides.date), reflection, shooting notes, final
+  //            images, capture/edit timestamps or reminder flags. A source
+  //            that's already been shot hands over the shots it didn't tick
+  //            off as the new day's list; otherwise the list starts empty.
+  //            Status stays put while the source is still before the shoot,
+  //            else it starts back at Active planning.
+  //   'brief': another shoot for the same project — just the concept, video
+  //            deliverables, deadline, references and frameworks, in Active
+  //            planning; no title, date, people, place or photos.
+  // Photos are read from IndexedDB first (at boot the in-memory copies may
+  // not have hydrated yet), falling back to what's in memory, and every
+  // write has landed before this resolves, so opening the new shoot straight
+  // away finds its mood board, cover and talent photos in place. The shoot
+  // is pushed only after those awaits, so it always lands in the live
+  // `state` (a pull-to-refresh swaps that object out).
+  async function copyShootForProject(src, mode, overrides) {
+    const opts = overrides || {};
+    // By id: an autosave since the caller looked the source up replaces the
+    // shoot object, which would leave `src` an orphan holding older data.
+    const source = (src && state.shoots.find(x => x.id === src.id)) || src;
+    if (!source) return null;
+    let id = uid();
+    while (state.shoots.some(x => x.id === id)) id = uid();
+    const shoot = blankShootRecord(id);
+    shoot.projectId = opts.projectId !== undefined ? (opts.projectId || '') : (source.projectId || '');
+    shoot.date = typeof opts.date === 'string' ? opts.date : '';
+
+    // The brief — the part both modes share.
+    shoot.category = source.category || '';
+    shoot.premise = source.premise || '';
+    shoot.character = source.character || '';
+    shoot.worldNotes = source.worldNotes || '';
+    shoot.shootGoals = source.shootGoals || '';
+    shoot.elevatorPitch = source.elevatorPitch || '';
+    shoot.deliverables = source.deliverables || '';
+    shoot.aspectRatios = normalizeAspectRatios(source.aspectRatios);
+    shoot.deliverableDestinations = source.deliverableDestinations || '';
+    shoot.deadline = source.deadline || '';
+    shoot.references = Array.isArray(source.references) ? [...source.references] : [];
+    shoot.frameworkTags = (source.frameworkTags || []).map(t => ({ ...t }));
+
+    if (mode === 'day') {
+      shoot.title = source.title || '';
+      shoot.status = ['prospect', 'planning', 'waiting_to_shoot'].includes(source.status) ? source.status : 'planning';
+      shoot.startTime = source.startTime || '';
+      shoot.endTime = source.endTime || '';
+      shoot.crewCallTime = source.crewCallTime || '';
+      shoot.talentCallTime = source.talentCallTime || '';
+      shoot.location = normalizeLocation(source.location);
+      shoot.locationDirections = source.locationDirections || '';
+      shoot.talentDirections = source.talentDirections || '';
+      shoot.teamDirections = source.teamDirections || '';
+      shoot.teamRequired = source.teamRequired || '';
+      shoot.teamFinalized = !!source.teamFinalized;
+      shoot.teamMembers = (source.teamMembers || []).map(tm => ({ socialPlatform: 'instagram', ...tm }));
+      shoot.moodboardComplete = !!source.moodboardComplete;
+      // Same old-shape handling as openShootModal; fresh ids since they're
+      // per-list ids, not shared identities.
+      shoot.lightingSetups = (source.lightingSetups || []).map(item => ({
+        id: uid(),
+        name: item.name || '',
+        characteristics: item.characteristics || '',
+        description: item.description !== undefined ? item.description : (item.text || ''),
+      }));
+      // Blank rows are dropped too — they'd only be empty lines to delete.
+      shoot.shotList = isPostCaptureStatus(source.status)
+        ? (source.shotList || [])
+          .filter(item => item && !item.checked && typeof item.text === 'string' && hasText(item.text))
+          .map(item => ({ ...(item.id ? { id: uid() } : {}), text: item.text, checked: false }))
+        : [];
+
+      const sourceTalents = source.talents || [];
+      const readRows = key => idbGetImages(key).catch(() => []);
+      const [moodboardImages, coverRows, talentRows] = await Promise.all([
+        readRows(source.id),
+        readRows(projectPhotoKey(source.id)),
+        // A talent without an id can't have a row (the key needs one), so its
+        // photo, if any, can only be the in-memory one.
+        Promise.all(sourceTalents.map(t => (t.id ? readRows(talentPhotoKey(source.id, t.id)) : Promise.resolve([])))),
+      ]);
+      // Same talent ids — the photo keys include the shoot id, so they can't
+      // collide — so the same person stays recognisable across days.
+      shoot.talents = sourceTalents.map((t, i) => ({
+        id: t.id || uid(),
+        name: t.name || '',
+        socialHandles: (t.socialHandles || []).map(sh => ({ ...sh })),
+        photo: photoFromEntries(talentRows[i]) || t.photo || '',
+      }));
+      shoot.projectPhoto = photoFromEntries(coverRows) || source.projectPhoto || null;
+
+      const writes = [];
+      if (moodboardImages.length) writes.push(idbSetImages(id, moodboardImages.map(img => ({ ...img }))));
+      if (shoot.projectPhoto) writes.push(savePhotoToIdb(projectPhotoKey(id), shoot.projectPhoto));
+      shoot.talents.forEach(t => {
+        if (t.photo) writes.push(savePhotoToIdb(talentPhotoKey(id, t.id), t.photo));
+      });
+      // One failed write shouldn't sink the rest (or the new shoot): the
+      // photos are on the in-memory shoot regardless, same as after any
+      // other failed photo save.
+      await Promise.all(writes.map(w => w.catch(() => {})));
+    } else {
+      shoot.status = 'planning';
+    }
+
+    // The project may have been ungrouped (or lost its last shoot) while
+    // the photos above were copying. Pointing the new shoot at a record
+    // that's gone would have the next load rebuild that project, undoing the
+    // ungroup — so it lands as a shoot of its own instead.
+    if (shoot.projectId && !findProject(shoot.projectId)) shoot.projectId = '';
+
+    // Same bookkeeping as a shoot created through the form (autosaveShoot).
+    applyStatusTimestamps(shoot, null, shoot.status);
+    state.shoots.push(shoot);
+    return shoot;
+  }
+
   function resizeImageFile(file, maxDim, quality) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -1779,10 +2406,13 @@
   function renderStatBoxDetailList(filterFn) {
     const shoots = state.shoots.filter(filterFn)
       .sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+    // One compact box per project, matching the tile's own count (see
+    // renderOverview), placed where its earliest listed day would sit.
+    const items = collapseProjects(shoots);
     const list = document.getElementById('statBoxDetailList');
     list.innerHTML = '';
-    shoots.forEach(s => renderCompactShootRow(list, s));
-    document.getElementById('statBoxDetailEmpty').hidden = shoots.length > 0;
+    items.forEach(item => renderCompactListItem(list, item));
+    document.getElementById('statBoxDetailEmpty').hidden = items.length > 0;
   }
 
   function openStatBoxDetail(filterFn, title, key) {
@@ -1820,6 +2450,240 @@
   document.getElementById('statBoxDetailOverlay').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeStatBoxDetail();
   });
+  // ---------- Project popup ----------
+  // A project's own page: every member shoot (archived included) as the
+  // same compact rows the stat box popup uses, plus the project-level
+  // actions. Built on the stat box popup's overlay/modal classes, so it
+  // shares that z-index — under the shoot modal (10) and the kebab sheet
+  // (20), so a row's shoot or ⋮ opened from here stacks on top — and
+  // renderAll() repaints it (refreshOpenProjectPopup) once they close,
+  // the same job refreshOpenStatBoxDetail does for the stat boxes.
+  let activeProjectId = null;
+  let projectPopupHideTimer = null;
+  // Guards "+ Add a day" / "+ Add a shoot" against a double tap starting a
+  // second copy while the first is still awaiting its IndexedDB writes.
+  let projectPopupBusy = false;
+
+  // Title, summary and member list only — the rename row is left exactly
+  // as it is, so a repaint while you're typing a new name never wipes it.
+  function renderProjectPopupBody(project) {
+    const members = projectMembers(project.id);
+    document.getElementById('projectDetailTitle').textContent = project.name;
+    const n = members.length;
+    document.getElementById('projectDetailSummary').textContent = [
+      `${n} shoot${n === 1 ? '' : 's'}`,
+      projectDateRangeText(members),
+      projectStatusLabel(members),
+    ].filter(Boolean).join(' · ');
+    // Flips once every shoot in the project is archived, the same way the
+    // ⋮ menu's Archive/Unarchive shoot item does for one shoot.
+    document.getElementById('projectArchiveBtn').textContent =
+      members.length && members.every(s => s.archived) ? 'Unarchive project' : 'Archive project';
+    const list = document.getElementById('projectDetailList');
+    list.innerHTML = '';
+    members.forEach(s => {
+      // The stock compact row, so its tap (opens the shoot modal, which
+      // stacks above this popup) and its ⋮ (normal shoot options) work
+      // here unchanged; only the title gets its "Day N" prefix. An archived
+      // day opens its Archive mode recap instead, like on the Archive tab.
+      renderCompactShootRow(list, s, { openArchiveMode: !!s.archived });
+      const info = projectDayInfo(s);
+      if (!info) return;
+      const titleEl = list.lastElementChild && list.lastElementChild.querySelector('.shoot-row-compact-title');
+      if (titleEl) titleEl.textContent = `Day ${info.day} · ${titleEl.textContent}`;
+    });
+  }
+
+  function hideProjectRename() {
+    document.getElementById('projectRenameRow').hidden = true;
+  }
+
+  function openProjectPopup(projectId) {
+    const project = findProject(projectId);
+    if (!project || !projectMembers(project.id).length) return;
+    // Already open (e.g. "Open <name>" from a member's ⋮ while this is
+    // showing) just repaints — no second scroll lock, no replayed fade.
+    const wasOpen = activeProjectId !== null;
+    if (activeProjectId !== projectId) hideProjectRename();
+    activeProjectId = projectId;
+    // A reopen inside a previous close's 200ms fade must not be hidden
+    // out from under itself when that timer lands.
+    clearTimeout(projectPopupHideTimer);
+    renderProjectPopupBody(project);
+    const overlay = document.getElementById('projectDetailOverlay');
+    overlay.hidden = false;
+    if (wasOpen) return;
+    overlay.querySelector('.stat-box-detail-modal').scrollTop = 0;
+    lockBodyScroll();
+    requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('open')));
+  }
+
+  // Called at the end of every renderAll(): anything that changes a shoot
+  // re-renders the lists, and this keeps the popup underneath in step —
+  // or closes it once the project is gone (ungrouped, last shoot deleted
+  // or moved out).
+  function refreshOpenProjectPopup() {
+    if (activeProjectId === null) return;
+    const project = findProject(activeProjectId);
+    if (!project || !projectMembers(project.id).length) {
+      closeProjectPopup();
+      return;
+    }
+    renderProjectPopupBody(project);
+  }
+
+  function closeProjectPopup() {
+    if (activeProjectId === null) return;
+    activeProjectId = null;
+    hideProjectRename();
+    const overlay = document.getElementById('projectDetailOverlay');
+    overlay.classList.remove('open');
+    unlockBodyScroll();
+    clearTimeout(projectPopupHideTimer);
+    projectPopupHideTimer = setTimeout(() => { overlay.hidden = true; }, 200);
+  }
+
+  document.getElementById('projectDetailCloseBtn').addEventListener('click', closeProjectPopup);
+  document.getElementById('projectDetailOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeProjectPopup();
+  });
+
+  // A new day carries the latest day forward: same talent, team, location,
+  // times, concept, mood board and lighting, dated the day after it.
+  document.getElementById('projectAddDayBtn').addEventListener('click', async () => {
+    const project = findProject(activeProjectId);
+    if (!project || projectPopupBusy) return;
+    const members = projectMembers(project.id);
+    if (!members.length) return;
+    // projectMembers is date-sorted with undated shoots last, so the last
+    // dated member is the latest day.
+    const dated = members.filter(s => s.date);
+    const source = dated.length ? dated[dated.length - 1] : members[members.length - 1];
+    let nextDate = '';
+    if (source.date) {
+      const [y, m, d] = source.date.split('-').map(Number);
+      nextDate = formatDate(new Date(y, m - 1, d + 1));
+    }
+    projectPopupBusy = true;
+    try {
+      const shoot = await copyShootForProject(source, 'day', { date: nextDate });
+      saveState();
+      renderAll();
+      refreshOpenStatBoxDetail();
+      if (shoot.projectId) {
+        const info = projectDayInfo(shoot);
+        const dayNumber = info ? info.day : projectMembers(project.id).length;
+        showToast(`Day ${dayNumber} added to ${project.name}`);
+      } else {
+        showToast(`${project.name} was ungrouped, so this was added as its own shoot`);
+      }
+      // A row tapped while the copy was still being written may already
+      // have the shoot modal open — re-filling it would drop unsaved typing.
+      if (shootModalOverlay.hidden) openShootModal(shoot.id);
+    } catch (err) {
+      showToast("Couldn't add a day. Please try again.");
+    } finally {
+      projectPopupBusy = false;
+    }
+  });
+
+  // A different shoot in the same project (e.g. another video for the same
+  // series): only the brief carries over, nothing day-specific.
+  document.getElementById('projectAddShootBtn').addEventListener('click', async () => {
+    const project = findProject(activeProjectId);
+    if (!project || projectPopupBusy) return;
+    const members = projectMembers(project.id);
+    if (!members.length) return;
+    // Same representative shoot the lists use for this project's box.
+    const source = projectRepresentative(members) || members[0];
+    projectPopupBusy = true;
+    try {
+      const shoot = await copyShootForProject(source, 'brief', {});
+      saveState();
+      renderAll();
+      refreshOpenStatBoxDetail();
+      // A row tapped while the copy was still being written may already
+      // have the shoot modal open — re-filling it would drop unsaved typing.
+      if (shootModalOverlay.hidden) openShootModal(shoot.id);
+    } catch (err) {
+      showToast("Couldn't add a shoot. Please try again.");
+    } finally {
+      projectPopupBusy = false;
+    }
+  });
+
+  document.getElementById('projectRenameBtn').addEventListener('click', () => {
+    const project = findProject(activeProjectId);
+    if (!project) return;
+    const row = document.getElementById('projectRenameRow');
+    if (!row.hidden) { row.hidden = true; return; }
+    const input = document.getElementById('projectRenameInput');
+    input.value = project.name;
+    row.hidden = false;
+    input.focus();
+  });
+
+  function saveProjectRename() {
+    const project = findProject(activeProjectId);
+    const name = document.getElementById('projectRenameInput').value.trim();
+    hideProjectRename();
+    // An emptied box reads as "never mind" rather than wiping the name.
+    if (!project || !name || name === project.name) return;
+    state.projects = projectsList().map(p => (p.id === project.id ? { ...p, name } : p));
+    saveState();
+    renderAll();
+    refreshOpenStatBoxDetail();
+  }
+
+  document.getElementById('saveProjectRenameBtn').addEventListener('click', saveProjectRename);
+
+  document.getElementById('projectRenameInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveProjectRename();
+  });
+
+  // Archives every shoot in the project in one go (whatever their status,
+  // same as the ⋮ menu's Archive shoot), or brings them all back once the
+  // whole project is archived. Days already archived on their own just stay
+  // archived. The popup stays open on the result, now reading Unarchive.
+  document.getElementById('projectArchiveBtn').addEventListener('click', () => {
+    const project = findProject(activeProjectId);
+    // Not mid-copy: a day still being added would miss the change.
+    if (!project || projectPopupBusy) return;
+    const members = projectMembers(project.id);
+    if (!members.length) return;
+    const unarchiving = members.every(s => s.archived);
+    const n = members.length;
+    const who = n === 1 ? 'Its 1 shoot moves' : `All ${n} shoots move`;
+    const question = unarchiving
+      ? `Unarchive ${project.name}? ${who} back to Shoots.`
+      : `Archive ${project.name}? ${who} to Archive.`;
+    if (!confirm(question)) return;
+    state.shoots = state.shoots.map(s => (s.projectId === project.id ? { ...s, archived: !unarchiving } : s));
+    saveState();
+    renderAll();
+    refreshOpenStatBoxDetail();
+    showToast(unarchiving ? `${project.name} is back in Shoots` : `${project.name} moved to Archive`);
+  });
+
+  document.getElementById('projectUngroupBtn').addEventListener('click', () => {
+    const project = findProject(activeProjectId);
+    // Not mid-copy: the day being added would otherwise land after its
+    // project is already gone.
+    if (!project || projectPopupBusy) return;
+    const members = projectMembers(project.id);
+    const n = members.length;
+    const rest = n === 1 ? 'Its 1 shoot stays as a separate shoot.' : `Its ${n} shoots stay as separate shoots.`;
+    if (!confirm(`Ungroup ${project.name}? ${rest}`)) return;
+    members.forEach(s => setShootProject(s.id, ''));
+    // Removed explicitly as well, rather than leaning only on the prune
+    // inside setShootProject, so ungrouping never depends on how that
+    // prune decides "empty".
+    state.projects = projectsList().filter(p => p.id !== project.id);
+    saveState();
+    closeProjectPopup();
+    renderAll();
+    refreshOpenStatBoxDetail();
+  });
 
   function renderOverview() {
     const todayShoots = state.shoots.filter(isToday)
@@ -1833,9 +2697,17 @@
     const proofsPendingShoots = state.shoots.filter(s => !s.archived && s.status === 'captured' && !isVideoShoot(s))
       .sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
 
-    const pendingTeamMoodboardCount = state.shoots.filter(STAT_BOX_FILTERS.pending).length;
-    const waitingForSelectsCount = state.shoots.filter(STAT_BOX_FILTERS.selects).length;
-    const inTheEditCount = state.shoots.filter(STAT_BOX_FILTERS.editing).length;
+    // A project's members collapse into one box per list (collapseProjects),
+    // so every list below and each counter's number counts a project once —
+    // a tile's number always matches the rows its popup shows. Today is the
+    // one exception: a project day happening today is listed as itself.
+    const upcomingItems = collapseProjects(upcomingShoots);
+    const proofsPendingItems = collapseProjects(proofsPendingShoots);
+    const deadlineItems = collapseProjects(deadlineShoots);
+
+    const pendingTeamMoodboardCount = collapseProjects(state.shoots.filter(STAT_BOX_FILTERS.pending)).length;
+    const waitingForSelectsCount = collapseProjects(state.shoots.filter(STAT_BOX_FILTERS.selects)).length;
+    const inTheEditCount = collapseProjects(state.shoots.filter(STAT_BOX_FILTERS.editing)).length;
 
     document.getElementById('statsRow').innerHTML = `
       <div class="stat-box" data-stat="pending">
@@ -1856,41 +2728,43 @@
     document.getElementById('todayCount').textContent = `[${todayShoots.length}]`;
     const todayList = document.getElementById('todayShootsList');
     todayList.innerHTML = '';
-    todayShoots.forEach(s => renderShootRow(todayList, s, { showStatus: true }));
+    // Today lists each shoot day as itself (a project's other days are still
+    // one box under Upcoming), so a project day says which project it's from.
+    todayShoots.forEach(s => renderShootRow(todayList, s, { showStatus: true, showProjectLine: true }));
 
     // Always visible, even at zero — same reasoning as Upcoming deadlines
     // below: a reliable place to glance at what's coming, empty or not.
-    document.getElementById('upcomingCount').textContent = `[${upcomingShoots.length}]`;
+    document.getElementById('upcomingCount').textContent = `[${upcomingItems.length}]`;
     const upList = document.getElementById('upcomingShootsList');
     upList.innerHTML = '';
-    if (!upcomingShoots.length) {
+    if (!upcomingItems.length) {
       upList.innerHTML = '<p class="empty-hint upcoming-empty-hint">Upcoming shoots go here, brometheus.</p>';
     } else {
-      renderBucketedShoots(upList, upcomingShoots, ['this_week', 'next_week', 'later'], 'date', 'overview:upcoming', { showStatus: true });
+      renderBucketedShoots(upList, upcomingItems, ['this_week', 'next_week', 'later'], 'date', 'overview:upcoming', { showStatus: true });
     }
 
     // Always visible, same reasoning as Upcoming deadlines below — a
     // reliable place to check, empty or not, rather than something that
     // pops in and out of the page.
-    document.getElementById('proofsPendingCount').textContent = `[${proofsPendingShoots.length}]`;
+    document.getElementById('proofsPendingCount').textContent = `[${proofsPendingItems.length}]`;
     const proofsList = document.getElementById('proofsPendingShootsList');
     proofsList.innerHTML = '';
-    if (!proofsPendingShoots.length) {
+    if (!proofsPendingItems.length) {
       proofsList.innerHTML = '<p class="empty-hint">No shoots waiting on proofs.</p>';
     } else {
-      proofsPendingShoots.forEach(s => renderShootRow(proofsList, s, { showBadge: false }));
+      proofsPendingItems.forEach(item => renderListItem(proofsList, item, { showBadge: false }));
     }
 
     // Always visible, even at zero — unlike Today/Upcoming, this section
     // isn't about whether anything's due right now so much as being a
     // reliable place to glance at what's coming, empty or not.
-    document.getElementById('upcomingDeadlinesCount').textContent = `[${deadlineShoots.length}]`;
+    document.getElementById('upcomingDeadlinesCount').textContent = `[${deadlineItems.length}]`;
     const deadlineList = document.getElementById('upcomingDeadlinesShootsList');
     deadlineList.innerHTML = '';
-    if (!deadlineShoots.length) {
+    if (!deadlineItems.length) {
       deadlineList.innerHTML = '<p class="empty-hint">No deadlines on the horizon.</p>';
     } else {
-      renderBucketedShoots(deadlineList, deadlineShoots, ['this_week', 'next_week'], 'deadline', 'overview:upcomingDeadlines', { showBadge: false });
+      renderBucketedShoots(deadlineList, deadlineItems, ['this_week', 'next_week'], 'deadline', 'overview:upcomingDeadlines', { showBadge: false });
     }
 
     // Section heading colors alternate dynamically, always starting with
@@ -2038,8 +2912,9 @@
 
   // Shared renderer for one nested group (status / date bucket / category)
   // on the Shoots page — same collapsible pill-heading + rows-wrap structure
-  // regardless of which sort mode built the group.
-  function renderShootGroup(list, groupKey, label, shoots, visibleIndex) {
+  // regardless of which sort mode built the group. Takes collapseProjects()
+  // items, so a project shows as one box (see renderListItem).
+  function renderShootGroup(list, groupKey, label, items, visibleIndex) {
     const groupEl = document.createElement('div');
     groupEl.className = 'shoot-status-group';
 
@@ -2052,7 +2927,7 @@
     const rowsWrap = document.createElement('div');
     rowsWrap.className = 'shoot-status-rows';
     rowsWrap.hidden = collapsed;
-    shoots.forEach(s => renderShootRow(rowsWrap, s, { showPending: true }));
+    items.forEach(item => renderListItem(rowsWrap, item, { showPending: true }));
 
     heading.addEventListener('click', () => {
       const nowHidden = !rowsWrap.hidden;
@@ -2069,14 +2944,22 @@
   // Default — grouped by status, same as always: every group orders by
   // shoot date except the edit stages (Editing, and video's Rough cut/Client
   // review/Revisions), which order by deadline since that's the date that
-  // actually matters once a shoot's already been captured.
+  // actually matters once a shoot's already been captured. A project box
+  // goes in the group of its least-advanced listed day (listItemStatusKey)
+  // and sorts by its rep, through the same comparators.
   function renderShootsByStatus(list, items) {
     let visibleIndex = 0;
     Object.keys(STATUS_LABELS).forEach(statusKey => {
-      const group = items.filter(s => (s.status || 'prospect') === statusKey)
-        .sort((a, b) => isInTheEditStatus(statusKey)
-          ? dateSortKey(a.deadline).localeCompare(dateSortKey(b.deadline))
-          : dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+      const group = items.filter(item => listItemStatusKey(item) === statusKey)
+        .sort((a, b) => {
+          const repA = listItemRep(a);
+          const repB = listItemRep(b);
+          // Edit stages sort by the deadline each row shows (for a project
+          // box, its earliest still-owed one — see listItemDate).
+          return isInTheEditStatus(statusKey)
+            ? dateSortKey(listItemDate(a, 'deadline')).localeCompare(dateSortKey(listItemDate(b, 'deadline')))
+            : dateTimeSortKey(repA).localeCompare(dateTimeSortKey(repB));
+        });
       if (!group.length) return;
       renderShootGroup(list, statusKey, STATUS_LABELS[statusKey], group, visibleIndex);
       visibleIndex++;
@@ -2084,19 +2967,20 @@
   }
 
   // Ignores status entirely — every shoot lands in one bucket by how soon
-  // (or how long ago) its shoot date is.
+  // (or how long ago) its shoot date is; a project box by its rep's date
+  // (its next day ahead, else its first day).
   function renderShootsByDate(list, items) {
     const buckets = new Map();
-    items.forEach(s => {
-      const bucket = shootDateBucket(s.date);
+    items.forEach(item => {
+      const bucket = shootDateBucket(listItemRep(item).date);
       if (!buckets.has(bucket)) buckets.set(bucket, []);
-      buckets.get(bucket).push(s);
+      buckets.get(bucket).push(item);
     });
     let visibleIndex = 0;
     SHOOT_DATE_BUCKET_ORDER.forEach(bucketKey => {
       const group = buckets.get(bucketKey);
       if (!group || !group.length) return;
-      group.sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+      group.sort((a, b) => dateTimeSortKey(listItemRep(a)).localeCompare(dateTimeSortKey(listItemRep(b))));
       renderShootGroup(list, `date:${bucketKey}`, SHOOT_DATE_BUCKET_LABELS[bucketKey], group, visibleIndex);
       visibleIndex++;
     });
@@ -2104,19 +2988,20 @@
 
   // Grouped by category — only categories with at least one shoot show up,
   // in the app's usual category order (not alphabetical; that's just for
-  // the Edit Shoot category dropdown).
+  // the Edit Shoot category dropdown). A project box files under its rep's
+  // category.
   function renderShootsByCategory(list, items) {
     const buckets = new Map();
-    items.forEach(s => {
-      const cat = s.category || 'other';
+    items.forEach(item => {
+      const cat = listItemRep(item).category || 'other';
       if (!buckets.has(cat)) buckets.set(cat, []);
-      buckets.get(cat).push(s);
+      buckets.get(cat).push(item);
     });
     let visibleIndex = 0;
     CATEGORY_FILTER_ORDER.forEach(cat => {
       const group = buckets.get(cat);
       if (!group || !group.length) return;
-      group.sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+      group.sort((a, b) => dateTimeSortKey(listItemRep(a)).localeCompare(dateTimeSortKey(listItemRep(b))));
       renderShootGroup(list, `cat:${cat}`, CATEGORY_LABELS[cat] || 'Other', group, visibleIndex);
       visibleIndex++;
     });
@@ -2125,7 +3010,10 @@
   function renderShoots() {
     renderShootSortOptions();
     const list = document.getElementById('shootList');
-    const items = state.shoots.filter(s => !s.archived);
+    // Collapsed once for the whole page, so every sort mode files a
+    // project's box exactly once (by its rep, or its least-advanced day for
+    // Status) rather than splitting it across groups.
+    const items = collapseProjects(state.shoots.filter(s => !s.archived));
 
     list.innerHTML = '';
     document.getElementById('shootEmpty').hidden = items.length !== 0;
@@ -2245,20 +3133,28 @@
     renderArchiveSlideshow();
     renderCategoryFilterChips('archiveFilters', 'archiveFilterToggle', archiveFilter);
     const list = document.getElementById('archiveList');
-    let items = state.shoots.filter(s => s.archived).sort((a, b) => dateSortKey(b.date).localeCompare(dateSortKey(a.date)));
-    if (archiveFilter !== 'all') items = items.filter(s => s.category === archiveFilter);
+    // Filter first, then collapse: a project box stands for the members that
+    // match the active category filter (its date span covers just those).
+    // It's filed by its rep's date (for a fully past project, its first day),
+    // so it shows once, under one month, even when its days straddle a month
+    // or year boundary. Newest first, same as before.
+    let shoots = state.shoots.filter(s => s.archived);
+    if (archiveFilter !== 'all') shoots = shoots.filter(s => s.category === archiveFilter);
+    const items = collapseProjects(shoots)
+      .sort((a, b) => dateSortKey(listItemRep(b).date).localeCompare(dateSortKey(listItemRep(a).date)));
 
     list.innerHTML = '';
     document.getElementById('archiveEmpty').hidden = items.length !== 0;
 
     const years = new Map();
-    items.forEach(s => {
-      const year = s.date ? s.date.slice(0, 4) : 'Undated';
-      const month = s.date ? s.date.slice(5, 7) : '00';
+    items.forEach(item => {
+      const date = listItemRep(item).date;
+      const year = date ? date.slice(0, 4) : 'Undated';
+      const month = date ? date.slice(5, 7) : '00';
       if (!years.has(year)) years.set(year, new Map());
       const months = years.get(year);
       if (!months.has(month)) months.set(month, []);
-      months.get(month).push(s);
+      months.get(month).push(item);
     });
 
     const sortedYears = [...years.keys()].sort((a, b) => {
@@ -2290,7 +3186,7 @@
         // second "Undated" sub-heading under the "Undated" year heading
         // is pure redundancy, so just list the shoots directly.
         sortedMonths.forEach(month => {
-          months.get(month).forEach(s => renderShootRow(yearRowsWrap, s, { showBadge: false, openArchiveMode: true }));
+          months.get(month).forEach(item => renderListItem(yearRowsWrap, item, { showBadge: false, openArchiveMode: true }));
         });
       } else {
         let visibleMonthIndex = 0;
@@ -2307,7 +3203,7 @@
           const monthRowsWrap = document.createElement('div');
           monthRowsWrap.className = 'shoot-status-rows';
           monthRowsWrap.hidden = monthCollapsed;
-          months.get(month).forEach(s => renderShootRow(monthRowsWrap, s, { showBadge: false, openArchiveMode: true }));
+          months.get(month).forEach(item => renderListItem(monthRowsWrap, item, { showBadge: false, openArchiveMode: true }));
 
           monthHeading.addEventListener('click', () => {
             const nowHidden = !monthRowsWrap.hidden;
@@ -5957,6 +6853,10 @@
     document.getElementById('shootEndTime').value = s ? (s.endTime || '') : '';
     document.getElementById('shootCrewCallTime').value = s ? (s.crewCallTime || '') : '';
     document.getElementById('shootTalentCallTime').value = s ? (s.talentCallTime || '') : '';
+    // Built from saved project membership (never from form data), so it has
+    // to come after currentShootId is set above; a brand-new draft just gets
+    // a fresh unticked row with Last day hidden.
+    updateMultiDayRow();
     currentShootLocation = s ? normalizeLocation(s.location) : { name: '', street: '', city: '', state: '', zip: '', country: state.defaultCountry || '' };
     updateLocationBtnDisplay();
     // Talents saved before they had ids get one assigned on load — needed as
@@ -6319,7 +7219,7 @@
     cropMode = mode === 'talent' ? 'talent' : 'project';
     cropStage.classList.toggle('crop-stage-talent', cropMode === 'talent');
     document.getElementById('cropModalTitle').textContent =
-      cropMode === 'talent' ? 'Crop talent photo' : 'Set project photo';
+      cropMode === 'talent' ? 'Crop talent photo' : 'Set cover photo';
     cropZoom = 1;
     cropZoomSlider.value = '1';
     cropActivePointers.clear();
@@ -6661,12 +7561,19 @@
     }
   }
 
-  function autosaveShoot() {
+  // `force` is only ever passed (as exactly true) by the Multi-day "Create
+  // days" flow: Day 1 has to exist as a real saved shoot before a project can
+  // link to it or days can be copied from it, even when the date is the only
+  // thing filled in so far — and isShootDataBlank deliberately ignores the
+  // date. Checked with === true so the timer/listener paths that call this
+  // with no argument can never trip it by accident. Returns the saved shoot,
+  // or undefined when a blank draft was skipped.
+  function autosaveShoot(force) {
     const data = gatherShootFormData();
     const idx = state.shoots.findIndex(x => x.id === currentShootId);
     let shoot;
     if (idx === -1) {
-      if (isShootDataBlank(data) && !shootHasImages) return;
+      if (force !== true && isShootDataBlank(data) && !shootHasImages) return;
       shoot = { id: currentShootId, ...data };
       applyStatusTimestamps(shoot, null, shoot.status);
       state.shoots.push(shoot);
@@ -6678,6 +7585,7 @@
       state.shoots[idx] = shoot;
     }
     saveState();
+    return shoot;
   }
 
   function scheduleShootAutosave() {
@@ -6705,6 +7613,302 @@
   // Commit as soon as focus leaves a field, so the pending-debounce window is
   // only ever open while you're actually still in a field typing.
   shootForm.addEventListener('focusout', saveShootNow);
+  // ---------- Multi-day shoot (Logistics) ----------
+  // A checkbox under Shoot date that turns this shoot into Day 1 of a new
+  // project, with one copied shoot per following day (see
+  // copyShootForProject). Never part of the shoot's own data: nothing here is
+  // read by gatherShootFormData, and both controls stop their input/change
+  // events at the source so they never schedule an autosave of their own.
+  // Membership only changes through the explicit actions below (Create days,
+  // or unticking a member), and the row is always rebuilt from saved state by
+  // updateMultiDayRow().
+  const MULTI_DAY_MAX_DAYS = 14;
+  let multiDayPromptDates = null;
+  let multiDayCreating = false;
+
+  // 'YYYY-MM-DD' shifted by n calendar days. Done on a local Date's day field
+  // rather than by adding n * 86400000ms, so a DST change in between can
+  // never land it a day off.
+  function addDaysToDateStr(dateStr, n) {
+    const d = parseShootDate(dateStr);
+    d.setDate(d.getDate() + n);
+    return formatDate(d);
+  }
+
+  // Every date from start to end, inclusive. Stops one past the limit —
+  // enough for the caller to tell "too long" apart without walking a
+  // mis-picked year-long range a day at a time.
+  function multiDayDateRange(startStr, endStr) {
+    const dates = [];
+    let d = startStr;
+    while (d <= endStr && dates.length <= MULTI_DAY_MAX_DAYS) {
+      dates.push(d);
+      d = addDaysToDateStr(d, 1);
+    }
+    return dates;
+  }
+
+  // "Oct 14, 15 and 16" — the month is only repeated when it changes
+  // ("Oct 31 and Nov 1"). Past 4 days a full list stops being readable, so
+  // it collapses to "Oct 14 – Oct 20 (7 days)".
+  function multiDayDatesText(dates) {
+    const monthDay = (ds) => parseShootDate(ds).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    if (dates.length > 4) {
+      return `${monthDay(dates[0])} – ${monthDay(dates[dates.length - 1])} (${dates.length} days)`;
+    }
+    return joinWithAnd(dates.map((ds, i) => (
+      i > 0 && ds.slice(0, 7) === dates[i - 1].slice(0, 7)
+        ? String(parseShootDate(ds).getDate())
+        : monthDay(ds)
+    )));
+  }
+
+  // The open shoot's saved project membership as { shoot, project }, or null.
+  // Read by id from saved state, never the form, so a never-saved draft is
+  // always "not a member". A projectId pointing at a missing project counts
+  // as no project, same as collapseProjects.
+  function multiDayMembership() {
+    const shoot = state.shoots.find(x => x.id === currentShootId);
+    const project = shoot && shoot.projectId ? findProject(shoot.projectId) : null;
+    return project ? { shoot, project } : null;
+  }
+
+  // Back to a plain unticked row with the Last day picker hidden and empty.
+  function resetMultiDayDraft() {
+    document.getElementById('shootMultiDay').checked = false;
+    const lastDayInput = document.getElementById('shootLastDay');
+    lastDayInput.value = '';
+    lastDayInput.removeAttribute('min');
+    lastDayInput.removeAttribute('max');
+    document.getElementById('multiDayLastDayLabel').hidden = true;
+  }
+
+  // Rebuilds the row from saved membership: a member reads as a ticked
+  // "Part of <project> · Day N of M" (the day suffix only when projectDayInfo
+  // has one — dated, not postponed/canceled, 2+ live dates in the project);
+  // anything else is a fresh unticked "Multi-day shoot". Called from
+  // openShootModal and after every membership change made while the shoot
+  // modal is open.
+  function updateMultiDayRow() {
+    resetMultiDayDraft();
+    const label = document.getElementById('multiDayLabel');
+    const membership = multiDayMembership();
+    if (!membership) {
+      label.textContent = 'Multi-day shoot';
+      return;
+    }
+    const info = projectDayInfo(membership.shoot);
+    document.getElementById('shootMultiDay').checked = true;
+    label.textContent = `Part of ${membership.project.name}${info ? ` · Day ${info.day} of ${info.total}` : ''}`;
+  }
+
+  // Keeps the Last day picker's allowed range anchored to the shoot date:
+  // from the day after it up to 13 days after it (14 days in all).
+  function setLastDayRange(startDate) {
+    const lastDayInput = document.getElementById('shootLastDay');
+    lastDayInput.min = addDaysToDateStr(startDate, 1);
+    lastDayInput.max = addDaysToDateStr(startDate, MULTI_DAY_MAX_DAYS - 1);
+  }
+
+  // A brand-new draft that Create days just force-saved is a real saved shoot
+  // now — so the modal switches to behaving like Edit Shoot for it, showing
+  // the same edit-only controls openShootModal(id) would have (Share, Delete,
+  // Shoot mode, Complete). No-op for a shoot that was already open for editing.
+  function markShootModalAsSaved() {
+    if (editingShootId === currentShootId) return;
+    editingShootId = currentShootId;
+    document.getElementById('deleteShootBtn').hidden = false;
+    document.getElementById('shareShootBtn').hidden = false;
+    const isArchived = !document.getElementById('unarchiveShootBtn').hidden;
+    document.getElementById('completeShootBtn').hidden = isArchived || document.getElementById('shootStatus').value !== 'delivered';
+    updateEnterShootModeBtnVisibility();
+  }
+
+  // Neither control is shoot data, so neither may reach the form-level
+  // input/change listeners (scheduleShootAutosave, syncFieldFilledState).
+  ['shootMultiDay', 'shootLastDay'].forEach(id => {
+    document.getElementById(id).addEventListener('input', (e) => e.stopPropagation());
+  });
+
+  document.getElementById('shootMultiDay').addEventListener('change', (e) => {
+    e.stopPropagation();
+    const checkbox = e.target;
+    const membership = multiDayMembership();
+    if (membership) {
+      // A member's box only ever goes from ticked to unticked by hand —
+      // that's the "take it out of the project" gesture.
+      if (checkbox.checked) return;
+      if (!confirm(`Take this shoot out of ${membership.project.name}? It stays as its own shoot.`)) {
+        checkbox.checked = true;
+        return;
+      }
+      // Commit any edit still sitting in the debounce first, so the lists
+      // re-rendered below already show it.
+      saveShootNow();
+      setShootProject(membership.shoot.id, '');
+      saveState();
+      renderAll();
+      refreshOpenStatBoxDetail();
+      updateMultiDayRow();
+      return;
+    }
+    if (!checkbox.checked) {
+      resetMultiDayDraft();
+      return;
+    }
+    const startDate = document.getElementById('shootDate').value;
+    if (!startDate) {
+      checkbox.checked = false;
+      showToast('Set the shoot date first');
+      return;
+    }
+    document.getElementById('shootLastDay').value = '';
+    setLastDayRange(startDate);
+    document.getElementById('multiDayLastDayLabel').hidden = false;
+  });
+
+  document.getElementById('shootLastDay').addEventListener('change', (e) => {
+    e.stopPropagation();
+    const lastDayInput = e.target;
+    const lastDay = lastDayInput.value;
+    if (!lastDay || multiDayMembership()) return;
+    // Desktop keyboards fire change mid-typing ("0002-10-16" after the first
+    // year digit) — wait for a real four-digit year before checking it.
+    if (lastDay.slice(0, 4) < '1000') return;
+    const startDate = document.getElementById('shootDate').value;
+    if (!startDate) {
+      resetMultiDayDraft();
+      showToast('Set the shoot date first');
+      return;
+    }
+    if (lastDay <= startDate) {
+      lastDayInput.value = '';
+      showToast('Pick a last day after the shoot date');
+      return;
+    }
+    const dates = multiDayDateRange(startDate, lastDay);
+    if (dates.length > MULTI_DAY_MAX_DAYS) {
+      lastDayInput.value = '';
+      showToast(`Multi-day shoots can be up to ${MULTI_DAY_MAX_DAYS} days`);
+      return;
+    }
+    // Dismisses the native date picker so it isn't left floating over the
+    // prompt (the focusout this fires runs the usual saveShootNow — harmless).
+    lastDayInput.blur();
+    openMultiDayPrompt(dates);
+  });
+
+  // The shoot date moving — or being cleared: Postponed/Canceled wipe it
+  // from code, which fires no change event of its own, hence the status hook
+  // too — changes what the row should say. A member's "Day N of M" is worked
+  // out from saved dates, so the edit is committed first; a non-member's
+  // in-progress pick has its Last day range re-anchored, or is dropped
+  // entirely if there's no date left to anchor it to.
+  function syncMultiDayRowToShootDate() {
+    if (multiDayMembership()) {
+      saveShootNow();
+      updateMultiDayRow();
+      return;
+    }
+    if (!document.getElementById('shootMultiDay').checked) return;
+    const startDate = document.getElementById('shootDate').value;
+    if (!startDate) {
+      resetMultiDayDraft();
+      return;
+    }
+    document.getElementById('shootLastDay').value = '';
+    setLastDayRange(startDate);
+  }
+
+  document.getElementById('shootDate').addEventListener('change', syncMultiDayRowToShootDate);
+  // Registered after the main status handler above, so it sees the date that
+  // handler may have just cleared.
+  document.getElementById('shootStatus').addEventListener('change', syncMultiDayRowToShootDate);
+
+  function openMultiDayPrompt(dates) {
+    multiDayPromptDates = dates;
+    const term = moodboardTerm(document.getElementById('shootCategory').value).toLowerCase();
+    document.getElementById('multiDayPromptText').textContent =
+      `This makes a separate shoot for each day — ${multiDayDatesText(dates)}. Each one copies this shoot's talent, team, location, times, concept, ${term} and lighting setups. You can change anything on any day later.`;
+    // Read off the form rather than saved state — a brand-new draft has
+    // nothing saved yet, and an existing shoot may have unsaved edits.
+    const talent = currentTalents.find(t => hasText(t.name));
+    document.getElementById('multiDayProjectNameInput').value =
+      document.getElementById('shootTitle').value.trim() || (talent ? talent.name.trim() : '') || UNTITLED_PROJECT_NAME;
+    document.getElementById('multiDayPromptOverlay').hidden = false;
+  }
+
+  function closeMultiDayPrompt() {
+    document.getElementById('multiDayPromptOverlay').hidden = true;
+    multiDayPromptDates = null;
+  }
+
+  document.getElementById('multiDayPromptCancelBtn').addEventListener('click', () => {
+    if (multiDayCreating) return;
+    closeMultiDayPrompt();
+    resetMultiDayDraft();
+  });
+
+  document.getElementById('multiDayProjectNameInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('multiDayPromptCreateBtn').click();
+  });
+
+  document.getElementById('multiDayPromptCreateBtn').addEventListener('click', async () => {
+    if (multiDayCreating) return;
+    const dates = multiDayPromptDates;
+    if (!dates || dates.length < 2 || shootModalOverlay.hidden || multiDayMembership()) {
+      closeMultiDayPrompt();
+      updateMultiDayRow();
+      return;
+    }
+    multiDayCreating = true;
+    const createBtn = document.getElementById('multiDayPromptCreateBtn');
+    createBtn.textContent = 'Creating…';
+    let project = null;
+    let sourceId = null;
+    try {
+      const name = document.getElementById('multiDayProjectNameInput').value.trim() || UNTITLED_PROJECT_NAME;
+      // Day 1 must be a real saved shoot before a project can point at it or
+      // anything can be copied from it. Forced: a draft whose only content so
+      // far is its date reads as blank to isShootDataBlank (the date is
+      // deliberately not counted), so a normal autosave would skip it — and
+      // closeShootModal would then wipe it as an abandoned draft.
+      clearTimeout(shootSaveTimer);
+      const day1 = autosaveShoot(true);
+      sourceId = day1.id;
+      markShootModalAsSaved();
+      project = createProject(name);
+      setShootProject(sourceId, project.id);
+      // Saved straight away so the link survives even if the app is
+      // backgrounded and discarded while the days below are still copying.
+      saveState();
+      // setShootProject spread-writes a new object — copy from the live one.
+      const source = state.shoots.find(x => x.id === sourceId);
+      try {
+        // One at a time, in date order, so the new shoots land in
+        // state.shoots (and their IndexedDB rows) in the same order as
+        // their days.
+        for (const date of dates.slice(1)) {
+          await copyShootForProject(source, 'day', { date, projectId: project.id });
+        }
+      } catch (err) {
+        // An IndexedDB write failing part-way (e.g. storage full) keeps the
+        // days that did get made; the toast below says how many that was.
+      }
+      saveState();
+    } finally {
+      multiDayCreating = false;
+      createBtn.textContent = 'Create days';
+    }
+    closeMultiDayPrompt();
+    renderAll();
+    refreshOpenStatBoxDetail();
+    if (!shootModalOverlay.hidden && currentShootId === sourceId) updateMultiDayRow();
+    const total = projectMembers(project.id).length;
+    showToast(total === dates.length
+      ? `${total} days created in ${project.name}`
+      : `Only ${total} of ${dates.length} days could be created in ${project.name}`);
+  });
 
   function closeShootModal() {
     if (currentShootId) {
@@ -6771,6 +7975,8 @@
     const doomed = state.shoots.find(x => x.id === id);
     state.shoots = state.shoots.filter(x => x.id !== id);
     state.journalEntries = state.journalEntries.filter(e => e.sourceShootId !== id);
+    // A project is only its shoots, so one whose last shoot this was goes too.
+    pruneEmptyProjects();
     idbDeleteImages(id).catch(() => {});
     idbDeleteImages(finalImagesKey(id)).catch(() => {});
     // Cover + per-talent photos live under their own keys, so they need
@@ -6826,6 +8032,11 @@
     optionsShootId = id;
     const s = state.shoots.find(x => x.id === id);
     document.getElementById('archiveShootOptionBtn').textContent = (s && s.archived) ? 'Unarchive shoot' : 'Archive shoot';
+    // Same idea as Archive/Unarchive just above: the item keeps its slot and
+    // says which project a member is already in, so the sheet it opens
+    // reads as "manage" for a member rather than "add".
+    const optionsProject = (s && s.projectId) ? findProject(s.projectId) : null;
+    document.getElementById('projectShootOptionBtn').textContent = optionsProject ? `Project: ${optionsProject.name}` : 'Add to project';
     // The pane track slides via CSS transform, not native scrolling — reset
     // any stray scroll position (e.g. from a focused input the browser tried
     // to "reveal") so it can't stack with the transform and misalign panes.
@@ -7064,6 +8275,116 @@
     deleteShootById(id);
     renderAll();
     refreshOpenStatBoxDetail();
+  });
+
+  // ---------- Add to project (kebab item → its own small sheet) ----------
+  // A standalone sheet (built like the journal entry options) rather than a
+  // sixth pane on the shoot options slider, whose track is sized for
+  // exactly five panes. The kebab closes before this opens, so the two
+  // never coexist.
+  const projectPickerOverlay = document.getElementById('projectPickerOverlay');
+  let projectPickerShootId = null;
+
+  function openProjectPicker(shootId) {
+    const s = state.shoots.find(x => x.id === shootId);
+    if (!s) return;
+    projectPickerShootId = shootId;
+    const current = s.projectId ? findProject(s.projectId) : null;
+    const openBtn = document.getElementById('projectPickerOpenBtn');
+    openBtn.textContent = current ? `Open ${current.name}` : '';
+    openBtn.hidden = !current;
+    document.getElementById('projectPickerRemoveBtn').hidden = !current;
+    // A shoot that isn't in a project yet is usually about to become the
+    // first of one, so its own name is the likeliest project name; a
+    // member opening this is more likely moving somewhere new, so it
+    // starts blank.
+    document.getElementById('projectPickerNameInput').value = current ? '' : (s.title || primaryTalentName(s) || '');
+    // Alphabetical, like every other options list here.
+    const projects = projectsList().slice()
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+    const list = document.getElementById('projectPickerList');
+    list.innerHTML = projects.map(p => `
+      <button type="button" class="options-item choice-item${current && p.id === current.id ? ' active' : ''}" data-project-id="${escapeHtml(p.id)}">${escapeHtml(p.name)}</button>
+    `).join('');
+    list.hidden = !projects.length;
+    document.getElementById('projectPickerDivider').hidden = !projects.length;
+    projectPickerOverlay.hidden = false;
+  }
+
+  function closeProjectPicker() {
+    projectPickerOverlay.hidden = true;
+    projectPickerShootId = null;
+  }
+
+  // Every membership change lands the same way: persist, repaint the lists
+  // (which also repaints an open project popup, see renderAll), refresh a
+  // stat box popup left open underneath, and say what happened — the
+  // shoot's own row can vanish into a project box, so the toast is the
+  // only confirmation it went where you meant.
+  function finishProjectMembershipChange(message) {
+    saveState();
+    renderAll();
+    refreshOpenStatBoxDetail();
+    showToast(message);
+  }
+
+  document.getElementById('projectShootOptionBtn').addEventListener('click', () => {
+    const id = optionsShootId;
+    closeShootOptions();
+    if (id) openProjectPicker(id);
+  });
+
+  document.getElementById('projectPickerOpenBtn').addEventListener('click', () => {
+    const s = state.shoots.find(x => x.id === projectPickerShootId);
+    closeProjectPicker();
+    if (s && s.projectId) openProjectPopup(s.projectId);
+  });
+
+  function createProjectFromPicker() {
+    const shootId = projectPickerShootId;
+    const name = document.getElementById('projectPickerNameInput').value.trim() || UNTITLED_PROJECT_NAME;
+    closeProjectPicker();
+    if (!shootId || !state.shoots.some(x => x.id === shootId)) return;
+    const project = createProject(name);
+    // Moves a member out of its old project too; setShootProject prunes
+    // the old one if this was its last shoot.
+    setShootProject(shootId, project.id);
+    finishProjectMembershipChange(`Added to ${project.name}`);
+  }
+
+  document.getElementById('projectPickerCreateBtn').addEventListener('click', createProjectFromPicker);
+
+  document.getElementById('projectPickerNameInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') createProjectFromPicker();
+  });
+
+  document.getElementById('projectPickerList').addEventListener('click', (e) => {
+    const btn = e.target.closest('.options-item');
+    if (!btn) return;
+    const shootId = projectPickerShootId;
+    const project = findProject(btn.dataset.projectId);
+    closeProjectPicker();
+    const s = state.shoots.find(x => x.id === shootId);
+    // Tapping the project it's already in is just a way out.
+    if (!s || !project || s.projectId === project.id) return;
+    const wasInOne = !!(s.projectId && findProject(s.projectId));
+    setShootProject(shootId, project.id);
+    finishProjectMembershipChange(`${wasInOne ? 'Moved' : 'Added'} to ${project.name}`);
+  });
+
+  document.getElementById('projectPickerRemoveBtn').addEventListener('click', () => {
+    const s = state.shoots.find(x => x.id === projectPickerShootId);
+    closeProjectPicker();
+    if (!s || !s.projectId) return;
+    const project = findProject(s.projectId);
+    setShootProject(s.id, '');
+    finishProjectMembershipChange(project ? `Removed from ${project.name}` : 'Removed from project');
+  });
+
+  document.getElementById('projectPickerCancelBtn').addEventListener('click', closeProjectPicker);
+
+  projectPickerOverlay.addEventListener('click', (e) => {
+    if (e.target === projectPickerOverlay) closeProjectPicker();
   });
 
   document.getElementById('shootOptionsCancelBtn').addEventListener('click', closeShootOptions);
@@ -8914,6 +10235,8 @@
 
   document.getElementById('deleteAllConfirmYesBtn').addEventListener('click', () => {
     state.shoots = [];
+    // Projects are only groups of shoots, so none outlive them.
+    state.projects = [];
     saveState();
     idbClearAllImages().catch(() => {});
     renderAll();
@@ -9012,8 +10335,12 @@
       // the next reload.
       migrateIdeaPhaseStatus(importedShoots);
       normalizeShootStatuses(importedShoots);
+      // Same project clean-up as loadState. A backup from before projects
+      // existed has neither records nor projectIds, so this is just [].
+      const importedProjects = normalizeProjects(payload.state.projects, importedShoots);
       state = {
         shoots: importedShoots,
+        projects: importedProjects,
         frameworks: (Array.isArray(payload.state.frameworks) && payload.state.frameworks.length) ? payload.state.frameworks : seedFrameworks(),
         journalEntries: Array.isArray(payload.state.journalEntries) ? payload.state.journalEntries : [],
         titleDisplayMode: payload.state.titleDisplayMode === 'title' ? 'title' : 'talent',
@@ -9697,6 +11024,12 @@
     renderArchive();
     renderJournal();
     renderStats();
+    // The project popup stacks under the shoot modal/kebab like the stat
+    // box popup, so every change that repaints the lists repaints it too
+    // (or closes it once its project is gone). All seven
+    // refreshOpenStatBoxDetail() call sites come straight after a
+    // renderAll(), so this one hook covers them as well.
+    refreshOpenProjectPopup();
   }
 
   // ---------- Day-after shoot check-in ----------

@@ -2397,6 +2397,14 @@ h2.status-group-heading.heading-navy {
   display: none;
 }
 
+/* Multi-day shoot's "Last day" picker (Logistics) — same story: the
+   #shootForm label display:flex rule outranks the browser's built-in
+   [hidden]{display:none}, so without this it would always show. The
+   checkbox row above it is already covered by .checkbox-row[hidden]. */
+#multiDayLastDayLabel[hidden] {
+  display: none;
+}
+
 #teamDetailsBlock[hidden] {
   display: none;
 }
@@ -4188,6 +4196,17 @@ h2.status-group-heading.heading-navy {
   flex-direction: column;
   gap: 8px;
 }
+/* The "Add to project" sheet's existing-project choices — same stacked
+   choice-item column as the status pane's list above. */
+#projectPickerList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#projectPickerList[hidden] {
+  display: none;
+}
 
 /* ---- Pull to refresh ---- */
 .pull-refresh-indicator {
@@ -4645,6 +4664,39 @@ h2.status-group-heading.heading-navy {
 
 .stat-box-detail-modal .empty-state {
   padding: 0 20px 20px;
+}
+/* ---- Project popup (reuses the stat box popup above wholesale) ---- */
+/* A project name is user-typed and can be one long unbroken word — without
+   this it would shove the close X off the header instead of wrapping. */
+#projectDetailTitle {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Same 20px side inset the stat box popup gives its header and list (its
+   scroll container carries no padding of its own, see above). */
+#projectDetailSummary {
+  padding: 0 20px 12px;
+}
+
+/* Stacked full-width, the same way "+ Add X" buttons sit in their own
+   flex-column sections everywhere else. */
+.project-detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 20px 20px;
+}
+
+.project-rename-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Author display rule above, so [hidden] needs restating. */
+.project-rename-row[hidden] {
+  display: none;
 }
 
 /* ---------- Shoot mode ---------- */

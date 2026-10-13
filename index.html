@@ -243,6 +243,10 @@
         <label>Shoot date
           <input type="date" id="shootDate" />
         </label>
+        <label class="checkbox-row" id="multiDayRow"><input type="checkbox" id="shootMultiDay" /> <span id="multiDayLabel">Multi-day shoot</span></label>
+        <label id="multiDayLastDayLabel" hidden>Last day
+          <input type="date" id="shootLastDay" />
+        </label>
         <label>Deadline
           <input type="date" id="shootDeadline" />
         </label>
@@ -929,7 +933,7 @@
     <input type="text" id="imageViewerCaptionInput" placeholder="Add a caption" maxlength="140" hidden />
     <button type="button" class="image-viewer-menu-btn" id="imageViewerMenuBtn">&#8226;&#8226;&#8226;</button>
     <div id="imageViewerMenu" class="image-viewer-menu" hidden>
-      <button type="button" id="setProjectPhotoFromViewer">Set as project photo</button>
+      <button type="button" id="setProjectPhotoFromViewer">Set as cover photo</button>
       <button type="button" id="deleteImageFromViewer" class="options-delete">Delete this image</button>
     </div>
   </div>
@@ -939,7 +943,7 @@
 <div id="projectPhotoCropOverlay" class="modal-overlay crop-overlay" hidden>
   <div class="modal crop-modal">
     <div class="modal-header">
-      <h2 id="cropModalTitle">Set project photo</h2>
+      <h2 id="cropModalTitle">Set cover photo</h2>
       <button type="button" class="icon-btn close-btn" id="cropCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <p class="field-hint">Drag to reposition, pinch or use the slider to zoom</p>
@@ -1005,9 +1009,13 @@
       <div class="options-pane">
         <!-- Alphabetical, with Delete and Cancel pinned last (see the app
              menu's pane for the same reasoning). -->
+        <!-- "Add to project" keeps its slot when it relabels to "Project:
+             <name>" for a shoot that's already in one, same as Archive/
+             Unarchive keeps its slot. -->
+        <button type="button" class="options-item" id="projectShootOptionBtn">Add to project</button>
         <button type="button" class="options-item" id="archiveShootOptionBtn">Archive shoot</button>
         <button type="button" class="options-item" id="changeDeadlineOptionBtn">Change deadline</button>
-        <button type="button" class="options-item" id="changeProjectPhotoOptionBtn">Change project photo</button>
+        <button type="button" class="options-item" id="changeProjectPhotoOptionBtn">Change cover photo</button>
         <button type="button" class="options-item" id="changeTitleOptionBtn">Change shoot title</button>
         <button type="button" class="options-item" id="changeStatusOptionBtn">Change status</button>
         <button type="button" class="options-item" id="shareShootOptionBtn">Share as PDF</button>
@@ -1044,6 +1052,21 @@
     <button type="button" class="options-item" id="shareJournalOptionBtn">Share as PDF</button>
     <button type="button" class="options-item options-delete" id="deleteJournalOptionBtn">Delete entry</button>
     <button type="button" class="options-item options-cancel" id="journalOptionsCancelBtn">Cancel</button>
+  </div>
+</div>
+<!-- ============ ADD TO PROJECT (opened from the shoot options kebab) ============ -->
+<!-- Its own small sheet, built like the journal entry options above, rather
+     than a sixth pane on the shoot options slider — that track's widths and
+     translate steps are sized for exactly five panes. -->
+<div id="projectPickerOverlay" class="modal-overlay options-overlay" hidden>
+  <div class="modal options-modal rounded-modal">
+    <button type="button" class="options-item" id="projectPickerOpenBtn" hidden></button>
+    <input type="text" id="projectPickerNameInput" class="options-rename-input" maxlength="120" placeholder="New project name" />
+    <button type="button" class="options-item primary" id="projectPickerCreateBtn">Create project</button>
+    <div class="menu-divider" id="projectPickerDivider" aria-hidden="true" hidden></div>
+    <div id="projectPickerList" hidden></div>
+    <button type="button" class="options-item" id="projectPickerRemoveBtn" hidden>Remove from project</button>
+    <button type="button" class="options-item options-cancel" id="projectPickerCancelBtn">Cancel</button>
   </div>
 </div>
 
@@ -1191,6 +1214,34 @@
     </div>
     <div id="statBoxDetailList" class="mini-list"></div>
     <p class="empty-state" id="statBoxDetailEmpty" hidden>No shoots here yet.</p>
+  </div>
+</div>
+<!-- ============ PROJECT DETAIL (a project's shoots, same centered popup as the stat boxes) ============ -->
+<!-- Reuses .stat-box-detail-overlay/.stat-box-detail-modal wholesale, so it
+     inherits that popup's look, its z-index (under the shoot modal and the
+     kebab sheet, so a row's shoot or ⋮ opened from here stacks on top), its
+     [hidden] rule and both anyModalOpen() checks. Must stay AFTER
+     #statBoxDetailOverlay: they share z-index 5, so a project opened from a
+     stat box list sits above that list purely by source order. -->
+<div id="projectDetailOverlay" class="stat-box-detail-overlay" hidden>
+  <div class="stat-box-detail-modal">
+    <div class="modal-header">
+      <h2 id="projectDetailTitle"></h2>
+      <button type="button" class="icon-btn close-btn" id="projectDetailCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <p class="field-hint" id="projectDetailSummary"></p>
+    <div id="projectDetailList" class="mini-list"></div>
+    <div class="project-detail-actions">
+      <button type="button" class="primary small-btn" id="projectAddDayBtn">+ Add a day</button>
+      <button type="button" class="primary small-btn" id="projectAddShootBtn">+ Add a shoot</button>
+      <div class="project-rename-row" id="projectRenameRow" hidden>
+        <input type="text" id="projectRenameInput" class="options-rename-input" maxlength="120" placeholder="Name for the project" />
+        <button type="button" class="options-item primary" id="saveProjectRenameBtn">Save</button>
+      </div>
+      <button type="button" class="secondary small-btn" id="projectRenameBtn">Rename</button>
+      <button type="button" class="secondary small-btn" id="projectArchiveBtn">Archive project</button>
+      <button type="button" class="secondary small-btn" id="projectUngroupBtn">Ungroup</button>
+    </div>
   </div>
 </div>
 
@@ -1346,6 +1397,19 @@
     <div class="modal-actions" id="deadlinePromptActions">
       <button type="button" class="secondary" id="deadlinePromptNotNowBtn">Not now</button>
       <button type="button" class="primary" id="deadlinePromptOkBtn">Okay</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MULTI-DAY SHOOT PROMPT ============ -->
+<div id="multiDayPromptOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal daily-report-modal">
+    <h2>Multi-day shoot</h2>
+    <p id="multiDayPromptText"></p>
+    <input type="text" id="multiDayProjectNameInput" class="deadline-prompt-input" maxlength="120" placeholder="Project name" aria-label="Project name" />
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="multiDayPromptCancelBtn">Cancel</button>
+      <button type="button" class="primary" id="multiDayPromptCreateBtn">Create days</button>
     </div>
   </div>
 </div>
