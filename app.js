@@ -11262,9 +11262,9 @@
       "questions": [
         {
           "field": "right",
-          "text": "Which frame or moment came out best?",
+          "text": "Which shot or moment came out best?",
           "placeholder": "e.g. the shot through the motel window",
-          "say": "Best frame: {a}."
+          "say": "Best shot: {a}."
         },
         {
           "field": "right",
@@ -11307,7 +11307,7 @@
         {
           "field": "lessons",
           "text": "What's one thing you'll keep doing?",
-          "placeholder": "e.g. shooting the warm-up frames",
+          "placeholder": "e.g. shooting the warm-up shots",
           "say": "Keep doing: {a}."
         },
         {
@@ -11815,7 +11815,7 @@
         {
           "field": "lessons",
           "text": "Finish this: next time, I'll…",
-          "placeholder": "e.g. label every frame with the setup",
+          "placeholder": "e.g. label every shot with the setup",
           "say": "Next time, I'll {a}.",
           "lower": true,
           "sayOwn": "Next time, {a}."
