@@ -319,7 +319,7 @@
           </div>
 
           <label><span id="shootPremiseLabelText">Concept</span>
-            <textarea id="shootPremise" rows="6" maxlength="200" placeholder="visual narrative or message" readonly></textarea>
+            <textarea id="shootPremise" rows="6" maxlength="300" placeholder="visual narrative or message" readonly></textarea>
           </label>
 
           <div id="narrativeFieldsBlock">
@@ -443,6 +443,11 @@
           <!-- First slide only (see renderShootWizardChrome); the same small
                underlined link look as the Visuals "Manage" link. -->
           <button type="button" class="manage-link" id="shootWizardDontShowBtn" hidden>Don't show again</button>
+        </div>
+        <!-- Wizard-only blocks, borrowed onto a slide like the page's own
+             (see SHOOT_WIZARD_STEPS) and kept out of sight here otherwise. -->
+        <div id="shootWizardHolder" hidden>
+          <button type="button" class="primary small-btn" id="conceptHelperBtn">Need to think it through?</button>
         </div>
       </div>
     </form>
@@ -1165,6 +1170,49 @@
       <button type="button" class="danger" id="deleteAllConfirmYesBtn">Yes, delete everything</button>
     </div>
     <button type="button" class="primary" id="deleteAllConfirmOkBtn" hidden>OK</button>
+  </div>
+</div>
+
+<!-- ============ LEAVE THE NEW SHOOT GUIDE? ============ -->
+<div id="shootWizardLeaveOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2>Leave the guide?</h2>
+    <p>Everything you've filled in so far is already on the shoot page, and you can keep adding to it there.</p>
+    <div class="modal-actions" id="shootWizardLeaveActions">
+      <button type="button" class="primary" id="shootWizardLeaveStayBtn">Keep going</button>
+      <button type="button" class="secondary" id="shootWizardLeaveGoBtn">Go to shoot page</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CONCEPT HELPER ("Need to think it through?") ============ -->
+<!-- A short decision tree of yes/no and short-answer questions (see
+     CONCEPT_FLOWS in app.js), compiled into a concept at the end. -->
+<div id="conceptHelperOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal concept-helper-modal">
+    <p class="mi-sub" id="conceptHelperStep"></p>
+    <h2 id="conceptHelperTitle"></h2>
+    <p id="conceptHelperText"></p>
+    <p class="field-hint concept-helper-hint" id="conceptHelperHint"></p>
+    <input type="text" id="conceptHelperInput" class="deadline-prompt-input" maxlength="40" autocomplete="off" autocapitalize="none" />
+    <textarea id="conceptHelperSummary" class="deadline-prompt-input" rows="5"></textarea>
+    <p class="mi-sub concept-helper-count" id="conceptHelperCount"></p>
+    <div class="modal-actions" id="conceptHelperYesNo">
+      <button type="button" class="secondary" id="conceptHelperNoBtn">No</button>
+      <button type="button" class="primary" id="conceptHelperYesBtn">Yes</button>
+    </div>
+    <div class="modal-actions" id="conceptHelperNextRow">
+      <button type="button" class="primary" id="conceptHelperNextBtn">Next</button>
+    </div>
+    <div class="modal-actions" id="conceptHelperEndRow">
+      <button type="button" class="primary" id="conceptHelperUseBtn">Use this</button>
+      <button type="button" class="secondary" id="conceptHelperWriteBtn">I'll write it myself</button>
+    </div>
+    <button type="button" class="manage-link concept-helper-link" id="conceptHelperBackBtn">Back</button>
+    <button type="button" class="manage-link concept-helper-link" id="conceptHelperRestartBtn">Start over</button>
+    <div class="shoot-tour-skip-row">
+      <button type="button" class="secondary journal-block-btn" id="conceptHelperCloseBtn">Close</button>
+    </div>
   </div>
 </div>
 

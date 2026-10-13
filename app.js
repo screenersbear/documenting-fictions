@@ -1235,11 +1235,11 @@
     // the stack instead of sharing a slot with status.
     const badgeParts = [pendingText, proofsPendingText, reflectionPendingText].filter(Boolean);
     const badgeHtml = badgeParts.join('<br>');
-    // Once archived there's nothing left to deliver, so the deadline no
-    // longer means anything — don't show it. Otherwise, an overdue deadline
-    // still shows (until the shoot's delivered or archived), just in red.
+    // Once delivered (or archived) there's nothing left to deliver, so the
+    // deadline no longer means anything — don't show it. Otherwise, an
+    // overdue deadline still shows, just in red.
     const isOverdue = !!s.deadline && s.deadline < todayStr();
-    const dueHtml = (s.deadline && !s.archived)
+    const dueHtml = (s.deadline && !s.archived && s.status !== 'delivered')
       ? `<span class="shoot-row-date-line shoot-row-due${isOverdue ? ' overdue' : ''}">Due: ${prettyDateShort(s.deadline)}</span>`
       : '';
     const statusHtml = statusLabel
@@ -6205,22 +6205,33 @@
     btn.classList.toggle('has-value', !!display);
   }
 
-  // Most-selected locations first (a repeatedly-booked studio should surface
-  // above somewhere you've only shot once) — ties broken alphabetically so
-  // the order stays stable rather than reflecting shoot-creation order.
+  // Most recently used locations first: each ranks by the latest shoot date
+  // it's been used for (an undated shoot that's still being planned counts
+  // as today), ties broken alphabetically so the order stays stable rather
+  // than reflecting shoot-creation order.
   function getAllPastLocations() {
-    const counts = {};
+    const latest = {};
     const samples = {};
     const dismissed = new Set(state.dismissedLocationKeys);
+    const today = todayStr();
     state.shoots.forEach(s => {
-      if (isLocationBlank(s.location)) return;
-      const key = locationKey(s.location);
+      // A country on its own is just the pre-filled default, not a location
+      // anyone picked (same rule as updateLocationBtnDisplay).
+      const loc = s.location;
+      if (!loc || !['name', 'street', 'city', 'state', 'zip'].some(k => hasText(loc[k]))) return;
+      const key = locationKey(loc);
       if (dismissed.has(key)) return;
-      counts[key] = (counts[key] || 0) + 1;
-      samples[key] = s.location;
+      // Only a shoot still being planned counts its missing date as today: a
+      // canceled/postponed one has had its date cleared, so it ranks last.
+      const live = !s.archived && s.status !== 'canceled' && s.status !== 'rescheduled';
+      const when = s.date || (live ? today : '');
+      if (!(key in latest) || when >= latest[key]) {
+        latest[key] = when;
+        samples[key] = s.location;
+      }
     });
-    return Object.keys(counts)
-      .sort((a, b) => counts[b] - counts[a] || formatLocationDisplay(samples[a]).localeCompare(formatLocationDisplay(samples[b])))
+    return Object.keys(latest)
+      .sort((a, b) => latest[b].localeCompare(latest[a]) || formatLocationDisplay(samples[a]).localeCompare(formatLocationDisplay(samples[b])))
       .map(key => samples[key]);
   }
 
@@ -7148,6 +7159,8 @@
       title: 'The idea',
       hint: 'The concept behind the shoot, then the whole thing in a single line.',
       blocks: () => [
+        // Wizard-only: walks through a few questions and writes a concept.
+        shootWizardBlock('conceptHelperBtn'),
         shootWizardBlock('shootPremise', 'label'),
         shootWizardBlock('shootElevatorPitch', 'label'),
       ],
@@ -7446,6 +7459,8 @@
     shootWizardPendingId = null;
     clearTimeout(shootWizardStartTimer);
     if (!shootWizardActive) return;
+    closeLeaveShootWizardPrompt();
+    closeConceptHelper();
     blurShootWizardFocus();
     restoreShootWizardBlocks();
     shootWizardActive = false;
@@ -7493,7 +7508,41 @@
     else closeShootModal();
   });
 
-  document.getElementById('shootWizardExitBtn').addEventListener('click', () => endShootWizard());
+  // Leaving early always asks first — from "Go to shoot page" or a tap on
+  // the dim around the card. (Finishing on the last slide, or "Don't show
+  // again", don't: those say what they do.)
+  function askLeaveShootWizard() {
+    if (!shootWizardActive) return;
+    document.getElementById('shootWizardLeaveOverlay').hidden = false;
+  }
+
+  function closeLeaveShootWizardPrompt() {
+    document.getElementById('shootWizardLeaveOverlay').hidden = true;
+  }
+
+  document.getElementById('shootWizardExitBtn').addEventListener('click', askLeaveShootWizard);
+
+  // Only a tap that both starts and ends on the dim: with a mouse, a text
+  // selection dragged out past the card's edge also "clicks" the backdrop.
+  let shootWizardPressOnBackdrop = false;
+  document.getElementById('shootWizard').addEventListener('pointerdown', (e) => {
+    shootWizardPressOnBackdrop = e.target === e.currentTarget;
+  });
+  document.getElementById('shootWizard').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget && shootWizardPressOnBackdrop) askLeaveShootWizard();
+    shootWizardPressOnBackdrop = false;
+  });
+
+  document.getElementById('shootWizardLeaveStayBtn').addEventListener('click', closeLeaveShootWizardPrompt);
+
+  document.getElementById('shootWizardLeaveGoBtn').addEventListener('click', () => {
+    closeLeaveShootWizardPrompt();
+    endShootWizard();
+  });
+
+  document.getElementById('shootWizardLeaveOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeLeaveShootWizardPrompt();
+  });
 
   // On/off for the whole guide, remembered on this device. Turned off from
   // the first slide's "Don't show again", and back on (or off) from the app
@@ -7513,6 +7562,2061 @@
 
   // Lands on the shoot page with everything so far, then says where the
   // switch lives so the guide isn't gone for good by accident.
+  // ---------- Concept helper ("Need to think it through?") ----------
+  // From The idea slide: a short decision tree of yes/no and short-answer
+  // questions, picked by the shoot's category (CONCEPT_FLOWS), whose answers
+  // are dropped mad-lib style into a concept summary at the end — editable,
+  // then either used as the Concept or left for the user to write their own.
+  //
+  // Flow format: { id, label, categories (keys; '' = no category yet),
+  // start, nodes: [{ id, type: 'yesno'|'short', text, hint?, placeholder?,
+  // key, yes/no (yesno: next id or 'END'), yesValue/noValue? (stored instead
+  // of true/false), next (short), categoryText? ({category: text}) }],
+  // summaries: [{ when: {key: value}, template }] } — the first summary whose
+  // `when` all match is used. Templates: {key} inserts an answer, {category}
+  // the shoot type, and [[ ... ]] is dropped whole if any {key} in it is blank.
+  // The Concept box's own limit, so a compiled concept that won't fit is
+  // caught here (see updateConceptHelperCount) rather than cut off by it.
+  const conceptHelperMax = () => document.getElementById('shootPremise').maxLength || 300;
+  let conceptHelper = null; // { flow, nodeId, history: [nodeId], answers: {nodeId: value}, ended }
+
+  // The questions behind "Need to think it through?" — one flow per kind of
+  // shoot (see the format notes above openConceptHelper), each leaning on
+  // what that kind of shoot actually is: story vs vibe for narrative work,
+  // the people and their relationship for engagements/family/maternity, a
+  // theme rather than a plot for events (you don't control what happens),
+  // message/audience/personality for brand work, and so on. '' in a flow's
+  // categories = the one used before a category's been picked.
+  const CONCEPT_FLOWS = [
+    {
+      "id": "editorial",
+      "label": "Editorial: story or vibe",
+      "categories": [
+        "editorial"
+      ],
+      "start": "editorial_mode",
+      "nodes": [
+        {
+          "id": "editorial_mode",
+          "type": "yesno",
+          "text": "Is this spread more of a vibe than a story with a beginning, middle and end?",
+          "hint": "Either is great. Some of the best spreads are all vibe.",
+          "key": "mode",
+          "yes": "editorial_mood",
+          "no": "editorial_who",
+          "yesValue": "vibe",
+          "noValue": "story"
+        },
+        {
+          "id": "editorial_who",
+          "type": "short",
+          "text": "Who's the main character, in a few words?",
+          "hint": "Who they're playing, not who's modeling.",
+          "placeholder": "e.g. a runaway bride",
+          "key": "character",
+          "next": "editorial_doing"
+        },
+        {
+          "id": "editorial_doing",
+          "type": "short",
+          "text": "What do we catch them doing?",
+          "hint": "One action, like a film still.",
+          "placeholder": "e.g. smoking in her gown",
+          "key": "action",
+          "next": "editorial_after"
+        },
+        {
+          "id": "editorial_after",
+          "type": "yesno",
+          "text": "Are we meeting them just after something big happened?",
+          "hint": "Say no if the big thing is still coming.",
+          "key": "timing",
+          "yes": "editorial_moment",
+          "no": "editorial_moment",
+          "yesValue": "just after",
+          "noValue": "just before"
+        },
+        {
+          "id": "editorial_moment",
+          "type": "short",
+          "text": "What's the big moment, in a few words?",
+          "hint": "It can be tiny: a phone call, a slammed door.",
+          "placeholder": "e.g. leaving the church",
+          "key": "moment",
+          "next": "editorial_world"
+        },
+        {
+          "id": "editorial_world",
+          "type": "short",
+          "text": "Where and when does it take place?",
+          "hint": "A place, an era, or both.",
+          "placeholder": "e.g. a '70s desert motel",
+          "key": "world",
+          "next": "editorial_feel"
+        },
+        {
+          "id": "editorial_feel",
+          "type": "short",
+          "text": "In a few words, how should it feel?",
+          "placeholder": "e.g. lonely but hopeful",
+          "key": "feeling",
+          "next": "editorial_styling"
+        },
+        {
+          "id": "editorial_mood",
+          "type": "short",
+          "text": "In a few words, how should it feel?",
+          "placeholder": "e.g. dreamy but lonely",
+          "key": "mood",
+          "next": "editorial_light"
+        },
+        {
+          "id": "editorial_light",
+          "type": "short",
+          "text": "What's the light and color like?",
+          "hint": "Think palette and light, not gear.",
+          "placeholder": "e.g. hazy, faded pastels",
+          "key": "light",
+          "next": "editorial_place"
+        },
+        {
+          "id": "editorial_place",
+          "type": "short",
+          "text": "Where's it set?",
+          "hint": "A real spot or just the kind of place.",
+          "placeholder": "e.g. an empty ballroom",
+          "key": "place",
+          "next": "editorial_refs"
+        },
+        {
+          "id": "editorial_refs",
+          "type": "short",
+          "text": "Any era, movie or reference it's borrowing from?",
+          "hint": "A decade, a film, a painter, a photographer.",
+          "placeholder": "e.g. '90s fashion mags",
+          "key": "refs",
+          "next": "editorial_leave"
+        },
+        {
+          "id": "editorial_leave",
+          "type": "short",
+          "text": "Finish this: it should leave you…",
+          "placeholder": "e.g. a little homesick",
+          "key": "takeaway",
+          "next": "editorial_styling"
+        },
+        {
+          "id": "editorial_styling",
+          "type": "yesno",
+          "text": "Last one: are wardrobe and styling a big part of this?",
+          "hint": "Say no if it's stripped-back and real.",
+          "key": "styling",
+          "yes": "END",
+          "no": "END",
+          "yesValue": "fashion-forward",
+          "noValue": "stripped-back"
+        }
+      ],
+      "summaries": [
+        {
+          "when": {
+            "mode": "story"
+          },
+          "template": "An editorial[[ about {character}]][[, caught {action}]][[ {timing} {moment}]][[, set in {world}]][[, with {styling} styling]].[[ It should feel {feeling}.]]"
+        },
+        {
+          "when": {
+            "mode": "vibe"
+          },
+          "template": "[[{mood}: ]]a mood piece[[ set in {place}]][[, bathed in {light}]][[, with {styling} styling]].[[ Think {refs}.]][[ It should leave you {takeaway}.]]"
+        },
+        {
+          "when": {},
+          "template": "An editorial[[ with {styling} styling]].[[ It should feel {feeling}.]][[ It should feel {mood}.]]"
+        }
+      ]
+    },
+    {
+      "id": "portfolio",
+      "label": "Portfolio: story or vibe",
+      "categories": [
+        "portfolio_building"
+      ],
+      "start": "portfolio_mode",
+      "nodes": [
+        {
+          "id": "portfolio_mode",
+          "type": "yesno",
+          "text": "Is this portfolio piece more of a vibe than a story with a beginning, middle and end?",
+          "hint": "Either works. Go with whatever's closest to what's in your head.",
+          "key": "mode",
+          "yes": "portfolio_mood",
+          "no": "portfolio_who",
+          "yesValue": "vibe",
+          "noValue": "story"
+        },
+        {
+          "id": "portfolio_who",
+          "type": "short",
+          "text": "Who's the main character, in a few words?",
+          "hint": "Who they're playing, not who's modeling.",
+          "placeholder": "e.g. a retired magician",
+          "key": "character",
+          "next": "portfolio_doing"
+        },
+        {
+          "id": "portfolio_doing",
+          "type": "short",
+          "text": "What do we catch them doing?",
+          "hint": "One action, like a film still.",
+          "placeholder": "e.g. packing up his props",
+          "key": "action",
+          "next": "portfolio_after"
+        },
+        {
+          "id": "portfolio_after",
+          "type": "yesno",
+          "text": "Are we meeting them just after something big happened?",
+          "hint": "Say no if the big thing is still coming.",
+          "key": "timing",
+          "yes": "portfolio_moment",
+          "no": "portfolio_moment",
+          "yesValue": "just after",
+          "noValue": "just before"
+        },
+        {
+          "id": "portfolio_moment",
+          "type": "short",
+          "text": "What's the big moment, in a few words?",
+          "hint": "It can be tiny: a phone call, a slammed door.",
+          "placeholder": "e.g. his last show",
+          "key": "moment",
+          "next": "portfolio_world"
+        },
+        {
+          "id": "portfolio_world",
+          "type": "short",
+          "text": "Where and when does it take place?",
+          "hint": "A place, an era, or both.",
+          "placeholder": "e.g. an empty '50s theater",
+          "key": "world",
+          "next": "portfolio_feel"
+        },
+        {
+          "id": "portfolio_feel",
+          "type": "short",
+          "text": "In a few words, how should it feel?",
+          "placeholder": "e.g. bittersweet",
+          "key": "feeling",
+          "next": "portfolio_showoff"
+        },
+        {
+          "id": "portfolio_mood",
+          "type": "short",
+          "text": "In a few words, how should it feel?",
+          "placeholder": "e.g. quiet and eerie",
+          "key": "mood",
+          "next": "portfolio_light"
+        },
+        {
+          "id": "portfolio_light",
+          "type": "short",
+          "text": "What's the light and color like?",
+          "hint": "Think palette and light, not gear.",
+          "placeholder": "e.g. cold fluorescents",
+          "key": "light",
+          "next": "portfolio_place"
+        },
+        {
+          "id": "portfolio_place",
+          "type": "short",
+          "text": "Where's it set?",
+          "hint": "A real spot or just the kind of place.",
+          "placeholder": "e.g. a laundromat at 2am",
+          "key": "place",
+          "next": "portfolio_refs"
+        },
+        {
+          "id": "portfolio_refs",
+          "type": "short",
+          "text": "Any era, movie or reference it's borrowing from?",
+          "hint": "A decade, a film, a painter, a photographer.",
+          "placeholder": "e.g. Edward Hopper",
+          "key": "refs",
+          "next": "portfolio_leave"
+        },
+        {
+          "id": "portfolio_leave",
+          "type": "short",
+          "text": "Finish this: it should leave you…",
+          "placeholder": "e.g. a little uneasy",
+          "key": "takeaway",
+          "next": "portfolio_showoff"
+        },
+        {
+          "id": "portfolio_showoff",
+          "type": "short",
+          "text": "Last one: what skill or style should this show off?",
+          "hint": "Whatever you want future clients to see more of.",
+          "placeholder": "e.g. cinematic color",
+          "key": "showoff",
+          "next": "END"
+        }
+      ],
+      "summaries": [
+        {
+          "when": {
+            "mode": "story"
+          },
+          "template": "A story[[ about {character}]][[, caught {action}]][[ {timing} {moment}]][[, set in {world}]].[[ It should feel {feeling}.]][[ Made to show off {showoff}.]]"
+        },
+        {
+          "when": {
+            "mode": "vibe"
+          },
+          "template": "[[{mood}: ]]a mood piece[[ set in {place}]][[, bathed in {light}]].[[ Think {refs}.]][[ It should leave you {takeaway}.]][[ Made to show off {showoff}.]]"
+        },
+        {
+          "when": {},
+          "template": "A portfolio piece[[ made to show off {showoff}]].[[ It should feel {feeling}.]][[ It should feel {mood}.]]"
+        }
+      ]
+    },
+    {
+      "id": "testshoot",
+      "label": "Test shoot: story or vibe",
+      "categories": [
+        "test_shoot"
+      ],
+      "start": "testshoot_mode",
+      "nodes": [
+        {
+          "id": "testshoot_mode",
+          "type": "yesno",
+          "text": "Is this {category} more of a vibe than a story with a beginning, middle and end?",
+          "hint": "Tests are a great place to chase a pure vibe. No wrong answer.",
+          "key": "mode",
+          "yes": "testshoot_mood",
+          "no": "testshoot_who",
+          "yesValue": "vibe",
+          "noValue": "story"
+        },
+        {
+          "id": "testshoot_who",
+          "type": "short",
+          "text": "Who's the main character, in a few words?",
+          "hint": "Who they're playing, not who's modeling.",
+          "placeholder": "e.g. a pageant queen",
+          "key": "character",
+          "next": "testshoot_doing"
+        },
+        {
+          "id": "testshoot_doing",
+          "type": "short",
+          "text": "What do we catch them doing?",
+          "hint": "One action, like a film still.",
+          "placeholder": "e.g. eating cake alone",
+          "key": "action",
+          "next": "testshoot_after"
+        },
+        {
+          "id": "testshoot_after",
+          "type": "yesno",
+          "text": "Are we meeting them just after something big happened?",
+          "hint": "Say no if the big thing is still coming.",
+          "key": "timing",
+          "yes": "testshoot_moment",
+          "no": "testshoot_moment",
+          "yesValue": "just after",
+          "noValue": "just before"
+        },
+        {
+          "id": "testshoot_moment",
+          "type": "short",
+          "text": "What's the big moment, in a few words?",
+          "hint": "It can be tiny: a phone call, a slammed door.",
+          "placeholder": "e.g. losing the crown",
+          "key": "moment",
+          "next": "testshoot_world"
+        },
+        {
+          "id": "testshoot_world",
+          "type": "short",
+          "text": "Where and when does it take place?",
+          "hint": "A place, an era, or both.",
+          "placeholder": "e.g. a '90s rec center",
+          "key": "world",
+          "next": "testshoot_feel"
+        },
+        {
+          "id": "testshoot_feel",
+          "type": "short",
+          "text": "In a few words, how should it feel?",
+          "placeholder": "e.g. funny but sad",
+          "key": "feeling",
+          "next": "testshoot_testing"
+        },
+        {
+          "id": "testshoot_mood",
+          "type": "short",
+          "text": "In a few words, how should it feel?",
+          "placeholder": "e.g. warm and sleepy",
+          "key": "mood",
+          "next": "testshoot_light"
+        },
+        {
+          "id": "testshoot_light",
+          "type": "short",
+          "text": "What's the light and color like?",
+          "hint": "Think palette and light, not gear.",
+          "placeholder": "e.g. golden, grainy light",
+          "key": "light",
+          "next": "testshoot_place"
+        },
+        {
+          "id": "testshoot_place",
+          "type": "short",
+          "text": "Where's it set?",
+          "hint": "A real spot or just the kind of place.",
+          "placeholder": "e.g. a sunlit bedroom",
+          "key": "place",
+          "next": "testshoot_refs"
+        },
+        {
+          "id": "testshoot_refs",
+          "type": "short",
+          "text": "Any era, movie or reference it's borrowing from?",
+          "hint": "A decade, a film, a painter, a photographer.",
+          "placeholder": "e.g. Sofia Coppola",
+          "key": "refs",
+          "next": "testshoot_leave"
+        },
+        {
+          "id": "testshoot_leave",
+          "type": "short",
+          "text": "Finish this: it should leave you…",
+          "placeholder": "e.g. wanting to slow down",
+          "key": "takeaway",
+          "next": "testshoot_testing"
+        },
+        {
+          "id": "testshoot_testing",
+          "type": "short",
+          "text": "Last one: what are you testing or trying for the first time?",
+          "hint": "A look, a technique, new gear, a new face or team.",
+          "placeholder": "e.g. a new film stock",
+          "key": "testing",
+          "next": "END"
+        }
+      ],
+      "summaries": [
+        {
+          "when": {
+            "mode": "story"
+          },
+          "template": "A story[[ about {character}]][[, caught {action}]][[ {timing} {moment}]][[, set in {world}]].[[ It should feel {feeling}.]][[ Trying out {testing}.]]"
+        },
+        {
+          "when": {
+            "mode": "vibe"
+          },
+          "template": "[[{mood}: ]]a mood piece[[ set in {place}]][[, bathed in {light}]].[[ Think {refs}.]][[ It should leave you {takeaway}.]][[ Trying out {testing}.]]"
+        },
+        {
+          "when": {},
+          "template": "A test shoot[[ to try out {testing}]].[[ It should feel {feeling}.]][[ It should feel {mood}.]]"
+        }
+      ]
+    },
+    {
+      "id": "story",
+      "label": "Story or vibe",
+      "categories": [
+        "other",
+        ""
+      ],
+      "start": "story_mode",
+      "nodes": [
+        {
+          "id": "story_mode",
+          "type": "yesno",
+          "text": "Is the idea more of a vibe than a story with a beginning, middle and end?",
+          "hint": "No wrong answer. Some ideas are a whole plot, some are just a feeling.",
+          "key": "mode",
+          "yes": "story_mood",
+          "no": "story_who",
+          "yesValue": "vibe",
+          "noValue": "story"
+        },
+        {
+          "id": "story_who",
+          "type": "short",
+          "text": "Who's the main character, in a few words?",
+          "hint": "Who they're playing, not who's modeling.",
+          "placeholder": "e.g. an astronaut's wife",
+          "key": "character",
+          "next": "story_doing"
+        },
+        {
+          "id": "story_doing",
+          "type": "short",
+          "text": "What do we catch them doing?",
+          "hint": "One action, like a film still.",
+          "placeholder": "e.g. setting the table",
+          "key": "action",
+          "next": "story_after"
+        },
+        {
+          "id": "story_after",
+          "type": "yesno",
+          "text": "Are we meeting them just after something big happened?",
+          "hint": "Say no if the big thing is still coming.",
+          "key": "timing",
+          "yes": "story_moment",
+          "no": "story_moment",
+          "yesValue": "just after",
+          "noValue": "just before"
+        },
+        {
+          "id": "story_moment",
+          "type": "short",
+          "text": "What's the big moment, in a few words?",
+          "hint": "It can be tiny: a phone call, a slammed door.",
+          "placeholder": "e.g. the launch",
+          "key": "moment",
+          "next": "story_world"
+        },
+        {
+          "id": "story_world",
+          "type": "short",
+          "text": "Where and when does it take place?",
+          "hint": "A place, an era, or both.",
+          "placeholder": "e.g. a '60s suburban kitchen",
+          "key": "world",
+          "next": "story_feel"
+        },
+        {
+          "id": "story_feel",
+          "type": "short",
+          "text": "In a few words, how should it feel?",
+          "placeholder": "e.g. tender and strange",
+          "key": "feeling",
+          "next": "story_frames"
+        },
+        {
+          "id": "story_frames",
+          "type": "yesno",
+          "text": "Last one: does the whole story live in a single frame?",
+          "hint": "Say no if it plays out across a few frames.",
+          "key": "storyFormat",
+          "yes": "END",
+          "no": "END",
+          "yesValue": "told in a single frame",
+          "noValue": "told across a few frames"
+        },
+        {
+          "id": "story_mood",
+          "type": "short",
+          "text": "In a few words, how should it feel?",
+          "placeholder": "e.g. hazy and nostalgic",
+          "key": "mood",
+          "next": "story_light"
+        },
+        {
+          "id": "story_light",
+          "type": "short",
+          "text": "What's the light and color like?",
+          "hint": "Think palette and light, not gear.",
+          "placeholder": "e.g. warm tungsten glow",
+          "key": "light",
+          "next": "story_place"
+        },
+        {
+          "id": "story_place",
+          "type": "short",
+          "text": "Where's it set?",
+          "hint": "A real spot or just the kind of place.",
+          "placeholder": "e.g. a roller rink",
+          "key": "place",
+          "next": "story_refs"
+        },
+        {
+          "id": "story_refs",
+          "type": "short",
+          "text": "Any era, movie or reference it's borrowing from?",
+          "hint": "A decade, a film, a painter, a photographer.",
+          "placeholder": "e.g. '80s home videos",
+          "key": "refs",
+          "next": "story_leave"
+        },
+        {
+          "id": "story_leave",
+          "type": "short",
+          "text": "Finish this: it should leave you…",
+          "placeholder": "e.g. missing someone",
+          "key": "takeaway",
+          "next": "story_vibe_frames"
+        },
+        {
+          "id": "story_vibe_frames",
+          "type": "yesno",
+          "text": "Last one: does the whole vibe live in a single image?",
+          "hint": "Say no if it's a set or a series.",
+          "key": "vibeFormat",
+          "yes": "END",
+          "no": "END",
+          "yesValue": "captured in a single image",
+          "noValue": "built as a series"
+        }
+      ],
+      "summaries": [
+        {
+          "when": {
+            "mode": "story"
+          },
+          "template": "A story[[ about {character}]][[, caught {action}]][[ {timing} {moment}]][[, set in {world}]][[, {storyFormat}]].[[ It should feel {feeling}.]]"
+        },
+        {
+          "when": {
+            "mode": "vibe"
+          },
+          "template": "[[{mood}: ]]a mood piece[[ set in {place}]][[, bathed in {light}]][[, {vibeFormat}]].[[ Think {refs}.]][[ It should leave you {takeaway}.]]"
+        },
+        {
+          "when": {},
+          "template": "A narrative portrait shoot[[, {storyFormat}]][[, {vibeFormat}]].[[ It should feel {feeling}.]][[ It should feel {mood}.]]"
+        }
+      ]
+    },
+    {
+      "id": "people",
+      "label": "Couples, families & maternity",
+      "categories": [
+        "engagement",
+        "family",
+        "maternity"
+      ],
+      "start": "people_q1",
+      "nodes": [
+        {
+          "id": "people_q1",
+          "type": "yesno",
+          "text": "Do you want to catch them as they really are, more candid than posed?",
+          "hint": "Say no if you're picturing a styled idea, a theme or a little story.",
+          "key": "style",
+          "yes": "people_them",
+          "no": "people_story",
+          "categoryText": {
+            "engagement": "Do you want to catch the two of them as they really are, more candid than posed?",
+            "family": "Do you want to catch this family as they really are, chaos and all?",
+            "maternity": "Do you want to catch this season as it really is, more candid than posed?"
+          }
+        },
+        {
+          "id": "people_them",
+          "type": "short",
+          "text": "How would you describe them, in a few words?",
+          "hint": "Whatever makes them them.",
+          "placeholder": "e.g. goofy and always teasing",
+          "key": "them",
+          "next": "people_has_ritual",
+          "categoryText": {
+            "engagement": "How would you describe these two together, in a few words?",
+            "family": "How would you describe this family, in a few words?",
+            "maternity": "How would you describe the parents-to-be right now, in a few words?"
+          }
+        },
+        {
+          "id": "people_has_ritual",
+          "type": "yesno",
+          "text": "Is there something they always do together we could build it around?",
+          "hint": "Think cooking dinner, walking the dog, bedtime, painting the nursery.",
+          "key": "hasRitual",
+          "yes": "people_ritual",
+          "no": "people_has_place",
+          "categoryText": {
+            "engagement": "Is there something the two of them always do together we could build it around?",
+            "family": "Is there a family ritual or routine we could build it around?",
+            "maternity": "Is there something they're doing to get ready that we could build it around?"
+          }
+        },
+        {
+          "id": "people_ritual",
+          "type": "short",
+          "text": "What is it, in a few words?",
+          "placeholder": "e.g. sunday pancakes",
+          "key": "ritual",
+          "next": "people_has_place"
+        },
+        {
+          "id": "people_has_place",
+          "type": "yesno",
+          "text": "Is there a place that means something to them?",
+          "hint": "Home totally counts.",
+          "key": "hasPlace",
+          "yes": "people_place",
+          "no": "people_moment",
+          "categoryText": {
+            "engagement": "Is there a place that means something to the two of them?",
+            "family": "Is there a place that means something to this family?",
+            "maternity": "Is there a place that means something to them right now?"
+          }
+        },
+        {
+          "id": "people_place",
+          "type": "short",
+          "text": "Where is it, in a few words?",
+          "placeholder": "e.g. the diner where they met",
+          "key": "place",
+          "next": "people_moment"
+        },
+        {
+          "id": "people_moment",
+          "type": "short",
+          "text": "What's one little thing between them you'd hate to miss?",
+          "placeholder": "e.g. the way they crack up",
+          "key": "moment",
+          "next": "people_feel",
+          "categoryText": {
+            "engagement": "What's one little thing between the two of them you'd hate to miss?",
+            "family": "What's one little thing in this family you'd hate to miss?",
+            "maternity": "What's one little moment or detail you'd hate to miss?"
+          }
+        },
+        {
+          "id": "people_story",
+          "type": "yesno",
+          "text": "Is there a little story to it, with a beginning, middle and end?",
+          "hint": "No is totally fine. A theme or a look counts as an idea too.",
+          "key": "story",
+          "yes": "people_plot",
+          "no": "people_theme"
+        },
+        {
+          "id": "people_plot",
+          "type": "short",
+          "text": "In a few words, what's the story about?",
+          "placeholder": "e.g. a road trip gone sideways",
+          "key": "plot",
+          "next": "people_real"
+        },
+        {
+          "id": "people_real",
+          "type": "yesno",
+          "text": "Is it pulled from their real life?",
+          "key": "real",
+          "yes": "people_setting",
+          "no": "people_setting",
+          "yesValue": "taken from real life",
+          "noValue": "made up just for them",
+          "categoryText": {
+            "engagement": "Is it pulled from their real story, like how they met?",
+            "family": "Is it pulled from real family life, like a story they always tell?",
+            "maternity": "Is it pulled from their real life, like how they found out?"
+          }
+        },
+        {
+          "id": "people_theme",
+          "type": "short",
+          "text": "What's the theme or idea, in a few words?",
+          "hint": "Think of it like a title for the session.",
+          "placeholder": "e.g. a '50s sunday picnic",
+          "key": "theme",
+          "next": "people_has_link"
+        },
+        {
+          "id": "people_has_link",
+          "type": "yesno",
+          "text": "Does the theme tie back to something real about them?",
+          "key": "hasLink",
+          "yes": "people_link",
+          "no": "people_setting",
+          "categoryText": {
+            "engagement": "Does the theme tie back to something real about the two of them?",
+            "family": "Does the theme tie back to something real about this family?",
+            "maternity": "Does the theme tie back to something real about them or this baby?"
+          }
+        },
+        {
+          "id": "people_link",
+          "type": "short",
+          "text": "What's the connection, in a few words?",
+          "placeholder": "e.g. how her parents met",
+          "key": "link",
+          "next": "people_setting"
+        },
+        {
+          "id": "people_setting",
+          "type": "short",
+          "text": "Where does it play out, in a few words?",
+          "hint": "Bonus points if the place means something to them.",
+          "placeholder": "e.g. a roadside motel",
+          "key": "setting",
+          "next": "people_look"
+        },
+        {
+          "id": "people_look",
+          "type": "short",
+          "text": "Any era, movie or reference it's borrowing from?",
+          "hint": "A decade, a film, a painter, a photographer.",
+          "placeholder": "e.g. '70s family snapshots",
+          "key": "look",
+          "next": "people_feel"
+        },
+        {
+          "id": "people_feel",
+          "type": "short",
+          "text": "Last one: in a few words, how should it feel?",
+          "placeholder": "e.g. warm and a little messy",
+          "key": "feel",
+          "next": "END"
+        }
+      ],
+      "summaries": [
+        {
+          "when": {
+            "style": true
+          },
+          "template": "A candid session[[ of them being {them}]][[, built around {ritual}]][[ at {place}]].[[ Don't miss {moment}.]][[ It should feel {feel}.]]"
+        },
+        {
+          "when": {
+            "style": false,
+            "story": true
+          },
+          "template": "A styled little story[[ about {plot}]][[, {real}]][[, set at {setting}]][[, with the look of {look}]].[[ It should feel {feel}.]]"
+        },
+        {
+          "when": {
+            "style": false,
+            "story": false
+          },
+          "template": "A styled session[[ built around {theme}]][[, a nod to {link}]][[, set at {setting}]][[, with the look of {look}]].[[ It should feel {feel}.]]"
+        },
+        {
+          "when": {},
+          "template": "A session that's true to who they are[[, set at {setting}]][[ at {place}]].[[ It should feel {feel}.]]"
+        }
+      ]
+    },
+    {
+      "id": "wedding",
+      "label": "Wedding",
+      "categories": [
+        "wedding"
+      ],
+      "start": "wedding_q1",
+      "nodes": [
+        {
+          "id": "wedding_q1",
+          "type": "yesno",
+          "text": "Is this a real wedding day, not a styled shoot?",
+          "hint": "Real days aren't yours to direct, so we'll find a theme to follow, not a plot.",
+          "key": "real",
+          "yes": "wedding_approach",
+          "no": "wedding_story"
+        },
+        {
+          "id": "wedding_approach",
+          "type": "yesno",
+          "text": "Do you want to lean more candid and documentary than posed?",
+          "hint": "Either way you're following the day. This is just how much you step in.",
+          "key": "approach",
+          "yes": "wedding_thread",
+          "no": "wedding_thread",
+          "yesValue": "documentary-style",
+          "noValue": "polished, editorial"
+        },
+        {
+          "id": "wedding_thread",
+          "type": "short",
+          "text": "What thread do you want to follow through the day?",
+          "hint": "You can't script the day, but you can pick what to notice.",
+          "placeholder": "e.g. two families becoming one",
+          "key": "thread",
+          "next": "wedding_moment"
+        },
+        {
+          "id": "wedding_moment",
+          "type": "short",
+          "text": "Which part of the day matters most to the two of them?",
+          "placeholder": "e.g. the first look",
+          "key": "moment",
+          "next": "wedding_has_ritual"
+        },
+        {
+          "id": "wedding_has_ritual",
+          "type": "yesno",
+          "text": "Are there any traditions or rituals you'll want to honor?",
+          "hint": "Cultural, religious, or just a family thing.",
+          "key": "hasRitual",
+          "yes": "wedding_ritual",
+          "no": "wedding_feel"
+        },
+        {
+          "id": "wedding_ritual",
+          "type": "short",
+          "text": "Which ones, in a few words?",
+          "placeholder": "e.g. the tea ceremony",
+          "key": "ritual",
+          "next": "wedding_feel"
+        },
+        {
+          "id": "wedding_story",
+          "type": "yesno",
+          "text": "Is there a little story to it, with a beginning, middle and end?",
+          "hint": "No is totally fine. A theme or a look counts as an idea too.",
+          "key": "story",
+          "yes": "wedding_plot",
+          "no": "wedding_theme"
+        },
+        {
+          "id": "wedding_plot",
+          "type": "short",
+          "text": "In a few words, what's the story about?",
+          "placeholder": "e.g. a runaway bride at dawn",
+          "key": "plot",
+          "next": "wedding_setting"
+        },
+        {
+          "id": "wedding_theme",
+          "type": "short",
+          "text": "What's the theme or idea, in a few words?",
+          "hint": "Think of it like a title for the shoot.",
+          "placeholder": "e.g. a '20s speakeasy elopement",
+          "key": "theme",
+          "next": "wedding_setting"
+        },
+        {
+          "id": "wedding_setting",
+          "type": "short",
+          "text": "Where does it play out, in a few words?",
+          "placeholder": "e.g. a roadside chapel",
+          "key": "setting",
+          "next": "wedding_look"
+        },
+        {
+          "id": "wedding_look",
+          "type": "short",
+          "text": "Any era, movie or reference it's borrowing from?",
+          "hint": "A decade, a film, a painter, a photographer.",
+          "placeholder": "e.g. a '90s bridal magazine",
+          "key": "look",
+          "next": "wedding_feel"
+        },
+        {
+          "id": "wedding_feel",
+          "type": "short",
+          "text": "Last one: in a few words, how should it feel?",
+          "placeholder": "e.g. romantic and a little wild",
+          "key": "feel",
+          "next": "END"
+        }
+      ],
+      "summaries": [
+        {
+          "when": {
+            "real": true
+          },
+          "template": "A[[ {approach}]] take on their wedding day[[, centered on {thread}]][[, honoring {ritual}]].[[ Don't miss {moment}.]][[ It should feel {feel}.]]"
+        },
+        {
+          "when": {
+            "real": false,
+            "story": true
+          },
+          "template": "A styled wedding story[[ about {plot}]][[, set at {setting}]][[, with the look of {look}]].[[ It should feel {feel}.]]"
+        },
+        {
+          "when": {
+            "real": false,
+            "story": false
+          },
+          "template": "A styled wedding shoot[[ built around {theme}]][[, set at {setting}]][[, with the look of {look}]].[[ It should feel {feel}.]]"
+        },
+        {
+          "when": {},
+          "template": "A wedding shoot that's true to the couple[[, centered on {thread}]][[, built around {theme}]].[[ It should feel {feel}.]]"
+        }
+      ]
+    },
+    {
+      "id": "event",
+      "label": "Event: find the theme",
+      "categories": [
+        "event"
+      ],
+      "start": "event_q1",
+      "nodes": [
+        {
+          "id": "event_q1",
+          "type": "yesno",
+          "text": "Is this {category} centered on a stage, with performers or speakers everyone's watching?",
+          "hint": "Yes for gigs, shows, talks and recitals. No for parties, openings and mixers.",
+          "key": "stage",
+          "yes": "event_show",
+          "no": "event_occasion"
+        },
+        {
+          "id": "event_show",
+          "type": "short",
+          "text": "What's the show, in a few words?",
+          "hint": "A gig, a keynote, a recital, a comedy night…",
+          "placeholder": "e.g. a sold-out punk show",
+          "key": "what",
+          "next": "event_show_theme"
+        },
+        {
+          "id": "event_show_theme",
+          "type": "short",
+          "text": "In a few words, what's the theme or energy you want to bottle up?",
+          "hint": "You can't script it, so pick the thread you'll follow.",
+          "placeholder": "e.g. electric, sweaty joy",
+          "key": "theme",
+          "next": "event_side"
+        },
+        {
+          "id": "event_side",
+          "type": "yesno",
+          "text": "Are you telling it from the crowd's side, rather than the stage's?",
+          "hint": "Say no if you'll be with the performers: on stage, in the wings, backstage.",
+          "key": "crowd",
+          "yes": "event_crowd_motif",
+          "no": "event_stage_motif"
+        },
+        {
+          "id": "event_crowd_motif",
+          "type": "short",
+          "text": "What will you keep hunting for in the crowd?",
+          "hint": "A recurring detail that ties the whole set together.",
+          "placeholder": "e.g. hands in the air",
+          "key": "motif",
+          "next": "event_show_moment"
+        },
+        {
+          "id": "event_stage_motif",
+          "type": "short",
+          "text": "What will you keep hunting for on stage and behind it?",
+          "hint": "A recurring detail that ties the whole set together.",
+          "placeholder": "e.g. sweat under hot lights",
+          "key": "motif",
+          "next": "event_show_moment"
+        },
+        {
+          "id": "event_show_moment",
+          "type": "short",
+          "text": "Which moment can't you miss?",
+          "hint": "Know when it's coming so you're already in position.",
+          "placeholder": "e.g. the encore",
+          "key": "moment",
+          "next": "event_candid"
+        },
+        {
+          "id": "event_occasion",
+          "type": "short",
+          "text": "What's the occasion, in a few words?",
+          "hint": "A party, a gala, a launch, an opening…",
+          "placeholder": "e.g. a rooftop 40th",
+          "key": "what",
+          "next": "event_eyes"
+        },
+        {
+          "id": "event_eyes",
+          "type": "short",
+          "text": "Whose eyes are you telling it through?",
+          "hint": "The host, the guest of honor, the guests, even the staff.",
+          "placeholder": "e.g. the birthday girl",
+          "key": "who",
+          "next": "event_theme"
+        },
+        {
+          "id": "event_theme",
+          "type": "short",
+          "text": "In a few words, what's the theme or energy you want to bottle up?",
+          "hint": "You can't script it, so pick the thread you'll follow.",
+          "placeholder": "e.g. glamour with a wink",
+          "key": "theme",
+          "next": "event_planned"
+        },
+        {
+          "id": "event_planned",
+          "type": "yesno",
+          "text": "Is there a big planned moment, like a toast, a reveal or a cake cutting?",
+          "hint": "Say no if it's more of a hang with no real run-of-show.",
+          "key": "planned",
+          "yes": "event_moment",
+          "no": "event_inbetween"
+        },
+        {
+          "id": "event_moment",
+          "type": "short",
+          "text": "Which moment can't you miss?",
+          "hint": "Know when it's coming so you're already in position.",
+          "placeholder": "e.g. the surprise toast",
+          "key": "moment",
+          "next": "event_motif"
+        },
+        {
+          "id": "event_inbetween",
+          "type": "short",
+          "text": "Then it lives in the in-between. What should you watch for?",
+          "placeholder": "e.g. old friends catching up",
+          "key": "inbetween",
+          "next": "event_motif"
+        },
+        {
+          "id": "event_motif",
+          "type": "short",
+          "text": "What small detail will you keep coming back to?",
+          "hint": "A recurring detail that ties the whole set together.",
+          "placeholder": "e.g. string lights",
+          "key": "motif",
+          "next": "event_candid"
+        },
+        {
+          "id": "event_candid",
+          "type": "yesno",
+          "text": "Last one: will you stay fly-on-the-wall, with no posing or directing?",
+          "hint": "Say no if you'll also grab group shots or quick portraits.",
+          "key": "candid",
+          "yes": "END",
+          "no": "END",
+          "yesValue": "fly-on-the-wall",
+          "noValue": "mostly candid"
+        }
+      ],
+      "summaries": [
+        {
+          "when": {
+            "stage": true,
+            "crowd": true
+          },
+          "template": "[[{theme}: ]]a[[ {candid}]] look[[ at {what}]], told from the crowd.[[ Keep coming back to {motif}.]][[ Don't miss {moment}.]]"
+        },
+        {
+          "when": {
+            "stage": true,
+            "crowd": false
+          },
+          "template": "[[{theme}: ]]a[[ {candid}]] look[[ at {what}]], told from the stage and the wings.[[ Keep coming back to {motif}.]][[ Don't miss {moment}.]]"
+        },
+        {
+          "when": {
+            "stage": false,
+            "planned": true
+          },
+          "template": "[[{theme}: ]]a[[ {candid}]] look[[ at {what}]][[, through the eyes of {who}]].[[ Keep coming back to {motif}.]][[ Don't miss {moment}.]]"
+        },
+        {
+          "when": {
+            "stage": false,
+            "planned": false
+          },
+          "template": "[[{theme}: ]]a[[ {candid}]] look[[ at {what}]][[, through the eyes of {who}]].[[ Keep coming back to {motif}.]][[ Watch the in-between: {inbetween}.]]"
+        },
+        {
+          "when": {},
+          "template": "[[{theme}: ]]event coverage[[ of {what}]][[, through the eyes of {who}]][[, shot {candid}]].[[ Keep coming back to {motif}.]][[ Don't miss {moment}.]][[ Watch the in-between: {inbetween}.]]"
+        }
+      ]
+    },
+    {
+      "id": "brand",
+      "label": "Brand, commercial & content",
+      "categories": [
+        "branding",
+        "commercial",
+        "content_shoot"
+      ],
+      "start": "brand_q1",
+      "nodes": [
+        {
+          "id": "brand_q1",
+          "type": "yesno",
+          "text": "Should it feel like real life, more than clean shots with one clear star?",
+          "hint": "Say no for clean, front-and-center shots.",
+          "key": "lifestyle",
+          "yes": "brand_scene",
+          "no": "brand_hero",
+          "categoryText": {
+            "branding": "Should it show the brand in real-life moments, not just clean portraits or product shots?",
+            "commercial": "Should we see the product in use in real life, not just shot on its own?",
+            "content_shoot": "Should the content feel like real life in motion, not clean, posed setups?"
+          }
+        },
+        {
+          "id": "brand_scene",
+          "type": "short",
+          "text": "What everyday moment are we showing?",
+          "placeholder": "e.g. lazy sunday mornings",
+          "key": "scene",
+          "next": "brand_subject",
+          "categoryText": {
+            "branding": "What real-life moment shows what the brand is about?",
+            "commercial": "What moment is the product being used in?",
+            "content_shoot": "What everyday moment should the content live in?"
+          }
+        },
+        {
+          "id": "brand_hero",
+          "type": "short",
+          "text": "What should be front and center?",
+          "placeholder": "e.g. the new cold brew",
+          "key": "hero",
+          "next": "brand_subject",
+          "categoryText": {
+            "branding": "Who or what should be front and center? The founder, the product?",
+            "commercial": "Which product, or which detail of it, should be the star?",
+            "content_shoot": "What should be front and center in every frame?"
+          }
+        },
+        {
+          "id": "brand_subject",
+          "type": "short",
+          "text": "Who's the client, in a few words?",
+          "placeholder": "e.g. a coffee roaster",
+          "key": "subject",
+          "next": "brand_takeaway",
+          "categoryText": {
+            "branding": "Whose brand is this, in a few words?",
+            "commercial": "Who's the client or product, in a few words?",
+            "content_shoot": "Whose feed is this for, in a few words?"
+          }
+        },
+        {
+          "id": "brand_takeaway",
+          "type": "short",
+          "text": "What's the one thing people should take away?",
+          "hint": "One idea beats five.",
+          "placeholder": "e.g. it's made with care",
+          "key": "takeaway",
+          "next": "brand_audience",
+          "categoryText": {
+            "branding": "What's the one thing people should know about the brand after seeing these?",
+            "commercial": "What's the one thing a viewer should take away about the product?",
+            "content_shoot": "What's the one thing a scroller should get in a second?"
+          }
+        },
+        {
+          "id": "brand_audience",
+          "type": "short",
+          "text": "Who should see it, and where?",
+          "hint": "Who they are, plus where they'll see it.",
+          "placeholder": "e.g. new moms on Instagram",
+          "key": "audience",
+          "next": "brand_words",
+          "categoryText": {
+            "branding": "Who's the dream customer, and where will they see these?",
+            "commercial": "Who's the buyer, and where will the ads reach them?",
+            "content_shoot": "Who should stop scrolling, and on which app?"
+          }
+        },
+        {
+          "id": "brand_words",
+          "type": "short",
+          "text": "Three words for its personality?",
+          "hint": "Adjectives work best.",
+          "placeholder": "e.g. warm, bold, honest",
+          "key": "words",
+          "next": "brand_polish",
+          "categoryText": {
+            "branding": "Three words for the brand's personality?",
+            "commercial": "Three words for how the product should come across?",
+            "content_shoot": "Three words for the account's personality?"
+          }
+        },
+        {
+          "id": "brand_polish",
+          "type": "yesno",
+          "text": "Last one: should it look polished and high-end, rather than raw and real?",
+          "key": "polish",
+          "yes": "END",
+          "no": "END",
+          "yesValue": "polished",
+          "noValue": "raw, natural",
+          "categoryText": {
+            "commercial": "Last one: should it look glossy and high-end, rather than raw and real?",
+            "content_shoot": "Last one: should it look polished, rather than raw and shot-on-a-phone?"
+          }
+        }
+      ],
+      "summaries": [
+        {
+          "when": {
+            "lifestyle": true
+          },
+          "template": "A[[ {polish}]] lifestyle shoot[[ for {subject}]][[, built around {scene}]][[, aimed at {audience}]].[[ It should feel {words}.]][[ The message: {takeaway}.]]"
+        },
+        {
+          "when": {
+            "lifestyle": false
+          },
+          "template": "A[[ {polish}]] shoot[[ for {subject}]][[, with {hero} front and center]][[, aimed at {audience}]].[[ It should feel {words}.]][[ The message: {takeaway}.]]"
+        },
+        {
+          "when": {},
+          "template": "A[[ {polish}]] shoot[[ for {subject}]][[, aimed at {audience}]].[[ It should feel {words}.]][[ The message: {takeaway}.]]"
+        }
+      ]
+    },
+    {
+      "id": "headshot",
+      "label": "Headshot",
+      "categories": [
+        "headshot"
+      ],
+      "start": "headshot_q1",
+      "nodes": [
+        {
+          "id": "headshot_q1",
+          "type": "yesno",
+          "text": "Is this for acting or modeling, like casting and agent submissions?",
+          "hint": "Say no for work, business or personal-brand headshots.",
+          "key": "acting",
+          "yes": "headshot_actor",
+          "no": "headshot_who"
+        },
+        {
+          "id": "headshot_actor",
+          "type": "short",
+          "text": "Who's in front of the camera, in a few words?",
+          "placeholder": "e.g. a stage actor in her 20s",
+          "key": "who",
+          "next": "headshot_roles"
+        },
+        {
+          "id": "headshot_roles",
+          "type": "short",
+          "text": "What kinds of roles should these get them called in for?",
+          "placeholder": "e.g. quirky best-friend roles",
+          "key": "roles",
+          "next": "headshot_looks"
+        },
+        {
+          "id": "headshot_looks",
+          "type": "yesno",
+          "text": "Want two looks, a bright commercial one and a moodier theatrical one?",
+          "key": "looks",
+          "yes": "headshot_words",
+          "no": "headshot_words",
+          "yesValue": "Two looks: bright commercial and moody theatrical",
+          "noValue": "One strong, consistent look"
+        },
+        {
+          "id": "headshot_who",
+          "type": "short",
+          "text": "What do they do, in a few words?",
+          "placeholder": "e.g. a family law attorney",
+          "key": "who",
+          "next": "headshot_takeaway"
+        },
+        {
+          "id": "headshot_takeaway",
+          "type": "short",
+          "text": "What should it say about how they work?",
+          "hint": "The one thing a client should pick up at a glance.",
+          "placeholder": "e.g. they really listen",
+          "key": "takeaway",
+          "next": "headshot_where"
+        },
+        {
+          "id": "headshot_where",
+          "type": "short",
+          "text": "Where will it be used?",
+          "placeholder": "e.g. LinkedIn and their site",
+          "key": "where",
+          "next": "headshot_setting"
+        },
+        {
+          "id": "headshot_setting",
+          "type": "yesno",
+          "text": "Should it be on a clean backdrop, rather than in their own space?",
+          "hint": "Their own space means their office, studio, shop, wherever they work.",
+          "key": "setting",
+          "yes": "headshot_polish",
+          "no": "headshot_polish",
+          "yesValue": "on a clean backdrop",
+          "noValue": "in their own space"
+        },
+        {
+          "id": "headshot_polish",
+          "type": "yesno",
+          "text": "Should it feel classic and polished, rather than relaxed and natural?",
+          "key": "polish",
+          "yes": "headshot_words",
+          "no": "headshot_words",
+          "yesValue": "classic, polished",
+          "noValue": "relaxed, natural"
+        },
+        {
+          "id": "headshot_words",
+          "type": "short",
+          "text": "Last one: three words for how they should come across?",
+          "placeholder": "e.g. warm, sharp, wry",
+          "key": "words",
+          "next": "END"
+        }
+      ],
+      "summaries": [
+        {
+          "when": {
+            "acting": true
+          },
+          "template": "Casting headshots[[ for {who}]][[, to land {roles}]].[[ {looks}.]][[ They should come across {words}.]]"
+        },
+        {
+          "when": {
+            "acting": false
+          },
+          "template": "A[[ {polish}]] headshot[[ for {who}]][[, {setting}]].[[ It should say {takeaway}.]][[ They should come across {words}.]][[ Made for {where}.]]"
+        },
+        {
+          "when": {},
+          "template": "A[[ {polish}]] headshot[[ for {who}]].[[ They should come across {words}.]]"
+        }
+      ]
+    },
+    {
+      "id": "publicity",
+      "label": "Publicity",
+      "categories": [
+        "publicity"
+      ],
+      "start": "publicity_q1",
+      "nodes": [
+        {
+          "id": "publicity_q1",
+          "type": "yesno",
+          "text": "Is this for a specific release or announcement?",
+          "hint": "Like an album, a book, a film, a tour or an opening.",
+          "key": "release",
+          "yes": "publicity_news",
+          "no": "publicity_who"
+        },
+        {
+          "id": "publicity_news",
+          "type": "short",
+          "text": "What's being announced, in a few words?",
+          "placeholder": "e.g. her debut album",
+          "key": "news",
+          "next": "publicity_who"
+        },
+        {
+          "id": "publicity_who",
+          "type": "short",
+          "text": "Who's in the spotlight, in a few words?",
+          "placeholder": "e.g. an indie folk singer",
+          "key": "who",
+          "next": "publicity_scene"
+        },
+        {
+          "id": "publicity_scene",
+          "type": "yesno",
+          "text": "Should we put them in a scene, rather than on a simple backdrop?",
+          "hint": "A scene builds a world around them. A backdrop keeps it all about them.",
+          "key": "scene",
+          "yes": "publicity_world",
+          "no": "publicity_takeaway"
+        },
+        {
+          "id": "publicity_world",
+          "type": "short",
+          "text": "Where are we, in a few words?",
+          "hint": "A place, a time, a world.",
+          "placeholder": "e.g. a smoky jazz club",
+          "key": "world",
+          "next": "publicity_takeaway"
+        },
+        {
+          "id": "publicity_takeaway",
+          "type": "short",
+          "text": "At a glance, what should these photos say?",
+          "placeholder": "e.g. this era is darker",
+          "key": "takeaway",
+          "next": "publicity_words"
+        },
+        {
+          "id": "publicity_words",
+          "type": "short",
+          "text": "Three words for their public persona?",
+          "placeholder": "e.g. witty, magnetic, strange",
+          "key": "words",
+          "next": "publicity_polish"
+        },
+        {
+          "id": "publicity_polish",
+          "type": "yesno",
+          "text": "Last one: should it look glossy and polished, rather than raw and lived-in?",
+          "key": "polish",
+          "yes": "END",
+          "no": "END",
+          "yesValue": "polished",
+          "noValue": "raw, lived-in"
+        }
+      ],
+      "summaries": [
+        {
+          "when": {
+            "scene": true
+          },
+          "template": "[[{polish} ]]press photos[[ of {who}]][[ for {news}]][[, set in {world}]].[[ At a glance: {takeaway}.]][[ Their persona: {words}.]]"
+        },
+        {
+          "when": {
+            "scene": false
+          },
+          "template": "[[{polish} ]]press portraits[[ of {who}]][[ for {news}]], on a simple backdrop.[[ At a glance: {takeaway}.]][[ Their persona: {words}.]]"
+        },
+        {
+          "when": {},
+          "template": "[[{polish} ]]press photos[[ of {who}]][[ for {news}]].[[ At a glance: {takeaway}.]][[ Their persona: {words}.]]"
+        }
+      ]
+    },
+    {
+      "id": "video",
+      "label": "Video",
+      "categories": [
+        "video"
+      ],
+      "start": "video_q1",
+      "nodes": [
+        {
+          "id": "video_q1",
+          "type": "yesno",
+          "text": "Is this video telling a story, with a character and something happening to them?",
+          "hint": "Narrative music videos count. Say no for promos, recaps or behind-the-scenes.",
+          "key": "narrative",
+          "yes": "video_who",
+          "no": "video_promo"
+        },
+        {
+          "id": "video_who",
+          "type": "short",
+          "text": "Who's the story about, in a few words?",
+          "placeholder": "e.g. a retired boxer",
+          "key": "character",
+          "next": "video_doing"
+        },
+        {
+          "id": "video_doing",
+          "type": "short",
+          "text": "What are they doing when we first meet them?",
+          "placeholder": "e.g. closing up his old gym",
+          "key": "situation",
+          "next": "video_arc"
+        },
+        {
+          "id": "video_arc",
+          "type": "yesno",
+          "text": "Does something happen that changes things by the end?",
+          "hint": "Say no if it's more of a vibe that lives in one moment.",
+          "key": "arc",
+          "yes": "video_turn",
+          "no": "video_image"
+        },
+        {
+          "id": "video_turn",
+          "type": "short",
+          "text": "What changes things? Finish this: “until…”",
+          "placeholder": "e.g. a kid asks for lessons",
+          "key": "turn",
+          "next": "video_setting"
+        },
+        {
+          "id": "video_image",
+          "type": "short",
+          "text": "What's the one image that sums up the whole vibe?",
+          "placeholder": "e.g. gloves hanging on a nail",
+          "key": "image",
+          "next": "video_setting"
+        },
+        {
+          "id": "video_setting",
+          "type": "short",
+          "text": "Where's it set?",
+          "hint": "A real spot or just the kind of place.",
+          "placeholder": "e.g. a small rust-belt town",
+          "key": "setting",
+          "next": "video_feel"
+        },
+        {
+          "id": "video_feel",
+          "type": "short",
+          "text": "In a few words, how should it feel?",
+          "placeholder": "e.g. bittersweet and hopeful",
+          "key": "feeling",
+          "next": "video_words"
+        },
+        {
+          "id": "video_words",
+          "type": "yesno",
+          "text": "Last one: will it be mostly wordless, carried by visuals, music and sound?",
+          "hint": "Say no if people talk it through on camera.",
+          "key": "dialogue",
+          "yes": "END",
+          "no": "END",
+          "yesValue": "mostly wordless",
+          "noValue": "dialogue-driven"
+        },
+        {
+          "id": "video_promo",
+          "type": "yesno",
+          "text": "Is it promoting something, like a brand, product, song or event?",
+          "hint": "Say no if it's more of a mini-doc, recap or behind-the-scenes piece.",
+          "key": "promo",
+          "yes": "video_product",
+          "no": "video_subject"
+        },
+        {
+          "id": "video_product",
+          "type": "short",
+          "text": "What's it promoting, in a few words?",
+          "placeholder": "e.g. a local coffee roaster",
+          "key": "product",
+          "next": "video_audience"
+        },
+        {
+          "id": "video_audience",
+          "type": "short",
+          "text": "Who needs to see it?",
+          "placeholder": "e.g. young creatives",
+          "key": "audience",
+          "next": "video_message"
+        },
+        {
+          "id": "video_message",
+          "type": "short",
+          "text": "If they only remember one thing, what is it?",
+          "placeholder": "e.g. it's roasted fresh daily",
+          "key": "message",
+          "next": "video_tone"
+        },
+        {
+          "id": "video_tone",
+          "type": "short",
+          "text": "In a few words, what's the tone?",
+          "placeholder": "e.g. warm and cheeky",
+          "key": "tone",
+          "next": "video_platform"
+        },
+        {
+          "id": "video_platform",
+          "type": "short",
+          "text": "Where will it mostly play?",
+          "hint": "This decides the shape: vertical, square or wide.",
+          "placeholder": "e.g. Instagram reels",
+          "key": "platform",
+          "next": "video_hook"
+        },
+        {
+          "id": "video_hook",
+          "type": "short",
+          "text": "Last one: what's the opening shot that hooks people in the first seconds?",
+          "placeholder": "e.g. a slow-mo espresso pour",
+          "key": "hook",
+          "next": "END"
+        },
+        {
+          "id": "video_subject",
+          "type": "short",
+          "text": "What's it capturing, in a few words?",
+          "placeholder": "e.g. a day in a family bakery",
+          "key": "subject",
+          "next": "video_style"
+        },
+        {
+          "id": "video_style",
+          "type": "yesno",
+          "text": "Will you mostly follow along as things happen, without directing?",
+          "hint": "Say no if you'll stage or re-create some scenes.",
+          "key": "style",
+          "yes": "video_focus",
+          "no": "video_focus",
+          "yesValue": "shot fly-on-the-wall",
+          "noValue": "lightly directed"
+        },
+        {
+          "id": "video_focus",
+          "type": "short",
+          "text": "What should it keep coming back to?",
+          "hint": "The thread or theme that ties it all together.",
+          "placeholder": "e.g. three generations at work",
+          "key": "focus",
+          "next": "video_doc_moment"
+        },
+        {
+          "id": "video_doc_moment",
+          "type": "short",
+          "text": "What's one moment you can't miss?",
+          "placeholder": "e.g. the first loaf of the day",
+          "key": "moment",
+          "next": "video_doc_feel"
+        },
+        {
+          "id": "video_doc_feel",
+          "type": "short",
+          "text": "Last one: in a few words, how should it feel?",
+          "placeholder": "e.g. cozy and unhurried",
+          "key": "feeling",
+          "next": "END"
+        }
+      ],
+      "summaries": [
+        {
+          "when": {
+            "narrative": true,
+            "arc": true
+          },
+          "template": "A[[ {dialogue}]] short film[[ about {character}]][[, caught {situation}]][[, until {turn}]][[, set in {setting}]].[[ It should feel {feeling}.]]"
+        },
+        {
+          "when": {
+            "narrative": true,
+            "arc": false
+          },
+          "template": "A[[ {dialogue}]] mood piece[[ about {character}]][[, caught {situation}]][[, set in {setting}]].[[ It lingers on {image}.]][[ It should feel {feeling}.]]"
+        },
+        {
+          "when": {
+            "narrative": false,
+            "promo": true
+          },
+          "template": "[[{tone}: ]]a promo[[ for {product}]][[, aimed at {audience}]][[ on {platform}]].[[ It opens on {hook}.]][[ The message: {message}.]]"
+        },
+        {
+          "when": {
+            "narrative": false,
+            "promo": false
+          },
+          "template": "[[{feeling}: ]]a mini-doc[[ capturing {subject}]][[, {style}]].[[ It keeps coming back to {focus}.]][[ Don't miss {moment}.]]"
+        },
+        {
+          "when": {},
+          "template": "A video[[ about {character}]][[ for {product}]][[ capturing {subject}]].[[ It should feel {feeling}.]][[ It should feel {tone}.]]"
+        }
+      ]
+    },
+    {
+      "id": "lighting",
+      "label": "Lighting test",
+      "categories": [
+        "lighting_test"
+      ],
+      "start": "lighting_q1",
+      "nodes": [
+        {
+          "id": "lighting_q1",
+          "type": "yesno",
+          "text": "Are you comparing a few lighting setups side by side?",
+          "hint": "Say no if you're dialing in one specific look.",
+          "key": "multi",
+          "yes": "lighting_compare",
+          "no": "lighting_look"
+        },
+        {
+          "id": "lighting_look",
+          "type": "short",
+          "text": "What's the look you're testing?",
+          "placeholder": "e.g. hard window light",
+          "key": "look",
+          "next": "lighting_learn"
+        },
+        {
+          "id": "lighting_learn",
+          "type": "short",
+          "text": "Finish this: I want to figure out…",
+          "placeholder": "e.g. how deep the shadows can go",
+          "key": "learn",
+          "next": "lighting_mood"
+        },
+        {
+          "id": "lighting_compare",
+          "type": "short",
+          "text": "Which setups are you comparing?",
+          "placeholder": "e.g. softbox vs. bare bulb",
+          "key": "compare",
+          "next": "lighting_learn_compare"
+        },
+        {
+          "id": "lighting_learn_compare",
+          "type": "short",
+          "text": "Finish this: I want to figure out…",
+          "placeholder": "e.g. which one flatters skin",
+          "key": "learn",
+          "next": "lighting_mood"
+        },
+        {
+          "id": "lighting_mood",
+          "type": "short",
+          "text": "In a few words, what mood should the light create?",
+          "placeholder": "e.g. gritty and noir",
+          "key": "mood",
+          "next": "lighting_has_ref"
+        },
+        {
+          "id": "lighting_has_ref",
+          "type": "yesno",
+          "text": "Do you have a reference image or photographer in mind?",
+          "key": "hasRef",
+          "yes": "lighting_ref",
+          "no": "lighting_sitter"
+        },
+        {
+          "id": "lighting_ref",
+          "type": "short",
+          "text": "Who or what's the reference?",
+          "placeholder": "e.g. Peter Lindbergh portraits",
+          "key": "ref",
+          "next": "lighting_sitter"
+        },
+        {
+          "id": "lighting_sitter",
+          "type": "yesno",
+          "text": "Last one: will a real person be sitting in for it?",
+          "hint": "Say no if you're using a stand-in or a mannequin.",
+          "key": "sitter",
+          "yes": "END",
+          "no": "END",
+          "yesValue": "on a live model",
+          "noValue": "on a stand-in"
+        }
+      ],
+      "summaries": [
+        {
+          "when": {
+            "multi": true
+          },
+          "template": "A side-by-side lighting test[[ of {compare}]][[, shot {sitter}]].[[ It should feel {mood}.]][[ The goal: figure out {learn}.]][[ Think {ref}.]]"
+        },
+        {
+          "when": {
+            "multi": false
+          },
+          "template": "A lighting test[[ of {look}]][[, shot {sitter}]].[[ It should feel {mood}.]][[ The goal: figure out {learn}.]][[ Think {ref}.]]"
+        },
+        {
+          "when": {},
+          "template": "A lighting test[[ of {look}]][[ of {compare}]][[, shot {sitter}]].[[ It should feel {mood}.]][[ The goal: figure out {learn}.]]"
+        }
+      ]
+    }
+  ];
+
+
+  function conceptHelperCategory() {
+    return document.getElementById('shootCategory').value || '';
+  }
+
+  function conceptHelperCategoryLabel() {
+    const cat = conceptHelperCategory();
+    if (!cat || !CATEGORY_LABELS[cat]) return 'shoot';
+    // "editorial shoot", but "test shoot" rather than "test shoot shoot".
+    const label = CATEGORY_LABELS[cat].toLowerCase();
+    return /\bshoot$/.test(label) ? label : `${label} shoot`;
+  }
+
+  function conceptFlowFor(category) {
+    return CONCEPT_FLOWS.find(f => f.categories.includes(category))
+      || CONCEPT_FLOWS.find(f => f.categories.includes(''))
+      || CONCEPT_FLOWS[0];
+  }
+
+  function conceptHelperNode(id) {
+    return conceptHelper.flow.nodes.find(n => n.id === id) || null;
+  }
+
+  // Answers along the path actually taken (history + current), by key — so
+  // an answer from a branch the user backed out of never leaks into the
+  // summary.
+  function conceptHelperAnswers() {
+    const out = {};
+    [...conceptHelper.history, conceptHelper.nodeId].forEach(id => {
+      const node = id && conceptHelperNode(id);
+      if (node && Object.prototype.hasOwnProperty.call(conceptHelper.answers, id)) out[node.key] = conceptHelper.answers[id];
+    });
+    return out;
+  }
+
+  function conceptHelperFill(template, answers) {
+    const value = (key) => {
+      if (key === 'category') return conceptHelperCategoryLabel();
+      const v = answers[key];
+      if (typeof v !== 'string') return '';
+      return v.trim().replace(/[.!?…]+$/, '');
+    };
+    let text = template.replace(/\[\[([\s\S]*?)\]\]/g, (_, inner) => {
+      const keys = [...inner.matchAll(/\{(\w+)\}/g)].map(m => m[1]);
+      return keys.every(k => value(k)) ? inner : '';
+    });
+    text = text.replace(/\{(\w+)\}/g, (_, k) => value(k));
+    text = text.replace(/\s+/g, ' ').replace(/\s+([,.;:!?])/g, '$1').replace(/([,;:])\1+/g, '$1')
+      .replace(/,\s*\./g, '.').replace(/…\./g, '.').replace(/\.{2,}/g, '.').trim();
+    if (!text) return '';
+    text = text.charAt(0).toUpperCase() + text.slice(1);
+    if (!/[.!?]$/.test(text)) text += '.';
+    return text;
+  }
+
+  function conceptHelperSummaryText() {
+    const answers = conceptHelperAnswers();
+    const match = conceptHelper.flow.summaries.find(sum => Object.entries(sum.when || {})
+      .every(([key, val]) => answers[key] === val));
+    return match ? conceptHelperFill(match.template, answers) : '';
+  }
+
+  function updateConceptHelperCount() {
+    const len = document.getElementById('conceptHelperSummary').value.trim().length;
+    const count = document.getElementById('conceptHelperCount');
+    const over = len > conceptHelperMax();
+    count.textContent = over
+      ? `${len}/${conceptHelperMax()} — trim a little to fit the Concept box`
+      : `${len}/${conceptHelperMax()}`;
+    count.classList.toggle('over', over);
+    document.getElementById('conceptHelperUseBtn').disabled = over || len === 0;
+  }
+
+  function renderConceptHelper() {
+    const h = conceptHelper;
+    const show = (id, on) => { document.getElementById(id).hidden = !on; };
+    const input = document.getElementById('conceptHelperInput');
+    if (h.ended) {
+      document.getElementById('conceptHelperStep').textContent = '';
+      document.getElementById('conceptHelperTitle').textContent = "Here's your concept";
+      document.getElementById('conceptHelperText').textContent = 'Change anything you like, then use it as your concept or write your own.';
+      show('conceptHelperHint', false);
+      show('conceptHelperInput', false);
+      show('conceptHelperSummary', true);
+      show('conceptHelperCount', true);
+      show('conceptHelperYesNo', false);
+      show('conceptHelperNextRow', false);
+      show('conceptHelperEndRow', true);
+      show('conceptHelperBackBtn', true);
+      show('conceptHelperRestartBtn', true);
+      updateConceptHelperCount();
+      return;
+    }
+    const node = conceptHelperNode(h.nodeId);
+    const cat = conceptHelperCategory();
+    const text = (node.categoryText && node.categoryText[cat]) || node.text;
+    document.getElementById('conceptHelperStep').textContent = `Question ${h.history.length + 1}`;
+    document.getElementById('conceptHelperTitle').textContent = "Let's think it through";
+    document.getElementById('conceptHelperText').textContent = text.replace(/\{category\}/g, conceptHelperCategoryLabel());
+    const hint = document.getElementById('conceptHelperHint');
+    hint.textContent = node.hint || '';
+    show('conceptHelperHint', !!node.hint);
+    const isShort = node.type === 'short';
+    show('conceptHelperInput', isShort);
+    show('conceptHelperSummary', false);
+    show('conceptHelperCount', false);
+    show('conceptHelperYesNo', !isShort);
+    show('conceptHelperNextRow', isShort);
+    show('conceptHelperEndRow', false);
+    show('conceptHelperBackBtn', h.history.length > 0);
+    show('conceptHelperRestartBtn', false);
+    if (isShort) {
+      input.placeholder = node.placeholder || '';
+      const prev = h.answers[h.nodeId];
+      input.value = typeof prev === 'string' ? prev : '';
+    }
+  }
+
+  function goConceptHelper(nextId) {
+    const h = conceptHelper;
+    h.history.push(h.nodeId);
+    if (!nextId || nextId === 'END' || !conceptHelperNode(nextId)) {
+      h.ended = true;
+      document.getElementById('conceptHelperSummary').value = conceptHelperSummaryText();
+    } else {
+      h.nodeId = nextId;
+    }
+    renderConceptHelper();
+  }
+
+  function openConceptHelper() {
+    if (!CONCEPT_FLOWS.length) return;
+    const flow = conceptFlowFor(conceptHelperCategory());
+    conceptHelper = { flow, nodeId: flow.start, history: [], answers: {}, ended: false };
+    renderConceptHelper();
+    document.getElementById('conceptHelperOverlay').hidden = false;
+  }
+
+  function closeConceptHelper() {
+    document.getElementById('conceptHelperOverlay').hidden = true;
+    conceptHelper = null;
+  }
+
+  document.getElementById('conceptHelperBtn').addEventListener('click', openConceptHelper);
+
+  document.getElementById('conceptHelperYesBtn').addEventListener('click', () => {
+    if (!conceptHelper || conceptHelper.ended) return;
+    const node = conceptHelperNode(conceptHelper.nodeId);
+    conceptHelper.answers[node.id] = node.yesValue !== undefined ? node.yesValue : true;
+    goConceptHelper(node.yes);
+  });
+
+  document.getElementById('conceptHelperNoBtn').addEventListener('click', () => {
+    if (!conceptHelper || conceptHelper.ended) return;
+    const node = conceptHelperNode(conceptHelper.nodeId);
+    conceptHelper.answers[node.id] = node.noValue !== undefined ? node.noValue : false;
+    goConceptHelper(node.no);
+  });
+
+  function nextConceptHelperShort() {
+    if (!conceptHelper || conceptHelper.ended) return;
+    const node = conceptHelperNode(conceptHelper.nodeId);
+    if (node.type !== 'short') return;
+    // Blank is fine — that part of the summary is simply left out.
+    conceptHelper.answers[node.id] = document.getElementById('conceptHelperInput').value.trim();
+    goConceptHelper(node.next);
+  }
+
+  document.getElementById('conceptHelperNextBtn').addEventListener('click', nextConceptHelperShort);
+
+  document.getElementById('conceptHelperInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); nextConceptHelperShort(); }
+  });
+
+  document.getElementById('conceptHelperBackBtn').addEventListener('click', () => {
+    const h = conceptHelper;
+    if (!h || !h.history.length) return;
+    h.nodeId = h.history.pop();
+    h.ended = false;
+    renderConceptHelper();
+  });
+
+  document.getElementById('conceptHelperRestartBtn').addEventListener('click', () => {
+    if (!conceptHelper) return;
+    const flow = conceptHelper.flow;
+    conceptHelper = { flow, nodeId: flow.start, history: [], answers: {}, ended: false };
+    renderConceptHelper();
+  });
+
+  document.getElementById('conceptHelperSummary').addEventListener('input', updateConceptHelperCount);
+
+  // Fills the Concept field (the real one — on the wizard slide it's typed
+  // into directly) and lets the form's own input listener save it.
+  document.getElementById('conceptHelperUseBtn').addEventListener('click', () => {
+    const text = document.getElementById('conceptHelperSummary').value.trim();
+    if (!text || text.length > conceptHelperMax()) return;
+    const premise = document.getElementById('shootPremise');
+    if (hasText(premise.value) && premise.value.trim() !== text
+      && !confirm('Replace what\'s already in Concept with this?')) return;
+    premise.value = text;
+    premise.dispatchEvent(new Event('input', { bubbles: true }));
+    syncFieldFilledState(premise);
+    closeConceptHelper();
+  });
+
+  // "Now that you've got it": back to the slide with the Concept box ready.
+  document.getElementById('conceptHelperWriteBtn').addEventListener('click', () => {
+    closeConceptHelper();
+    const premise = document.getElementById('shootPremise');
+    if (!premise.readOnly) premise.focus();
+  });
+
+  document.getElementById('conceptHelperCloseBtn').addEventListener('click', closeConceptHelper);
+
   document.getElementById('shootWizardDontShowBtn').addEventListener('click', () => {
     setNewShootGuideOn(false);
     endShootWizard();
@@ -12417,7 +14521,9 @@
 
   // ---------- Shoot mode: Quick review (editable Direction / Lighting setups) ----------
   const SHOOT_MODE_DIRECTION_FIELDS = [
-    ['premise', 'Concept', 200],
+    // Concept's limit comes from the field itself (raised to 300 so the
+    // concept helper's summaries fit), so the two can't drift apart.
+    ['premise', 'Concept', () => document.getElementById('shootPremise').maxLength || 300],
     ['character', 'Character/Personality', 1000],
     ['worldNotes', 'World-building notes', 1000],
     ['shootGoals', 'Shoot goals', 1000],
@@ -12468,7 +14574,8 @@
     if (kind === 'direction') {
       document.getElementById('shootModeReviewTitle').textContent = 'Direction';
       SHOOT_MODE_DIRECTION_FIELDS.forEach(([key, label, maxLength]) => {
-        body.appendChild(renderShootModeReviewField(label, shoot[key] || '', maxLength, (newValue) => {
+        const limit = typeof maxLength === 'function' ? maxLength() : maxLength;
+        body.appendChild(renderShootModeReviewField(label, shoot[key] || '', limit, (newValue) => {
           shoot[key] = newValue;
           commit();
         }));

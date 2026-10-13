@@ -3988,6 +3988,74 @@ h2.status-group-heading.heading-navy {
   font-size: 13px;
 }
 
+/* "Leave the guide?" — the two answers stacked full width, so "Go to shoot
+   page" reads on one line instead of wrapping inside a half-width button. */
+#shootWizardLeaveActions {
+  flex-direction: column;
+}
+
+/* ---- Concept helper ("Need to think it through?") ---- */
+#shootWizardHolder[hidden] {
+  display: none;
+}
+
+.concept-helper-modal #conceptHelperText {
+  margin-bottom: 8px;
+}
+
+.concept-helper-hint {
+  margin: 0 0 14px;
+  text-align: left;
+}
+
+.concept-helper-hint[hidden],
+#conceptHelperInput[hidden],
+#conceptHelperSummary[hidden],
+.concept-helper-count[hidden],
+#conceptHelperYesNo[hidden],
+#conceptHelperNextRow[hidden],
+#conceptHelperEndRow[hidden],
+.concept-helper-link[hidden] {
+  display: none;
+}
+
+/* The compiled concept, editable before it's used — tall enough to read
+   the whole thing at once. */
+#conceptHelperSummary {
+  resize: none;
+  height: auto;
+  min-height: 150px;
+  line-height: 1.4;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+/* "Use this" / "I'll write it myself" stacked full width, like the guide's
+   leave prompt, so neither label wraps inside a half-width button. */
+#conceptHelperEndRow {
+  flex-direction: column;
+}
+
+.concept-helper-count {
+  margin: 0 0 14px;
+  text-align: right;
+}
+
+.concept-helper-count.over {
+  color: var(--red);
+}
+
+/* Same small underlined link as "Don't show again". */
+.concept-helper-link {
+  margin: 12px auto 0;
+  font-size: 13px;
+}
+
+#conceptHelperUseBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* The "All set" slide has no fields — same gap above its buttons as the
    tour's card, rather than the body's empty box plus the usual margin. */
 #shootWizardBody:empty {
@@ -5526,6 +5594,12 @@ h2.status-group-heading.heading-navy {
 .rounded-modal {
   border: 3px solid var(--ink);
   border-radius: 28px 28px 0 0;
+}
+
+/* The ⋮ option sheets (a shoot box's or journal entry's ⋮, and the
+   project picker) are outlined in the accent colour instead of ink. */
+.options-modal.rounded-modal {
+  border-color: var(--accent);
 }
 
 /* Reflections table-of-contents popup: unlike every other bottom sheet
