@@ -417,6 +417,34 @@
         <button type="button" class="primary" id="saveShootBtn">Save</button>
         <button type="button" class="complete-shoot-btn" id="completeShootBtn" hidden>Complete Shoot</button>
       </div>
+
+      <!-- New-shoot planning wizard. Inside the form on purpose: each slide
+           borrows the real field blocks from the page above (see
+           SHOOT_WIZARD_STEPS in app.js), so the form's autosave listeners and
+           #shootForm field styles keep working on them. Last in the form so
+           first-match lookups (the Save bar's .modal-actions) still find the
+           page's own elements first. Every button is type="button": a
+           submit-type one would be "clicked" by Enter in any text field. -->
+      <div id="shootWizard" hidden>
+        <div id="shootWizardCard" role="dialog" aria-modal="true" aria-labelledby="shootWizardTitle" tabindex="-1">
+          <div class="shoot-wizard-head">
+            <p class="mi-sub" id="shootWizardStep"></p>
+            <h2 id="shootWizardTitle"></h2>
+            <p id="shootWizardHint"></p>
+          </div>
+          <div id="shootWizardBody"></div>
+          <div class="shoot-wizard-actions">
+            <button type="button" class="secondary" id="shootWizardBackBtn">Back</button>
+            <button type="button" class="primary" id="shootWizardNextBtn">Next</button>
+          </div>
+          <div class="shoot-tour-skip-row" id="shootWizardExitRow">
+            <button type="button" class="secondary journal-block-btn" id="shootWizardExitBtn">Go to shoot page</button>
+          </div>
+          <!-- First slide only (see renderShootWizardChrome); the same small
+               underlined link look as the Visuals "Manage" link. -->
+          <button type="button" class="manage-link" id="shootWizardDontShowBtn" hidden>Don't show again</button>
+        </div>
+      </div>
     </form>
   </div>
 </div>
@@ -1086,6 +1114,8 @@
         <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="importDataBtn">Import shoot data</button>
         <div class="menu-divider" aria-hidden="true"></div>
+        <button type="button" class="options-item" id="newShootGuideBtn">New shoot guide</button>
+        <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="photographerInfoBtn">Photographer information</button>
         <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="shootDisplayOptionsBtn">Shoot display options</button>
@@ -1114,6 +1144,11 @@
              primary treatment as the Save buttons in the shoot options panes. -->
         <button type="button" class="options-item primary" id="themeOkayBtn">Okay</button>
       </div>
+      <div class="options-pane">
+        <button type="button" class="options-item options-back" id="newShootGuideBackBtn">&larr; Back</button>
+        <button type="button" class="options-item choice-item" id="newShootGuideOnBtn">Guide me through new shoots</button>
+        <button type="button" class="options-item choice-item" id="newShootGuideOffBtn">Open new shoots straight to the page</button>
+      </div>
     </div>
     <input type="file" id="importFileInput" accept="application/json" hidden />
   </div>
@@ -1129,6 +1164,15 @@
       <button type="button" class="danger" id="deleteAllConfirmYesBtn">Yes, delete everything</button>
     </div>
     <button type="button" class="primary" id="deleteAllConfirmOkBtn" hidden>OK</button>
+  </div>
+</div>
+
+<!-- ============ NEW SHOOT GUIDE TURNED OFF ============ -->
+<div id="shootWizardOffOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2>Guide turned off</h2>
+    <p>New shoots will open straight to the shoot page. You can turn the guide back on anytime: tap the menu button at the top of the app, then New shoot guide.</p>
+    <button type="button" class="primary" id="shootWizardOffOkBtn">got it!</button>
   </div>
 </div>
 

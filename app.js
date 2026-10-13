@@ -5458,6 +5458,15 @@
     document.querySelectorAll('#shootForm input, #shootForm textarea').forEach(syncFieldFilledState);
   }
 
+  // What a list inside the shoot form actually scrolls in: the new-shoot
+  // wizard's card body while the list is borrowed onto one of its slides
+  // (see SHOOT_WIZARD_STEPS), the shoot modal itself the rest of the time.
+  // Saving/restoring the modal's scroll for a list that's in the card would
+  // leave the card free to lurch on every re-render.
+  function shootListScroller(container) {
+    return (container && container.closest('#shootWizardBody')) || shootModalOverlay.querySelector('.modal');
+  }
+
   // Ticking a checkbox re-renders its whole list, because checked items sort to
   // the bottom — which destroys the very node that was tapped. Left alone the
   // browser drops focus and the modal lurches hundreds of pixels: measured at
@@ -5470,8 +5479,8 @@
   // while focus follows the item down to its new position.
   function restoreAfterListReorder(container, checkIdx, savedScrollTop) {
     const apply = () => {
-      const modalEl = shootModalOverlay.querySelector('.modal');
-      if (modalEl && savedScrollTop !== undefined) modalEl.scrollTop = savedScrollTop;
+      const scroller = shootListScroller(container);
+      if (scroller && savedScrollTop !== undefined) scroller.scrollTop = savedScrollTop;
       if (checkIdx === undefined) return;
       const cb = container.querySelector(`.shot-check[data-idx="${checkIdx}"]`);
       if (cb) cb.focus({ preventScroll: true });
@@ -5482,8 +5491,8 @@
 
   function renderShotList(focusIdx, refocusCheckIdx) {
     const container = document.getElementById('shotListItems');
-    const modalEl = shootModalOverlay.querySelector('.modal');
-    const savedScrollTop = refocusCheckIdx === undefined || !modalEl ? undefined : modalEl.scrollTop;
+    const scroller = shootListScroller(container);
+    const savedScrollTop = refocusCheckIdx === undefined || !scroller ? undefined : scroller.scrollTop;
     const indexed = currentShotList.map((item, idx) => ({ ...item, idx }));
     const ordered = indexed.filter(i => !i.checked).concat(indexed.filter(i => i.checked));
     container.innerHTML = ordered.map(item => `
@@ -6012,12 +6021,23 @@
     };
   }
 
+  // The same, for a lighting list borrowed onto a new-shoot wizard slide:
+  // the card body's own visible box, still capped above the iOS keyboard.
+  function wizardBodyDragBounds(body) {
+    const r = body.getBoundingClientRect();
+    const vv = window.visualViewport;
+    return {
+      top: r.top,
+      bottom: Math.min(r.bottom, vv ? vv.offsetTop + vv.height : r.bottom),
+    };
+  }
+
   function commitLightingReorder(cards) {
     // The modal was closed mid-drag: closeShootModal already saved the old order.
     if (shootModalOverlay.hidden) return;
     const container = document.getElementById('lightingSetupsItems');
-    const modalEl = shootModalOverlay.querySelector('.modal');
-    const savedScrollTop = modalEl ? modalEl.scrollTop : undefined;
+    const scroller = shootListScroller(container);
+    const savedScrollTop = scroller ? scroller.scrollTop : undefined;
     // Each card's data-idx is its PRE-drag index (renderLightingSetups stamps
     // it), so DOM order maps straight back onto the array. The SAME setup
     // objects are reused, so every id (and the collapsed state keyed by it)
@@ -6041,7 +6061,19 @@
       container,
       rowSelector: '.lighting-setup-card',
       draggingClass: 'lighting-dragging',
-      scroll: { el: modalEl, bounds: () => lightingDragScrollBounds(modalEl) },
+      // Getters rather than fixed values: the list may be on the page
+      // (scrolling in the modal, between its sticky header and Save bar) or
+      // borrowed onto a new-shoot wizard slide (scrolling in the card), and
+      // wireRowDragReorder reads `el` on every grab and bounds() every tick.
+      // Left pointing at the modal, a drag in the card would auto-scroll the
+      // covered page behind it and fold that scroll into the dragged row.
+      scroll: {
+        get el() { return shootListScroller(container); },
+        bounds: () => {
+          const wizardBody = container.closest('#shootWizardBody');
+          return wizardBody ? wizardBodyDragBounds(wizardBody) : lightingDragScrollBounds(modalEl);
+        },
+      },
       onStart: () => {
         // On iOS tapping a button never blurs a focused field, and a swap
         // would move that field mid-drag (dropping the keyboard at a random
@@ -6598,7 +6630,12 @@
     'shootTalentDirections', 'shootTeamDirections', 'shootLocationDirections',
     'shootShootingNotes', 'shootDeliverables',
   ].forEach(fieldId => {
-    document.getElementById(fieldId).addEventListener('click', () => openExpandField(fieldId));
+    document.getElementById(fieldId).addEventListener('click', (e) => {
+      // Not readonly right now = borrowed onto a new-shoot wizard slide,
+      // which has the room to type in place (see moveBlockIntoShootWizard).
+      if (!e.currentTarget.readOnly) return;
+      openExpandField(fieldId);
+    });
   });
 
   // ---------- Post-shoot reflection (gated behind captured-or-later status) ----------
@@ -6640,6 +6677,10 @@
 
   document.getElementById('postShootPromptYesBtn').addEventListener('click', () => {
     document.getElementById('postShootPromptOverlay').hidden = true;
+    // "Yes" from the new-shoot wizard's first slide (a shoot being logged
+    // after the fact) means "take me to the reflection now" — close the
+    // wizard first so the scroll below lands on the page, not behind it.
+    if (shootWizardActive) endShootWizard();
     const content = showPostShootContentExpanded();
     updateShootModalJumpMenuVisibility();
     content.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -6822,6 +6863,15 @@
   let shootSaveTimer = null;
   const shootScrollPositions = {};
   let shootModalBaseTitle = '';
+  // New-shoot planning wizard (see SHOOT_WIZARD_STEPS). Tracked by its own
+  // flag rather than by editingShootId === null: Multi-day's "Create days"
+  // saves a brand-new draft mid-wizard, which flips that to the shoot's id.
+  let shootWizardActive = false;
+  let shootWizardStepKey = null;
+  let shootWizardMoved = [];          // { el, placeholder, wasHidden, unhid, unlocked } per borrowed block
+  let shootWizardPendingId = null;    // shoot a queued wizard is waiting to open over
+  let shootWizardStartTimer = null;
+  let shootWizardViewportMaxH = 0;    // tallest visible height seen this run — the keyboard yardstick
 
   // Shared by the scroll-position-restore anchors below, the jump menu, and
   // the scrollspy title — the one canonical list of top-level sections in
@@ -6964,6 +7014,9 @@
   }
 
   document.getElementById('shootTourBtn').addEventListener('click', () => {
+    // Covered by the new-shoot wizard's backdrop, but still reachable by
+    // keyboard focus — and the tour would scroll the page behind the wizard.
+    if (shootWizardActive) return;
     closeShootModalJumpMenu();
     shootTourStepIndex = 0;
     document.getElementById('shootTourOverlay').hidden = false;
@@ -6983,6 +7036,520 @@
   });
 
   document.getElementById('shootTourSkipBtn').addEventListener('click', closeShootTour);
+
+  // ---------- New-shoot planning wizard ----------
+  // A brand-new shoot opens with a step-by-step popup over the dimmed page —
+  // a few fields per slide, like an installer, instead of the whole form at
+  // once. Each slide BORROWS the real field blocks from the page: they're
+  // moved into the card (a comment node keeps their spot — it has no box, so
+  // it adds no stray flex gap) and moved straight back when the slide changes
+  // or the wizard closes. Whatever's typed therefore lands in the real form:
+  // autosave, the talent/location/team popups, the mood board, Multi-day and
+  // every category-driven show/hide work untouched, and the page is already
+  // filled in when the wizard's done. Only openShootModal(null) starts it —
+  // existing shoots, "+ Add a day" copies and the rest never do.
+  //
+  // The markup sits inside #shootForm on purpose (the form-level input/
+  // change/focusout listeners and the #shootForm field styles keep applying
+  // to borrowed blocks), and every popup a slide can open is a later
+  // body-level overlay, so it stacks above the wizard with no z-index work.
+  //
+  // Slides run in this order, so reordering them is reordering this list.
+  //   key        stable id; the current slide is tracked by key because a
+  //              category change on slide 1 adds/removes slides around it
+  //   title/hint string, or a function read on every render
+  //   blocks()   the page elements to borrow, resolved from field ids while
+  //              they're back in place on the page
+  //   when()     optional — the slide is skipped (and not counted) if false
+  //   filled()   optional — true once anything on the slide has a value,
+  //              which turns the forward button from "Skip" into "Next"
+  //   enter()/leave() optional — after the blocks move in / after they're back
+
+  // Shorthand for the step list: a field by id, or the block around it.
+  function shootWizardBlock(fieldId, selector) {
+    const el = document.getElementById(fieldId);
+    if (!el) return null;
+    return selector ? el.closest(selector) : el;
+  }
+
+  function shootFieldHasText(fieldId) {
+    return hasText(document.getElementById(fieldId).value);
+  }
+
+  // The framework tag groups are collapsible (and the fold is remembered),
+  // but a slide that's only there to tick tags shouldn't open on a closed
+  // heading — open while on the slide, then back to whatever's remembered
+  // (including a fold the user tapped while on it, which the heading saves).
+  function setShootWizardFrameworkGroupsOpen(forceOpen) {
+    const selector = FRAMEWORK_TAG_CONTAINER_IDS.map(id => `#${id} .framework-subsection-body`).join(', ');
+    document.querySelectorAll(selector).forEach(body => {
+      const collapsed = !forceOpen && isSectionCollapsed(`shoot:framework:${body.dataset.fwBody}`);
+      body.hidden = collapsed;
+      const heading = body.parentElement.querySelector('.framework-heading');
+      if (heading) heading.classList.toggle('collapsed', collapsed);
+    });
+  }
+
+  const SHOOT_WIZARD_STEPS = [
+    {
+      key: 'basics',
+      title: 'The basics',
+      hint: 'Name the shoot and pick what kind it is. The status button tracks it from early idea to delivery.',
+      blocks: () => [
+        shootWizardBlock('shootStatus', '.status-swatch-wrap'),
+        shootWizardBlock('shootTitle', 'label'),
+        shootWizardBlock('shootCategory', 'label'),
+      ],
+      filled: () => shootFieldHasText('shootTitle') || !!document.getElementById('shootCategory').value,
+    },
+    {
+      key: 'talent',
+      title: 'Talent',
+      hint: "Who's in front of the camera? Add each person, with their handles and a photo if you have one.",
+      blocks: () => [shootWizardBlock('addTalentBtn', '.talents-section')],
+      filled: () => currentTalents.length > 0,
+    },
+    {
+      key: 'when',
+      title: 'Date & time',
+      hint: () => (isVideoCategory(document.getElementById('shootCategory').value)
+        ? "When it's happening, plus crew and talent call times. Leave anything you don't know yet blank."
+        : "When it's happening. Leave anything you don't know yet blank."),
+      // Last day and the video call times keep showing/hiding themselves.
+      blocks: () => [
+        shootWizardBlock('shootDate', 'label'),
+        shootWizardBlock('multiDayRow'),
+        shootWizardBlock('multiDayLastDayLabel'),
+        shootWizardBlock('shootStartTime', '.time-range-row'),
+        shootWizardBlock('videoCallTimesRow'),
+      ],
+      filled: () => ['shootDate', 'shootStartTime', 'shootEndTime', 'shootCrewCallTime', 'shootTalentCallTime'].some(shootFieldHasText),
+    },
+    {
+      key: 'location',
+      title: 'Location',
+      hint: "Where it's happening, and anything people need to know to find it.",
+      blocks: () => [
+        shootWizardBlock('shootLocationBtn', 'label'),
+        shootWizardBlock('shootLocationDirections', 'label'),
+      ],
+      // Country alone is the pre-filled default, not something entered —
+      // same rule as updateLocationBtnDisplay.
+      filled: () => ['name', 'street', 'city', 'state', 'zip'].some(k => hasText(currentShootLocation[k]))
+        || shootFieldHasText('shootLocationDirections'),
+    },
+    {
+      key: 'team',
+      title: 'Team',
+      hint: "Is anyone helping out? Add each person once you know who's on board.",
+      blocks: () => [shootWizardBlock('teamBody')],
+      filled: () => document.getElementById('teamRequiredYes').checked || document.getElementById('teamRequiredNo').checked,
+    },
+    {
+      key: 'goals',
+      title: 'Goals',
+      hint: () => (isVideoCategory(document.getElementById('shootCategory').value)
+        ? "What the shoot needs to accomplish, and what you're delivering at the end."
+        : 'What does this shoot need to accomplish?'),
+      blocks: () => [
+        shootWizardBlock('shootGoals', 'label'),
+        shootWizardBlock('videoDeliverablesBlock'),
+      ],
+      filled: () => ['shootGoals', 'shootDeliverables', 'shootDeliverableDestinations'].some(shootFieldHasText)
+        || !!document.querySelector('#shootAspectRatios input:checked'),
+    },
+    {
+      key: 'idea',
+      title: 'The idea',
+      hint: 'The concept behind the shoot, then the whole thing in a single line.',
+      blocks: () => [
+        shootWizardBlock('shootPremise', 'label'),
+        shootWizardBlock('shootElevatorPitch', 'label'),
+      ],
+      filled: () => ['shootPremise', 'shootElevatorPitch'].some(shootFieldHasText),
+    },
+    {
+      key: 'story',
+      title: 'The story',
+      hint: "Who the talent is being, and the world they're in.",
+      blocks: () => [shootWizardBlock('narrativeFieldsBlock')],
+      // Narrative categories only — the same switch that shows these fields
+      // on the page (updateCategoryTierUI), where a blank category counts as
+      // narrative too.
+      when: () => !document.getElementById('narrativeFieldsBlock').hidden,
+      filled: () => ['shootCharacter', 'shootWorldNotes'].some(shootFieldHasText),
+    },
+    {
+      key: 'directions',
+      title: 'Directions',
+      hint: "Notes for the day: what you'll ask of the talent, and what the team needs to know.",
+      blocks: () => [
+        shootWizardBlock('shootTalentDirections', 'label'),
+        shootWizardBlock('shootTeamDirections', 'label'),
+      ],
+      filled: () => ['shootTalentDirections', 'shootTeamDirections'].some(shootFieldHasText),
+    },
+    {
+      key: 'moodboard',
+      // Mood board or Storyboard, by category — same wording as the section.
+      title: () => moodboardTerm(document.getElementById('shootCategory').value),
+      hint: () => {
+        const term = moodboardTerm(document.getElementById('shootCategory').value).toLowerCase();
+        return document.getElementById('moodboardCompleteRow').hidden
+          ? `Images that set the look. Add a few now, or come back to the ${term} later.`
+          : `Images that set the look. Tick the box once the ${term} is done, or if this shoot doesn't need one.`;
+      },
+      // Anchored on the grid: Final images shares the .moodboard-section class.
+      blocks: () => [shootWizardBlock('moodboardGrid', '.moodboard-section')],
+      filled: () => shootHasImages
+        || !!document.querySelector('#moodboardGrid .moodboard-item')
+        || document.getElementById('shootMoodboardComplete').checked,
+    },
+    {
+      key: 'references',
+      title: 'References',
+      hint: "Anything you're drawing inspiration from. Add as many links as you like.",
+      blocks: () => [shootWizardBlock('referencesList', '.references-block')],
+      filled: () => currentReferences.some(ref => hasText(ref)),
+    },
+    {
+      key: 'visualLanguage',
+      title: 'Visual language',
+      hint: "Tick whatever describes the look you're after.",
+      // The Manage link stays on the page: editing a framework re-renders the
+      // tags from the SAVED shoot, which would clear ticks on a new draft.
+      blocks: () => [
+        document.getElementById('frameworkTagsContainerEarly').children.length ? shootWizardBlock('frameworkTagsContainerEarly') : null,
+        // Holds custom frameworks only, and is flagged hidden when there are
+        // none — but no CSS rule actually hides it, so it'd arrive as an
+        // empty box. Left on the page in that case.
+        document.getElementById('frameworkTagsContainer').hidden ? null : shootWizardBlock('frameworkTagsContainer'),
+      ],
+      when: () => (state.frameworks || []).some(fw => (fw.tags || []).length > 0),
+      filled: () => !!document.querySelector(FRAMEWORK_TAG_CHECKED_SELECTOR),
+      enter: () => setShootWizardFrameworkGroupsOpen(true),
+      leave: () => setShootWizardFrameworkGroupsOpen(false),
+    },
+    {
+      key: 'lighting',
+      title: 'Lighting setups',
+      hint: 'Plan the light you want, one setup at a time.',
+      // The section's body only — its heading stays on the page with the
+      // jump menu/scrollspy/tour anchors. Shown here even if folded there.
+      blocks: () => [shootWizardBlock('lightingSetupsBody')],
+      filled: () => currentLightingSetups.some(setup => hasText(setup.name) || hasText(setup.characteristics) || hasText(setup.description)),
+    },
+    {
+      key: 'shotList',
+      title: 'Shot list',
+      hint: 'Every shot you want to come away with. Tap a line to write, and Enter starts the next one.',
+      blocks: () => [shootWizardBlock('shotListBody')],
+      filled: () => currentShotList.some(item => hasText(item.text)) || shootFieldHasText('shootShootingNotes'),
+    },
+    {
+      key: 'deadline',
+      title: 'Deadline',
+      hint: "When everything's due, if there's a date to hit.",
+      blocks: () => [shootWizardBlock('shootDeadline', 'label')],
+      filled: () => shootFieldHasText('shootDeadline'),
+    },
+    {
+      key: 'finish',
+      title: 'All set',
+      hint: 'Everything you filled in is already on the shoot page. Add to it or change it there anytime.',
+      blocks: () => [],
+    },
+  ];
+
+  // The slides that currently apply (the one on screen always counts, so the
+  // "Step x of y" line can never lose its own place).
+  function shootWizardStepsInPlay() {
+    return SHOOT_WIZARD_STEPS.filter(step => step.key === shootWizardStepKey || !step.when || step.when());
+  }
+
+  // The nearest slide that applies before (-1) or after (+1) the current
+  // one, or null at either end. Re-evaluated every time, since slide 1's
+  // category decides whether The story applies at all.
+  function adjacentShootWizardStep(direction) {
+    const from = SHOOT_WIZARD_STEPS.findIndex(step => step.key === shootWizardStepKey);
+    for (let i = from + direction; i >= 0 && i < SHOOT_WIZARD_STEPS.length; i += direction) {
+      const step = SHOOT_WIZARD_STEPS[i];
+      if (!step.when || step.when()) return step;
+    }
+    return null;
+  }
+
+  // Before anything moves: a focused field that's moved loses focus without
+  // a focusout (so without its saveShootNow), and iOS never blurs a field
+  // when a button is tapped. Blurring also drops the keyboard/native picker.
+  function blurShootWizardFocus() {
+    const active = document.activeElement;
+    if (active && active !== document.body && document.getElementById('shootWizard').contains(active)) active.blur();
+  }
+
+  function moveBlockIntoShootWizard(el, body) {
+    if (!el || body.contains(el)) return;
+    const placeholder = document.createComment('shoot-wizard');
+    el.before(placeholder);
+    // A collapsible section body brings its remembered fold along — shown
+    // regardless while it's on a slide, given its fold back on the way out.
+    const isSectionBody = SHOOT_FORM_COLLAPSE_SECTIONS.some(([, , bodyId]) => bodyId === el.id);
+    const record = { el, placeholder, wasHidden: el.hidden, unhid: isSectionBody, unlocked: [], wasInert: el.inert };
+    if (isSectionBody) el.hidden = false;
+    // A block that sits directly under #shootForm (Team, Shot list) was made
+    // inert itself along with the rest of the covered page — it has to come
+    // alive in the card, then go back to how it was on the page.
+    el.inert = false;
+    // On the page these open the expand popup instead of taking typing (see
+    // its click guard); a slide has the room to type in place.
+    el.querySelectorAll('textarea[readonly]').forEach(field => {
+      field.readOnly = false;
+      record.unlocked.push(field);
+    });
+    body.appendChild(el);
+    shootWizardMoved.push(record);
+  }
+
+  function restoreShootWizardBlocks() {
+    shootWizardMoved.forEach(({ el, placeholder, wasHidden, unhid, unlocked, wasInert }) => {
+      unlocked.forEach(field => { field.readOnly = true; });
+      if (unhid) el.hidden = wasHidden;
+      el.inert = wasInert;
+      if (placeholder.parentNode) placeholder.replaceWith(el);
+    });
+    shootWizardMoved = [];
+    const step = SHOOT_WIZARD_STEPS.find(s => s.key === shootWizardStepKey);
+    if (step && step.leave) step.leave();
+  }
+
+  function renderShootWizardChrome() {
+    const step = SHOOT_WIZARD_STEPS.find(s => s.key === shootWizardStepKey);
+    if (!step) return;
+    const inPlay = shootWizardStepsInPlay();
+    const isLast = !adjacentShootWizardStep(1);
+    document.getElementById('shootWizardStep').textContent = `Step ${inPlay.indexOf(step) + 1} of ${inPlay.length}`;
+    document.getElementById('shootWizardTitle').textContent = typeof step.title === 'function' ? step.title() : step.title;
+    document.getElementById('shootWizardHint').textContent = typeof step.hint === 'function' ? step.hint() : step.hint;
+    document.getElementById('shootWizardBackBtn').hidden = !adjacentShootWizardStep(-1);
+    // Small "Don't show again" link, on the first slide only.
+    document.getElementById('shootWizardDontShowBtn').hidden = inPlay.indexOf(step) !== 0;
+    // Forward is always possible — "Skip" only says nothing's been filled in
+    // on this slide yet. The "Go to shoot page" row stays on every slide, the
+    // last one included, so the way out is always in the same place.
+    document.getElementById('shootWizardNextBtn').textContent = isLast ? 'Done' : (step.filled && step.filled() ? 'Next' : 'Skip');
+  }
+
+  // Run from scheduleShootAutosave on every change while the wizard's up.
+  function refreshShootWizard() {
+    renderShootWizardChrome();
+    // Values written from code fire no input event, so they'd keep their
+    // empty-field look on the slide — a picked location's remembered
+    // directions, for one. Only fields whose look is actually out of step get
+    // re-synced: re-measuring every box on each keystroke can briefly shrink
+    // the card's content and knock its scroll position.
+    document.querySelectorAll('#shootWizardBody input, #shootWizardBody textarea').forEach(el => {
+      if (el !== document.activeElement && isBoxSheddingField(el) && el.classList.contains('is-filled') !== hasText(el.value)) syncFieldFilledState(el);
+    });
+  }
+
+  function showShootWizardStep(key) {
+    const step = SHOOT_WIZARD_STEPS.find(s => s.key === key);
+    if (!step) return;
+    blurShootWizardFocus();
+    restoreShootWizardBlocks();
+    shootWizardStepKey = key;
+    const body = document.getElementById('shootWizardBody');
+    step.blocks().forEach(block => moveBlockIntoShootWizard(block, body));
+    if (step.enter) step.enter();
+    body.scrollTop = 0;
+    renderShootWizardChrome();
+    // Measured now, at the card's width, with the wizard already visible — a
+    // hidden one would measure zero and leave every box at its rows default.
+    body.querySelectorAll('input, textarea').forEach(syncFieldFilledState);
+    autoSizeAllListTextareas();
+    // The card, not a field: focusing a field on every slide would throw the
+    // keyboard up over the slide before it's even been read.
+    document.getElementById('shootWizardCard').focus({ preventScroll: true });
+  }
+
+  // Fits the wizard to the part of the screen that's actually visible, so
+  // with the iOS keyboard up the card re-centres above it instead of sitting
+  // behind it (iOS doesn't shrink the layout viewport). A visible height well
+  // under the tallest seen this run means the keyboard's up: compact mode.
+  function syncShootWizardViewport() {
+    const wizard = document.getElementById('shootWizard');
+    const vv = window.visualViewport;
+    const height = vv ? vv.height : window.innerHeight;
+    shootWizardViewportMaxH = Math.max(shootWizardViewportMaxH, height);
+    if (vv) {
+      wizard.style.setProperty('--wiz-vv-top', `${vv.offsetTop}px`);
+      wizard.style.setProperty('--wiz-vv-h', `${vv.height}px`);
+    }
+    // Also compact outright on a short screen (an iPhone on its side), where
+    // the full step line + hint + buttons alone would leave no room for fields.
+    wizard.classList.toggle('shoot-wizard-compact', height < shootWizardViewportMaxH * 0.8 || height < 560);
+  }
+
+  // The covered page can't take focus while the wizard's up. The wizard is
+  // last in the form, so every page field comes before a slide's fields in
+  // document order: iOS's keyboard ^/v arrows (or Tab) from a slide's first
+  // field would land in a field hidden behind the dim and type into it
+  // unseen, or reach Save/Delete/Shoot mode/the tour. Every popup a slide
+  // opens is a body-level overlay, so none of them is affected.
+  function setShootPageInert(on) {
+    const modalEl = shootModalOverlay.querySelector('.modal');
+    [...modalEl.children, ...shootForm.children].forEach(el => {
+      if (el !== shootForm && el.id !== 'shootWizard') el.inert = on;
+    });
+  }
+
+  function startShootWizard() {
+    const first = SHOOT_WIZARD_STEPS.find(step => !step.when || step.when());
+    if (!first) return;
+    shootWizardActive = true;
+    shootWizardStepKey = null;
+    shootWizardViewportMaxH = 0;
+    // Slide 1 explains the status button itself, so the one-time intro that
+    // points at it "up top" is marked seen rather than stacking over the
+    // wizard now, or turning up later to repeat it.
+    try { localStorage.setItem(STATUS_SWATCH_INTRO_KEY, '1'); } catch (err) { /* storage unavailable — nothing to remember it in */ }
+    // The covered page holds still: only the card scrolls. Doesn't clip the
+    // fixed wizard (its containing block is the viewport), and code can
+    // still set scrollTop.
+    shootModalOverlay.querySelector('.modal').style.overflow = 'hidden';
+    setShootPageInert(true);
+    document.getElementById('shootWizard').hidden = false;
+    syncShootWizardViewport();
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', syncShootWizardViewport);
+      window.visualViewport.addEventListener('scroll', syncShootWizardViewport);
+    }
+    showShootWizardStep(first.key);
+  }
+
+  // The shoot modal slides up on a transform for its first 0.2s, and while
+  // that runs it's the containing block for anything position:fixed inside
+  // it — a wizard shown straight away would sit inside the moving sheet,
+  // clipped, then jump to full screen. So it waits for the slide-in's own
+  // animationend (wired below), with a timer as the fallback for when none
+  // comes: the overlay was already open, or the tab is in the background
+  // (rAF and CSS animations stall there, timers don't).
+  function queueShootWizard() {
+    shootWizardPendingId = currentShootId;
+    clearTimeout(shootWizardStartTimer);
+    shootWizardStartTimer = setTimeout(startQueuedShootWizard, 320);
+  }
+
+  function startQueuedShootWizard() {
+    const pendingId = shootWizardPendingId;
+    shootWizardPendingId = null;
+    clearTimeout(shootWizardStartTimer);
+    if (!pendingId || pendingId !== currentShootId || shootModalOverlay.hidden || shootWizardActive) return;
+    startShootWizard();
+  }
+
+  // Every way out: Done, "Go to shoot page", the post-shoot prompt's Yes,
+  // closeShootModal and openShootModal. Idempotent. `closing` skips the
+  // landing-on-the-page work, since a close/reopen does its own next.
+  function endShootWizard(opts) {
+    const closing = !!(opts && opts.closing);
+    shootWizardPendingId = null;
+    clearTimeout(shootWizardStartTimer);
+    if (!shootWizardActive) return;
+    blurShootWizardFocus();
+    restoreShootWizardBlocks();
+    shootWizardActive = false;
+    shootWizardStepKey = null;
+    const wizard = document.getElementById('shootWizard');
+    wizard.hidden = true;
+    wizard.classList.remove('shoot-wizard-compact');
+    setShootPageInert(false);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', syncShootWizardViewport);
+      window.visualViewport.removeEventListener('scroll', syncShootWizardViewport);
+    }
+    const modalEl = shootModalOverlay.querySelector('.modal');
+    modalEl.style.overflow = '';
+    if (closing) return;
+    // On a new shoot, Direction's fields wait behind "select a category to
+    // continue" — but a slide lets them be filled with no category picked.
+    // Left gated, what was just written would look lost.
+    if (!document.getElementById('shootCategory').value) {
+      const directionFilled = [...document.querySelectorAll('#formSection2 input, #formSection2 textarea')]
+        .some(el => (el.type === 'checkbox' ? el.checked : hasText(el.value)));
+      if (directionFilled) revealSection2();
+    }
+    // Everything was last measured at the card's width; the page is wider.
+    // The fold state goes first so only open sections get measured.
+    applyShootFormCollapseState();
+    syncAllShootFormFields();
+    autoSizeAllListTextareas();
+    // Instant, not smooth: smooth scrolling doesn't run in a background tab.
+    modalEl.scrollTop = 0;
+    updateShootModalTitleFromScroll();
+  }
+
+  document.getElementById('shootWizardBackBtn').addEventListener('click', () => {
+    if (!shootWizardActive) return;
+    const prev = adjacentShootWizardStep(-1);
+    if (prev) showShootWizardStep(prev.key);
+  });
+
+  document.getElementById('shootWizardNextBtn').addEventListener('click', () => {
+    if (!shootWizardActive) return;
+    const next = adjacentShootWizardStep(1);
+    if (next) showShootWizardStep(next.key);
+    else endShootWizard();
+  });
+
+  document.getElementById('shootWizardExitBtn').addEventListener('click', () => endShootWizard());
+
+  // On/off for the whole guide, remembered on this device. Turned off from
+  // the first slide's "Don't show again", and back on (or off) from the app
+  // menu's New shoot guide pane.
+  const NEW_SHOOT_GUIDE_OFF_KEY = 'dailies_new_shoot_guide_off_v1';
+
+  function isNewShootGuideOn() {
+    try { return localStorage.getItem(NEW_SHOOT_GUIDE_OFF_KEY) !== '1'; } catch (err) { return true; }
+  }
+
+  function setNewShootGuideOn(on) {
+    try {
+      if (on) localStorage.removeItem(NEW_SHOOT_GUIDE_OFF_KEY);
+      else localStorage.setItem(NEW_SHOOT_GUIDE_OFF_KEY, '1');
+    } catch (err) { /* storage unavailable — nothing to remember it in */ }
+  }
+
+  // Lands on the shoot page with everything so far, then says where the
+  // switch lives so the guide isn't gone for good by accident.
+  document.getElementById('shootWizardDontShowBtn').addEventListener('click', () => {
+    setNewShootGuideOn(false);
+    endShootWizard();
+    document.getElementById('shootWizardOffOverlay').hidden = false;
+  });
+
+  document.getElementById('shootWizardOffOkBtn').addEventListener('click', () => {
+    document.getElementById('shootWizardOffOverlay').hidden = true;
+  });
+
+  // See queueShootWizard. animationend bubbles up from animated things inside
+  // the modal too, so only the modal's own slide-in counts.
+  shootModalOverlay.querySelector('.modal').addEventListener('animationend', (e) => {
+    if (e.target === e.currentTarget && shootWizardPendingId) startQueuedShootWizard();
+  });
+
+  // iOS scrolls a focused field into view before the keyboard has finished
+  // shrinking the visible area (and the card with it, see
+  // syncShootWizardViewport), which can leave it under the keyboard — so
+  // once more after that resize. Same pattern as renderShotList's.
+  document.getElementById('shootWizardBody').addEventListener('focusin', (e) => {
+    const field = e.target;
+    if (!window.visualViewport) return;
+    if (!field.matches('textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="file"])')) return;
+    window.visualViewport.addEventListener('resize', () => {
+      if (shootWizardActive && document.activeElement === field) field.scrollIntoView({ block: 'nearest' });
+    }, { once: true });
+  });
 
   // Updates the sticky title to name whichever section has scrolled past
   // the header, so it always reads as "where am I" rather than a static
@@ -7007,6 +7574,10 @@
   shootModalOverlay.querySelector('.modal').addEventListener('scroll', updateShootModalTitleFromScroll, { passive: true });
 
   function openShootModal(id) {
+    // Hands back any fields a wizard still has borrowed — only possible after
+    // a path that hid the overlay without closeShootModal (Delete, Complete,
+    // Unarchive) — before anything below repopulates or measures them.
+    endShootWizard({ closing: true });
     closeStatsDetail();
     editingShootId = id;
     const s = id ? state.shoots.find(x => x.id === id) : null;
@@ -7158,7 +7729,14 @@
     // still there and still scrollable behind the fixed overlay.
     if (shootModalOverlay.hidden) lockBodyScroll();
     shootModalOverlay.hidden = false;
-    if (!s) maybeShowStatusSwatchIntro();
+    // Only a brand-new shoot (the "+ New Shoot" buttons pass null) gets the
+    // planning wizard. Its first slide covers the status button, so it takes
+    // over from the one-time status intro there; an id that no longer
+    // resolves to a shoot keeps the intro, as before.
+    // Turned off (first slide's "Don't show again", or the app menu), a new
+    // shoot opens straight to the page, with the status intro as before.
+    if (!id && isNewShootGuideOn()) queueShootWizard();
+    else if (!s) maybeShowStatusSwatchIntro();
 
     const modalEl = shootModalOverlay.querySelector('.modal');
     const savedScroll = (id && shootScrollPositions[id]) || 0;
@@ -7846,6 +8424,12 @@
     // need to be eager. It used to be 500ms, which meant a save on every
     // natural pause mid-sentence.
     shootSaveTimer = setTimeout(autosaveShoot, 2000);
+    // Every change made on a wizard slide passes through here — typed and
+    // picked fields via the form listeners below, and the popup saves and
+    // list edits (talent, location, team, deadline, shots, setups, links,
+    // photos) that fire no form event — so it's the one hook the wizard's
+    // Skip/Next label and step count need.
+    if (shootWizardActive) refreshShootWizard();
   }
 
   function saveShootNow() {
@@ -8187,6 +8771,9 @@
   });
 
   function closeShootModal() {
+    // First: every borrowed field goes home (with its readonly back) before
+    // the scroll position is recorded and the draft saved or discarded.
+    endShootWizard({ closing: true });
     if (currentShootId) {
       shootScrollPositions[currentShootId] = shootModalOverlay.querySelector('.modal').scrollTop;
     }
@@ -10385,6 +10972,7 @@
     appMenuOverlay.hidden = true;
     appMenuPaneTrack.classList.remove('show-second');
     appMenuPaneTrack.classList.remove('show-third');
+    appMenuPaneTrack.classList.remove('show-fourth');
   }
 
   document.getElementById('appMenuBtn').addEventListener('click', () => {
@@ -10433,6 +11021,36 @@
     saveState();
     renderAll();
     updateDisplayChoiceHighlight();
+  });
+
+  // ---------- New shoot guide (on/off for the new-shoot wizard) ----------
+  function updateNewShootGuideChoice() {
+    const on = isNewShootGuideOn();
+    document.getElementById('newShootGuideOnBtn').classList.toggle('active', on);
+    document.getElementById('newShootGuideOffBtn').classList.toggle('active', !on);
+  }
+
+  document.getElementById('newShootGuideBtn').addEventListener('click', () => {
+    updateNewShootGuideChoice();
+    appMenuPaneTrack.classList.remove('show-second');
+    appMenuPaneTrack.classList.remove('show-third');
+    appMenuPaneTrack.classList.add('show-fourth');
+    syncPaneTrackHeight(appMenuPaneTrack);
+  });
+
+  document.getElementById('newShootGuideBackBtn').addEventListener('click', () => {
+    appMenuPaneTrack.classList.remove('show-fourth');
+    syncPaneTrackHeight(appMenuPaneTrack);
+  });
+
+  document.getElementById('newShootGuideOnBtn').addEventListener('click', () => {
+    setNewShootGuideOn(true);
+    updateNewShootGuideChoice();
+  });
+
+  document.getElementById('newShootGuideOffBtn').addEventListener('click', () => {
+    setNewShootGuideOn(false);
+    updateNewShootGuideChoice();
   });
 
   // ---------- Color theme (restyles background/border/fill chrome only —
