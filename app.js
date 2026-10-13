@@ -11274,9 +11274,9 @@
         },
         {
           "field": "right",
-          "text": "What worked with the talent, styling or light?",
+          "text": "What worked best with the talent: styling, light, performance?",
           "placeholder": "e.g. her stillness between takes",
-          "say": "What worked: {a}."
+          "say": "What worked best: {a}."
         },
         {
           "field": "better",
