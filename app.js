@@ -1947,9 +1947,21 @@
   //    how soon it happens.
   //  - 'category': grouped by shoot category, only showing categories that
   //    actually have a shoot in them.
-  let shootSort = 'status';
-
+  // The chosen sort is remembered on this device (like collapsed sections),
+  // so the Shoots page reopens the way it was left, even after a relaunch.
+  const SHOOT_SORT_KEY = 'dailies_shoot_sort_v1';
   const SHOOT_SORT_LABELS = { status: 'Status', shoot_date: 'Shoot date', category: 'Category' };
+
+  function loadShootSort() {
+    try {
+      const saved = localStorage.getItem(SHOOT_SORT_KEY);
+      return SHOOT_SORT_LABELS[saved] ? saved : 'status';
+    } catch (e) {
+      return 'status';
+    }
+  }
+
+  let shootSort = loadShootSort();
 
   const SHOOT_DATE_BUCKET_ORDER = ['this_week', 'next_week', 'later_this_month', 'next_month', 'future', 'past', 'undated'];
   const SHOOT_DATE_BUCKET_LABELS = {
@@ -2008,6 +2020,7 @@
     const chip = e.target.closest('.chip');
     if (!chip || !chip.dataset.sort) return;
     shootSort = chip.dataset.sort;
+    try { localStorage.setItem(SHOOT_SORT_KEY, shootSort); } catch (e) { /* ignore */ }
     document.getElementById('shootSortOptions').hidden = true;
     renderShoots();
   });
