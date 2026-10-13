@@ -6973,9 +6973,9 @@
     { id: 'basicInfoHeading', title: 'Basic Info', text: "Title, talent, status, and category — the foundation of the shoot." },
     { id: 'logisticsHeading', title: 'Logistics', text: 'Shoot date, deadline, time, and location — the when and where.' },
     { id: 'teamHeading', title: 'Team', text: "Who's on the shoot and how to reach them." },
-    { id: 'directionHeading', title: 'Direction', text: "Concept, character, and creative direction — the story you're telling, plus what you'll be asking of the talent and the team on the day." },
+    { id: 'directionHeading', title: 'Direction', text: "Concept, character, and creative direction — the story you're telling." },
     { id: 'visualsHeading', title: 'Visuals', text: () => `${moodboardTerm(document.getElementById('shootCategory').value)}, references, and frameworks — the visual language for the shoot.`, nestedIds: ['lightingSetupsHeading'] },
-    { id: 'shotListHeading', title: 'Shot list', text: 'Every shot you want to come away with. Tap a line to write, Enter to start the next one, and tick them off as you go.' },
+    { id: 'shotListHeading', title: 'Shot list', text: "Every shot you want to come away with — tap a line to write, Enter to start the next one, and tick them off as you go — plus notes for the day and what you'll be asking of the talent and the team." },
     { id: 'postShootHeading', title: 'Reflection', text: 'What went right, what could be better, and lessons for next time — filled in after the shoot.' },
   ];
   let shootTourStepIndex = 0;
@@ -7057,12 +7057,11 @@
   // Slides run in this order, so reordering them is reordering this list.
   //   key        stable id; the current slide is tracked by key because a
   //              category change on slide 1 adds/removes slides around it
-  //   title/hint string, or a function read on every render
+  //   title      string, or a function read on every render
+  //   hint       optional — a line under the title (string or function)
   //   blocks()   the page elements to borrow, resolved from field ids while
   //              they're back in place on the page
   //   when()     optional — the slide is skipped (and not counted) if false
-  //   filled()   optional — true once anything on the slide has a value,
-  //              which turns the forward button from "Skip" into "Next"
   //   enter()/leave() optional — after the blocks move in / after they're back
 
   // Shorthand for the step list: a field by id, or the block around it.
@@ -7094,27 +7093,21 @@
     {
       key: 'basics',
       title: 'The basics',
-      hint: 'Name the shoot and pick what kind it is. The status button tracks it from early idea to delivery.',
       blocks: () => [
         shootWizardBlock('shootStatus', '.status-swatch-wrap'),
         shootWizardBlock('shootTitle', 'label'),
         shootWizardBlock('shootCategory', 'label'),
       ],
-      filled: () => shootFieldHasText('shootTitle') || !!document.getElementById('shootCategory').value,
     },
     {
       key: 'talent',
       title: 'Talent',
       hint: "Who's in front of the camera? Add each person, with their handles and a photo if you have one.",
       blocks: () => [shootWizardBlock('addTalentBtn', '.talents-section')],
-      filled: () => currentTalents.length > 0,
     },
     {
       key: 'when',
       title: 'Date & time',
-      hint: () => (isVideoCategory(document.getElementById('shootCategory').value)
-        ? "When it's happening, plus crew and talent call times. Leave anything you don't know yet blank."
-        : "When it's happening. Leave anything you don't know yet blank."),
       // Last day and the video call times keep showing/hiding themselves.
       blocks: () => [
         shootWizardBlock('shootDate', 'label'),
@@ -7123,7 +7116,6 @@
         shootWizardBlock('shootStartTime', '.time-range-row'),
         shootWizardBlock('videoCallTimesRow'),
       ],
-      filled: () => ['shootDate', 'shootStartTime', 'shootEndTime', 'shootCrewCallTime', 'shootTalentCallTime'].some(shootFieldHasText),
     },
     {
       key: 'location',
@@ -7133,17 +7125,12 @@
         shootWizardBlock('shootLocationBtn', 'label'),
         shootWizardBlock('shootLocationDirections', 'label'),
       ],
-      // Country alone is the pre-filled default, not something entered —
-      // same rule as updateLocationBtnDisplay.
-      filled: () => ['name', 'street', 'city', 'state', 'zip'].some(k => hasText(currentShootLocation[k]))
-        || shootFieldHasText('shootLocationDirections'),
     },
     {
       key: 'team',
       title: 'Team',
       hint: "Is anyone helping out? Add each person once you know who's on board.",
       blocks: () => [shootWizardBlock('teamBody')],
-      filled: () => document.getElementById('teamRequiredYes').checked || document.getElementById('teamRequiredNo').checked,
     },
     {
       key: 'goals',
@@ -7155,8 +7142,6 @@
         shootWizardBlock('shootGoals', 'label'),
         shootWizardBlock('videoDeliverablesBlock'),
       ],
-      filled: () => ['shootGoals', 'shootDeliverables', 'shootDeliverableDestinations'].some(shootFieldHasText)
-        || !!document.querySelector('#shootAspectRatios input:checked'),
     },
     {
       key: 'idea',
@@ -7166,7 +7151,6 @@
         shootWizardBlock('shootPremise', 'label'),
         shootWizardBlock('shootElevatorPitch', 'label'),
       ],
-      filled: () => ['shootPremise', 'shootElevatorPitch'].some(shootFieldHasText),
     },
     {
       key: 'story',
@@ -7177,40 +7161,6 @@
       // on the page (updateCategoryTierUI), where a blank category counts as
       // narrative too.
       when: () => !document.getElementById('narrativeFieldsBlock').hidden,
-      filled: () => ['shootCharacter', 'shootWorldNotes'].some(shootFieldHasText),
-    },
-    {
-      key: 'directions',
-      title: 'Directions',
-      hint: "Notes for the day: what you'll ask of the talent, and what the team needs to know.",
-      blocks: () => [
-        shootWizardBlock('shootTalentDirections', 'label'),
-        shootWizardBlock('shootTeamDirections', 'label'),
-      ],
-      filled: () => ['shootTalentDirections', 'shootTeamDirections'].some(shootFieldHasText),
-    },
-    {
-      key: 'moodboard',
-      // Mood board or Storyboard, by category — same wording as the section.
-      title: () => moodboardTerm(document.getElementById('shootCategory').value),
-      hint: () => {
-        const term = moodboardTerm(document.getElementById('shootCategory').value).toLowerCase();
-        return document.getElementById('moodboardCompleteRow').hidden
-          ? `Images that set the look. Add a few now, or come back to the ${term} later.`
-          : `Images that set the look. Tick the box once the ${term} is done, or if this shoot doesn't need one.`;
-      },
-      // Anchored on the grid: Final images shares the .moodboard-section class.
-      blocks: () => [shootWizardBlock('moodboardGrid', '.moodboard-section')],
-      filled: () => shootHasImages
-        || !!document.querySelector('#moodboardGrid .moodboard-item')
-        || document.getElementById('shootMoodboardComplete').checked,
-    },
-    {
-      key: 'references',
-      title: 'References',
-      hint: "Anything you're drawing inspiration from. Add as many links as you like.",
-      blocks: () => [shootWizardBlock('referencesList', '.references-block')],
-      filled: () => currentReferences.some(ref => hasText(ref)),
     },
     {
       key: 'visualLanguage',
@@ -7226,9 +7176,27 @@
         document.getElementById('frameworkTagsContainer').hidden ? null : shootWizardBlock('frameworkTagsContainer'),
       ],
       when: () => (state.frameworks || []).some(fw => (fw.tags || []).length > 0),
-      filled: () => !!document.querySelector(FRAMEWORK_TAG_CHECKED_SELECTOR),
       enter: () => setShootWizardFrameworkGroupsOpen(true),
       leave: () => setShootWizardFrameworkGroupsOpen(false),
+    },
+    {
+      key: 'references',
+      title: 'References',
+      hint: "Anything you're drawing inspiration from. Add as many links as you like.",
+      blocks: () => [shootWizardBlock('referencesList', '.references-block')],
+    },
+    {
+      key: 'moodboard',
+      // Mood board or Storyboard, by category — same wording as the section.
+      title: () => moodboardTerm(document.getElementById('shootCategory').value),
+      hint: () => {
+        const term = moodboardTerm(document.getElementById('shootCategory').value).toLowerCase();
+        return document.getElementById('moodboardCompleteRow').hidden
+          ? `Images that set the look. Add a few now, or come back to the ${term} later.`
+          : `Images that set the look. Tick the box once the ${term} is done, or if this shoot doesn't need one.`;
+      },
+      // Anchored on the grid: Final images shares the .moodboard-section class.
+      blocks: () => [shootWizardBlock('moodboardGrid', '.moodboard-section')],
     },
     {
       key: 'lighting',
@@ -7237,21 +7205,34 @@
       // The section's body only — its heading stays on the page with the
       // jump menu/scrollspy/tour anchors. Shown here even if folded there.
       blocks: () => [shootWizardBlock('lightingSetupsBody')],
-      filled: () => currentLightingSetups.some(setup => hasText(setup.name) || hasText(setup.characteristics) || hasText(setup.description)),
     },
     {
       key: 'shotList',
       title: 'Shot list',
       hint: 'Every shot you want to come away with. Tap a line to write, and Enter starts the next one.',
-      blocks: () => [shootWizardBlock('shotListBody')],
-      filled: () => currentShotList.some(item => hasText(item.text)) || shootFieldHasText('shootShootingNotes'),
+      // Its own pieces rather than the whole section body: Directions for
+      // talent/team live in the same section on the page but get their own
+      // slide, right after this one.
+      blocks: () => [
+        shootWizardBlock('shotListItems'),
+        shootWizardBlock('addShotBtn'),
+        shootWizardBlock('shootShootingNotes', 'label'),
+      ],
+    },
+    {
+      key: 'directions',
+      title: 'Directions',
+      hint: "Notes for the day: what you'll ask of the talent, and what the team needs to know.",
+      blocks: () => [
+        shootWizardBlock('shootTalentDirections', 'label'),
+        shootWizardBlock('shootTeamDirections', 'label'),
+      ],
     },
     {
       key: 'deadline',
       title: 'Deadline',
       hint: "When everything's due, if there's a date to hit.",
       blocks: () => [shootWizardBlock('shootDeadline', 'label')],
-      filled: () => shootFieldHasText('shootDeadline'),
     },
     {
       key: 'finish',
@@ -7329,14 +7310,23 @@
     const isLast = !adjacentShootWizardStep(1);
     document.getElementById('shootWizardStep').textContent = `Step ${inPlay.indexOf(step) + 1} of ${inPlay.length}`;
     document.getElementById('shootWizardTitle').textContent = typeof step.title === 'function' ? step.title() : step.title;
-    document.getElementById('shootWizardHint').textContent = typeof step.hint === 'function' ? step.hint() : step.hint;
-    document.getElementById('shootWizardBackBtn').hidden = !adjacentShootWizardStep(-1);
+    const hintEl = document.getElementById('shootWizardHint');
+    hintEl.textContent = (typeof step.hint === 'function' ? step.hint() : step.hint) || '';
+    // A slide without a hint doesn't keep an empty line's spacing.
+    hintEl.hidden = !hintEl.textContent;
+    // No Back on the first slide, nor on the last: that one is just the
+    // confirm button (see below).
+    document.getElementById('shootWizardBackBtn').hidden = isLast || !adjacentShootWizardStep(-1);
     // Small "Don't show again" link, on the first slide only.
     document.getElementById('shootWizardDontShowBtn').hidden = inPlay.indexOf(step) !== 0;
-    // Forward is always possible — "Skip" only says nothing's been filled in
-    // on this slide yet. The "Go to shoot page" row stays on every slide, the
-    // last one included, so the way out is always in the same place.
-    document.getElementById('shootWizardNextBtn').textContent = isLast ? 'Done' : (step.filled && step.filled() ? 'Next' : 'Skip');
+    // Forward is always possible, filled in or not. On the last slide the
+    // forward button is the shoot page's own Save — same varying text as the
+    // page's button (picked when the shoot opened) — and the separate "Go to
+    // shoot page" row, on every other slide, steps aside.
+    const nextBtn = document.getElementById('shootWizardNextBtn');
+    nextBtn.textContent = isLast ? document.getElementById('saveShootBtn').textContent : 'Next';
+    nextBtn.classList.toggle('shoot-wizard-save', isLast);
+    document.getElementById('shootWizardExitRow').hidden = isLast;
   }
 
   // Run from scheduleShootAutosave on every change while the wizard's up.
@@ -7499,7 +7489,8 @@
     if (!shootWizardActive) return;
     const next = adjacentShootWizardStep(1);
     if (next) showShootWizardStep(next.key);
-    else endShootWizard();
+    // The last slide's button is Save: save and close, like the page's.
+    else closeShootModal();
   });
 
   document.getElementById('shootWizardExitBtn').addEventListener('click', () => endShootWizard());
@@ -8428,7 +8419,7 @@
     // picked fields via the form listeners below, and the popup saves and
     // list edits (talent, location, team, deadline, shots, setups, links,
     // photos) that fire no form event — so it's the one hook the wizard's
-    // Skip/Next label and step count need.
+    // step count and filled-in field looks need.
     if (shootWizardActive) refreshShootWizard();
   }
 
@@ -8448,6 +8439,7 @@
   // Commit as soon as focus leaves a field, so the pending-debounce window is
   // only ever open while you're actually still in a field typing.
   shootForm.addEventListener('focusout', saveShootNow);
+
   // ---------- Multi-day shoot (Logistics) ----------
   // A checkbox under Shoot date that turns this shoot into Day 1 of a new
   // project, with one copied shoot per following day (see
@@ -8612,6 +8604,28 @@
     document.getElementById('shootLastDay').value = '';
     setLastDayRange(startDate);
     document.getElementById('multiDayLastDayLabel').hidden = false;
+    maybeShowMultiDayNotice();
+  });
+
+  // A heads-up the moment Multi-day is ticked — on the shoot page or in the
+  // new-shoot guide — that each day gets a shoot page of its own, before the
+  // Last day picker and the confirm popup. "Don't show again" is remembered
+  // on this device.
+  const MULTI_DAY_NOTICE_HIDDEN_KEY = 'dailies_multi_day_notice_hidden_v1';
+
+  function maybeShowMultiDayNotice() {
+    let hidden;
+    try { hidden = localStorage.getItem(MULTI_DAY_NOTICE_HIDDEN_KEY) === '1'; } catch (err) { hidden = false; }
+    if (!hidden) document.getElementById('multiDayNoticeOverlay').hidden = false;
+  }
+
+  document.getElementById('multiDayNoticeOkBtn').addEventListener('click', () => {
+    document.getElementById('multiDayNoticeOverlay').hidden = true;
+  });
+
+  document.getElementById('multiDayNoticeHideBtn').addEventListener('click', () => {
+    try { localStorage.setItem(MULTI_DAY_NOTICE_HIDDEN_KEY, '1'); } catch (err) { /* storage unavailable — nothing to remember it in */ }
+    document.getElementById('multiDayNoticeOverlay').hidden = true;
   });
 
   document.getElementById('shootLastDay').addEventListener('change', (e) => {

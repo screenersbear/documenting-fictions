@@ -272,12 +272,6 @@
         <label>Location directions
           <textarea id="shootLocationDirections" rows="3" maxlength="1000" placeholder="What floor the studio is on, where to park, etc." readonly></textarea>
         </label>
-        <label>Directions for talent
-          <textarea id="shootTalentDirections" rows="6" maxlength="1000" placeholder="notes, reminders, directions for the day of the shoot..." readonly></textarea>
-        </label>
-        <label>Directions for team
-          <textarea id="shootTeamDirections" rows="6" maxlength="1000" placeholder="notes, reminders, directions for the day of the shoot..." readonly></textarea>
-        </label>
       </div>
 
       <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
@@ -385,6 +379,12 @@
         <button type="button" id="addShotBtn" class="primary small-btn">+ Add shot</button>
         <label>Shooting notes
           <textarea id="shootShootingNotes" rows="6" maxlength="2000" placeholder="Anything to remember on the day — settings, timings, things to try" readonly></textarea>
+        </label>
+        <label>Directions for talent
+          <textarea id="shootTalentDirections" rows="6" maxlength="1000" placeholder="notes, reminders, directions for the day of the shoot..." readonly></textarea>
+        </label>
+        <label>Directions for team
+          <textarea id="shootTeamDirections" rows="6" maxlength="1000" placeholder="notes, reminders, directions for the day of the shoot..." readonly></textarea>
         </label>
       </div>
 
@@ -1101,6 +1101,7 @@
 <!-- ============ APP MENU ============ -->
 <div id="appMenuOverlay" class="modal-overlay options-overlay app-menu-overlay" hidden>
   <div class="modal options-modal options-modal-slider app-menu-modal">
+    <h2 class="app-menu-header">App options</h2>
     <div class="options-pane-track" id="appMenuPaneTrack">
       <div class="options-pane">
         <!-- Options are alphabetical; the destructive one and Cancel stay
@@ -1124,7 +1125,7 @@
         <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item options-delete" id="deleteAllShootDataBtn">Delete all shoot data</button>
         <div class="menu-divider" aria-hidden="true"></div>
-        <button type="button" class="options-item options-cancel" id="appMenuCancelBtn">Cancel</button>
+        <button type="button" class="options-item options-cancel" id="appMenuCancelBtn">Go back</button>
       </div>
       <div class="options-pane">
         <button type="button" class="options-item options-back" id="displayOptionsBackBtn">&larr; Back</button>
@@ -1164,6 +1165,17 @@
       <button type="button" class="danger" id="deleteAllConfirmYesBtn">Yes, delete everything</button>
     </div>
     <button type="button" class="primary" id="deleteAllConfirmOkBtn" hidden>OK</button>
+  </div>
+</div>
+
+<!-- ============ MULTI-DAY SHOOT NOTICE ============ -->
+<div id="multiDayNoticeOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2>Multi-day shoot</h2>
+    <p>A shoot page will be set up for each day of the shoot. Pick the last day next, and you'll get to confirm before the days are made.</p>
+    <button type="button" class="primary" id="multiDayNoticeOkBtn">got it!</button>
+    <!-- Same small link as the new-shoot guide's "Don't show again". -->
+    <button type="button" class="manage-link" id="multiDayNoticeHideBtn">Don't show again</button>
   </div>
 </div>
 

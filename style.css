@@ -3981,10 +3981,40 @@ h2.status-group-heading.heading-navy {
   display: none;
 }
 
+/* The multi-day notice's "Don't show again" — the same small link, centred
+   under its "got it!" button. */
+#multiDayNoticeHideBtn {
+  margin: 12px auto 0;
+  font-size: 13px;
+}
+
 /* The "All set" slide has no fields — same gap above its buttons as the
    tour's card, rather than the body's empty box plus the usual margin. */
+#shootWizardBody:empty {
+  min-height: 0;
+}
+
 #shootWizardBody:empty + .shoot-wizard-actions {
   margin-top: 6px;
+}
+
+/* The last slide's only button is the shoot page's Save, so it takes that
+   button's look: full width (Back is hidden there), the same varying text
+   in the title font, upper case, fixed height so a long message wraps
+   inside it rather than resizing it. */
+.shoot-wizard-actions .shoot-wizard-save {
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.15;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 21px;
+  text-transform: uppercase;
+  border: 2px solid var(--ink);
 }
 
 /* Keyboard up (see syncShootWizardViewport): the step count and hint go and
@@ -4105,6 +4135,38 @@ h2.status-group-heading.heading-navy {
   border-radius: 28px;
 }
 
+/* "App options" band across the top of the menu, in the accent colour; the
+   modal's rounded corners clip it. Stays put while the panes slide below. */
+.app-menu-header {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 16px;
+  background: var(--accent);
+  color: var(--text);
+  font-family: var(--font-title);
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+/* "Go back" closes the menu — the same accent band as the header, run edge
+   to edge along the bottom (the negative margins undo the pane's 12px
+   padding, so its corners are the modal's own rounded ones). */
+#appMenuCancelBtn {
+  width: calc(100% + 24px);
+  margin: 4px -12px -12px;
+  padding: 16px;
+  border-radius: 0;
+  background: var(--accent);
+  color: var(--text);
+  font-family: var(--font-title);
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
 /* Team Member — centered like the app menu/intro popups rather than a
    bottom sheet: unlike Talent/Location (longer, scrolling forms), its
    content is short and fixed, so floating it in the middle reads as a
@@ -4127,7 +4189,8 @@ h2.status-group-heading.heading-navy {
 #dailyReportCloseBtn,
 #statusSwatchIntroCloseBtn,
 #exportPreviousIntroCloseBtn,
-#shootWizardOffOkBtn {
+#shootWizardOffOkBtn,
+#multiDayNoticeOkBtn {
   width: 100%;
   padding: 13px;
   border-radius: var(--radius-xl);
