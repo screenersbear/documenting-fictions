@@ -1509,12 +1509,87 @@
   }
 
   // ---------- mood board / final image storage (IndexedDB) ----------
+  // One connection for the whole session: opening a fresh one for every read
+  // was most of what a launch spent waiting on photos (a cover and each
+  // talent photo per shoot), on iPhone especially.
+  let idbConnection = null;
+
   function idbOpen() {
-    return new Promise((resolve, reject) => {
-      const req = indexedDB.open(IDB_NAME, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
+    if (!idbConnection) {
+      const opening = new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+        req.onsuccess = () => {
+          const db = req.result;
+          // Closed out from under us (another tab upgrading, or the browser
+          // dropping it): the next call opens a new one — unless a newer
+          // connection has already taken this one's place.
+          const forget = () => { if (idbConnection === opening) idbConnection = null; };
+          db.onversionchange = () => { db.close(); forget(); };
+          db.onclose = forget;
+          resolve(db);
+        };
+        req.onerror = () => reject(req.error);
+      });
+      opening.catch(() => { if (idbConnection === opening) idbConnection = null; });
+      idbConnection = opening;
+    }
+    return idbConnection;
+  }
+
+  // Runs one transaction. `run(store)` queues its requests and may return a
+  // function that reads their results; the promise settles with that once
+  // the whole transaction has. iOS can lose the shared connection while the
+  // app sits in the background — a transaction that can't start on it, or
+  // dies with the "connection lost" kind of error, gets one retry on a
+  // fresh connection.
+  function idbTransaction(mode, run, retried) {
+    const connection = idbOpen();
+    const retry = (err) => {
+      if (retried) throw err;
+      // Only if it's still the one that failed: a read that failed alongside
+      // may already have opened its replacement.
+      if (idbConnection === connection) idbConnection = null;
+      return idbTransaction(mode, run, true);
+    };
+    return connection.then(db => {
+      let tx;
+      try {
+        tx = db.transaction(IDB_STORE, mode);
+      } catch (err) {
+        try { db.close(); } catch (e) { /* already gone */ }
+        return retry(err);
+      }
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        const fail = () => {
+          if (settled) return;
+          settled = true;
+          const err = tx.error;
+          if (err && (err.name === 'UnknownError' || err.name === 'InvalidStateError')) {
+            try { db.close(); } catch (e) { /* already gone */ }
+            Promise.resolve().then(() => retry(err)).then(resolve, reject);
+          } else {
+            reject(err);
+          }
+        };
+        let read;
+        try {
+          read = run(tx.objectStore(IDB_STORE));
+        } catch (err) {
+          settled = true;
+          try { tx.abort(); } catch (e) { /* already finished */ }
+          reject(err);
+          return;
+        }
+        tx.oncomplete = () => {
+          if (settled) return;
+          settled = true;
+          resolve(typeof read === 'function' ? read() : undefined);
+        };
+        tx.onerror = fail;
+        tx.onabort = fail;
+      });
     });
   }
 
@@ -1525,30 +1600,58 @@
   }
 
   function idbGetImages(key) {
-    return idbOpen().then(db => new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readonly');
-      const req = tx.objectStore(IDB_STORE).get(key);
-      req.onsuccess = () => resolve(normalizeMoodboardImages(req.result));
-      req.onerror = () => reject(req.error);
-    }));
+    return idbTransaction('readonly', store => {
+      const req = store.get(key);
+      return () => normalizeMoodboardImages(req.result);
+    });
+  }
+
+  // Several keys in one transaction: a Map of key -> images ([] if none).
+  function idbGetManyImages(keys) {
+    return idbTransaction('readonly', store => {
+      const reqs = keys.map(key => [key, store.get(key)]);
+      return () => new Map(reqs.map(([key, req]) => [key, normalizeMoodboardImages(req.result)]));
+    });
   }
 
   function idbSetImages(key, images) {
-    return idbOpen().then(db => new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      tx.objectStore(IDB_STORE).put(images, key);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    }));
+    forgetCachedImages(key);
+    return idbTransaction('readwrite', store => { store.put(images, key); }).then(() => noteImagesWritten(key));
   }
 
   function idbDeleteImages(key) {
-    return idbOpen().then(db => new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      tx.objectStore(IDB_STORE).delete(key);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    }));
+    forgetCachedImages(key);
+    return idbTransaction('readwrite', store => { store.delete(key); }).then(() => noteImagesWritten(key));
+  }
+
+  // Images already read for the Journal list, by key, so redrawing it (every
+  // renderAll — each tab switch) draws them straight away instead of
+  // emptying every photo strip and filling it again a moment later.
+  const journalListImageCache = new Map();
+
+  function forgetCachedImages(key) {
+    if (key === null) journalListImageCache.clear();
+    else journalListImageCache.delete(key);
+  }
+
+  // Once a write has landed: anything that keeps its own copy reads again.
+  // The Archive slideshow keeps what it last read (see
+  // renderArchiveSlideshow) — a write to any final images, or clearing the
+  // lot (key null), sends it back to read. Kept off the write's own promise
+  // chain, so nothing here can make a write that succeeded look like it
+  // failed.
+  function noteImagesWritten(key) {
+    forgetCachedImages(key);
+    setTimeout(() => {
+      // A list drawn mid-write could have cached the old copy.
+      if (key !== null && !views.journal.hidden && journalListImageCache.has(key)) {
+        journalListImageCache.delete(key);
+        renderJournal();
+      }
+      if (key !== null && !String(key).endsWith('__final')) return;
+      archiveSlideshowStale = true;
+      if (archiveSlideshowLoaded) renderArchiveSlideshow();
+    }, 0);
   }
 
   function finalImagesKey(shootId) {
@@ -1619,11 +1722,10 @@
   }
 
   function computeIdbStorageBreakdown() {
-    return idbOpen().then(db => new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readonly');
+    return idbTransaction('readonly', store => {
       const totals = { moodboard: 0, cover: 0, talent: 0, final: 0, journal: 0 };
       const counts = { moodboard: 0, cover: 0, talent: 0, final: 0, journal: 0 };
-      const req = tx.objectStore(IDB_STORE).openCursor();
+      const req = store.openCursor();
       req.onsuccess = (e) => {
         const cursor = e.target.result;
         if (!cursor) return;
@@ -1634,9 +1736,8 @@
         });
         cursor.continue();
       };
-      tx.oncomplete = () => resolve({ totals, counts });
-      tx.onerror = () => reject(tx.error);
-    }));
+      return () => ({ totals, counts });
+    });
   }
 
   function formatStorageBytes(bytes) {
@@ -1724,37 +1825,41 @@
   // render code can keep reading shoot.projectPhoto / talent.photo
   // synchronously, exactly as it did when they were stored inline.
   //
-  // Each result is written onto whatever shoot/talent currently has that id in
-  // `state` (looked up when the read lands, not captured up front) — `state`
-  // gets swapped by a pull-to-refresh and shoot objects get replaced by copies
-  // on every autosave, so a captured reference can already be an orphan by
-  // then. It only fills a photo that's missing, so a late read can never put
-  // an older copy over one that was just added, and one read failing no longer
-  // ends the whole batch early (which used to let the caller repaint before
-  // the other reads had landed). Resolves to how many photos it filled in, so
-  // a caller can skip a repaint when nothing changed.
+  // All in one transaction — at launch this is what the first paint waits
+  // on (see the boot code), so it has to be quick. Each result is written
+  // onto whatever shoot/talent currently has that id in `state` (looked up
+  // when the read lands, not captured up front) — `state` gets swapped by a
+  // pull-to-refresh and shoot objects get replaced by copies on every
+  // autosave, so a captured reference can already be an orphan by then. It
+  // only fills a photo that's missing, so a late read can never put an older
+  // copy over one that was just added. If the batch read fails, it falls
+  // back to one read per photo, so one bad row can't cost all the others.
+  // Resolves to how many photos it filled in, so a caller can skip a repaint
+  // when nothing changed.
   function hydratePhotos() {
-    let filled = 0;
-    const jobs = [];
+    const keys = [];
     state.shoots.forEach(shoot => {
-      const shootId = shoot.id;
-      jobs.push(idbGetImages(projectPhotoKey(shootId)).then(entries => {
-        const src = photoFromEntries(entries);
-        const cur = state.shoots.find(x => x.id === shootId);
-        if (src && cur && !cur.projectPhoto) { cur.projectPhoto = src; filled++; }
-      }).catch(() => {}));
+      keys.push(projectPhotoKey(shoot.id));
       (shoot.talents || []).forEach(talent => {
-        if (!talent.id) return;
-        const talentId = talent.id;
-        jobs.push(idbGetImages(talentPhotoKey(shootId, talentId)).then(entries => {
-          const src = photoFromEntries(entries);
-          const cur = state.shoots.find(x => x.id === shootId);
-          const t = cur && (cur.talents || []).find(x => x.id === talentId);
-          if (src && t && !t.photo) { t.photo = src; filled++; }
-        }).catch(() => {}));
+        if (talent.id) keys.push(talentPhotoKey(shoot.id, talent.id));
       });
     });
-    return Promise.all(jobs).then(() => filled);
+    if (!keys.length) return Promise.resolve(0);
+    const readAll = idbGetManyImages(keys).catch(() => Promise.all(keys.map(key => idbGetImages(key)
+      .then(entries => [key, entries], () => [key, []])))
+      .then(pairs => new Map(pairs)));
+    return readAll.then(rows => {
+      let filled = 0;
+      state.shoots.forEach(shoot => {
+        const cover = photoFromEntries(rows.get(projectPhotoKey(shoot.id)));
+        if (cover && !shoot.projectPhoto) { shoot.projectPhoto = cover; filled++; }
+        (shoot.talents || []).forEach(talent => {
+          const src = talent.id ? photoFromEntries(rows.get(talentPhotoKey(shoot.id, talent.id))) : '';
+          if (src && !talent.photo) { talent.photo = src; filled++; }
+        });
+      });
+      return filled;
+    });
   }
 
   // Re-attaches the photos already held in memory onto a freshly rebuilt state
@@ -3223,7 +3328,21 @@
   // ---------- Archive view ----------
   let archiveFilter = 'all';
   let archiveSlideshowTimer = null;
-  let archiveSlideshowSignature = '';
+  // null until the first read lands, so even "no photos" gets drawn once
+  // (it shows the empty-state line).
+  let archiveSlideshowSignature = null;
+  // The slideshow's photos are the app's biggest, so they're not read at
+  // launch: loadArchiveSlideshow runs a moment after the first paint (or
+  // straight away if Archive is opened first). After that it only reads
+  // again when final images change (noteImagesWritten) or the set of shoots
+  // does — not on every renderAll, which runs on every tab switch.
+  let archiveSlideshowLoaded = false;
+  let archiveSlideshowStale = true;
+  let archiveSlideshowShootsKey = '';
+  // One read at a time: a burst of writes (deleting or importing many
+  // shoots) folds into the read already running plus one catch-up, rather
+  // than a full read of every final image per write.
+  let archiveSlideshowReading = false;
 
   // The rotation is deliberately split out from the DOM build below. Each tick
   // cross-fades and scales a full-size photo over 4.2s on a 4.2s interval, so
@@ -3253,21 +3372,55 @@
     archiveSlideshowTimer = null;
   }
 
+  function loadArchiveSlideshow() {
+    archiveSlideshowLoaded = true;
+    renderArchiveSlideshow();
+  }
+
   // Pulls final images across every non-video shoot (any status) and cycles
   // through them; skips a rebuild if the image set hasn't actually changed so
   // the animation doesn't restart every time renderAll() runs. Video shoots
   // have no final images (any left from before a switch to video are hidden).
   function renderArchiveSlideshow() {
+    // Not loaded yet (see archiveSlideshowLoaded) — unless Archive's the
+    // screen being shown.
+    if (!archiveSlideshowLoaded) {
+      if (views.archive.hidden) return;
+      archiveSlideshowLoaded = true;
+    }
     const shoots = state.shoots.filter(s => !isVideoShoot(s));
-    Promise.all(shoots.map(s => idbGetImages(finalImagesKey(s.id)))).then(results => {
+    const shootsKey = shoots.map(s => s.id).join('|');
+    // Nothing's changed since the last read — the path taken when you
+    // navigate back to Archive, where the DOM is already built but the
+    // rotation is stopped.
+    if (!archiveSlideshowStale && shootsKey === archiveSlideshowShootsKey) {
+      startArchiveSlideshow();
+      return;
+    }
+    if (archiveSlideshowReading) {
+      archiveSlideshowStale = true;
+      return;
+    }
+    archiveSlideshowReading = true;
+    archiveSlideshowStale = false;
+    archiveSlideshowShootsKey = shootsKey;
+    idbGetManyImages(shoots.map(s => finalImagesKey(s.id))).then(rows => {
+      archiveSlideshowReading = false;
+      // Something changed while this was reading: skip this result and read
+      // once more.
+      const currentKey = state.shoots.filter(s => !isVideoShoot(s)).map(s => s.id).join('|');
+      if (archiveSlideshowStale || currentKey !== archiveSlideshowShootsKey) {
+        archiveSlideshowStale = true;
+        renderArchiveSlideshow();
+        return;
+      }
       const images = [];
-      results.forEach((imgs, i) => {
-        imgs.forEach(img => { if (img.src) images.push({ src: img.src, shootId: shoots[i].id }); });
+      shoots.forEach(shoot => {
+        (rows.get(finalImagesKey(shoot.id)) || []).forEach(img => { if (img.src) images.push({ src: img.src, shootId: shoot.id }); });
       });
       const signature = images.map(img => img.src).join('|');
-      // Unchanged image set: leave the existing <img>s alone, but still
-      // re-evaluate the timer — this is the path taken when you navigate back
-      // to Archive, where the DOM is already built but the rotation is stopped.
+      // Unchanged image set (a write that didn't change what's shown): leave
+      // the existing <img>s alone, but still re-evaluate the timer.
       if (signature === archiveSlideshowSignature) {
         startArchiveSlideshow();
         return;
@@ -3277,19 +3430,40 @@
 
       stopArchiveSlideshow();
       const container = document.getElementById('archiveSlideshow');
-      container.querySelectorAll('img').forEach(img => img.remove());
+      // The photo on screen stays until the new first one has faded in over
+      // it — no cut to an empty box when the set changes while you watch.
+      const showing = images.length ? container.querySelector('img.active') : null;
+      container.querySelectorAll('img').forEach(img => { if (img !== showing) img.remove(); });
       document.getElementById('archiveSlideshowEmpty').hidden = images.length > 0;
       if (!images.length) return;
 
-      images.forEach((entry, idx) => {
+      let first = null;
+      images.forEach(entry => {
         const img = document.createElement('img');
         img.src = entry.src;
         img.dataset.shootId = entry.shootId;
-        if (idx === 0) img.classList.add('active');
         container.appendChild(img);
+        if (!first) first = img;
       });
-
-      startArchiveSlideshow();
+      // The first photo fades in with the slideshow's own cross-fade rather
+      // than popping in, when Archive's on screen as it loads (built while
+      // Archive's hidden, it's simply there when you get to it).
+      void first.offsetWidth;
+      first.classList.add('active');
+      if (showing) {
+        showing.classList.remove('active');
+        // The rotation starts once the old photo's gone, so it counts from
+        // the new set only.
+        setTimeout(() => {
+          showing.remove();
+          startArchiveSlideshow();
+        }, 1250);
+      } else {
+        startArchiveSlideshow();
+      }
+    }).catch(() => {
+      archiveSlideshowReading = false;
+      archiveSlideshowStale = true;
     });
   }
 
@@ -3852,22 +4026,33 @@
   // let a background list render overwrite the editor's flag with some other
   // entry's answer.
   function renderJournalListImages(grid, key) {
+    // Already read once: drawn straight away (see journalListImageCache).
+    const cached = journalListImageCache.get(key);
+    if (cached) {
+      drawJournalListImages(grid, key, cached);
+      return Promise.resolve();
+    }
     return idbGetImages(key).then(images => {
-      grid.hidden = !images.length;
-      grid.innerHTML = '';
-      images.forEach((img, idx) => {
-        const thumb = document.createElement('div');
-        thumb.className = 'moodboard-thumb';
-        thumb.innerHTML = `<img src="${img.src}" alt="" />`;
-        thumb.querySelector('img').addEventListener('click', (ev) => {
-          // The whole sheet of paper is tappable, so a photo tap has to stop
-          // here or it also fires the edit / jump-to-shoot handler underneath.
-          ev.stopPropagation();
-          openImageViewer(images, idx, key, () => renderJournal(), false);
-        });
-        grid.appendChild(thumb);
-      });
+      journalListImageCache.set(key, images);
+      drawJournalListImages(grid, key, images);
     }).catch(() => { grid.hidden = true; });
+  }
+
+  function drawJournalListImages(grid, key, images) {
+    grid.hidden = !images.length;
+    grid.innerHTML = '';
+    images.forEach((img, idx) => {
+      const thumb = document.createElement('div');
+      thumb.className = 'moodboard-thumb';
+      thumb.innerHTML = `<img src="${img.src}" alt="" />`;
+      thumb.querySelector('img').addEventListener('click', (ev) => {
+        // The whole sheet of paper is tappable, so a photo tap has to stop
+        // here or it also fires the edit / jump-to-shoot handler underneath.
+        ev.stopPropagation();
+        openImageViewer(images, idx, key, () => renderJournal(), false);
+      });
+      grid.appendChild(thumb);
+    });
   }
 
   // Sizes .journal-paper's --header-band (see the CSS) to this specific
@@ -15553,12 +15738,8 @@
   });
 
   function idbClearAllImages() {
-    return idbOpen().then(db => new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      tx.objectStore(IDB_STORE).clear();
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    }));
+    forgetCachedImages(null);
+    return idbTransaction('readwrite', store => { store.clear(); }).then(() => noteImagesWritten(null));
   }
 
   const deleteAllConfirmOverlay = document.getElementById('deleteAllConfirmOverlay');
@@ -17566,15 +17747,36 @@
   });
   window.addEventListener('pagehide', flushPendingEdits);
 
-  renderAll();
-  // Photos come from IndexedDB, which is async, so the first paint above lands
-  // without thumbnails and this fills them in a moment later. Everything after
-  // boot reads them straight off the in-memory state, so this is the only
-  // moment it's visible.
-  migrateInlinePhotos()
-    .then(hydratePhotos)
-    .then(() => renderAll())
+  // Photos come from IndexedDB, which is async, so the first render below
+  // has none and a second one fills them in. The page stays hidden meanwhile
+  // (html.booting: a plain white screen) and appears once, photos and all —
+  // rather than showing camera icons that swap for photos a moment later.
+  // Their read is queued before anything else: the render below (the
+  // Journal's photo strips) and the launch popups (the daily report) queue
+  // reads of their own, and IndexedDB serves them in order. Capped so a slow
+  // read can't hold up the app: after 600ms it shows regardless (the photos
+  // then land when they're ready), and style.css reveals the page on its own
+  // after 1.5s if this never runs at all. Everything after boot reads photos
+  // straight off the in-memory state.
+  const photosReady = hydratePhotos()
+    .then(filled => { if (filled) renderAll(); })
     .catch(() => {});
+  // Inline photos are already in memory, so this can run alongside.
+  migrateInlinePhotos();
+  renderAll();
+  Promise.race([photosReady, new Promise(resolve => setTimeout(resolve, 600))]).then(() => {
+    document.documentElement.classList.remove('booting');
+    // A popup opened during launch (a tab intro, the daily report…) played
+    // its entrance while the page was hidden — play it again now it shows.
+    document.querySelectorAll('.modal-overlay:not([hidden]) .modal').forEach(modal => {
+      modal.style.animation = 'none';
+      void modal.offsetWidth;
+      modal.style.animation = '';
+    });
+    // Archive's slideshow (full-size photos) reads in the background once
+    // the app's up, so it's ready before you get there.
+    setTimeout(() => { if (!archiveSlideshowLoaded) loadArchiveSlideshow(); }, 400);
+  });
   // Introductions first: on a genuinely first run this is the welcome step, and
   // the rest of the launch popups defer so they don't stack on top of it.
   maybeShowPhotographerPrompt();

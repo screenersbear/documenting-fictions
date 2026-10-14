@@ -63,6 +63,23 @@ html {
   background: var(--ink);
 }
 
+/* Launch: a plain white screen (the same white as the page, and as the
+   launch screen before it) until the first paint can include the photos —
+   app.js removes .booting from <html>. The animation is only a backstop:
+   if that never happens, the page shows itself after 1.5s anyway. */
+html.booting {
+  background: var(--bg);
+}
+
+html.booting body {
+  visibility: hidden;
+  animation: boot-reveal 0s linear 1.5s forwards;
+}
+
+@keyframes boot-reveal {
+  to { visibility: visible; }
+}
+
 /* Form controls don't inherit page font by default in most browsers —
    catch any that a more specific rule hasn't already set to Courier. */
 button, input, select, textarea {
