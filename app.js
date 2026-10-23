@@ -2506,7 +2506,7 @@
       // Stop the Archive photo rotation the moment you leave it, rather than
       // waiting on renderArchiveSlideshow's async pass to notice.
       if (view !== 'archive') stopArchiveSlideshow();
-      window.scrollTo(0, 0);
+      scrollPageTo(0);
       renderAll();
       // Journal's intro was rewritten when the Log and Reflections notebooks
       // merged into one page, under a new key so anyone who dismissed the old
@@ -2712,6 +2712,44 @@
       window.scrollTo(0, bodyScrollLockY);
     }
   }
+
+  // Scrolls the page — or, while a popup holds it locked, sets where it
+  // will be once the popup closes (a tab switched under a popup, as "Done
+  // shooting" does, opens at the top rather than at the old tab's place).
+  function scrollPageTo(y) {
+    if (bodyScrollLockCount > 0) {
+      bodyScrollLockY = y;
+      document.body.style.top = `-${y}px`;
+    } else {
+      window.scrollTo(0, y);
+    }
+  }
+
+  // Every popup holds the page still: while any popup layer is showing, the
+  // page underneath is locked (the lock above, taken once for all of them),
+  // so dragging on a popup — App options, say — can't scroll the screen
+  // below it. It watches each layer's `hidden` attribute rather than every
+  // open/close function, so any popup built as one of these layers is
+  // covered. (The stat box/project popups and the shoot page also take the
+  // lock themselves; the count above keeps that from doubling up.)
+  const POPUP_LAYER_SELECTOR = '.modal-overlay, .stat-box-detail-overlay, .stats-detail-overlay, .image-viewer-overlay';
+  const popupLayers = [...document.querySelectorAll(POPUP_LAYER_SELECTOR)];
+  let popupScrollLocked = false;
+
+  function anyPopupOpen() {
+    return popupLayers.some(layer => !layer.hidden);
+  }
+
+  function syncPopupScrollLock() {
+    const open = anyPopupOpen();
+    if (open === popupScrollLocked) return;
+    popupScrollLocked = open;
+    if (open) lockBodyScroll();
+    else unlockBodyScroll();
+  }
+
+  const popupLayerObserver = new MutationObserver(syncPopupScrollLock);
+  popupLayers.forEach(layer => popupLayerObserver.observe(layer, { attributes: true, attributeFilter: ['hidden'] }));
 
   // Split out from openStatBoxDetail so a later refresh (see closeShootModal)
   // can repaint just the list, without replaying the open animation or
@@ -16805,7 +16843,7 @@
     document.getElementById('shootModeMoodEmpty').textContent = `No ${term.toLowerCase()} images for this shoot.`;
     const grid = document.getElementById('shootModeMoodboard');
     grid.innerHTML = '';
-    idbGetImages(shoot.id).then(images => {
+    return idbGetImages(shoot.id).then(images => {
       document.getElementById('shootModeMoodEmpty').hidden = images.length !== 0;
       images.forEach((img, idx) => {
         const thumb = document.createElement('div');
@@ -16874,6 +16912,51 @@
     saveState();
     renderShootModeShots(shoot, shoot.shotList.length - 1);
     renderAll();
+  });
+
+  // "+ Add photos" under the mood board: the shoot page's own upload (see
+  // moodboardFileInput), but the page is closed while Shoot mode is up, so
+  // this writes straight to the saved shoot — the photos onto its mood
+  // board, and the first one as its cover if it has neither yet — then
+  // shows the newest, the way "+ Add shot" puts you on the new line.
+  document.getElementById('shootModeAddMoodboardBtn').addEventListener('click', () => {
+    document.getElementById('shootModeMoodboardFileInput').click();
+  });
+
+  document.getElementById('shootModeMoodboardFileInput').addEventListener('change', (e) => {
+    const files = [...e.target.files];
+    e.target.value = '';
+    const uploadShootId = getShootModeShootId();
+    if (!files.length || !uploadShootId) return;
+    let coverSet = false;
+    Promise.all(files.map(f => resizeImageFile(f, 1280, 0.72)))
+      .then(newImages => idbGetImages(uploadShootId).then(existing => {
+        const shoot = state.shoots.find(x => x.id === uploadShootId);
+        if (!shoot || !newImages.length) return false;
+        const shouldAutoSetProjectPhoto = existing.length === 0 && !shoot.projectPhoto;
+        const combined = existing.concat(newImages.map(src => ({ src, caption: '' })));
+        return idbSetImages(uploadShootId, combined).then(() => {
+          if (!shouldAutoSetProjectPhoto) return;
+          return resizeDataUrlThumb(newImages[0], 200, 0.6).then(thumb => {
+            coverSet = true;
+            const live = state.shoots.find(x => x.id === uploadShootId);
+            if (live) live.projectPhoto = thumb;
+            return savePhotoToIdb(projectPhotoKey(uploadShootId), thumb);
+          });
+        }).then(() => true);
+      }))
+      .then(uploaded => {
+        if (!uploaded) return;
+        renderAll();
+        onShootImagesChanged(uploadShootId, { board: true, cover: coverSet });
+        const shoot = state.shoots.find(x => x.id === uploadShootId);
+        if (!shoot || getShootModeShootId() !== uploadShootId) return;
+        renderShootModeMoodboard(shoot).then(() => {
+          const thumbs = document.querySelectorAll('#shootModeMoodboard .moodboard-thumb');
+          if (thumbs.length) thumbs[thumbs.length - 1].scrollIntoView({ block: 'nearest' });
+        });
+      })
+      .catch(() => {});
   });
 
   // "Done shooting" is a wrap-up action, not just an escape hatch — the next
@@ -17880,8 +17963,11 @@
       indicator.style.transform = `translateX(-50%) translateY(${y}px)`;
     }
 
+    // Every popup layer, the photo viewer and Stats' slide-over included —
+    // with one up the page is locked at scrollY 0 (see syncPopupScrollLock),
+    // so the scrollY check alone would let a drag down in it refresh.
     function anyModalOpen() {
-      return !!document.querySelector('.modal-overlay:not([hidden]), .stat-box-detail-overlay:not([hidden])');
+      return anyPopupOpen();
     }
 
     document.addEventListener('touchstart', (e) => {
@@ -17966,8 +18052,10 @@
     let startY = null;
     let tracking = false;
 
+    // No tab swipes under any popup (the photo viewer and Stats' slide-over
+    // included), so the screen behind one can't change.
     function anyModalOpen() {
-      return !!document.querySelector('.modal-overlay:not([hidden]), .stat-box-detail-overlay:not([hidden])');
+      return anyPopupOpen();
     }
 
     document.addEventListener('touchstart', (e) => {

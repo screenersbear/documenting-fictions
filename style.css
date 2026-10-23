@@ -5117,9 +5117,18 @@ h2.status-group-heading.heading-navy {
    since it's still inside the scrollport. Padding lives on the header and
    list/empty-state instead, so the sticky header sits flush with the true
    top of the scrollport and fully covers anything scrolling past it. */
+/* Its header is an accent-coloured band (like App options' header) — the
+   modal's rounded corners clip it. Shared by the stat box and project
+   popups, both opened from boxes on the main pages. */
 .stat-box-detail-modal .modal-header {
   margin: 0 0 14px;
-  padding: 20px 20px 10px;
+  padding: 16px 20px;
+  background: var(--accent);
+  border-bottom: none;
+}
+
+.stat-box-detail-modal .modal-header h2 {
+  color: var(--text);
 }
 
 .stat-box-detail-modal .mini-list {

@@ -1433,6 +1433,10 @@
       <h3 class="shoot-mode-section-heading heading-yellow" id="shootModeMoodboardHeading">Mood board</h3>
       <div id="shootModeMoodboard" class="moodboard-grid"></div>
       <p class="shoot-mode-empty" id="shootModeMoodEmpty" hidden>No mood board images for this shoot.</p>
+      <!-- Same as the shoot page's own "+ Add photos", and the same look as
+           "+ Add shot" above (see the Shoot mode code in app.js). -->
+      <button type="button" id="shootModeAddMoodboardBtn" class="primary small-btn shoot-mode-add-shot-btn">+ Add photos</button>
+      <input type="file" id="shootModeMoodboardFileInput" accept="image/*" multiple hidden />
     </div>
     <button type="button" class="primary shoot-mode-bottom-cta" id="shootModeDoneBtn">Done shooting</button>
   </div>
