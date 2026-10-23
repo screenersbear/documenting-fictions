@@ -6672,12 +6672,37 @@
 
   // ---------- Tiered concept fields (narrative vs commercial categories) ----------
   const COMMERCIAL_TIER_CATEGORIES = ['commercial', 'video', 'lighting_test', 'headshot', 'event'];
+  // Events don't plan a concept or an elevator pitch at all.
+  const NO_CONCEPT_CATEGORIES = ['event'];
+
+  function categoryHasStoryFields(category) {
+    return !COMMERCIAL_TIER_CATEGORIES.includes(category || '');
+  }
+
+  function categoryHasConcept(category) {
+    return !NO_CONCEPT_CATEGORIES.includes(category || '');
+  }
+
+  // Whether a Direction field belongs to this shoot's kind — the same rule
+  // the page shows/hides them by (below), for the places that list them
+  // from the saved shoot instead: Shoot mode's Direction review and the PDFs.
+  function directionFieldApplies(shoot, key) {
+    if (key === 'premise' || key === 'elevatorPitch') return categoryHasConcept(shoot.category);
+    if (key === 'character' || key === 'worldNotes') return categoryHasStoryFields(shoot.category);
+    return true;
+  }
 
   function updateCategoryTierUI() {
     const category = document.getElementById('shootCategory').value;
-    const isCommercialTier = COMMERCIAL_TIER_CATEGORIES.includes(category);
+    const isCommercialTier = !categoryHasStoryFields(category);
     document.getElementById('narrativeFieldsBlock').hidden = isCommercialTier;
     document.getElementById('shootPremiseLabelText').textContent = isCommercialTier ? 'Concept (if applicable)' : 'Concept';
+    // No Concept, Elevator pitch or concept helper (which only writes
+    // those) for events. Hiding never clears them, same as the rest.
+    const hasConcept = categoryHasConcept(category);
+    document.getElementById('shootPremiseField').hidden = !hasConcept;
+    document.getElementById('shootElevatorPitchField').hidden = !hasConcept;
+    document.getElementById('conceptHelperBtn').hidden = !hasConcept;
     // Video-only fields: Deliverables (Direction) and Crew/Talent call times
     // (Logistics). Hiding never clears them, so flipping away from Video and
     // back keeps whatever was filled in.
@@ -7396,6 +7421,9 @@
         shootWizardBlock('shootPremise', 'label'),
         shootWizardBlock('shootElevatorPitch', 'label'),
       ],
+      // Not for events, which have no concept or pitch (see
+      // updateCategoryTierUI).
+      when: () => categoryHasConcept(document.getElementById('shootCategory').value),
     },
     {
       key: 'story',
@@ -14180,13 +14208,15 @@
 
     // Direction is opt-in (unchecked by default in the sections popup) — it's
     // internal creative planning, so it only goes out when deliberately chosen.
+    // Only fields this kind of shoot has (directionFieldApplies), so an
+    // event never prints a concept or pitch.
     const directionFields = [
-      ['Concept: ', s.premise],
-      ['Elevator pitch: ', s.elevatorPitch],
-      ['Character/Personality: ', s.character],
-      ['World-building notes: ', s.worldNotes],
-      ['Shoot goals: ', s.shootGoals],
-    ].filter(([, value]) => hasText(value));
+      ['Concept: ', s.premise, 'premise'],
+      ['Elevator pitch: ', s.elevatorPitch, 'elevatorPitch'],
+      ['Character/Personality: ', s.character, 'character'],
+      ['World-building notes: ', s.worldNotes, 'worldNotes'],
+      ['Shoot goals: ', s.shootGoals, 'shootGoals'],
+    ].filter(([, value, key]) => hasText(value) && directionFieldApplies(s, key));
     if (directionFields.length && sections.direction) {
       sectionHeading('Direction:');
       doc.setFontSize(11);
@@ -15206,12 +15236,12 @@
 
       // ---- Direction ----
       const directionFields = [
-        ['Concept: ', s.premise],
-        ['Elevator pitch: ', s.elevatorPitch],
-        ['Character/Personality: ', s.character],
-        ['World-building notes: ', s.worldNotes],
-        ['Shoot goals: ', s.shootGoals],
-      ].filter(([, value]) => hasText(value));
+        ['Concept: ', s.premise, 'premise'],
+        ['Elevator pitch: ', s.elevatorPitch, 'elevatorPitch'],
+        ['Character/Personality: ', s.character, 'character'],
+        ['World-building notes: ', s.worldNotes, 'worldNotes'],
+        ['Shoot goals: ', s.shootGoals, 'shootGoals'],
+      ].filter(([, value, key]) => hasText(value) && directionFieldApplies(s, key));
       if (directionFields.length) {
         sectionHeading('Direction:');
         doc.setFontSize(11);
@@ -17176,7 +17206,8 @@
 
     if (kind === 'direction') {
       document.getElementById('shootModeReviewTitle').textContent = 'Direction';
-      SHOOT_MODE_DIRECTION_FIELDS.forEach(([key, label, maxLength]) => {
+      // Only the fields this kind of shoot has on its page.
+      SHOOT_MODE_DIRECTION_FIELDS.filter(([key]) => directionFieldApplies(shoot, key)).forEach(([key, label, maxLength]) => {
         const limit = typeof maxLength === 'function' ? maxLength() : maxLength;
         body.appendChild(renderShootModeReviewField(label, shoot[key] || '', limit, (newValue) => {
           shoot[key] = newValue;

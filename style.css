@@ -1751,6 +1751,9 @@ h2.status-group-heading.heading-navy {
 
 #formSection2[hidden],
 #narrativeFieldsBlock[hidden],
+#shootPremiseField[hidden],
+#shootElevatorPitchField[hidden],
+#conceptHelperBtn[hidden],
 #videoDeliverablesBlock[hidden],
 #finalImagesSection[hidden],
 #postShootContent[hidden],
