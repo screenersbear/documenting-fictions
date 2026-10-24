@@ -173,9 +173,10 @@
 
   // [label, value] pairs for the Deliverables block, shared by the call sheet,
   // the archive PDF and Archive mode. Empty for non-video shoots, so a shoot
-  // switched away from video never prints its leftover values.
-  function videoDeliverableFields(s) {
-    if (!isVideoShoot(s)) return [];
+  // switched away from video never prints its leftover values — except with
+  // evenIfHidden, for the archive PDF, which may end up the only copy.
+  function videoDeliverableFields(s, evenIfHidden) {
+    if (!evenIfHidden && !isVideoShoot(s)) return [];
     return [
       ['Videos', s.deliverables || ''],
       ['Aspect ratios', normalizeAspectRatios(s.aspectRatios).join(', ')],
@@ -1040,12 +1041,26 @@
   // happening. Lists show it as "Originally: …", and whatever schedules,
   // counts or groups shoots by their day reads it through scheduledShootDate,
   // which leaves it out, the same as when these shoots had no date at all.
+  // The status alone says the shoot's off the schedule (Upcoming, today,
+  // a project's live days); isOriginalPlanDate says whether its date is
+  // that original plan.
   function isOffScheduleShoot(s) {
     return s.status === 'rescheduled' || s.status === 'canceled';
   }
 
+  // Going Postponed/Canceled notes the date the shoot had right then as
+  // offScheduleDate (applyStatusChange, and the page's status button), and
+  // any other status drops it. Only that exact date is the original plan: a
+  // new date given since — with the status left on Postponed, say — is the
+  // new plan, and reads, sorts, counts and gets its check-in like any other.
+  // A shoot saved before the note existed has none, so its date is taken
+  // as the plan, the way it showed back then.
+  function isOriginalPlanDate(s) {
+    return isOffScheduleShoot(s) && !!s.date && s.offScheduleDate === s.date;
+  }
+
   function scheduledShootDate(s) {
-    return isOffScheduleShoot(s) ? '' : (s.date || '');
+    return isOriginalPlanDate(s) ? '' : (s.date || '');
   }
 
   // Mirrors the "Due:" label on the deadline — "Shoots:" while the date is
@@ -1054,7 +1069,7 @@
   // A postponed or canceled shoot's kept date reads as the original plan.
   function shootDateLabel(s, formatter) {
     if (!s.date) return 'Date TBD';
-    if (isOffScheduleShoot(s)) return `Originally: ${formatter(s.date)}`;
+    if (isOriginalPlanDate(s)) return `Originally: ${formatter(s.date)}`;
     const prefix = s.date >= todayStr() ? 'Shoots' : 'Shot';
     return `${prefix}: ${formatter(s.date)}`;
   }
@@ -1447,9 +1462,12 @@
   // members' dates. "Date TBD" when none of them has a date yet. Postponed
   // and canceled days are left out (their dates are only the original plan,
   // see isOffScheduleShoot), unless every dated day is one: then it's the
-  // span they were planned for, as "Originally: …", like a shoot row.
+  // span they were planned for, as "Originally: …", like a shoot row — or,
+  // when any of them has been given a new date since (scheduledShootDate,
+  // see isOriginalPlanDate), the span of those new dates, read as the plan.
   function projectDateRangeLabel(members) {
-    const live = members.filter(isProjectLiveShoot);
+    let live = members.filter(isProjectLiveShoot);
+    if (!projectDateRangeText(live)) live = members.filter(s => scheduledShootDate(s));
     const range = projectDateRangeText(live);
     if (!range) {
       const original = projectDateRangeText(members);
@@ -5755,7 +5773,11 @@
     const choice = getTeamRequiredChoice();
     document.getElementById('teamDetailsBlock').hidden = choice !== 'yes';
     document.getElementById('teamFinalizedNote').hidden = choice !== 'no';
-    document.getElementById('shootTeamDirectionsField').hidden = choice === 'no';
+    const directionsField = document.getElementById('shootTeamDirectionsField');
+    directionsField.hidden = choice === 'no';
+    // Back from "Just me": the kept directions were last measured while
+    // hidden (zero height), so they're sized to their text again now.
+    if (!directionsField.hidden) syncFieldFilledState(document.getElementById('shootTeamDirections'));
   }
 
   // Buttons fire no input/change event of their own, so each saves itself
@@ -7076,6 +7098,11 @@
 
   // ---------- Post-shoot reflection (gated behind captured-or-later status) ----------
   let previousStatusValue = 'prospect';
+  // The open shoot's offScheduleDate (see isOriginalPlanDate), kept with the
+  // form like its other fields: loaded by openShootModal, noted by the
+  // status button and saved by gatherShootFormData. undefined when it has
+  // none.
+  let currentOffScheduleDate;
   // The status swap the last category flip made ({ from, to }), so flipping
   // the category straight back restores the original status (a mis-tap on
   // the category dropdown stays lossless). Reset per modal open.
@@ -7126,6 +7153,11 @@
       }
       if (shootPageOpenOn(shootId)) {
         document.getElementById('postShootContent').hidden = false;
+        // Its answers were measured while hidden (zero height, so they kept
+        // their rows size and a longer one reads cut off): measured again
+        // now they're on screen. A folded section skips it, and is measured
+        // when it's opened.
+        onShootSectionRevealed('postShootBody');
         updateShootModalJumpMenuVisibility();
       }
     }
@@ -7308,6 +7340,11 @@
     const newValue = e.target.value;
     const oldValue = previousStatusValue;
     previousStatusValue = newValue;
+    // The same note applyStatusChange makes: going Postponed/Canceled marks
+    // the date on the page right now as the plan that fell through.
+    currentOffScheduleDate = isOffScheduleShoot({ status: newValue })
+      ? document.getElementById('shootDate').value
+      : undefined;
 
     // Nothing is cleared on the way: a Postponed (key: rescheduled) or
     // Canceled shoot keeps its date and times (lists show them as the
@@ -12633,6 +12670,7 @@
     // read straight off the shoot here.
     renderShootStatusSelectOptions(s ? (s.category || '') : '', s ? (s.status || 'prospect') : 'prospect');
     previousStatusValue = document.getElementById('shootStatus').value;
+    currentOffScheduleDate = s ? s.offScheduleDate : undefined;
     categoryRemap = null;
     updateStatusSwatchDisplay();
     updateEnterShootModeBtnVisibility();
@@ -13321,6 +13359,10 @@
       title: document.getElementById('shootTitle').value.trim(),
       status: document.getElementById('shootStatus').value,
       date: document.getElementById('shootDate').value,
+      // Always present, so a status moved back onto the schedule clears the
+      // saved one in the {...oldShoot, ...data} spread (an undefined key is
+      // left out of the JSON that's stored).
+      offScheduleDate: currentOffScheduleDate,
       deadline: document.getElementById('shootDeadline').value,
       startTime: document.getElementById('shootStartTime').value,
       endTime: document.getElementById('shootEndTime').value,
@@ -13717,6 +13759,47 @@
   }
 
   document.getElementById('shootDate').addEventListener('change', syncMultiDayRowToShootDate);
+
+  // A new date on a Postponed or Canceled shoot most likely means it's back
+  // on, so the page asks, with the answers named for what they do. Keeping
+  // the status leaves the new date as the plan it's moved to (it isn't the
+  // date it went off the schedule with, see isOriginalPlanDate); "Back on
+  // the schedule" moves it to Active planning the way the status button
+  // does, so that change's own follow-ups run too. Asked once the date field
+  // is let go of — a date typed on a keyboard changes on every digit — and
+  // only while the page is still open on that shoot, still off the schedule,
+  // with a date that isn't the one it went off the schedule with.
+  let backOnScheduleAskFor = null;
+
+  async function askBackOnSchedule() {
+    const shootId = backOnScheduleAskFor;
+    backOnScheduleAskFor = null;
+    const select = document.getElementById('shootStatus');
+    const status = select.value;
+    const date = document.getElementById('shootDate').value;
+    if (!shootPageOpenOn(shootId) || !isOffScheduleShoot({ status }) || !date || date === currentOffScheduleDate) return;
+    const label = STATUS_LABELS[status].toLowerCase();
+    const backOn = await askConfirm({
+      title: 'New date — is it back on?',
+      text: `This shoot is ${label}. Put it back on the schedule for ${prettyDate(date)}, or keep it ${label} for now?`,
+      cancelLabel: `Keep ${label}`,
+      confirmLabel: 'Back on the schedule',
+    });
+    // Nothing to do if the page closed or the status moved meanwhile.
+    if (!backOn || !shootPageOpenOn(shootId) || select.value !== status) return;
+    select.value = 'planning';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    saveShootNow();
+  }
+
+  document.getElementById('shootDate').addEventListener('change', (e) => {
+    if (!isOffScheduleShoot({ status: document.getElementById('shootStatus').value })) return;
+    backOnScheduleAskFor = currentShootId;
+    if (document.activeElement !== e.target) askBackOnSchedule();
+  });
+  document.getElementById('shootDate').addEventListener('blur', () => {
+    if (backOnScheduleAskFor) askBackOnSchedule();
+  });
   // A status change never touches the date any more (Postponed/Canceled keep
   // it), so a non-member's Last day pick is left alone; but a member's "Day
   // N of M" still moves with it, since a postponed or canceled day stops
@@ -14123,7 +14206,8 @@
   // (the reflection and editing reminders run off those), and nothing else
   // on the shoot is touched: a reflection is only hidden while the shoot's
   // back before Captured, and a postponed/canceled shoot keeps its date and
-  // times (see isOffScheduleShoot). Then the same follow-up prompts as the
+  // times (see isOffScheduleShoot), only noting which date that was (see
+  // isOriginalPlanDate). Then the same follow-up prompts as the
   // page's status button (runStatusFollowUps), unless the caller passes
   // { followUps: false } to ask them itself, or not at all. Returns the
   // status the shoot had before, or null when there's no such shoot.
@@ -14134,6 +14218,12 @@
     const oldStatus = shoot.status || 'prospect';
     shoot.status = newStatus;
     applyStatusTimestamps(shoot, oldStatus, newStatus);
+    // Postponed/Canceled picked here means the date the shoot has right now
+    // is the plan that fell through (see isOriginalPlanDate) — even when it
+    // was Postponed already: the check-in asks about a new date once it's
+    // passed, and answering Postponed again has to settle that one too.
+    if (isOffScheduleShoot(shoot)) shoot.offScheduleDate = shoot.date || '';
+    else delete shoot.offScheduleDate;
     state.shoots[idx] = shoot;
     saveState();
     renderAll();
@@ -14611,7 +14701,7 @@
       sectionHeading('Logistics:');
       doc.setFontSize(11);
       // A postponed/canceled shoot's kept date is the original plan.
-      if (s.date) drawLabeledLine(isOffScheduleShoot(s) ? 'Originally: ' : 'Date: ', prettyDate(s.date), 16);
+      if (s.date) drawLabeledLine(isOriginalPlanDate(s) ? 'Originally: ' : 'Date: ', prettyDate(s.date), 16);
       if (timeRange) drawLabeledLine('Time: ', timeRange, 16);
       if (crewCall) drawLabeledLine('Crew call: ', crewCall, 16);
       if (talentCall) drawLabeledLine('Talent call: ', talentCall, 16);
@@ -15514,6 +15604,12 @@
     };
   }
 
+  // Unlike the single-shoot PDF and the screens, this prints everything a
+  // shoot keeps, hidden or not — its export is followed by the offer to
+  // delete the shoots, so it may become the only copy. That means the team
+  // and Directions for team on a "Just me" shoot (labelled as such), the
+  // reflection whatever the status, Direction and video fields whatever the
+  // category, and the Shooting notes and deadline (no other PDF has them).
   async function buildArchivePdf(shoots) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -15621,7 +15717,7 @@
       doc.setFont('courier', 'normal');
       doc.setFontSize(10);
       // A postponed/canceled shoot's kept date is the original plan.
-      const dateLabel = s.date ? `${isOffScheduleShoot(s) ? 'Originally ' : ''}${prettyDate(s.date)}` : 'Date TBD';
+      const dateLabel = s.date ? `${isOriginalPlanDate(s) ? 'Originally ' : ''}${prettyDate(s.date)}` : 'Date TBD';
       const subLabel = [dateLabel, CATEGORY_LABELS[s.category] || null, STATUS_LABELS[s.status] || null]
         .filter(Boolean).join('   •   ');
       doc.text(subLabel, margin, headerHeight + 16);
@@ -15631,7 +15727,8 @@
       // ---- Talent ----
       const talentsForPdf = (s.talents || [])
         .map((talent, idx) => ({ talent, label: hasText(talent.name) ? talent.name.trim() : `Talent ${idx + 1}` }))
-        .filter(({ talent }) => hasText(talent.name) || hasText(talent.photo));
+        .filter(({ talent }) => hasText(talent.name) || hasText(talent.photo)
+          || (talent.socialHandles || []).some(sh => hasText(sh.handle)));
       if (talentsForPdf.length) {
         sectionHeading('Talent:');
         doc.setFont('courier', 'normal');
@@ -15653,26 +15750,28 @@
       // ---- Logistics ----
       const timeRange = shootTimeRange(s);
       const locationDisplay = formatLocationDisplayNoCountry(s.location);
-      const isVideo = isVideoShoot(s);
-      const crewCall = isVideo ? prettyTime(s.crewCallTime) : '';
-      const talentCall = isVideo ? prettyTime(s.talentCallTime) : '';
-      // Not on a "Just me" shoot, where it's kept but hidden.
-      const teamDirections = directionFieldApplies(s, 'teamDirections') ? s.teamDirections : '';
-      if (timeRange || crewCall || talentCall || locationDisplay || hasText(s.locationDirections) || hasText(s.talentDirections) || hasText(teamDirections)) {
+      // Call times are video-only on the page, but kept on any shoot.
+      const crewCall = prettyTime(s.crewCallTime);
+      const talentCall = prettyTime(s.talentCallTime);
+      // Printed on a "Just me" shoot too, where it's kept but hidden.
+      const teamDirections = s.teamDirections;
+      const soloNote = s.teamRequired === 'no' ? ' (set to Just me)' : '';
+      if (hasText(s.deadline) || timeRange || crewCall || talentCall || locationDisplay || hasText(s.locationDirections) || hasText(s.talentDirections) || hasText(teamDirections)) {
         sectionHeading('Logistics:');
         doc.setFontSize(11);
+        if (hasText(s.deadline)) drawLabeledLine('Deadline: ', prettyDate(s.deadline), 14);
         if (timeRange) drawLabeledLine('Time: ', timeRange, 14);
         if (crewCall) drawLabeledLine('Crew call: ', crewCall, 14);
         if (talentCall) drawLabeledLine('Talent call: ', talentCall, 14);
         if (locationDisplay) { drawLabeledLine('Location: ', locationDisplay, 14); y += 2; }
         if (hasText(s.locationDirections)) { drawLabeledLine('Location instructions: ', s.locationDirections, 14); y += 2; }
         if (hasText(s.talentDirections)) { drawLabeledLine('Directions for talent: ', s.talentDirections, 14); y += 2; }
-        if (hasText(teamDirections)) { drawLabeledLine('Directions for team: ', teamDirections, 14); y += 2; }
+        if (hasText(teamDirections)) { drawLabeledLine(`Directions for team${soloNote}: `, teamDirections, 14); y += 2; }
         y += 6;
       }
 
-      // ---- Deliverables (video only) ----
-      const deliverableFields = videoDeliverableFields(s);
+      // ---- Deliverables (video fields, kept on any shoot) ----
+      const deliverableFields = videoDeliverableFields(s, true);
       if (deliverableFields.length) {
         sectionHeading('Deliverables:');
         doc.setFontSize(11);
@@ -15687,7 +15786,7 @@
         ['Character/Personality: ', s.character, 'character'],
         ['World-building notes: ', s.worldNotes, 'worldNotes'],
         ['Shoot goals: ', s.shootGoals, 'shootGoals'],
-      ].filter(([, value, key]) => hasText(value) && directionFieldApplies(s, key));
+      ].filter(([, value]) => hasText(value));
       if (directionFields.length) {
         sectionHeading('Direction:');
         doc.setFontSize(11);
@@ -15721,9 +15820,9 @@
         y += 6;
       }
 
-      // ---- Shot list ----
+      // ---- Shot list, and the Shooting notes under it on the page ----
       const shots = (s.shotList || []).filter(item => hasText(item.text));
-      if (shots.length) {
+      if (shots.length || hasText(s.shootingNotes)) {
         sectionHeading('Shot list:');
         doc.setFont('courier', 'normal');
         doc.setFontSize(11);
@@ -15736,13 +15835,18 @@
             y += 14;
           });
         });
+        if (hasText(s.shootingNotes)) {
+          if (shots.length) y += 4;
+          drawLabeledLine('Shooting notes: ', s.shootingNotes.trim(), 14);
+        }
         y += 6;
       }
 
       // ---- Team ----
-      const team = s.teamRequired === 'yes' ? (s.teamMembers || []) : [];
+      // Printed on a "Just me" shoot too, where the list is kept but hidden.
+      const team = s.teamMembers || [];
       if (team.length) {
-        sectionHeading('Team:');
+        sectionHeading(`Team${soloNote}:`);
         doc.setFont('courier', 'normal');
         doc.setFontSize(11);
         team.forEach(tm => {
@@ -15775,13 +15879,14 @@
       }
 
       // ---- Post-shoot reflection ----
-      // Only from Captured on, same as the page: a shoot stepped back a
-      // status keeps its answers, hidden, rather than printing them as current.
-      const reflectionFields = (isPostCaptureStatus(s.status) ? [
+      // Whatever the status: the page only shows it from Captured on, but a
+      // shoot stepped back a status (or postponed, or canceled) keeps its
+      // answers, hidden, and they're printed here rather than lost.
+      const reflectionFields = [
         ['What went right: ', s.whatWentRight],
         ["What could've gone better: ", s.couldBeBetter],
         ['Lessons for next time: ', s.lessonsLearned],
-      ] : []).filter(([, value]) => hasText(value));
+      ].filter(([, value]) => hasText(value));
       if (reflectionFields.length) {
         sectionHeading('Post-shoot reflection:');
         doc.setFontSize(11);
@@ -17757,8 +17862,8 @@
 
     const logisticsFields = [];
     // A postponed or canceled shoot keeps its date as the original plan
-    // (see isOffScheduleShoot), so it's labelled that way here too.
-    if (hasText(shoot.date)) logisticsFields.push([isOffScheduleShoot(shoot) ? 'Originally' : 'Shoot date', prettyDate(shoot.date)]);
+    // (see isOriginalPlanDate), so it's labelled that way here too.
+    if (hasText(shoot.date)) logisticsFields.push([isOriginalPlanDate(shoot) ? 'Originally' : 'Shoot date', prettyDate(shoot.date)]);
     const locationText = formatLocationDisplay(shoot.location);
     if (hasText(locationText)) logisticsFields.push(['Location', locationText]);
     if (logisticsFields.length) {
@@ -18194,17 +18299,28 @@
     // good. It still only asks once a day (the lastShown guard above), so
     // whichever day you next open the app is the day it catches up.
     // Postponed/canceled shoots keep their original date now, but already
-    // have their answer.
-    const pendingShoots = state.shoots.filter(s => !s.archived && !POST_CAPTURE_STATUSES.includes(s.status) && !isOffScheduleShoot(s) && s.date && s.date < today);
+    // have their answer; a new date one's been given since is asked about
+    // like any other once it's passed (see isOriginalPlanDate).
+    const pendingShoots = state.shoots.filter(s => !s.archived && !POST_CAPTURE_STATUSES.includes(s.status) && !isOriginalPlanDate(s) && s.date && s.date < today);
     if (!pendingShoots.length) return;
 
     try { localStorage.setItem(DAY_AFTER_PROMPT_KEY, today); } catch (e) { /* ignore */ }
 
+    // Oldest first, each named with its date — and its day number on a
+    // multi-day project, whose days all share one name — so rows that would
+    // otherwise read the same can be told apart. Written once, here: an
+    // answer never rewrites a row's name (a day set to Postponed stops
+    // counting as a project day, which would renumber the others).
+    pendingShoots.sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
+    const rowLabel = s => {
+      const info = projectDayInfo(s);
+      return `${shootDisplayName(s)} · ${prettyDateShort(s.date)}${info ? ` · Day ${info.day}` : ''}`;
+    };
     const plural = pendingShoots.length > 1;
     document.getElementById('dayAfterPromptText').textContent = `Did ${plural ? 'these shoots' : 'this shoot'} happen?`;
     document.getElementById('dayAfterList').innerHTML = pendingShoots.map(s => `
       <div class="day-after-row" data-shoot-id="${escapeHtml(s.id)}">
-        <span class="day-after-name">${escapeHtml(shootDisplayName(s))}</span>
+        <span class="day-after-name">${escapeHtml(rowLabel(s))}</span>
         <div class="modal-actions fit-pair">
           <button type="button" class="secondary" data-status="rescheduled">${escapeHtml(STATUS_LABELS.rescheduled)}</button>
           <button type="button" class="primary" data-status="captured">Shot it</button>
