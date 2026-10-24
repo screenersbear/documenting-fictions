@@ -7296,6 +7296,9 @@
     setSectionCollapsed('shoot:postShoot', false);
     document.getElementById('postShootBody').hidden = false;
     document.getElementById('postShootHeading').classList.remove('collapsed');
+    // Sized now it's on screen: opened folded, its boxes were measured while
+    // hidden and would stay cut off at three lines.
+    onShootSectionRevealed('postShootBody');
     return content;
   }
 
@@ -12545,7 +12548,16 @@
     }
   ];
 
-  let reflectHelper = null; // { flow, index, answers: [text per question] }
+  let reflectHelper = null; // { flow, index, answers: [text per question], voiceTip }
+
+  // The first time the helper opens on this device, question 1 also says
+  // talking works (the keyboard's mic). A page can't start dictation itself,
+  // and the browser's own speech-to-text stops hearing after one go in a
+  // Home Screen app on iOS 27, so this is a tip rather than a button.
+  // Spoken answers run long, so each answer holds 1000 characters, and the
+  // three reflection boxes hold 4000 so three of them still fit once they're
+  // written as sentences.
+  const REFLECT_VOICE_TIP_KEY = 'dailies_seen_reflect_voice_tip_v1';
 
   function reflectFlowFor(category) {
     return REFLECTION_FLOWS.find(f => f.categories.includes(category))
@@ -12568,6 +12580,12 @@
     // Said once, up front: nothing here has to be answered.
     const hint = document.getElementById('reflectHelperHint');
     hint.textContent = h.index === 0 ? "Answer what you can. Anything you skip is just left out." : '';
+    if (h.index === 0 && h.voiceTip) {
+      const tip = document.createElement('span');
+      tip.className = 'field-hint-bold';
+      tip.textContent = 'Tip:';
+      hint.append(document.createElement('br'), tip, ' tap the mic on your keyboard and just talk.');
+    }
     hint.hidden = !hint.textContent;
     const input = document.getElementById('reflectHelperInput');
     input.placeholder = q.placeholder || '';
@@ -12649,7 +12667,12 @@
   }
 
   function openReflectHelper() {
-    reflectHelper = { flow: reflectFlowFor(document.getElementById('shootCategory').value || ''), index: 0, answers: [] };
+    let voiceTip;
+    try {
+      voiceTip = localStorage.getItem(REFLECT_VOICE_TIP_KEY) !== '1';
+      if (voiceTip) localStorage.setItem(REFLECT_VOICE_TIP_KEY, '1');
+    } catch (err) { voiceTip = false; /* storage unavailable — nothing to remember it in, so not shown every time */ }
+    reflectHelper = { flow: reflectFlowFor(document.getElementById('shootCategory').value || ''), index: 0, answers: [], voiceTip };
     renderReflectHelper();
     document.getElementById('reflectHelperOverlay').hidden = false;
   }
@@ -18206,7 +18229,11 @@
     note.className = 'last-time-note';
     const text = document.createElement('p');
     text.className = 'field-hint';
-    text.innerHTML = `<span class="field-hint-bold">Last time</span> (${escapeHtml(source)}): “${escapeHtml(lessons)}”`;
+    // Quoted up to 1000 characters (what Lessons used to hold), so a long
+    // spoken one doesn't push the popup's own fields far down; the button
+    // below still adds all of it.
+    const quoted = lessons.length > 1000 ? `${lessons.slice(0, 1000).replace(/\s+\S*$/, '')}…` : lessons;
+    text.innerHTML = `<span class="field-hint-bold">Last time</span> (${escapeHtml(source)}): “${escapeHtml(quoted)}”`;
     note.appendChild(text);
     // Written straight into the page's own Shooting notes box (it's on the
     // page even while a popup or the guide is over it), then the same

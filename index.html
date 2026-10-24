@@ -382,7 +382,7 @@
         <div id="shotListItems" class="shot-list-items"></div>
         <button type="button" id="addShotBtn" class="primary small-btn">+ Add shot</button>
         <label>Shooting notes
-          <textarea id="shootShootingNotes" rows="6" maxlength="2000" placeholder="Anything to remember on the day — settings, timings, things to try" readonly></textarea>
+          <textarea id="shootShootingNotes" rows="6" maxlength="6000" placeholder="Anything to remember on the day — settings, timings, things to try" readonly></textarea>
         </label>
         <label>Directions for talent
           <textarea id="shootTalentDirections" rows="6" maxlength="1000" placeholder="notes, reminders, directions for the day of the shoot..." readonly></textarea>
@@ -399,13 +399,13 @@
           <!-- The reflection helper (see REFLECTION_FLOWS in app.js). -->
           <button type="button" class="primary small-btn" id="reflectHelperBtn">Need help reflecting?</button>
           <label>What went right
-            <textarea id="shootWentRight" rows="3" maxlength="1000" readonly></textarea>
+            <textarea id="shootWentRight" rows="3" maxlength="4000" readonly></textarea>
           </label>
           <label>What could've gone better
-            <textarea id="shootCouldBeBetter" rows="3" maxlength="1000" readonly></textarea>
+            <textarea id="shootCouldBeBetter" rows="3" maxlength="4000" readonly></textarea>
           </label>
           <label>Lessons for next time
-            <textarea id="shootLessonsLearned" rows="3" maxlength="1000" readonly></textarea>
+            <textarea id="shootLessonsLearned" rows="3" maxlength="4000" readonly></textarea>
           </label>
 
           <div class="moodboard-section" id="finalImagesSection">
@@ -1261,7 +1261,7 @@
     <h2 id="reflectHelperTitle"></h2>
     <p id="reflectHelperText"></p>
     <p class="field-hint concept-helper-hint" id="reflectHelperHint"></p>
-    <textarea id="reflectHelperInput" class="deadline-prompt-input" rows="3" maxlength="200"></textarea>
+    <textarea id="reflectHelperInput" class="deadline-prompt-input" rows="3" maxlength="1000"></textarea>
     <div class="modal-actions" id="reflectHelperNav">
       <button type="button" class="secondary" id="reflectHelperBackBtn">Back</button>
       <button type="button" class="primary" id="reflectHelperNextBtn">Next</button>
@@ -1427,7 +1427,7 @@
       <p class="shoot-mode-empty" id="shootModeShotsEmpty" hidden>No shots on the list for this shoot.</p>
       <button type="button" id="shootModeAddShotBtn" class="primary small-btn shoot-mode-add-shot-btn">+ Add shot</button>
       <label class="shoot-mode-shooting-notes-label">Shooting notes
-        <textarea id="shootModeShootingNotes" rows="1" maxlength="2000" placeholder="Anything to remember on the day — settings, timings, things to try"></textarea>
+        <textarea id="shootModeShootingNotes" rows="1" maxlength="6000" placeholder="Anything to remember on the day — settings, timings, things to try"></textarea>
       </label>
 
       <h3 class="shoot-mode-section-heading heading-yellow" id="shootModeMoodboardHeading">Mood board</h3>
