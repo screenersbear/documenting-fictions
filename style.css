@@ -2435,6 +2435,12 @@ h2.status-group-heading.heading-navy {
   gap: 10px;
 }
 
+/* Directions for team, hidden (never cleared) on a "Just me" shoot — the
+   #shootForm label display:flex rule would otherwise beat [hidden]. */
+#shootTeamDirectionsField[hidden] {
+  display: none;
+}
+
 .team-members-list {
   display: flex;
   flex-direction: column;
@@ -4024,6 +4030,17 @@ h2.status-group-heading.heading-navy {
   font-size: 13px;
 }
 
+/* The reflection prompt's "Walk me through it" — the same small link,
+   centred under its Later / Reflect now pair. */
+#postShootPromptWalkBtn {
+  margin: 12px auto 0;
+  font-size: 13px;
+}
+
+#postShootPromptWalkBtn[hidden] {
+  display: none;
+}
+
 /* "Leave the guide?" — the two answers stacked full width, so "Go to shoot
    page" reads on one line instead of wrapping inside a half-width button. */
 #shootWizardLeaveActions {
@@ -4460,6 +4477,13 @@ h2.status-group-heading.heading-navy {
   margin-left: 8px;
 }
 
+/* "Set deadline" until a date's picked — same dimmed look as the concept
+   helper's disabled button. */
+#deadlinePromptOkBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 #dailyReportList {
   margin-bottom: 18px;
 }
@@ -4489,6 +4513,35 @@ h2.status-group-heading.heading-navy {
 
 .daily-report-item-list li {
   margin-top: 2px;
+}
+
+/* Next-day check-in: a row per shoot, its name over its two answers
+   (Postponed / Shot it) or, once answered, the status it was set to. */
+.day-after-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 18px;
+  text-align: left;
+}
+
+.day-after-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.day-after-name {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.day-after-result {
+  font-size: 15px;
+  color: var(--text-dim);
 }
 
 /* ---- Shoot options sheet ---- */
@@ -5571,6 +5624,30 @@ h2.status-group-heading.heading-navy {
   font-weight: 800;
   letter-spacing: 1.5px;
   cursor: pointer;
+}
+
+/* Shoot mode's bottom bar: "Exit" and "Done shooting" side by side in what
+   was Done shooting's own full-width bar — same height, type and ink top
+   rule, split by an ink rule. Exit only takes its word's width, so Done
+   shooting keeps most of the bar. Exit is white like a .secondary button,
+   without the class itself, whose !important border would replace the
+   ink rules. */
+.shoot-mode-bottom-bar {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.shoot-mode-bottom-bar .shoot-mode-bottom-cta {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.shoot-mode-bottom-bar .shoot-mode-bottom-cta-secondary {
+  flex: 0 0 auto;
+  background: var(--surface-2);
+  color: var(--text);
+  border-right: 2px solid var(--ink);
 }
 
 #shootModeStartBtn,

@@ -991,11 +991,27 @@
     return formatDate(new Date());
   }
 
+  // Postponed (key: rescheduled) and Canceled shoots keep the date they were
+  // planned for (and its times) instead of having it wiped, so nothing's lost
+  // if the shoot goes ahead after all — but it's no longer a day anything is
+  // happening. Lists show it as "Originally: …", and whatever schedules,
+  // counts or groups shoots by their day reads it through scheduledShootDate,
+  // which leaves it out, the same as when these shoots had no date at all.
+  function isOffScheduleShoot(s) {
+    return s.status === 'rescheduled' || s.status === 'canceled';
+  }
+
+  function scheduledShootDate(s) {
+    return isOffScheduleShoot(s) ? '' : (s.date || '');
+  }
+
   // Mirrors the "Due:" label on the deadline — "Shoots:" while the date is
   // still ahead (or today), "Shot:" once it's in the past, so a glance at
   // either label tells you whether that half of the bubble is done or not.
+  // A postponed or canceled shoot's kept date reads as the original plan.
   function shootDateLabel(s, formatter) {
     if (!s.date) return 'Date TBD';
+    if (isOffScheduleShoot(s)) return `Originally: ${formatter(s.date)}`;
     const prefix = s.date >= todayStr() ? 'Shoots' : 'Shot';
     return `${prefix}: ${formatter(s.date)}`;
   }
@@ -1381,11 +1397,18 @@
   // A project box's version of shootDateLabel: the same "Shoots:"/"Shot:"
   // prefix ("Shoots" while its last listed day is still ahead or today,
   // "Shot" once every listed day has passed) over the span of its listed
-  // members' dates. "Date TBD" when none of them has a date yet.
+  // members' dates. "Date TBD" when none of them has a date yet. Postponed
+  // and canceled days are left out (their dates are only the original plan,
+  // see isOffScheduleShoot), unless every dated day is one: then it's the
+  // span they were planned for, as "Originally: …", like a shoot row.
   function projectDateRangeLabel(members) {
-    const range = projectDateRangeText(members);
-    if (!range) return 'Date TBD';
-    const last = members.map(s => s.date).filter(Boolean).sort().pop();
+    const live = members.filter(isProjectLiveShoot);
+    const range = projectDateRangeText(live);
+    if (!range) {
+      const original = projectDateRangeText(members);
+      return original ? `Originally: ${original}` : 'Date TBD';
+    }
+    const last = live.map(s => s.date).filter(Boolean).sort().pop();
     return `${last >= todayStr() ? 'Shoots' : 'Shot'}: ${range}`;
   }
 
@@ -1929,8 +1952,8 @@
   }
 
   // Postponed (key: rescheduled) and Canceled shoots are off the schedule —
-  // applyStatusChange clears their date — so they don't count as a day of
-  // the project or toward its progress.
+  // the date they keep is only the original plan (see isOffScheduleShoot) —
+  // so they don't count as a day of the project or toward its progress.
   function isProjectLiveShoot(s) {
     return s.status !== 'rescheduled' && s.status !== 'canceled';
   }
@@ -1995,12 +2018,13 @@
 
   // The shoot that stands in for a project in a list (its thumbnail, its
   // placement by date or category): the next shoot day from today on, else
-  // the earliest-dated one, else simply the first one given.
+  // the earliest-dated one, else simply the first one given. A postponed or
+  // canceled day's kept date doesn't count (scheduledShootDate).
   function projectRepresentative(members) {
     if (!members || !members.length) return null;
     const today = todayStr();
     const dated = members
-      .filter(s => s.date)
+      .filter(s => scheduledShootDate(s))
       .sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
     return dated.find(s => s.date >= today) || dated[0] || members[0];
   }
@@ -2824,7 +2848,8 @@
     const n = members.length;
     document.getElementById('projectDetailSummary').textContent = [
       `${n} shoot${n === 1 ? '' : 's'}`,
-      projectDateRangeText(members),
+      // Only the days still on the schedule (see isOffScheduleShoot).
+      projectDateRangeText(members.filter(isProjectLiveShoot)),
       projectStatusLabel(members),
     ].filter(Boolean).join(' · ');
     // Flips once every shoot in the project is archived, the same way the
@@ -2909,10 +2934,11 @@
     if (!members.length) return;
     // projectMembers is date-sorted with undated shoots last, so the last
     // dated member is the latest day — the new one is dated the day after.
-    const dated = members.filter(s => s.date);
+    // A postponed or canceled day's kept date isn't a day of the project.
+    const dated = members.filter(s => scheduledShootDate(s));
     const latest = dated.length ? dated[dated.length - 1] : members[members.length - 1];
     let nextDate = '';
-    if (latest.date) {
+    if (scheduledShootDate(latest)) {
       const [y, m, d] = latest.date.split('-').map(Number);
       nextDate = formatDate(new Date(y, m - 1, d + 1));
     }
@@ -3308,11 +3334,13 @@
 
   // Ignores status entirely — every shoot lands in one bucket by how soon
   // (or how long ago) its shoot date is; a project box by its rep's date
-  // (its next day ahead, else its first day).
+  // (its next day ahead, else its first day). A postponed or canceled
+  // shoot's kept date is only the original plan, so it files as Undated,
+  // where it always sat back when that date was wiped.
   function renderShootsByDate(list, items) {
     const buckets = new Map();
     items.forEach(item => {
-      const bucket = shootDateBucket(listItemRep(item).date);
+      const bucket = shootDateBucket(scheduledShootDate(listItemRep(item)));
       if (!buckets.has(bucket)) buckets.set(bucket, []);
       buckets.get(bucket).push(item);
     });
@@ -5443,13 +5471,15 @@
   // they've worked (most-used first, alphabetical within a tie) — same
   // "returning contact" idea as past locations, just counted by name
   // instead of by location key. The sample pulled in for each name is
-  // whichever shoot used it most recently.
+  // whichever shoot used it most recently. A solo shoot's team list is kept
+  // but hidden (see updateTeamRequiredUI), so it doesn't count here.
   function getAllPastTeamMembers() {
     const counts = {};
     const sampleDates = {};
     const samples = {};
     const dismissed = new Set(state.dismissedTeamMemberKeys);
     state.shoots.forEach(s => {
+      if (s.teamRequired !== 'yes') return;
       (s.teamMembers || []).forEach(tm => {
         if (!hasText(tm.name)) return;
         const key = tm.name.trim().toLowerCase();
@@ -5596,21 +5626,47 @@
     scheduleShootAutosave();
   });
 
-  function updateTeamRequiredUI() {
-    const yes = document.getElementById('teamRequiredYes').checked;
-    const no = document.getElementById('teamRequiredNo').checked;
-    document.getElementById('teamDetailsBlock').hidden = !yes;
-    document.getElementById('teamFinalizedNote').hidden = !no;
+  // "Requires team?" is two named buttons, "Just me" / "With a team", rather
+  // than a pair of Yes/No tick boxes. The answer is still saved as
+  // teamRequired 'no'/'yes' ('' while neither's been picked), read straight
+  // off whichever button is showing as picked.
+  const TEAM_REQUIRED_CHOICES = [['teamRequiredNoBtn', 'no'], ['teamRequiredYesBtn', 'yes']];
+
+  function getTeamRequiredChoice() {
+    const picked = TEAM_REQUIRED_CHOICES.find(([id]) => document.getElementById(id).classList.contains('active'));
+    return picked ? picked[1] : '';
   }
 
-  document.getElementById('teamRequiredYes').addEventListener('change', (e) => {
-    if (e.target.checked) document.getElementById('teamRequiredNo').checked = false;
+  function setTeamRequiredChoice(value) {
+    TEAM_REQUIRED_CHOICES.forEach(([id, choice]) => {
+      const btn = document.getElementById(id);
+      btn.classList.toggle('active', value === choice);
+      btn.setAttribute('aria-pressed', value === choice ? 'true' : 'false');
+    });
     updateTeamRequiredUI();
-  });
+  }
 
-  document.getElementById('teamRequiredNo').addEventListener('change', (e) => {
-    if (e.target.checked) document.getElementById('teamRequiredYes').checked = false;
-    updateTeamRequiredUI();
+  // Switching to "Just me" only HIDES the team list and Directions for team —
+  // both are kept, and come straight back with "With a team". Everything that
+  // shows or counts a team (PDFs, Stats, Pending labels...) checks
+  // teamRequired === 'yes' for the same reason, and directionFieldApplies
+  // leaves Directions for team out of Shoot mode and the PDFs on a solo shoot.
+  function updateTeamRequiredUI() {
+    const choice = getTeamRequiredChoice();
+    document.getElementById('teamDetailsBlock').hidden = choice !== 'yes';
+    document.getElementById('teamFinalizedNote').hidden = choice !== 'no';
+    document.getElementById('shootTeamDirectionsField').hidden = choice === 'no';
+  }
+
+  // Buttons fire no input/change event of their own, so each saves itself
+  // (scheduleShootAutosave also refreshes the new-shoot guide, whose Team
+  // slide borrows this whole block). Tapping the one already picked keeps it.
+  TEAM_REQUIRED_CHOICES.forEach(([id, choice]) => {
+    document.getElementById(id).addEventListener('click', () => {
+      if (getTeamRequiredChoice() === choice) return;
+      setTeamRequiredChoice(choice);
+      scheduleShootAutosave();
+    });
   });
 
   // ---------- Shot list (checklist inside Shoot-day notes) ----------
@@ -6451,9 +6507,10 @@
       const key = locationKey(loc);
       if (dismissed.has(key)) return;
       // Only a shoot still being planned counts its missing date as today: a
-      // canceled/postponed one has had its date cleared, so it ranks last.
+      // canceled/postponed one's kept date is only the original plan
+      // (scheduledShootDate leaves it out), so it ranks last.
       const live = !s.archived && s.status !== 'canceled' && s.status !== 'rescheduled';
-      const when = s.date || (live ? today : '');
+      const when = scheduledShootDate(s) || (live ? today : '');
       if (!(key in latest) || when >= latest[key]) {
         latest[key] = when;
         samples[key] = s.location;
@@ -6689,6 +6746,9 @@
   function directionFieldApplies(shoot, key) {
     if (key === 'premise' || key === 'elevatorPitch') return categoryHasConcept(shoot.category);
     if (key === 'character' || key === 'worldNotes') return categoryHasStoryFields(shoot.category);
+    // Hidden on a "Just me" shoot (see updateTeamRequiredUI); still shown
+    // while the team question hasn't been answered.
+    if (key === 'teamDirections') return shoot.teamRequired !== 'no';
     return true;
   }
 
@@ -6920,9 +6980,57 @@
     return order.indexOf(status) >= order.indexOf('captured');
   }
 
-  function openPostShootPrompt() {
+  // ---------- After a status change: the reflection and deadline prompts ----------
+  // Whichever way a status changes — the shoot page's status button, a row's
+  // ⋮ > Change status, or "Done shooting" — the same follow-ups come next,
+  // from runStatusFollowUps: moving into Captured or later offers the
+  // post-shoot reflection, and moving into the edit without a deadline asks
+  // for one, chained after the reflection prompt when both apply so the two
+  // never show stacked. Both prompts remember which shoot they're about, so
+  // they work from a row too, with that shoot's page closed: there they read
+  // and write the saved shoot, and "Reflect now" opens its page.
+
+  // Whether the shoot page is open on this shoot right now — its form, not
+  // the saved shoot, is then where its status, deadline and reflection are.
+  function shootPageOpenOn(shootId) {
+    return !!shootId && !shootModalOverlay.hidden && currentShootId === shootId;
+  }
+
+  function shootHasReflection(shootId) {
+    if (shootPageOpenOn(shootId)) {
+      return ['shootWentRight', 'shootCouldBeBetter', 'shootLessonsLearned'].some(shootFieldHasText);
+    }
+    const s = state.shoots.find(x => x.id === shootId);
+    return !!s && (hasText(s.whatWentRight) || hasText(s.couldBeBetter) || hasText(s.lessonsLearned));
+  }
+
+  function runStatusFollowUps(shootId, oldStatus, newStatus) {
+    if (isPostCaptureStatus(newStatus) && !isPostCaptureStatus(oldStatus)) {
+      // A reflection written before the shoot stepped back a status (it's
+      // only ever hidden then, never cleared) just comes back into view —
+      // no asking again for what's already there.
+      if (!shootHasReflection(shootId)) {
+        openPostShootPrompt(shootId);
+        return;
+      }
+      if (shootPageOpenOn(shootId)) {
+        document.getElementById('postShootContent').hidden = false;
+        updateShootModalJumpMenuVisibility();
+      }
+    }
+    // Only on entering the edit bucket: a video stepping Rough cut ->
+    // Client review -> Revisions shouldn't re-ask at every step.
+    if (isInTheEditStatus(newStatus) && !isInTheEditStatus(oldStatus)) maybeOpenDeadlinePrompt(shootId);
+  }
+
+  // The shoot the reflection prompt is about.
+  let postShootPromptShootId = null;
+
+  function openPostShootPrompt(shootId) {
+    postShootPromptShootId = shootId;
     document.getElementById('postShootPromptText').textContent = 'Complete post shoot reflection?';
     document.getElementById('postShootPromptActions').hidden = false;
+    document.getElementById('postShootPromptWalkBtn').hidden = false;
     document.getElementById('postShootPromptDismissBtn').hidden = true;
     document.getElementById('postShootPromptOverlay').hidden = false;
   }
@@ -6940,29 +7048,70 @@
     return content;
   }
 
-  document.getElementById('postShootPromptYesBtn').addEventListener('click', () => {
-    document.getElementById('postShootPromptOverlay').hidden = true;
-    // "Yes" from the new-shoot wizard's first slide (a shoot being logged
-    // after the fact) means "take me to the reflection now" — close the
+  // Opens a shoot's page, from a row, already scrolled to its Reflection.
+  // The scroll rides on openShootModal's own restore, which snaps a
+  // remembered position to the nearest section heading at or above it — so
+  // "as far down as it goes" lands on the last section, Reflection (shown
+  // and opened just below, before that restore measures anything).
+  function openShootPageAtReflection(shootId) {
+    if (!state.shoots.some(x => x.id === shootId)) return false;
+    shootScrollPositions[shootId] = Number.MAX_SAFE_INTEGER;
+    openShootModal(shootId);
+    const content = showPostShootContentExpanded();
+    updateShootModalJumpMenuVisibility();
+    // Then lined up exactly, once that restore's two frames have also sized
+    // the fields above it (which can push it down a little).
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (shootPageOpenOn(shootId)) content.scrollIntoView({ block: 'start' });
+    }));
+    return true;
+  }
+
+  // "Reflect now": straight to the Reflection section of that shoot's page.
+  function goToPostShootReflection(shootId) {
+    if (!shootPageOpenOn(shootId)) return openShootPageAtReflection(shootId);
+    // From the new-shoot wizard's first slide (a shoot being logged after
+    // the fact) this means "take me to the reflection now" — close the
     // wizard first so the scroll below lands on the page, not behind it.
     if (shootWizardActive) endShootWizard();
     const content = showPostShootContentExpanded();
     updateShootModalJumpMenuVisibility();
     content.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    maybeOpenDeadlinePrompt();
+    return true;
+  }
+
+  document.getElementById('postShootPromptYesBtn').addEventListener('click', () => {
+    const shootId = postShootPromptShootId;
+    document.getElementById('postShootPromptOverlay').hidden = true;
+    goToPostShootReflection(shootId);
+    maybeOpenDeadlinePrompt(shootId);
+  });
+
+  // "Walk me through it": the same, then the reflection helper's questions
+  // straight away. The deadline prompt, when it applies, waits until the
+  // helper closes rather than stacking over it.
+  document.getElementById('postShootPromptWalkBtn').addEventListener('click', () => {
+    const shootId = postShootPromptShootId;
+    document.getElementById('postShootPromptOverlay').hidden = true;
+    if (!goToPostShootReflection(shootId)) return;
+    openReflectHelper();
+    reflectHelper.onClose = () => maybeOpenDeadlinePrompt(shootId);
   });
 
   document.getElementById('postShootPromptLaterBtn').addEventListener('click', () => {
-    showPostShootContentExpanded();
-    updateShootModalJumpMenuVisibility();
+    if (shootPageOpenOn(postShootPromptShootId)) {
+      showPostShootContentExpanded();
+      updateShootModalJumpMenuVisibility();
+    }
     document.getElementById('postShootPromptText').textContent = "the post-shoot reflection questions will be at the bottom of this shoot whenever you're ready.";
     document.getElementById('postShootPromptActions').hidden = true;
+    document.getElementById('postShootPromptWalkBtn').hidden = true;
     document.getElementById('postShootPromptDismissBtn').hidden = false;
   });
 
   document.getElementById('postShootPromptDismissBtn').addEventListener('click', () => {
     document.getElementById('postShootPromptOverlay').hidden = true;
-    maybeOpenDeadlinePrompt();
+    maybeOpenDeadlinePrompt(postShootPromptShootId);
   });
 
   // ---------- Add deadline prompt (shown once a shoot moves into the edit —
@@ -6970,24 +7119,54 @@
   // a deadline set yet — chained after the post-shoot reflection
   // prompt when both apply, e.g. a shoot logged retroactively straight into
   // "editing", so the two never show stacked on top of each other). ----------
-  function openDeadlinePrompt() {
+  let deadlinePromptShootId = null;
+
+  function openDeadlinePrompt(shootId) {
+    deadlinePromptShootId = shootId;
     document.getElementById('deadlinePromptDateInput').value = '';
+    // "Set deadline" waits for a date — it used to just close with none.
+    document.getElementById('deadlinePromptOkBtn').disabled = true;
     document.getElementById('deadlinePromptOverlay').hidden = false;
   }
 
-  function maybeOpenDeadlinePrompt() {
-    if (isInTheEditStatus(document.getElementById('shootStatus').value) && !hasText(document.getElementById('shootDeadline').value)) {
-      openDeadlinePrompt();
+  function maybeOpenDeadlinePrompt(shootId) {
+    let status = '';
+    let deadline = '';
+    if (shootPageOpenOn(shootId)) {
+      status = document.getElementById('shootStatus').value;
+      deadline = document.getElementById('shootDeadline').value;
+    } else {
+      const s = state.shoots.find(x => x.id === shootId);
+      if (!s) return;
+      status = s.status;
+      deadline = s.deadline;
     }
+    if (isInTheEditStatus(status) && !hasText(deadline)) openDeadlinePrompt(shootId);
   }
+
+  ['input', 'change'].forEach(type => {
+    document.getElementById('deadlinePromptDateInput').addEventListener(type, (e) => {
+      document.getElementById('deadlinePromptOkBtn').disabled = !e.target.value;
+    });
+  });
 
   document.getElementById('deadlinePromptOkBtn').addEventListener('click', () => {
     const dateValue = document.getElementById('deadlinePromptDateInput').value;
+    if (!dateValue) return;
+    const shootId = deadlinePromptShootId;
     document.getElementById('deadlinePromptOverlay').hidden = true;
-    if (dateValue) {
+    if (shootPageOpenOn(shootId)) {
       document.getElementById('shootDeadline').value = dateValue;
       scheduleShootAutosave();
+      return;
     }
+    // Asked from a row, with the page closed: same write as the ⋮ menu's
+    // own deadline option (saveDeadlineOption).
+    const idx = state.shoots.findIndex(x => x.id === shootId);
+    if (idx === -1) return;
+    state.shoots[idx] = { ...state.shoots[idx], deadline: dateValue };
+    saveState();
+    renderAll();
   });
 
   document.getElementById('deadlinePromptNotNowBtn').addEventListener('click', () => {
@@ -7013,43 +7192,19 @@
 
   document.getElementById('shootStatus').addEventListener('change', (e) => {
     const newValue = e.target.value;
+    const oldValue = previousStatusValue;
+    previousStatusValue = newValue;
 
-    // Postponed (key: rescheduled)/canceled shoots no longer have a date to keep — clear it
-    // in the form itself so the very next autosave doesn't resurrect it.
-    if (newValue === 'rescheduled' || newValue === 'canceled') {
-      document.getElementById('shootDate').value = '';
-      document.getElementById('shootStartTime').value = '';
-      document.getElementById('shootEndTime').value = '';
-      document.getElementById('shootCrewCallTime').value = '';
-      document.getElementById('shootTalentCallTime').value = '';
+    // Nothing is cleared on the way: a Postponed (key: rescheduled) or
+    // Canceled shoot keeps its date and times (lists show them as the
+    // original plan, see isOffScheduleShoot), and stepping back from
+    // Captured only hides the Reflection — its answers are kept, and come
+    // back with the status. The form-level change listener saves it all.
+    if (!isPostCaptureStatus(newValue)) {
+      document.getElementById('postShootContent').hidden = true;
+      updateShootModalJumpMenuVisibility();
     }
-
-    const wasPostCapture = isPostCaptureStatus(previousStatusValue);
-    const isPostCapture = isPostCaptureStatus(newValue);
-
-    if (isPostCapture && !wasPostCapture) {
-      previousStatusValue = newValue;
-      openPostShootPrompt();
-    } else if (wasPostCapture && !isPostCapture) {
-      const confirmed = confirm("Reverting to an earlier status will clear any post-shoot reflection responses you've filled out. Continue?");
-      if (confirmed) {
-        document.getElementById('shootWentRight').value = '';
-        document.getElementById('shootCouldBeBetter').value = '';
-        document.getElementById('shootLessonsLearned').value = '';
-        document.getElementById('postShootContent').hidden = true;
-        updateShootModalJumpMenuVisibility();
-        previousStatusValue = newValue;
-        scheduleShootAutosave();
-      } else {
-        e.target.value = previousStatusValue;
-      }
-    } else {
-      // Only on entering the edit bucket: a video stepping Rough cut ->
-      // Client review -> Revisions shouldn't re-ask at every step.
-      const wasInTheEdit = isInTheEditStatus(previousStatusValue);
-      previousStatusValue = newValue;
-      if (isInTheEditStatus(newValue) && !wasInTheEdit) maybeOpenDeadlinePrompt();
-    }
+    runStatusFollowUps(currentShootId, oldValue, newValue);
 
     const isArchived = !document.getElementById('unarchiveShootBtn').hidden;
     document.getElementById('completeShootBtn').hidden = !editingShootId || isArchived || document.getElementById('shootStatus').value !== 'delivered';
@@ -7498,7 +7653,12 @@
     {
       key: 'directions',
       title: 'Directions',
-      hint: "Notes for the day: what you'll ask of the talent, and what the team needs to know.",
+      // On a "Just me" shoot (the Team slide's answer) Directions for team
+      // stays hidden here like on the page (updateTeamRequiredUI), so the
+      // hint only mentions the talent.
+      hint: () => (getTeamRequiredChoice() === 'no'
+        ? "Notes for the day: what you'll ask of the talent."
+        : "Notes for the day: what you'll ask of the talent, and what the team needs to know."),
       blocks: () => [
         shootWizardBlock('shootTalentDirections', 'label'),
         shootWizardBlock('shootTeamDirections', 'label'),
@@ -12190,7 +12350,11 @@
 
   function closeReflectHelper() {
     document.getElementById('reflectHelperOverlay').hidden = true;
+    // Whatever was waiting for the helper to close (the reflection prompt's
+    // "Walk me through it" holds the deadline prompt back until now).
+    const onClose = reflectHelper && reflectHelper.onClose;
     reflectHelper = null;
+    if (onClose) onClose();
   }
 
   document.getElementById('reflectHelperBtn').addEventListener('click', openReflectHelper);
@@ -12387,12 +12551,10 @@
       : [];
     renderLightingSetups();
 
-    const teamRequired = s ? (s.teamRequired || '') : '';
-    document.getElementById('teamRequiredYes').checked = teamRequired === 'yes';
-    document.getElementById('teamRequiredNo').checked = teamRequired === 'no';
+    // Also shows/hides the team list and Directions for team to match.
+    setTeamRequiredChoice(s ? (s.teamRequired || '') : '');
     document.getElementById('shootTeamFinalized').checked = s ? !!s.teamFinalized : false;
     updateTeamFinalizedLabel();
-    updateTeamRequiredUI();
     currentTeamMembers = s && s.teamMembers ? s.teamMembers.map(tm => ({ ...tm })) : [];
     renderTeamMembers();
 
@@ -12984,9 +13146,7 @@
     const frameworkTags = [...document.querySelectorAll(FRAMEWORK_TAG_CHECKED_SELECTOR)]
       .map(cb => ({ frameworkId: cb.dataset.fw, tag: cb.value }));
 
-    const teamRequired = document.getElementById('teamRequiredYes').checked
-      ? 'yes'
-      : (document.getElementById('teamRequiredNo').checked ? 'no' : '');
+    const teamRequired = getTeamRequiredChoice();
 
     return {
       title: document.getElementById('shootTitle').value.trim(),
@@ -13013,7 +13173,9 @@
       moodboardComplete: document.getElementById('shootMoodboardComplete').checked,
       teamRequired,
       teamFinalized: document.getElementById('shootTeamFinalized').checked,
-      teamMembers: teamRequired === 'yes' ? [...currentTeamMembers] : [],
+      // Kept whatever the team answer: "Just me" only hides the list, so
+      // switching back to "With a team" brings everyone straight back.
+      teamMembers: [...currentTeamMembers],
       references: currentReferences.map(r => r.trim()).filter(r => r),
       frameworkTags,
       whatWentRight: document.getElementById('shootWentRight').value.trim(),
@@ -13353,12 +13515,11 @@
     openMultiDayPrompt(dates);
   });
 
-  // The shoot date moving — or being cleared: Postponed/Canceled wipe it
-  // from code, which fires no change event of its own, hence the status hook
-  // too — changes what the row should say. A member's "Day N of M" is worked
-  // out from saved dates, so the edit is committed first; a non-member's
-  // in-progress pick has its Last day range re-anchored, or is dropped
-  // entirely if there's no date left to anchor it to.
+  // The shoot date moving — or being cleared — changes what the row should
+  // say. A member's "Day N of M" is worked out from saved dates, so the edit
+  // is committed first; a non-member's in-progress pick has its Last day
+  // range re-anchored, or is dropped entirely if there's no date left to
+  // anchor it to.
   function syncMultiDayRowToShootDate() {
     if (multiDayMembership()) {
       saveShootNow();
@@ -13376,9 +13537,15 @@
   }
 
   document.getElementById('shootDate').addEventListener('change', syncMultiDayRowToShootDate);
-  // Registered after the main status handler above, so it sees the date that
-  // handler may have just cleared.
-  document.getElementById('shootStatus').addEventListener('change', syncMultiDayRowToShootDate);
+  // A status change never touches the date any more (Postponed/Canceled keep
+  // it), so a non-member's Last day pick is left alone; but a member's "Day
+  // N of M" still moves with it, since a postponed or canceled day stops
+  // counting as a day of the project (isProjectLiveShoot).
+  document.getElementById('shootStatus').addEventListener('change', () => {
+    if (!multiDayMembership()) return;
+    saveShootNow();
+    updateMultiDayRow();
+  });
 
   function openMultiDayPrompt(dates) {
     multiDayPromptDates = dates;
@@ -13762,35 +13929,31 @@
     `).join('');
   }
 
-  function applyStatusChange(shootId, newStatus) {
+  // The one way a status changes from outside the shoot page — a row's ⋮ >
+  // Change status, "Done shooting", the next-day check-in — writing straight
+  // to the saved shoot. applyStatusTimestamps stamps capturedAt/editingAt
+  // (the reflection and editing reminders run off those), and nothing else
+  // on the shoot is touched: a reflection is only hidden while the shoot's
+  // back before Captured, and a postponed/canceled shoot keeps its date and
+  // times (see isOffScheduleShoot). Then the same follow-up prompts as the
+  // page's status button (runStatusFollowUps), unless the caller passes
+  // { followUps: false } to ask them itself, or not at all. Returns the
+  // status the shoot had before, or null when there's no such shoot.
+  function applyStatusChange(shootId, newStatus, opts) {
     const idx = state.shoots.findIndex(x => x.id === shootId);
-    if (idx === -1) return;
+    if (idx === -1) return null;
     const shoot = { ...state.shoots[idx] };
     const oldStatus = shoot.status || 'prospect';
-    const wasPostCapture = isPostCaptureStatus(oldStatus);
-    const willBePostCapture = isPostCaptureStatus(newStatus);
-    const hasReflection = hasText(shoot.whatWentRight) || hasText(shoot.couldBeBetter) || hasText(shoot.lessonsLearned);
-    if (wasPostCapture && !willBePostCapture && hasReflection) {
-      if (!confirm("Reverting to an earlier status will clear any post-shoot reflection responses you've filled out. Continue?")) return;
-      shoot.whatWentRight = '';
-      shoot.couldBeBetter = '';
-      shoot.lessonsLearned = '';
-    }
     shoot.status = newStatus;
     applyStatusTimestamps(shoot, oldStatus, newStatus);
-    if (newStatus === 'rescheduled' || newStatus === 'canceled') {
-      shoot.date = '';
-      shoot.startTime = '';
-      shoot.endTime = '';
-      shoot.crewCallTime = '';
-      shoot.talentCallTime = '';
-    }
     state.shoots[idx] = shoot;
     saveState();
     renderAll();
     // A stat box popup left open underneath would otherwise keep listing a
     // shoot that no longer belongs in it.
     refreshOpenStatBoxDetail();
+    if (!opts || opts.followUps !== false) runStatusFollowUps(shootId, oldStatus, newStatus);
+    return oldStatus;
   }
 
   document.getElementById('changeStatusOptionBtn').addEventListener('click', () => {
@@ -14246,17 +14409,21 @@
     // Video call sheets also carry separate crew and talent call times.
     const crewCall = isVideo ? prettyTime(s.crewCallTime) : '';
     const talentCall = isVideo ? prettyTime(s.talentCallTime) : '';
-    if ((s.date || timeRange || crewCall || talentCall || locationDisplay || hasText(s.locationDirections) || hasText(s.talentDirections) || hasText(s.teamDirections)) && sections.logistics) {
+    // Directions for team only on a shoot with a team (a "Just me" shoot
+    // keeps it, hidden — see directionFieldApplies).
+    const teamDirections = directionFieldApplies(s, 'teamDirections') ? s.teamDirections : '';
+    if ((s.date || timeRange || crewCall || talentCall || locationDisplay || hasText(s.locationDirections) || hasText(s.talentDirections) || hasText(teamDirections)) && sections.logistics) {
       sectionHeading('Logistics:');
       doc.setFontSize(11);
-      if (s.date) drawLabeledLine('Date: ', prettyDate(s.date), 16);
+      // A postponed/canceled shoot's kept date is the original plan.
+      if (s.date) drawLabeledLine(isOffScheduleShoot(s) ? 'Originally: ' : 'Date: ', prettyDate(s.date), 16);
       if (timeRange) drawLabeledLine('Time: ', timeRange, 16);
       if (crewCall) drawLabeledLine('Crew call: ', crewCall, 16);
       if (talentCall) drawLabeledLine('Talent call: ', talentCall, 16);
       if (locationDisplay) { drawLabeledLine('Location: ', locationDisplay, 14); y += 2; }
       if (hasText(s.locationDirections)) { drawLabeledLine('Location instructions: ', s.locationDirections, 14); y += 2; }
       if (hasText(s.talentDirections)) { drawLabeledLine('Directions for talent: ', s.talentDirections, 14); y += 2; }
-      if (hasText(s.teamDirections)) { drawLabeledLine('Directions for team: ', s.teamDirections, 14); y += 2; }
+      if (hasText(teamDirections)) { drawLabeledLine('Directions for team: ', teamDirections, 14); y += 2; }
       y += 8;
     }
 
@@ -15246,7 +15413,9 @@
       doc.setTextColor(...navy);
       doc.setFont('courier', 'normal');
       doc.setFontSize(10);
-      const subLabel = [prettyDate(s.date) || 'Date TBD', CATEGORY_LABELS[s.category] || null, STATUS_LABELS[s.status] || null]
+      // A postponed/canceled shoot's kept date is the original plan.
+      const dateLabel = s.date ? `${isOffScheduleShoot(s) ? 'Originally ' : ''}${prettyDate(s.date)}` : 'Date TBD';
+      const subLabel = [dateLabel, CATEGORY_LABELS[s.category] || null, STATUS_LABELS[s.status] || null]
         .filter(Boolean).join('   •   ');
       doc.text(subLabel, margin, headerHeight + 16);
       y = headerHeight + 32;
@@ -15280,7 +15449,9 @@
       const isVideo = isVideoShoot(s);
       const crewCall = isVideo ? prettyTime(s.crewCallTime) : '';
       const talentCall = isVideo ? prettyTime(s.talentCallTime) : '';
-      if (timeRange || crewCall || talentCall || locationDisplay || hasText(s.locationDirections) || hasText(s.talentDirections) || hasText(s.teamDirections)) {
+      // Not on a "Just me" shoot, where it's kept but hidden.
+      const teamDirections = directionFieldApplies(s, 'teamDirections') ? s.teamDirections : '';
+      if (timeRange || crewCall || talentCall || locationDisplay || hasText(s.locationDirections) || hasText(s.talentDirections) || hasText(teamDirections)) {
         sectionHeading('Logistics:');
         doc.setFontSize(11);
         if (timeRange) drawLabeledLine('Time: ', timeRange, 14);
@@ -15289,7 +15460,7 @@
         if (locationDisplay) { drawLabeledLine('Location: ', locationDisplay, 14); y += 2; }
         if (hasText(s.locationDirections)) { drawLabeledLine('Location instructions: ', s.locationDirections, 14); y += 2; }
         if (hasText(s.talentDirections)) { drawLabeledLine('Directions for talent: ', s.talentDirections, 14); y += 2; }
-        if (hasText(s.teamDirections)) { drawLabeledLine('Directions for team: ', s.teamDirections, 14); y += 2; }
+        if (hasText(teamDirections)) { drawLabeledLine('Directions for team: ', teamDirections, 14); y += 2; }
         y += 6;
       }
 
@@ -15397,11 +15568,13 @@
       }
 
       // ---- Post-shoot reflection ----
-      const reflectionFields = [
+      // Only from Captured on, same as the page: a shoot stepped back a
+      // status keeps its answers, hidden, rather than printing them as current.
+      const reflectionFields = (isPostCaptureStatus(s.status) ? [
         ['What went right: ', s.whatWentRight],
         ["What could've gone better: ", s.couldBeBetter],
         ['Lessons for next time: ', s.lessonsLearned],
-      ].filter(([, value]) => hasText(value));
+      ] : []).filter(([, value]) => hasText(value));
       if (reflectionFields.length) {
         sectionHeading('Post-shoot reflection:');
         doc.setFontSize(11);
@@ -16090,10 +16263,13 @@
   let statsSliceFilters = {};
   let statsYearFilter = String(new Date().getFullYear());
 
+  // A year counts the shoots dated in it; a postponed or canceled shoot's
+  // kept date is only the original plan, so those count under All time only
+  // (same as when that date used to be wiped).
   function getStatsShoots() {
     return statsYearFilter === 'all'
       ? state.shoots
-      : state.shoots.filter(s => s.date && s.date.slice(0, 4) === statsYearFilter);
+      : state.shoots.filter(s => scheduledShootDate(s).slice(0, 4) === statsYearFilter);
   }
 
   function buildVisualLanguageStats() {
@@ -16595,7 +16771,7 @@
   function renderStatsYearFilters() {
     const currentYear = String(new Date().getFullYear());
     const years = new Set([currentYear]);
-    state.shoots.forEach(s => { if (s.date) years.add(s.date.slice(0, 4)); });
+    state.shoots.forEach(s => { if (scheduledShootDate(s)) years.add(s.date.slice(0, 4)); });
     const sortedYears = [...years].sort((a, b) => b.localeCompare(a));
     const chips = [...sortedYears.map(y => ({ key: y, label: y })), { key: 'all', label: 'All time' }];
     statsYearFiltersEl.innerHTML = chips.map(c => `<button type="button" class="chip ${c.key === statsYearFilter ? 'active' : ''}" data-year="${c.key}">${escapeHtml(c.label)}</button>`).join('');
@@ -16988,6 +17164,11 @@
   }
 
   document.getElementById('shootModeExitBtn').addEventListener('click', exitShootMode);
+  // The bottom bar's "Exit", beside "Done shooting": the same as the X up
+  // top — out of Shoot mode with nothing changed — for someone who only
+  // opened it to look, or by accident, and is looking down there for a way
+  // out rather than up at the X.
+  document.getElementById('shootModeLeaveBtn').addEventListener('click', exitShootMode);
 
   // Same field as the main edit form's Shot list section (#shootShootingNotes)
   // — writes straight to the shoot, same as every other Shoot Mode field.
@@ -17063,14 +17244,24 @@
   // happened to be underneath. Same tab-then-modal sequence the post-shoot
   // journal prompt uses, for the same reason: openShootModal needs the right
   // tab active first, or it opens behind it.
+  // It also means the shoot happened: one still before Captured (Shoot
+  // ready, usually) moves to Captured through the usual status path, so
+  // capturedAt and the reflection reminders follow from it. That change's
+  // follow-ups wait until the page is open — opening it would hide them —
+  // and are then asked over it: the reflection prompt, mainly. A shoot
+  // that's already Captured or further along is left as it is.
   document.getElementById('shootModeDoneBtn').addEventListener('click', () => {
     const shootId = getShootModeShootId();
     exitShootMode();
     if (!shootId) return;
     const s = state.shoots.find(x => x.id === shootId);
     if (!s) return;
+    const oldStatus = s.status || 'prospect';
+    const capturing = ['prospect', 'planning', 'waiting_to_shoot'].includes(oldStatus);
+    if (capturing) applyStatusChange(shootId, 'captured', { followUps: false });
     document.querySelector(`.tab[data-view="${s.archived ? 'archive' : 'shoots'}"]`).click();
     openShootModal(shootId);
+    if (capturing) runStatusFollowUps(shootId, oldStatus, 'captured');
   });
 
   document.getElementById('enterShootModeBtn').addEventListener('click', () => {
@@ -17381,6 +17572,15 @@
     overlay.hidden = false;
   }
 
+  // The next-day check-in answers itself: a row per shoot, each with its two
+  // likely answers as buttons — "Postponed" and "Shot it" (Captured) — that
+  // update that shoot on the spot through the usual status path
+  // (applyStatusChange), and then show what it was set to. The reflection
+  // and deadline prompts stay out of it (one per row would stack over the
+  // list); the daily report's reflection reminder and the rows' "Pending:
+  // Reflection" pick a shot shoot up from there. The button under the list
+  // closes it whenever: "Not yet" while any row's still unanswered (those
+  // are asked again the next day), "Done" once they all are.
   function checkDayAfterPrompt() {
     const today = effectiveReportDateStr();
     let lastShown;
@@ -17392,32 +17592,52 @@
     // several) of opening the app doesn't silently drop the check-in for
     // good. It still only asks once a day (the lastShown guard above), so
     // whichever day you next open the app is the day it catches up.
-    const pendingShoots = state.shoots.filter(s => !s.archived && !POST_CAPTURE_STATUSES.includes(s.status) && s.date && s.date < today);
+    // Postponed/canceled shoots keep their original date now, but already
+    // have their answer.
+    const pendingShoots = state.shoots.filter(s => !s.archived && !POST_CAPTURE_STATUSES.includes(s.status) && !isOffScheduleShoot(s) && s.date && s.date < today);
     if (!pendingShoots.length) return;
 
     try { localStorage.setItem(DAY_AFTER_PROMPT_KEY, today); } catch (e) { /* ignore */ }
 
-    const names = pendingShoots.map(shootDisplayName);
     const plural = pendingShoots.length > 1;
-    document.getElementById('dayAfterPromptText').textContent = `Did ${plural ? 'these shoots' : 'this shoot'} happen: ${joinWithAnd(names)}?`;
-    document.getElementById('dayAfterPromptActions').hidden = false;
-    document.getElementById('dayAfterOkBtn').hidden = true;
+    document.getElementById('dayAfterPromptText').textContent = `Did ${plural ? 'these shoots' : 'this shoot'} happen?`;
+    document.getElementById('dayAfterList').innerHTML = pendingShoots.map(s => `
+      <div class="day-after-row" data-shoot-id="${escapeHtml(s.id)}">
+        <span class="day-after-name">${escapeHtml(shootDisplayName(s))}</span>
+        <div class="modal-actions fit-pair">
+          <button type="button" class="secondary" data-status="rescheduled">${escapeHtml(STATUS_LABELS.rescheduled)}</button>
+          <button type="button" class="primary" data-status="captured">Shot it</button>
+        </div>
+        <span class="day-after-result" hidden></span>
+      </div>
+    `).join('');
+    updateDayAfterCloseBtn();
     document.getElementById('dayAfterPromptOverlay').hidden = false;
+    document.querySelectorAll('#dayAfterList .modal-actions').forEach(fitButtonPair);
   }
 
-  document.getElementById('dayAfterYesBtn').addEventListener('click', () => {
-    document.getElementById('dayAfterPromptText').textContent = "Don't forget to update each shoot's status to reflect where it's at now!";
-    document.getElementById('dayAfterPromptActions').hidden = true;
-    document.getElementById('dayAfterOkBtn').hidden = false;
-  });
+  function updateDayAfterCloseBtn() {
+    const allAnswered = [...document.querySelectorAll('#dayAfterList .day-after-result')].every(el => !el.hidden);
+    const btn = document.getElementById('dayAfterOkBtn');
+    btn.textContent = allAnswered ? 'Done' : 'Not yet';
+    btn.className = allAnswered ? 'primary' : 'secondary';
+  }
 
-  document.getElementById('dayAfterNoBtn').addEventListener('click', () => {
-    document.getElementById('dayAfterPromptOverlay').hidden = true;
+  document.getElementById('dayAfterList').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-status]');
+    if (!btn) return;
+    const row = btn.closest('.day-after-row');
+    const status = btn.dataset.status;
+    if (applyStatusChange(row.dataset.shootId, status, { followUps: false }) === null) return;
+    row.querySelector('.modal-actions').hidden = true;
+    const result = row.querySelector('.day-after-result');
+    result.textContent = `Status: ${STATUS_LABELS[status]}`;
+    result.hidden = false;
+    updateDayAfterCloseBtn();
   });
 
   document.getElementById('dayAfterOkBtn').addEventListener('click', () => {
     document.getElementById('dayAfterPromptOverlay').hidden = true;
-    document.querySelector('.tab[data-view="shoots"]').click();
   });
 
   // ---------- Daily report (in-app "notifications" shown once per day on open) ----------
@@ -17470,7 +17690,9 @@
       }
 
       // Post-shoot reflection still blank — repeats every 3 days until filled in.
-      if (s.capturedAt && !hasText(s.whatWentRight) && !hasText(s.couldBeBetter) && !hasText(s.lessonsLearned)) {
+      // Only while the shoot is Captured or later: stepped back a status, its
+      // Reflection is hidden (capturedAt stays), so there's nothing to ask for.
+      if (s.capturedAt && isPostCaptureStatus(s.status) && !hasText(s.whatWentRight) && !hasText(s.couldBeBetter) && !hasText(s.lessonsLearned)) {
         const daysSinceCaptured = Math.floor((Date.now() - new Date(s.capturedAt).getTime()) / 86400000);
         const daysSinceLastReminder = s.lastReflectionReminderAt
           ? Math.floor((Date.now() - new Date(s.lastReflectionReminderAt).getTime()) / 86400000)
@@ -17523,7 +17745,9 @@
     const totalCount = shoots.length;
     if (totalCount > 0) facts.push(`You've logged ${totalCount} shoot${totalCount === 1 ? '' : 's'} total.`);
 
-    const thisYearCount = count(s => s.date && parseShootDate(s.date).getFullYear() === now.getFullYear());
+    // Shoot days come from scheduledShootDate throughout: a postponed or
+    // canceled shoot's kept date is only what was originally planned.
+    const thisYearCount = count(s => scheduledShootDate(s) && parseShootDate(s.date).getFullYear() === now.getFullYear());
     if (thisYearCount > 0) facts.push(`You've planned ${thisYearCount} shoot${thisYearCount === 1 ? '' : 's'} so far this year.`);
 
     // Only counts shoots that actually happened (captured or later) — a
@@ -17566,7 +17790,7 @@
       if (longest >= 3) facts.push(`Your longest shooting streak is ${longest} days in a row.`);
     }
 
-    const pastDates = shoots.filter(s => s.date && s.date <= todayStr()).map(s => s.date).sort();
+    const pastDates = shoots.filter(s => scheduledShootDate(s) && s.date <= todayStr()).map(s => s.date).sort();
     if (pastDates.length) {
       const daysSince = Math.round((now - parseShootDate(pastDates[pastDates.length - 1])) / 86400000);
       if (daysSince > 0) facts.push(`It's been ${daysSince} day${daysSince === 1 ? '' : 's'} since your last shoot.`);
@@ -17597,7 +17821,8 @@
     if (teamCount > 0) facts.push(`${teamCount} of your shoots have needed a team.`);
 
     const roleCounts = {};
-    shoots.forEach(s => (s.teamMembers || []).forEach(tm => { if (tm.role) roleCounts[tm.role] = (roleCounts[tm.role] || 0) + 1; }));
+    // A solo shoot's team list is kept but hidden, so it isn't counted.
+    shoots.forEach(s => (s.teamRequired === 'yes' ? (s.teamMembers || []) : []).forEach(tm => { if (tm.role) roleCounts[tm.role] = (roleCounts[tm.role] || 0) + 1; }));
     const roleEntries = Object.entries(roleCounts);
     if (roleEntries.length) {
       const [topRole] = roleEntries.sort((a, b) => b[1] - a[1])[0];
@@ -17635,17 +17860,19 @@
 
     const DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dowCounts = new Array(7).fill(0);
-    shoots.forEach(s => { if (s.date) dowCounts[parseShootDate(s.date).getDay()]++; });
+    shoots.forEach(s => { if (scheduledShootDate(s)) dowCounts[parseShootDate(s.date).getDay()]++; });
     const maxDow = dowCounts.indexOf(Math.max(...dowCounts));
     if (dowCounts[maxDow] > 0) facts.push(`${DOW_NAMES[maxDow]} is your most common shoot day.`);
 
     const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const monthCounts = new Array(12).fill(0);
-    shoots.forEach(s => { if (s.date) monthCounts[parseShootDate(s.date).getMonth()]++; });
+    shoots.forEach(s => { if (scheduledShootDate(s)) monthCounts[parseShootDate(s.date).getMonth()]++; });
     const maxMonth = monthCounts.indexOf(Math.max(...monthCounts));
     if (monthCounts[maxMonth] > 0) facts.push(`${MONTH_NAMES[maxMonth]} is historically your busiest shoot month.`);
 
-    const capturedShoots = shoots.filter(s => s.capturedAt);
+    // Captured as things stand: one stepped back a status keeps capturedAt,
+    // but its (hidden) reflection isn't counted either way.
+    const capturedShoots = shoots.filter(s => s.capturedAt && isPostCaptureStatus(s.status));
     if (capturedShoots.length > 0) {
       const reflectedCount = capturedShoots.filter(s => hasText(s.whatWentRight) || hasText(s.couldBeBetter) || hasText(s.lessonsLearned)).length;
       facts.push(`You've completed post-shoot reflections for ${Math.round((reflectedCount / capturedShoots.length) * 100)}% of your captured shoots.`);

@@ -278,9 +278,11 @@
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="teamHeading">Team<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="teamBody">
         <p class="team-question">Requires team?</p>
+        <!-- Two named choices in the app's chip look (the picked one filled);
+             saved as teamRequired 'no'/'yes' — see setTeamRequiredChoice. -->
         <div class="team-yesno-row">
-          <label class="checkbox-row"><input type="checkbox" id="teamRequiredYes" /> Yes</label>
-          <label class="checkbox-row"><input type="checkbox" id="teamRequiredNo" /> No</label>
+          <button type="button" class="chip" id="teamRequiredNoBtn" aria-pressed="false">Just me</button>
+          <button type="button" class="chip" id="teamRequiredYesBtn" aria-pressed="false">With a team</button>
         </div>
         <p class="field-hint team-finalized-note" id="teamFinalizedNote" hidden>Team finalized</p>
         <div id="teamDetailsBlock" hidden>
@@ -387,7 +389,7 @@
         <label>Directions for talent
           <textarea id="shootTalentDirections" rows="6" maxlength="1000" placeholder="notes, reminders, directions for the day of the shoot..." readonly></textarea>
         </label>
-        <label>Directions for team
+        <label id="shootTeamDirectionsField">Directions for team
           <textarea id="shootTeamDirections" rows="6" maxlength="1000" placeholder="notes, reminders, directions for the day of the shoot..." readonly></textarea>
         </label>
       </div>
@@ -1438,7 +1440,12 @@
       <button type="button" id="shootModeAddMoodboardBtn" class="primary small-btn shoot-mode-add-shot-btn">+ Add photos</button>
       <input type="file" id="shootModeMoodboardFileInput" accept="image/*" multiple hidden />
     </div>
-    <button type="button" class="primary shoot-mode-bottom-cta" id="shootModeDoneBtn">Done shooting</button>
+    <!-- "Exit" leaves Shoot mode and changes nothing (same as the X up top);
+         "Done shooting" wraps up the shoot. One bar, split in two. -->
+    <div class="shoot-mode-bottom-bar">
+      <button type="button" class="shoot-mode-bottom-cta shoot-mode-bottom-cta-secondary" id="shootModeLeaveBtn">Exit</button>
+      <button type="button" class="primary shoot-mode-bottom-cta" id="shootModeDoneBtn">Done shooting</button>
+    </div>
   </div>
 </div>
 
@@ -1511,8 +1518,10 @@
     <p id="postShootPromptText">Complete post shoot reflection?</p>
     <div class="modal-actions" id="postShootPromptActions">
       <button type="button" class="secondary" id="postShootPromptLaterBtn">Later</button>
-      <button type="button" class="primary" id="postShootPromptYesBtn">Yes</button>
+      <button type="button" class="primary" id="postShootPromptYesBtn">Reflect now</button>
     </div>
+    <!-- Opens the shoot at Reflection with the reflection helper's questions. -->
+    <button type="button" class="manage-link" id="postShootPromptWalkBtn">Walk me through it</button>
     <button type="button" class="primary" id="postShootPromptDismissBtn" hidden>got it!</button>
   </div>
 </div>
@@ -1534,11 +1543,9 @@
   <div class="modal intro-modal">
     <h2>Shoot check-in</h2>
     <p id="dayAfterPromptText"></p>
-    <div class="modal-actions" id="dayAfterPromptActions">
-      <button type="button" class="secondary" id="dayAfterNoBtn">Not yet</button>
-      <button type="button" class="primary" id="dayAfterYesBtn">Yes</button>
-    </div>
-    <button type="button" class="primary" id="dayAfterOkBtn" hidden>tysm for the reminder</button>
+    <!-- A row per shoot with "Postponed" / "Shot it" (see checkDayAfterPrompt). -->
+    <div id="dayAfterList" class="day-after-list"></div>
+    <button type="button" class="secondary" id="dayAfterOkBtn">Not yet</button>
   </div>
 </div>
 
@@ -1559,7 +1566,7 @@
     <input type="date" id="deadlinePromptDateInput" class="deadline-prompt-input" />
     <div class="modal-actions" id="deadlinePromptActions">
       <button type="button" class="secondary" id="deadlinePromptNotNowBtn">Not now</button>
-      <button type="button" class="primary" id="deadlinePromptOkBtn">Okay</button>
+      <button type="button" class="primary" id="deadlinePromptOkBtn" disabled>Set deadline</button>
     </div>
   </div>
 </div>
