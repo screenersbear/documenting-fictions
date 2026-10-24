@@ -1273,7 +1273,11 @@
       if (opts && opts.openArchiveMode) { openArchiveMode(s.id); return; }
       openShootModal(s.id);
     });
-    div.querySelector('.row-options-btn').addEventListener('click', (e) => {
+    // The whole yellow strip opens the options, not just the ⋮ circle in it:
+    // the strip is what reads as the button, and a tap on it just beside the
+    // ⋮ used to open the shoot instead. The ⋮ stays the focusable control
+    // (keyboard, VoiceOver); its click bubbles up to here.
+    div.querySelector('.shoot-row-accent-strip').addEventListener('click', (e) => {
       e.stopPropagation();
       openShootOptions(s.id);
     });
@@ -6499,8 +6503,6 @@
 
   function openLocationModal() {
     fillLocationForm(currentShootLocation);
-    document.getElementById('locationStateInput').classList.remove('field-invalid');
-    document.getElementById('locationStateError').hidden = true;
     refreshPastLocationsSelect();
     document.getElementById('locationModalOverlay').hidden = false;
   }
@@ -6518,27 +6520,17 @@
     if (loc) fillLocationForm(loc);
   });
 
-  document.getElementById('locationStateInput').addEventListener('input', (e) => {
-    if (hasText(e.target.value)) {
-      e.target.classList.remove('field-invalid');
-      document.getElementById('locationStateError').hidden = true;
-    }
-  });
-
+  // State / region is optional, like every other line here: plenty of places
+  // have none (or none anyone writes), and a studio name on its own is a
+  // perfectly good location. Everything that reads a location already skips
+  // a blank part — formatLocationDisplay leaves it out of the line, and the
+  // past-locations key just has an empty slot for it.
   document.getElementById('saveLocationBtn').addEventListener('click', () => {
-    const stateInput = document.getElementById('locationStateInput');
-    if (!hasText(stateInput.value)) {
-      stateInput.classList.add('field-invalid');
-      document.getElementById('locationStateError').hidden = false;
-      return;
-    }
-    stateInput.classList.remove('field-invalid');
-    document.getElementById('locationStateError').hidden = true;
     const newLocation = {
       name: document.getElementById('locationNameInput').value.trim(),
       street: document.getElementById('locationStreetInput').value.trim(),
       city: document.getElementById('locationCityInput').value.trim(),
-      state: stateInput.value.trim(),
+      state: document.getElementById('locationStateInput').value.trim(),
       zip: document.getElementById('locationZipInput').value.trim(),
       country: document.getElementById('locationCountryInput').value,
     };
@@ -6727,28 +6719,11 @@
 
   document.getElementById('shootCategory').addEventListener('change', updateVideoCategoryUI);
 
-  // ---------- Progressive reveal (new-shoot onboarding only) ----------
-  // Only the Direction fields still gate behind a prompt, since which ones
-  // show depends on the chosen category. Logistics/Visuals/Shoot-day notes
-  // are always present once their bubble is expanded — no separate reveal.
-  function revealSection2() {
-    document.getElementById('formSection2').hidden = false;
-    document.getElementById('categoryContinuePrompt').hidden = true;
-  }
-
-  document.getElementById('shootCategory').addEventListener('change', () => {
-    if (document.getElementById('shootCategory').value) revealSection2();
-  });
-
-  function initProgressiveReveal(s) {
-    const isNewShoot = !s;
-    if (!isNewShoot || document.getElementById('shootCategory').value) {
-      revealSection2();
-    } else {
-      document.getElementById('formSection2').hidden = true;
-      document.getElementById('categoryContinuePrompt').hidden = false;
-    }
-  }
+  // Direction no longer waits behind "select a category to continue" on a new
+  // shoot: Shoot goals and the rest are there from the start. With no
+  // category yet it shows the full set (the same as an existing shoot with
+  // none), and picking one later only hides what doesn't apply, never
+  // clearing it (updateCategoryTierUI).
 
   // ---------- Shoot form section bubbles (Logistics/Direction/Visuals/Shoot-day
   // notes, plus the Shot list sub-section) — collapse state is shared across
@@ -7739,14 +7714,6 @@
     const modalEl = shootModalOverlay.querySelector('.modal');
     modalEl.style.overflow = '';
     if (closing) return;
-    // On a new shoot, Direction's fields wait behind "select a category to
-    // continue" — but a slide lets them be filled with no category picked.
-    // Left gated, what was just written would look lost.
-    if (!document.getElementById('shootCategory').value) {
-      const directionFilled = [...document.querySelectorAll('#formSection2 input, #formSection2 textarea')]
-        .some(el => (el.type === 'checkbox' ? el.checked : hasText(el.value)));
-      if (directionFilled) revealSection2();
-    }
     // Everything was last measured at the card's width; the page is wider.
     // The fold state goes first so only open sections get measured.
     applyShootFormCollapseState();
@@ -12357,7 +12324,6 @@
     document.querySelectorAll('#shootAspectRatios input[type="checkbox"]').forEach(cb => {
       cb.checked = savedAspectRatios.includes(cb.value);
     });
-    initProgressiveReveal(s);
     document.getElementById('shootMoodboardComplete').checked = s ? !!s.moodboardComplete : false;
     // Also sets the Mood board/Storyboard wording (incl. the complete
     // checkbox label) and hides Final images for video.
@@ -17954,27 +17920,108 @@
   // the native shell serves local assets. No-op today since window.Capacitor
   // doesn't exist in a plain browser/PWA context.
   if (!window.Capacitor && 'serviceWorker' in navigator) {
-    // Without this, an installed (Add to Home Screen) PWA can sit on a
-    // stale service worker far longer than "close and reopen the app"
+    // Without an eager check, an installed (Add to Home Screen) PWA can sit
+    // on a stale service worker far longer than "close and reopen the app"
     // would suggest — WKWebView doesn't reliably check for a new sw.js on
-    // its own timeline, and even once it does, the new worker installing
-    // in the background doesn't do anything for the tab/app instance
-    // that's already open until that instance is reloaded. This forces an
-    // eager check on every load, and reloads once (guarded so it can't
-    // loop) the instant a new worker actually takes over — so a fresh
-    // deploy shows up on the very next load instead of an unpredictable
-    // number of relaunches later.
-    let refreshingForNewWorker = false;
+    // its own timeline. So every launch checks, and so does every return to
+    // the app, since an iOS home-screen app is usually resumed rather than
+    // relaunched.
+    //
+    // A new version then installs in the background and waits: swapping it
+    // in means reloading the page, and this used to reload the instant it
+    // arrived — a few seconds into a session, closing whatever was open. It
+    // now swaps in only while nobody's using the app: at launch, while the
+    // page is still hidden (html.booting) and nothing's been shown, or once
+    // the app's in the background with no popup, shoot page or toast (an
+    // Undo might still be wanted) up. So a fresh deploy still shows by the
+    // next launch at the latest; on a good signal the launch itself already
+    // gets the new files straight from the network (see sw.js).
+    const UPDATE_RELOAD_AT_KEY = 'df_update_reload_at';
+    const UPDATE_RELOAD_TAB_KEY = 'df_update_reload_tab';
+    let updateSwapRequested = false; // this page asked a waiting version to take over
+    let updateReloadPending = false; // it did, but the app was in use by then
+
+    // "Still hidden" means really hidden: the CSS backstop shows the page
+    // after 1.5s even if .booting is still on.
+    function updateCanReloadNow() {
+      if (anyPopupOpen() || !document.getElementById('toast').hidden) return false;
+      if (document.hidden) return true;
+      return document.documentElement.classList.contains('booting')
+        && getComputedStyle(document.body).visibility === 'hidden';
+    }
+
+    function swapInWaitingVersion(registration) {
+      if (!registration || !registration.waiting || !updateCanReloadNow()) return;
+      updateSwapRequested = true;
+      registration.waiting.postMessage('skipWaiting');
+    }
+
+    function reloadForUpdate() {
+      updateReloadPending = false;
+      // Never twice within a minute, so nothing can turn this into a loop.
+      let lastAt = 0;
+      try { lastAt = Number(sessionStorage.getItem(UPDATE_RELOAD_AT_KEY)) || 0; } catch (e) { /* ignore */ }
+      if (Date.now() - lastAt < 60000) return;
+      // IndexedDB runs requests in order, so this read only comes back once
+      // every photo write already under way has landed — the reload can't
+      // cut one off halfway.
+      idbGetImages('__update_reload__').catch(() => {}).then(() => {
+        if (!updateCanReloadNow()) { updateReloadPending = true; return; }
+        try {
+          sessionStorage.setItem(UPDATE_RELOAD_AT_KEY, String(Date.now()));
+          const activeTab = document.querySelector('.tabbar .tab.active');
+          if (activeTab) sessionStorage.setItem(UPDATE_RELOAD_TAB_KEY, activeTab.dataset.view);
+        } catch (e) { /* ignore */ }
+        window.location.reload();
+      });
+    }
+
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (refreshingForNewWorker) return;
-      refreshingForNewWorker = true;
-      window.location.reload();
+      // The very first install takes control too (clients.claim in sw.js),
+      // and the page already is the current version then; so does a version
+      // another tab swapped in. Only a swap this page asked for reloads it.
+      if (!updateSwapRequested) return;
+      updateSwapRequested = false;
+      if (updateCanReloadNow()) reloadForUpdate();
+      else updateReloadPending = true;
     });
+
+    // Registered after the one that saves pending edits, so it runs second.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        navigator.serviceWorker.getRegistration()
+          .then(registration => registration && registration.update())
+          .catch(() => {});
+        return;
+      }
+      if (updateReloadPending) {
+        if (updateCanReloadNow()) reloadForUpdate();
+        return;
+      }
+      navigator.serviceWorker.getRegistration().then(swapInWaitingVersion).catch(() => {});
+    });
+
+    // A version that finished installing during an earlier session but never
+    // got its turn (the app was in use every time it went to the background,
+    // or a desktop tab was simply reloaded, which never swaps one in by
+    // itself) goes in now, before anything's on screen.
+    navigator.serviceWorker.getRegistration().then(swapInWaitingVersion).catch(() => {});
+
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').then((registration) => {
-        registration.update();
-      }).catch(() => {});
+      navigator.serviceWorker.register('sw.js')
+        .then(registration => registration.update())
+        .catch(() => {});
     });
+
+    // After an update reload, back on the tab that was showing — the reload
+    // happened while you were away, so nothing should look different.
+    let tabAfterUpdate = null;
+    try {
+      tabAfterUpdate = sessionStorage.getItem(UPDATE_RELOAD_TAB_KEY);
+      sessionStorage.removeItem(UPDATE_RELOAD_TAB_KEY);
+    } catch (e) { /* ignore */ }
+    const tabAfterUpdateBtn = tabAfterUpdate && document.querySelector(`.tabbar .tab[data-view="${tabAfterUpdate}"]`);
+    if (tabAfterUpdateBtn && !tabAfterUpdateBtn.classList.contains('active')) tabAfterUpdateBtn.click();
   }
 
   // ---------- pull to refresh ----------
@@ -18078,7 +18125,10 @@
 
   // ---------- swipe between tabs ----------
   (function setupTabSwipe() {
-    const TAB_ORDER = ['overview', 'shoots', 'archive', 'journal', 'stats'];
+    // Read off the tab bar itself, so a swipe always lands on the tab next
+    // door on screen (a hand-kept list here had drifted: Archive and Journal
+    // were swapped).
+    const TAB_ORDER = [...document.querySelectorAll('.tabbar .tab')].map(tab => tab.dataset.view);
     let startX = null;
     let startY = null;
     let tracking = false;

@@ -293,9 +293,7 @@
       <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
       <h3 class="shoot-section-heading status-group-heading heading-navy" id="directionHeading">Direction<svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h3>
       <div id="directionBody">
-        <p class="continue-prompt" id="categoryContinuePrompt">select a category to continue</p>
-
-        <div id="formSection2" hidden>
+        <div id="formSection2">
           <label>Shoot goals
             <textarea id="shootGoals" rows="6" maxlength="1000" placeholder="What this shoot needs to accomplish" readonly></textarea>
           </label>
@@ -596,10 +594,9 @@
       <label>City
         <input type="text" id="locationCityInput" maxlength="100" placeholder="City" />
       </label>
-      <label>State
-        <input type="text" id="locationStateInput" maxlength="100" placeholder="State" />
+      <label>State / region
+        <input type="text" id="locationStateInput" maxlength="100" placeholder="State / region" />
       </label>
-      <p class="field-error-hint" id="locationStateError" hidden>State is required.</p>
       <label>Zip code
         <input type="text" id="locationZipInput" maxlength="20" placeholder="Zip / postal code" />
       </label>
