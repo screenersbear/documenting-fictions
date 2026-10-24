@@ -1679,6 +1679,21 @@
 </div>
 
 <!-- ============ TOAST ============ -->
+<!-- ============ CONFIRM (the app's own, in place of the browser's confirm()) ============ -->
+<!-- askConfirm() in app.js: a title, an optional line of text and two buttons
+     named for what they do. Last of the popups, and a notch above them (see
+     .app-confirm-overlay), so it stacks over whichever one it was asked from. -->
+<div id="appConfirmOverlay" class="modal-overlay intro-overlay app-confirm-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2 id="appConfirmTitle"></h2>
+    <p id="appConfirmText"></p>
+    <div class="modal-actions fit-pair" id="appConfirmActions">
+      <button type="button" class="secondary" id="appConfirmCancelBtn">Cancel</button>
+      <button type="button" class="primary" id="appConfirmOkBtn">OK</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast" hidden></div>
 
 <script src="lib/jspdf.umd.min.js"></script>

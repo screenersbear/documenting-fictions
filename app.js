@@ -13974,6 +13974,74 @@
     toastTimer = setTimeout(() => { toast.hidden = true; }, 3200);
   }
 
+  // "Shot removed · Undo": for quick removals that don't ask first (a shot,
+  // a lighting setup, a team member) — one tap within a few seconds puts it
+  // back. `onUndo` restores whatever was removed.
+  function showUndoToast(message, onUndo) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message + ' ';
+    const undo = document.createElement('button');
+    undo.type = 'button';
+    undo.className = 'toast-undo-btn';
+    undo.textContent = 'Undo';
+    undo.addEventListener('click', () => {
+      clearTimeout(toastTimer);
+      toast.hidden = true;
+      onUndo();
+    });
+    toast.appendChild(undo);
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.hidden = true; }, 5000);
+  }
+
+  // Two buttons side by side while both labels fit their half; stacked full
+  // width (the action on top, see .modal-actions-stacked) when one doesn't —
+  // the labels never wrap (.fit-pair), so one that's too long widens its
+  // button, which is what this measures. Call it once the row is showing.
+  function fitButtonPair(row) {
+    row.classList.remove('modal-actions-stacked');
+    const rowWidth = row.getBoundingClientRect().width;
+    if (!rowWidth) return;
+    const half = (rowWidth - (parseFloat(getComputedStyle(row).columnGap) || 0)) / 2;
+    const widths = [...row.querySelectorAll('button')].filter(b => !b.hidden).map(b => b.getBoundingClientRect().width);
+    if (Math.max(0, ...widths) > half + 3) row.classList.add('modal-actions-stacked');
+  }
+
+  // ---------- The app's own confirm (askConfirm) ----------
+  // In place of the browser's confirm(): the same card as the app's other
+  // prompts, with buttons named for what they do ("Delete shoot" / "Keep
+  // it") rather than OK / Cancel. Resolves true for the action, false for
+  // the other button. `danger` makes the action the red button, for
+  // anything that can't be taken back. One at a time: asking again while
+  // one is up answers the first with false.
+  let appConfirmResolve = null;
+
+  function askConfirm({ title = '', text = '', confirmLabel = 'OK', cancelLabel = 'Cancel', danger = false } = {}) {
+    if (appConfirmResolve) settleAppConfirm(false);
+    document.getElementById('appConfirmTitle').textContent = title;
+    const textEl = document.getElementById('appConfirmText');
+    textEl.textContent = text;
+    textEl.hidden = !text;
+    const ok = document.getElementById('appConfirmOkBtn');
+    ok.textContent = confirmLabel;
+    ok.className = danger ? 'danger' : 'primary';
+    document.getElementById('appConfirmCancelBtn').textContent = cancelLabel;
+    document.getElementById('appConfirmOverlay').hidden = false;
+    fitButtonPair(document.getElementById('appConfirmActions'));
+    return new Promise(resolve => { appConfirmResolve = resolve; });
+  }
+
+  function settleAppConfirm(answer) {
+    document.getElementById('appConfirmOverlay').hidden = true;
+    const resolve = appConfirmResolve;
+    appConfirmResolve = null;
+    if (resolve) resolve(answer);
+  }
+
+  document.getElementById('appConfirmOkBtn').addEventListener('click', () => settleAppConfirm(true));
+  document.getElementById('appConfirmCancelBtn').addEventListener('click', () => settleAppConfirm(false));
+
   // ---------- Share shoot as PDF ----------
   let cachedLogoDataUrl = null;
   function loadLogoDataUrl() {

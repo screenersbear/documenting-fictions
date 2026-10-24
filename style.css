@@ -4735,6 +4735,40 @@ h2.status-group-heading.heading-navy {
   display: none;
 }
 
+/* "Undo" inside a toast (showUndoToast): a plain underlined word in the
+   accent colour, so the toast still reads as one line. */
+.toast-undo-btn {
+  background: none;
+  border: none;
+  padding: 0 0 0 8px;
+  margin: 0;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* askConfirm's popup: a notch above every other popup (intro 30, crop 30,
+   image viewer 20) so it shows over whichever one asked; still under the
+   toast (40). */
+.app-confirm-overlay {
+  z-index: 35;
+}
+
+/* fitButtonPair: labels stay on one line, and a pair that won't fit side
+   by side stacks full width with the action (the last button) on top. */
+.modal-actions.fit-pair button {
+  white-space: nowrap;
+}
+
+.modal-actions.modal-actions-stacked {
+  flex-direction: column-reverse;
+}
+
+.modal-actions.modal-actions-stacked button {
+  white-space: normal;
+}
+
 /* Floating scroll-to-top button for the Journal list — it can run long, so
    this offers a quick way back up without hunting for the top of the page.
    JS shows it once scrolled down a bit and only while the Journal is the
