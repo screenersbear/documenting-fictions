@@ -1115,17 +1115,18 @@
         <!-- Options are alphabetical; the destructive one and Cancel stay
              pinned at the bottom so an irreversible action never lands under
              your thumb where a routine option used to be. -->
+        <!-- "Last backup: …" is kept current by renderLastBackupHint in app.js. -->
+        <button type="button" class="options-item" id="exportDataBtn">Back up all data<span class="field-hint options-item-hint" id="lastBackupHint">Last backup: never</span></button>
+        <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="changeThemeBtn">Change theme</button>
         <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="exportPreviousShootsBtn">Export previous shoots</button>
         <div class="menu-divider" aria-hidden="true"></div>
-        <button type="button" class="options-item" id="exportDataBtn">Export shoot data</button>
-        <div class="menu-divider" aria-hidden="true"></div>
-        <button type="button" class="options-item" id="importDataBtn">Import shoot data</button>
-        <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="newShootGuideBtn">New shoot guide</button>
         <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="photographerInfoBtn">Photographer information</button>
+        <div class="menu-divider" aria-hidden="true"></div>
+        <button type="button" class="options-item" id="importDataBtn">Restore from backup</button>
         <div class="menu-divider" aria-hidden="true"></div>
         <button type="button" class="options-item" id="shootDisplayOptionsBtn">Shoot display options</button>
         <div class="menu-divider" aria-hidden="true"></div>
@@ -1167,10 +1168,10 @@
 <div id="deleteAllConfirmOverlay" class="modal-overlay intro-overlay" hidden>
   <div class="modal intro-modal delete-all-confirm-modal" id="deleteAllConfirmModal">
     <h2 id="deleteAllConfirmTitle">Are you SURE sure, my guy?</h2>
-    <p id="deleteAllConfirmText">This permanently removes every shoot, mood board photo, and reference. This can't be undone.</p>
+    <p id="deleteAllConfirmText">This permanently removes every shoot and its photos — mood boards, final images, cover and talent photos. Your Journal entries and their photos are kept. This can't be undone.</p>
     <div class="modal-actions" id="deleteAllConfirmActions">
       <button type="button" class="secondary" id="deleteAllConfirmCancelBtn">Cancel</button>
-      <button type="button" class="danger" id="deleteAllConfirmYesBtn">Yes, delete everything</button>
+      <button type="button" class="danger" id="deleteAllConfirmYesBtn">Yes, delete all shoots</button>
     </div>
     <button type="button" class="primary" id="deleteAllConfirmOkBtn" hidden>OK</button>
   </div>
@@ -1298,7 +1299,7 @@
 <div id="exportPreviousIntroOverlay" class="modal-overlay intro-overlay" hidden>
   <div class="modal intro-modal">
     <h2>Export previous shoots</h2>
-    <p>This builds one PDF that compiles everything from the shoot page — direction, location, team, visuals, shot list, lighting setups, reflections, and all your photos and mood board images — for whichever shoots you pick. Once it's saved, you'll have the option to remove those shoots (and their photos) from the app to free up storage.</p>
+    <p>This builds one PDF that compiles everything from the shoot page — direction, location, team, visuals, shot list, lighting setups, reflections, and all your photos and mood board images — for whichever archived shoots you pick. Once it's saved, you'll have the option to remove those shoots (and their photos) from the app to free up storage.</p>
     <button type="button" class="primary" id="exportPreviousIntroCloseBtn">got it!</button>
   </div>
 </div>
@@ -1309,9 +1310,9 @@
       <h2>Select shoots to export</h2>
       <button type="button" class="icon-btn close-btn" id="exportPreviousPickerCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
-    <p class="field-hint">Choose which months to include — everything shot in a checked month goes into the archive.</p>
+    <p class="field-hint">Only archived shoots are listed. Choose which months to include — every archived shoot from a checked month goes into the PDF.</p>
     <div id="exportPreviousPickerList" class="export-picker-list"></div>
-    <p class="empty-state" id="exportPreviousPickerEmpty" hidden>No past shoots yet.</p>
+    <p class="empty-state" id="exportPreviousPickerEmpty" hidden>No archived shoots yet.</p>
     <button type="button" class="primary modal-cta" id="exportPreviousPickerBuildBtn">Build PDF archive</button>
   </div>
 </div>
@@ -1319,7 +1320,7 @@
 <div id="exportDeleteAskOverlay" class="modal-overlay intro-overlay" hidden>
   <div class="modal intro-modal">
     <h2>Delete the exported shoots?</h2>
-    <p>Your PDF archive is saved. Would you also like to remove <span id="exportDeleteAskCount"></span> from the app now, to free up storage?</p>
+    <p>If the PDF archive is saved somewhere safe, like Files, you can also remove <span id="exportDeleteAskCount"></span> from the app now, to free up storage.</p>
     <div class="modal-actions">
       <button type="button" class="secondary" id="exportDeleteAskNoBtn">Not now</button>
       <button type="button" class="danger" id="exportDeleteAskYesBtn">Yes, delete them</button>
@@ -1584,13 +1585,20 @@
   </div>
 </div>
 
-<!-- ============ IMPORT CONFIRMATION ============ -->
-<div id="importConfirmOverlay" class="modal-overlay confirm-overlay" hidden>
-  <div class="modal confirm-modal">
-    <p class="confirm-message">Importing will replace all shoots, frameworks, and photos currently in this app with the contents of the backup file. This can't be undone. Continue?</p>
+<!-- ============ RESTORE FROM BACKUP CONFIRMATION ============ -->
+<!-- The titled card the app's other prompts use. "Back up first" sits under
+     the pair, like the guide's Skip row: it runs a backup of what's here now
+     and leaves this popup open, so Restore is still one tap away after. -->
+<div id="importConfirmOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2>Restore from backup?</h2>
+    <p>Restoring replaces everything in the app — every shoot, journal entry, framework and photo — with what's in the backup file. Anything that isn't in the backup is lost, and this can't be undone.</p>
     <div class="modal-actions">
       <button type="button" class="secondary" id="cancelImportBtn">Cancel</button>
-      <button type="button" class="primary" id="confirmImportBtn">Import</button>
+      <button type="button" class="primary" id="confirmImportBtn">Restore</button>
+    </div>
+    <div class="shoot-tour-skip-row">
+      <button type="button" class="secondary journal-block-btn" id="importBackupFirstBtn">Back up first</button>
     </div>
   </div>
 </div>

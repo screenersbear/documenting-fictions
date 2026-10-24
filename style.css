@@ -4581,6 +4581,14 @@ h2.status-group-heading.heading-navy {
   color: var(--text);
 }
 
+/* A small .field-hint line under an option's label, inside the same button
+   ("Last backup: 3 days ago" under App options' Back up all data). */
+.options-item .options-item-hint {
+  display: block;
+  margin-top: 2px;
+  font-weight: 400;
+}
+
 .options-rename-input {
   width: 100%;
   box-sizing: border-box;
