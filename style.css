@@ -80,6 +80,15 @@ html.booting body {
   to { visibility: visible; }
 }
 
+/* An update reload at launch (reloadForUpdate in app.js): the page about to
+   be replaced stays hidden, past the 1.5s backstop above too, so the app
+   doesn't show itself twice. app.js drops this after 5s in case the reload
+   never happens. */
+html.update-reloading body {
+  visibility: hidden !important;
+  animation: none !important;
+}
+
 /* Form controls don't inherit page font by default in most browsers —
    catch any that a more specific rule hasn't already set to Courier. */
 button, input, select, textarea {
