@@ -3587,7 +3587,10 @@
   }
 
   document.getElementById('archiveSlideshow').addEventListener('click', (e) => {
-    const img = e.target.closest('img');
+    // The photo on screen, not whatever the tap hit: every photo is stacked
+    // in the same spot (the hidden ones only faded out), so the last one in
+    // the list would take every tap.
+    const img = e.currentTarget.querySelector('img.active') || e.target.closest('img');
     if (!img) return;
     const shoot = state.shoots.find(s => s.id === img.dataset.shootId);
     if (!shoot) return;
@@ -7141,6 +7144,8 @@
     document.getElementById('postShootPromptWalkBtn').hidden = false;
     document.getElementById('postShootPromptDismissBtn').hidden = true;
     document.getElementById('postShootPromptOverlay').hidden = false;
+    // "Reflect now" doesn't fit half the row on a phone: stack, don't wrap.
+    fitButtonPair(document.getElementById('postShootPromptActions'));
   }
 
   // Reveals the Post-shoot Reflection section and forces it open, overriding
@@ -7235,6 +7240,7 @@
     // "Set deadline" waits for a date — it used to just close with none.
     document.getElementById('deadlinePromptOkBtn').disabled = true;
     document.getElementById('deadlinePromptOverlay').hidden = false;
+    fitButtonPair(document.getElementById('deadlinePromptActions'));
   }
 
   function maybeOpenDeadlinePrompt(shootId) {
@@ -17750,7 +17756,9 @@
     }
 
     const logisticsFields = [];
-    if (hasText(shoot.date)) logisticsFields.push(['Shoot date', prettyDate(shoot.date)]);
+    // A postponed or canceled shoot keeps its date as the original plan
+    // (see isOffScheduleShoot), so it's labelled that way here too.
+    if (hasText(shoot.date)) logisticsFields.push([isOffScheduleShoot(shoot) ? 'Originally' : 'Shoot date', prettyDate(shoot.date)]);
     const locationText = formatLocationDisplay(shoot.location);
     if (hasText(locationText)) logisticsFields.push(['Location', locationText]);
     if (logisticsFields.length) {
@@ -17786,10 +17794,14 @@
       ideaFields.forEach(([key, label]) => body.appendChild(archiveModeField(label, shoot[key])));
     }
 
+    // Reflection answers are kept when a shoot steps back from Captured, but
+    // only shown once it's Captured or later — same as the shoot page.
     const reflectionFields = [];
-    if (hasText(shoot.whatWentRight)) reflectionFields.push(['What went right', shoot.whatWentRight]);
-    if (hasText(shoot.couldBeBetter)) reflectionFields.push(["What could've gone better", shoot.couldBeBetter]);
-    if (hasText(shoot.lessonsLearned)) reflectionFields.push(['Lessons for next time', shoot.lessonsLearned]);
+    if (isPostCaptureStatus(shoot.status)) {
+      if (hasText(shoot.whatWentRight)) reflectionFields.push(['What went right', shoot.whatWentRight]);
+      if (hasText(shoot.couldBeBetter)) reflectionFields.push(["What could've gone better", shoot.couldBeBetter]);
+      if (hasText(shoot.lessonsLearned)) reflectionFields.push(['Lessons for next time', shoot.lessonsLearned]);
+    }
     if (reflectionFields.length) {
       body.appendChild(sectionHeading('Reflection'));
       reflectionFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
