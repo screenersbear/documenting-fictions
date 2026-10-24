@@ -975,12 +975,55 @@
     return value;
   }
 
+  // ---------- Storage full ----------
+  // When the phone's storage for the app runs out, saves fail: localStorage
+  // throws QuotaExceededError and an IndexedDB write aborts with it. Those
+  // used to fail silently, so a photo could look added and simply not be
+  // there next time. Now they say so — at most once every few seconds,
+  // since one full store tends to fail a whole burst of writes at once.
+  // Declared up here, ahead of the first saveState(), so it's ready before
+  // anything can save.
+  const STORAGE_FULL_MESSAGE = "Couldn't save — your phone's storage for the app may be full. Back up and free some space.";
+  let storageFullNoticeAt = 0;
+
+  // Older engines report a full store by code rather than name (22 in
+  // WebKit/Chromium, 1014 in Firefox).
+  function isStorageFullError(err) {
+    if (!err) return false;
+    return err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED' || err.code === 22 || err.code === 1014;
+  }
+
+  // The .catch on photo writes: speaks up when the store is full and stays
+  // quiet about anything else, as before (a photo that couldn't be read is
+  // not a storage problem).
+  function noteStorageFull(err) {
+    if (!isStorageFullError(err)) return;
+    const now = Date.now();
+    if (now - storageFullNoticeAt < 5000) return;
+    storageFullNoticeAt = now;
+    // Deferred: saveState can run while the app is still starting up,
+    // before the toast code further down has been reached.
+    setTimeout(() => {
+      showToast(STORAGE_FULL_MESSAGE);
+      // Up longer than a routine toast: it's more to read, and it matters.
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { document.getElementById('toast').hidden = true; }, 6000);
+    }, 0);
+  }
+
   function saveState() {
     // Every save first brings multi-day projects in line: a change to a lead
     // day is mirrored onto the days following it, and a following day that
     // was changed by hand stops following (see syncProjectMirrors).
     syncProjectMirrors();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state, stripPhotos));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state, stripPhotos));
+    } catch (err) {
+      // Out of room: the change is still on screen but won't survive a
+      // relaunch, so say so. Anything else is a bug and still throws.
+      if (!isStorageFullError(err)) throw err;
+      noteStorageFull(err);
+    }
   }
 
   let state = loadState();
@@ -4047,7 +4090,7 @@
         renderJournalImages();
         scheduleJournalAutosave();
       })
-      .catch(() => {});
+      .catch(noteStorageFull);
   });
 
   function getAllUsedJournalTags() {
@@ -12532,7 +12575,7 @@
         }
         onShootImagesChanged(uploadShootId, { board: true, cover: coverSet });
       })
-      .catch(() => {});
+      .catch(noteStorageFull);
   });
 
   // ---------- Image viewer (full-size view, shared by mood board + final images + journal photos) ----------
@@ -12860,7 +12903,7 @@
       if (idx !== -1) {
         state.shoots[idx] = { ...state.shoots[idx], projectPhoto: dataUrl };
         saveState();
-        savePhotoToIdb(projectPhotoKey(targetId), dataUrl).catch(() => {})
+        savePhotoToIdb(projectPhotoKey(targetId), dataUrl).catch(noteStorageFull)
           .then(() => onShootImagesChanged(targetId, { cover: true }));
         renderAll();
       }
@@ -12871,7 +12914,7 @@
       scheduleShootAutosave();
       const coverShootId = currentShootId;
       if (coverShootId) {
-        savePhotoToIdb(projectPhotoKey(coverShootId), dataUrl).catch(() => {})
+        savePhotoToIdb(projectPhotoKey(coverShootId), dataUrl).catch(noteStorageFull)
           .then(() => onShootImagesChanged(coverShootId, { cover: true }));
       }
       closeProjectPhotoCrop();
@@ -12977,7 +13020,7 @@
         scheduleShootAutosave();
         renderFinalImages();
       })
-      .catch(() => {});
+      .catch(noteStorageFull);
   });
 
   function gatherShootFormData() {
@@ -14619,6 +14662,10 @@
     document.getElementById('pdfPreviewOverlay').hidden = true;
     teardownPdfViewer();
     pdfPreviewBlob = null;
+    // An "Export previous shoots" archive shown here: now that it's been
+    // looked at (and maybe saved), ask whether it saved before offering to
+    // delete anything.
+    if (exportArchiveAwaitingSave) askExportArchiveSaved();
   }
 
   pdfViewportEl.addEventListener('scroll', updatePdfPageIndicator, { passive: true });
@@ -14893,12 +14940,20 @@
     return years;
   }
 
+  // Only archived shoots: this export ends in an offer to delete what it
+  // covers, and a shoot still being planned or edited shouldn't be one
+  // checked month away from that.
+  function exportPreviousCandidates() {
+    return state.shoots.filter(s => s.archived);
+  }
+
   function renderExportPreviousPicker() {
     const list = document.getElementById('exportPreviousPickerList');
     list.innerHTML = '';
-    document.getElementById('exportPreviousPickerEmpty').hidden = state.shoots.length > 0;
+    const candidates = exportPreviousCandidates();
+    document.getElementById('exportPreviousPickerEmpty').hidden = candidates.length > 0;
 
-    const years = groupShootsByYearMonth(state.shoots);
+    const years = groupShootsByYearMonth(candidates);
     const sortedYears = [...years.keys()].sort((a, b) => {
       if (a === 'Undated') return 1;
       if (b === 'Undated') return -1;
@@ -14979,7 +15034,7 @@
     const checkedMonths = [...document.querySelectorAll('.export-picker-month-check:checked')]
       .map(cb => ({ year: cb.dataset.year, month: cb.dataset.month }));
     if (!checkedMonths.length) return [];
-    return state.shoots.filter(shoot => {
+    return exportPreviousCandidates().filter(shoot => {
       const { year, month } = shootYearMonth(shoot);
       return checkedMonths.some(m => m.year === year && m.month === month);
     });
@@ -15376,6 +15431,9 @@
       if (canWebShare) {
         const file = new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' });
         await navigator.share({ files: [file], title: pdfPreviewTitle });
+        // The share sheet only resolves once the PDF went somewhere (Save to
+        // Files, Mail…), so the clean-up offer can follow straight away.
+        openExportDeleteAsk(shoots);
       } else {
         // Shown only when Web Share isn't available — separate object URLs
         // so closing the modal's revoke doesn't pull the PDF out from
@@ -15383,15 +15441,15 @@
         if (previewWindow) previewWindow.location.href = URL.createObjectURL(pdfPreviewBlob);
         showPdfPreview(pdfPreviewBlob);
         if (previewWindow) showToast('Opened for viewing — use Share below to send it with the right filename');
+        // Whether it then gets saved from the preview or the new tab can't
+        // be seen from here, so nothing is offered for deletion until the
+        // preview is closed and "Did it save?" is answered (closePdfPreview).
+        exportArchiveAwaitingSave = shoots;
       }
-      // The delete-prompt is offered right away rather than gated on the
-      // share/save actually completing — the OS share sheet and the new-tab
-      // PDF viewer both finish outside any event this app can observe, so
-      // "the save screen was presented" is the one reliable moment to hook.
-      openExportDeleteAsk(shoots);
     } catch (err) {
       if (previewWindow) previewWindow.close();
-      if (err && err.name === 'AbortError') { openExportDeleteAsk(shoots); return; }
+      // Share sheet cancelled: nothing was saved, so no delete offer.
+      if (err && err.name === 'AbortError') return;
       console.error('Failed to build archive PDF', err);
       showToast('Could not create PDF archive');
     }
@@ -15399,6 +15457,22 @@
 
   // ---- Post-export delete flow: ask, then double-confirm, then delete ----
   let exportPendingDeleteShoots = [];
+  // The shoots of an archive showing in the in-app PDF preview (no Web
+  // Share), until that preview is closed and askExportArchiveSaved runs.
+  let exportArchiveAwaitingSave = null;
+
+  // Only offers the clean-up once the user says the PDF made it somewhere
+  // safe — answering "Not saved" leaves every shoot where it is.
+  function askExportArchiveSaved() {
+    const shoots = exportArchiveAwaitingSave;
+    exportArchiveAwaitingSave = null;
+    askConfirm({
+      title: 'Did it save?',
+      text: 'Only remove shoots from the app once the PDF archive is saved somewhere you can find it, like Files.',
+      cancelLabel: 'Not saved',
+      confirmLabel: 'It saved',
+    }).then(saved => { if (saved) openExportDeleteAsk(shoots); });
+  }
 
   function openExportDeleteAsk(shoots) {
     exportPendingDeleteShoots = shoots;
@@ -15429,7 +15503,7 @@
     const n = exportPendingDeleteShoots.length;
     exportDeleteConfirmModal.classList.add('danger-state');
     exportDeleteConfirmTitle.textContent = 'Delete these shoots for good?';
-    exportDeleteConfirmText.textContent = `This permanently removes ${n} shoot${n === 1 ? '' : 's'} and every photo attached to ${n === 1 ? 'it' : 'them'} — cover photos, talent photos, mood boards, and final images. They're already saved in the PDF you just exported, but this app copy of them can't be recovered once deleted.`;
+    exportDeleteConfirmText.textContent = `This permanently removes ${n} shoot${n === 1 ? '' : 's'} and every photo attached to ${n === 1 ? 'it' : 'them'} — cover photos, talent photos, mood boards, and final images. They're in the PDF you just exported, but this app copy of them can't be recovered once deleted.`;
     exportDeleteConfirmActions.hidden = false;
     exportDeleteConfirmOkBtn.hidden = true;
     document.getElementById('exportDeleteConfirmOverlay').hidden = false;
@@ -15805,9 +15879,30 @@
     });
   });
 
-  function idbClearAllImages() {
-    forgetCachedImages(null);
-    return idbTransaction('readwrite', store => { store.clear(); }).then(() => noteImagesWritten(null));
+  // "Delete all shoot data" keeps the Journal, so this can't simply clear
+  // the store: it walks it and deletes every row except Journal photos
+  // ('<entryId>__journal') — mood boards, final images, covers and talent
+  // photos, including any left behind by shoots deleted before. Any new
+  // kind of image that doesn't belong to a shoot has to be spared here too.
+  function idbDeleteAllShootImages() {
+    let deleted = [];
+    return idbTransaction('readwrite', store => {
+      // Keys only — no need to read every photo just to delete it. Reset
+      // here in case the transaction is retried (see idbTransaction).
+      deleted = [];
+      const req = store.getAllKeys();
+      req.onsuccess = () => {
+        req.result.forEach(key => {
+          if (categorizeStorageKey(String(key)) === 'journal') return;
+          store.delete(key);
+          deleted.push(key);
+        });
+      };
+    }).then(() => {
+      // Key by key, not noteImagesWritten(null): the Journal list keeps the
+      // photos it already has on hand instead of blinking empty and refilling.
+      deleted.forEach(key => noteImagesWritten(key));
+    });
   }
 
   const deleteAllConfirmOverlay = document.getElementById('deleteAllConfirmOverlay');
@@ -15816,14 +15911,16 @@
   const deleteAllConfirmText = document.getElementById('deleteAllConfirmText');
   const deleteAllConfirmActions = document.getElementById('deleteAllConfirmActions');
   const deleteAllConfirmOkBtn = document.getElementById('deleteAllConfirmOkBtn');
+  // Same words as the popup's default text in index.html.
+  const DELETE_ALL_WARNING = 'This permanently removes every shoot and its photos — mood boards, final images, cover and talent photos. Your Journal entries and their photos are kept. This can\'t be undone.';
 
+  // Straight to the app's own "are you SURE sure" popup — the browser
+  // confirm() that used to come first only asked the same thing twice.
   document.getElementById('deleteAllShootDataBtn').addEventListener('click', () => {
     closeAppMenu();
-    const confirmed = confirm('Delete ALL shoot data? This permanently removes every shoot, mood board photo, and reference. This can\'t be undone.');
-    if (!confirmed) return;
     deleteAllConfirmModal.classList.add('danger-state');
     deleteAllConfirmTitle.textContent = 'Are you SURE sure, my guy?';
-    deleteAllConfirmText.textContent = 'This permanently removes every shoot, mood board photo, and reference. This can\'t be undone.';
+    deleteAllConfirmText.textContent = DELETE_ALL_WARNING;
     deleteAllConfirmActions.hidden = false;
     deleteAllConfirmOkBtn.hidden = true;
     deleteAllConfirmOverlay.hidden = false;
@@ -15838,11 +15935,11 @@
     // Projects are only groups of shoots, so none outlive them.
     state.projects = [];
     saveState();
-    idbClearAllImages().catch(() => {});
+    idbDeleteAllShootImages().catch(() => {});
     renderAll();
     deleteAllConfirmModal.classList.remove('danger-state');
     deleteAllConfirmTitle.textContent = 'All shoot data deleted.';
-    deleteAllConfirmText.textContent = 'Good luck on your next shoots!';
+    deleteAllConfirmText.textContent = 'Your Journal is still here. Good luck on your next shoots!';
     deleteAllConfirmActions.hidden = true;
     deleteAllConfirmOkBtn.hidden = false;
   });
@@ -15851,8 +15948,58 @@
     deleteAllConfirmOverlay.hidden = true;
   });
 
-  // ---------- Export / Import (backup) ----------
-  function exportAllData() {
+  // ---------- Back up / Restore ----------
+  // When the last backup that's known to have gone somewhere was made (ms),
+  // for "Last backup: …" in App options and the Daily report's reminder.
+  const LAST_BACKUP_KEY = 'dailies_last_backup_v1';
+
+  function loadLastBackupTime() {
+    try {
+      const t = Number(localStorage.getItem(LAST_BACKUP_KEY));
+      return t > 0 ? t : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Whole calendar days since the last backup (0 = today), or null for never.
+  function daysSinceLastBackup() {
+    const t = loadLastBackupTime();
+    if (!t) return null;
+    const then = new Date(t);
+    then.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.max(0, Math.round((today - then) / 86400000));
+  }
+
+  function lastBackupLabel() {
+    const days = daysSinceLastBackup();
+    if (days === null) return 'never';
+    if (days === 0) return 'today';
+    if (days === 1) return 'yesterday';
+    return `${days} days ago`;
+  }
+
+  function renderLastBackupHint() {
+    document.getElementById('lastBackupHint').textContent = `Last backup: ${lastBackupLabel()}`;
+  }
+
+  renderLastBackupHint();
+  // Re-read on every open, so "today" turns into "yesterday" without a
+  // relaunch. Runs after the menu's own open handler, in the same tap, so
+  // there's nothing to see change.
+  document.getElementById('appMenuBtn').addEventListener('click', renderLastBackupHint);
+
+  function rememberBackup() {
+    try { localStorage.setItem(LAST_BACKUP_KEY, String(Date.now())); } catch (e) { /* storage unavailable — nothing to remember it in */ }
+    renderLastBackupHint();
+    showToast('Backup saved');
+  }
+
+  // The whole state plus every photo row it points at, as one file — the
+  // same payload Restore reads.
+  function buildBackupFile() {
     const keys = [];
     state.shoots.forEach(s => {
       keys.push(s.id);
@@ -15864,31 +16011,121 @@
     state.journalEntries.forEach(e => {
       if (!e.sourceShootId) keys.push(journalImagesKey(e.id));
     });
-    const images = {};
-    Promise.all(keys.map(k => idbGetImages(k).then(imgs => { images[k] = imgs; })))
-      .then(() => {
-        const payload = {
-          version: 1,
-          exportedAt: new Date().toISOString(),
-          state,
-          images,
-        };
-        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `starky-backup-${todayStr()}.json`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-      });
+    // One read for the lot, so the share sheet opens as soon after the tap
+    // as it can.
+    return idbGetManyImages(keys).then(found => {
+      const payload = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        state,
+        images: Object.fromEntries(found),
+      };
+      return new File([JSON.stringify(payload)], `starky-backup-${todayStr()}.json`, { type: 'application/json' });
+    });
+  }
+
+  // The plain download, for where files can't be shared. Revoked a few
+  // seconds later rather than straight away, same as the PDF's fallback —
+  // revoking in the same tick can cancel the download before it starts.
+  function downloadBackupFile(file) {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  // "Back up all data": hands the file to the share sheet, whose Save to
+  // Files is the one dependable way out of a home-screen app (an
+  // <a download> there can do nothing and say nothing), and says how it
+  // went. Only a backup that's known to have gone somewhere is remembered
+  // as the last one — a cancelled share isn't, and a plain download (no way
+  // to see whether it landed) only once the user says it saved.
+  let backupInProgress = false;
+
+  async function exportAllData() {
+    if (backupInProgress) return;
+    backupInProgress = true;
+    try {
+      const file = await buildBackupFile();
+      const canShareFile = !!(navigator.canShare && navigator.share && navigator.canShare({ files: [file] }));
+      if (!canShareFile) {
+        downloadBackupFile(file);
+        const saved = await askConfirm({
+          title: 'Did the backup save?',
+          text: `Look for ${file.name} in your downloads.`,
+          cancelLabel: 'Not saved',
+          confirmLabel: 'It saved',
+        });
+        if (saved) rememberBackup();
+        else showToast('Backup not saved');
+        return;
+      }
+      try {
+        await navigator.share({ files: [file], title: 'Documenting Fictions backup' });
+      } catch (err) {
+        // A big library can take long enough to gather that the tap no
+        // longer counts for opening the share sheet — offer a fresh one.
+        if (!err || err.name !== 'NotAllowedError') throw err;
+        const again = await askConfirm({
+          title: 'Your backup is ready',
+          text: 'Choose Save to Files to keep it somewhere safe.',
+          cancelLabel: 'Not now',
+          confirmLabel: 'Save backup',
+        });
+        if (!again) { showToast('Backup not saved'); return; }
+        await navigator.share({ files: [file], title: 'Documenting Fictions backup' });
+      }
+      rememberBackup();
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        showToast('Backup not saved');
+      } else {
+        console.error('Backup failed', err);
+        showToast("Couldn't back up");
+      }
+    } finally {
+      backupInProgress = false;
+    }
   }
 
   document.getElementById('exportDataBtn').addEventListener('click', () => {
     closeAppMenu();
     exportAllData();
   });
+
+  // The Daily report's backup reminder — not part of the day's cached
+  // content (see getTodaysDailyReportContent), so it's read fresh each time
+  // and gone the moment a backup is made. Once the last one is over a
+  // month old, or there's never been one and there's something to lose.
+  const BACKUP_REMINDER_DAYS = 30;
+
+  function backupReminderItem() {
+    const days = daysSinceLastBackup();
+    if (days === null) {
+      if (!state.shoots.length && !state.journalEntries.length) return null;
+      return { action: 'backup', text: 'No backup yet — tap to back up your shoots, journal and photos.' };
+    }
+    if (days <= BACKUP_REMINDER_DAYS) return null;
+    return { action: 'backup', text: `Your last backup was ${days} days ago — tap to back up now.` };
+  }
+
+  function withBackupReminder(content) {
+    const item = backupReminderItem();
+    return item ? { ...content, items: content.items.concat(item) } : content;
+  }
+
+  // Asked once per launch, without a word either way: storage marked
+  // persistent isn't cleared by the browser when the phone runs low on
+  // space, the way an ordinary site's can be — photos and all.
+  if (navigator.storage && navigator.storage.persist && navigator.storage.persisted) {
+    navigator.storage.persisted()
+      .then(already => (already ? null : navigator.storage.persist()))
+      .catch(() => {});
+  }
 
   document.getElementById('importDataBtn').addEventListener('click', () => {
     closeAppMenu();
@@ -15902,6 +16139,7 @@
     const file = e.target.files[0];
     e.target.value = '';
     if (!file) return;
+    const notABackup = () => showToast("That file isn't a backup from this app — nothing was changed.");
     const reader = new FileReader();
     reader.onload = () => {
       try {
@@ -15910,11 +16148,16 @@
         pendingImportPayload = payload;
         importConfirmOverlay.hidden = false;
       } catch (err) {
-        alert('That file could not be read as a Starky backup.');
+        notABackup();
       }
     };
+    reader.onerror = notABackup;
     reader.readAsText(file);
   });
+
+  // Runs the backup with the restore popup left open behind it, so Restore
+  // is right there once it's done.
+  document.getElementById('importBackupFirstBtn').addEventListener('click', exportAllData);
 
   document.getElementById('cancelImportBtn').addEventListener('click', () => {
     pendingImportPayload = null;
@@ -15955,6 +16198,7 @@
       saveState();
       applyColorTheme(state.colorTheme);
       renderAll();
+      showToast('Backup restored');
       // Backups made before photos moved to IDB still carry them inline on the
       // shoots, so run the same migration boot does; then pull every photo back
       // onto the in-memory state so thumbnails appear without a reload.
@@ -15962,6 +16206,13 @@
         .then(hydratePhotos)
         .then(() => renderAll())
         .catch(() => {});
+    }, err => {
+      // The photos go in first and everything else only once they all
+      // have, so when a photo write fails the app's shoots and journal are
+      // left as they were (only photos already written may have changed).
+      console.error('Restore failed', err);
+      if (isStorageFullError(err)) noteStorageFull(err);
+      else showToast("Couldn't restore that backup");
     });
   });
 
@@ -16986,7 +17237,7 @@
           if (thumbs.length) thumbs[thumbs.length - 1].scrollIntoView({ block: 'nearest' });
         });
       })
-      .catch(() => {});
+      .catch(noteStorageFull);
   });
 
   // "Done shooting" is a wrap-up action, not just an escape hatch — the next
@@ -17741,9 +17992,11 @@
     });
   }
 
+  // The backup reminder joins after caching, so it's never stored with the
+  // day's content (see withBackupReminder).
   function getTodaysDailyReportContent() {
     const cached = loadCachedDailyReportContent();
-    return cached ? refreshCachedDailyReportContent(cached) : buildTodaysDailyReportContent();
+    return (cached ? refreshCachedDailyReportContent(cached) : buildTodaysDailyReportContent()).then(withBackupReminder);
   }
 
   function renderDailyReportOverlay(content) {
@@ -17755,7 +18008,7 @@
       // daily-report-fact is the app's existing "this row isn't a link" marker
       // (it's what the nudge and stat lines use), so a grouped item that names
       // several shoots reuses it rather than inventing a second flavour.
-      row.className = item.shootId ? 'daily-report-item' : 'daily-report-item daily-report-fact';
+      row.className = (item.shootId || item.action) ? 'daily-report-item' : 'daily-report-item daily-report-fact';
       row.textContent = item.text;
       if (item.list && item.list.length) {
         const ul = document.createElement('ul');
@@ -17772,6 +18025,13 @@
           document.getElementById('dailyReportOverlay').hidden = true;
           document.querySelector('.tab[data-view="shoots"]').click();
           openShootModal(item.shootId);
+        });
+      }
+      // The backup reminder (backupReminderItem) runs the backup itself.
+      if (item.action === 'backup') {
+        row.addEventListener('click', () => {
+          document.getElementById('dailyReportOverlay').hidden = true;
+          exportAllData();
         });
       }
       list.appendChild(row);
