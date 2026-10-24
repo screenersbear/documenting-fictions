@@ -2849,6 +2849,14 @@
     return popupLayers.some(layer => !layer.hidden);
   }
 
+  // Slow work that has no popup up while it runs: a backup being gathered,
+  // a PDF being built or sitting in the share sheet, a restore being
+  // written. A new version is never swapped in meanwhile (see
+  // updateCanReloadNow): its reload would drop the work halfway, share
+  // sheet, "Backup saved" and all, without a word. A count, not a flag, since
+  // two can overlap (a backup still gathering while a PDF builds).
+  let busyTasks = 0;
+
   function syncPopupScrollLock() {
     const open = anyPopupOpen();
     if (open === popupScrollLocked) return;
@@ -15091,6 +15099,8 @@
   async function openPdfPreview(id, chosenSections) {
     const s = state.shoots.find(x => x.id === id);
     if (!s) return;
+    // Busy until the preview popup is up (it then holds off an update itself).
+    busyTasks++;
     try {
       const key = await callSheetCacheKey(s, chosenSections);
       if (!callSheetCache || callSheetCache.key !== key) {
@@ -15112,6 +15122,8 @@
     } catch (err) {
       console.error('Failed to build shoot PDF', err);
       showToast('Could not create PDF');
+    } finally {
+      busyTasks--;
     }
   }
 
@@ -15515,6 +15527,8 @@
     const canWebShare = !!(navigator.canShare && navigator.share
       && navigator.canShare({ files: [new File([''], 'probe.pdf', { type: 'application/pdf' })] }));
     const previewWindow = canWebShare ? null : window.open('', '_blank');
+    // Busy through the share sheet, or until the preview popup is up.
+    busyTasks++;
     try {
       const doc = await buildJournalEntryPdf(entry);
       pdfPreviewBlob = doc.output('blob');
@@ -15536,6 +15550,8 @@
       if (err && err.name === 'AbortError') return;
       console.error('Failed to build journal entry PDF', err);
       showToast('Could not create PDF');
+    } finally {
+      busyTasks--;
     }
   }
 
@@ -16072,6 +16088,9 @@
     const canWebShare = !!(navigator.canShare && navigator.share
       && navigator.canShare({ files: [new File([''], 'probe.pdf', { type: 'application/pdf' })] }));
     const previewWindow = canWebShare ? null : window.open('', '_blank');
+    // Busy through the share sheet and on until the delete offer (or the
+    // preview popup) is up, which then holds off an update itself.
+    busyTasks++;
     try {
       const doc = await buildArchivePdf(shoots);
       pdfPreviewBlob = doc.output('blob');
@@ -16116,6 +16135,8 @@
       if (err && err.name === 'AbortError') return;
       console.error('Failed to build archive PDF', err);
       showToast('Could not create PDF archive');
+    } finally {
+      busyTasks--;
     }
   }
 
@@ -16731,6 +16752,7 @@
   async function exportAllData() {
     if (backupInProgress) return;
     backupInProgress = true;
+    busyTasks++;
     try {
       const file = await buildBackupFile();
       const canShareFile = !!(navigator.canShare && navigator.share && navigator.canShare({ files: [file] }));
@@ -16771,6 +16793,7 @@
       }
     } finally {
       backupInProgress = false;
+      busyTasks--;
     }
   }
 
@@ -16852,6 +16875,9 @@
     pendingImportPayload = null;
     if (!payload) return;
     const imageWrites = Object.entries(payload.images || {}).map(([key, imgs]) => idbSetImages(key, imgs));
+    // Busy until the restored shoots are saved too, so an update can't land
+    // between the photos going in and the rest (see busyTasks).
+    busyTasks++;
     Promise.all(imageWrites).then(() => {
       const importedShoots = Array.isArray(payload.state.shoots) ? payload.state.shoots : [];
       // Import bypasses loadState's migrations, so the status-level fixes run
@@ -16895,7 +16921,7 @@
       console.error('Restore failed', err);
       if (isStorageFullError(err)) noteStorageFull(err);
       else showToast("Couldn't restore that backup");
-    });
+    }).finally(() => { busyTasks--; });
   });
 
   // ---------- Stats tab ----------
@@ -19065,7 +19091,10 @@
   // Inline photos are already in memory, so this can run alongside.
   migrateInlinePhotos();
   renderAll();
-  Promise.race([photosReady, new Promise(resolve => setTimeout(resolve, 600))]).then(() => {
+  const launchShown = Promise.race([photosReady, new Promise(resolve => setTimeout(resolve, 600))]).then(() => {
+    // An update reload already under way (see reloadForUpdate): this page is
+    // about to be replaced by the new version, so it never shows at all.
+    if (document.documentElement.classList.contains('update-reloading')) return;
     document.documentElement.classList.remove('booting');
     // A popup opened during launch (a tab intro, the daily report…) played
     // its entrance while the page was hidden — play it again now it shows.
@@ -19159,13 +19188,18 @@
     // gets the new files straight from the network (see sw.js).
     const UPDATE_RELOAD_AT_KEY = 'df_update_reload_at';
     const UPDATE_RELOAD_TAB_KEY = 'df_update_reload_tab';
+    // The rest of what was showing: how far down, and the Archive, Journal
+    // and Stats filters. A key of its own beside the tab's, so an update
+    // from a version that only saved the tab still brings the tab back.
+    const UPDATE_RELOAD_VIEW_KEY = 'df_update_reload_view';
     let updateSwapRequested = false; // this page asked a waiting version to take over
     let updateReloadPending = false; // it did, but the app was in use by then
 
     // "Still hidden" means really hidden: the CSS backstop shows the page
-    // after 1.5s even if .booting is still on.
+    // after 1.5s even if .booting is still on. Slow work with no popup up
+    // (busyTasks: a backup, a PDF) counts as in use too.
     function updateCanReloadNow() {
-      if (anyPopupOpen() || !document.getElementById('toast').hidden) return false;
+      if (anyPopupOpen() || !document.getElementById('toast').hidden || busyTasks > 0) return false;
       if (document.hidden) return true;
       return document.documentElement.classList.contains('booting')
         && getComputedStyle(document.body).visibility === 'hidden';
@@ -19192,7 +19226,26 @@
           sessionStorage.setItem(UPDATE_RELOAD_AT_KEY, String(Date.now()));
           const activeTab = document.querySelector('.tabbar .tab.active');
           if (activeTab) sessionStorage.setItem(UPDATE_RELOAD_TAB_KEY, activeTab.dataset.view);
+          sessionStorage.setItem(UPDATE_RELOAD_VIEW_KEY, JSON.stringify({
+            // While a popup holds the page still, window.scrollY is 0 and
+            // the real place is the one the lock saved.
+            scrollY: bodyScrollLockCount > 0 ? bodyScrollLockY : window.scrollY,
+            archiveFilter,
+            journalFilter,
+            statsYearFilter,
+          }));
         } catch (e) { /* ignore */ }
+        // At launch, this page stays hidden until the new one replaces it.
+        // reload() doesn't stop it, and on a slow answer it would show itself
+        // first (the 600ms reveal, or style.css's 1.5s backstop) only to be
+        // wiped a moment later, launching twice. In the background nothing
+        // shows anyway, so there it's left alone, in case iOS holds the reload
+        // until the app's back. The timer is only a backstop for a reload that
+        // never happens: sw.js answers this one within 2s.
+        if (!document.hidden) {
+          document.documentElement.classList.add('update-reloading');
+          setTimeout(() => document.documentElement.classList.remove('update-reloading', 'booting'), 5000);
+        }
         window.location.reload();
       });
     }
@@ -19228,21 +19281,50 @@
     // itself) goes in now, before anything's on screen.
     navigator.serviceWorker.getRegistration().then(swapInWaitingVersion).catch(() => {});
 
+    // Also what starts a new version's install after a launch that came in
+    // from the network: sw.js leaves it until now, once this page's own files
+    // are kept aside for that install to reuse.
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js')
         .then(registration => registration.update())
         .catch(() => {});
     });
 
-    // After an update reload, back on the tab that was showing — the reload
-    // happened while you were away, so nothing should look different.
+    // After an update reload, back on the tab that was showing, with the
+    // same filters, as far down as it was — the reload happened while you
+    // were away, so nothing should look different. Saved by the version
+    // before this one, so each value is checked before it's used.
     let tabAfterUpdate = null;
+    let viewAfterUpdate = null;
     try {
       tabAfterUpdate = sessionStorage.getItem(UPDATE_RELOAD_TAB_KEY);
       sessionStorage.removeItem(UPDATE_RELOAD_TAB_KEY);
+      const savedView = sessionStorage.getItem(UPDATE_RELOAD_VIEW_KEY);
+      sessionStorage.removeItem(UPDATE_RELOAD_VIEW_KEY);
+      viewAfterUpdate = savedView ? JSON.parse(savedView) : null;
     } catch (e) { /* ignore */ }
+    if (viewAfterUpdate && typeof viewAfterUpdate === 'object') {
+      const v = viewAfterUpdate;
+      if (v.archiveFilter === 'all' || (CATEGORY_FILTER_ORDER.includes(v.archiveFilter) && isCategoryVisible(v.archiveFilter))) {
+        archiveFilter = v.archiveFilter;
+      }
+      if (JOURNAL_FILTERS.some(f => f.key === v.journalFilter)) journalFilter = v.journalFilter;
+      if (typeof v.statsYearFilter === 'string' && /^(all|\d{4})$/.test(v.statsYearFilter)) statsYearFilter = v.statsYearFilter;
+    } else {
+      viewAfterUpdate = null;
+    }
+    // Filters first, so the tab's own render draws them.
     const tabAfterUpdateBtn = tabAfterUpdate && document.querySelector(`.tabbar .tab[data-view="${tabAfterUpdate}"]`);
     if (tabAfterUpdateBtn && !tabAfterUpdateBtn.classList.contains('active')) tabAfterUpdateBtn.click();
+    else if (viewAfterUpdate) renderAll();
+    // The scroll waits for the launch to show the page: the photos are in by
+    // then, so the list is at its full height. It runs straight after the
+    // reveal, before anything's drawn, so the top of the page never shows
+    // first; and it's instant (scrollPageTo), not smooth.
+    const scrollAfterUpdate = viewAfterUpdate ? Number(viewAfterUpdate.scrollY) : 0;
+    if (Number.isFinite(scrollAfterUpdate) && scrollAfterUpdate > 0) {
+      launchShown.then(() => scrollPageTo(scrollAfterUpdate));
+    }
   }
 
   // ---------- pull to refresh ----------
