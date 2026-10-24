@@ -1804,26 +1804,6 @@ h2.status-group-heading.heading-navy {
   scroll-margin-top: 68px;
 }
 
-@keyframes continue-prompt-pulse {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 1; }
-}
-
-.continue-prompt {
-  margin: 0;
-  padding: 14px;
-  text-align: center;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-dim);
-  cursor: pointer;
-  animation: continue-prompt-pulse 1.6s ease-in-out infinite;
-}
-
-.continue-prompt[hidden] {
-  display: none;
-}
-
 #shootForm label,
 #journalForm label,
 #locationForm label,
@@ -2018,16 +1998,6 @@ h2.status-group-heading.heading-navy {
 
 .field-hint-bold {
   font-weight: 700;
-}
-
-#locationForm input.field-invalid {
-  border-color: var(--red);
-}
-
-.field-error-hint {
-  font-size: 13px;
-  color: var(--red);
-  margin: -8px 0 0;
 }
 
 .pdf-sections-list {
