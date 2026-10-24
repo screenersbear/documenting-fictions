@@ -2985,7 +2985,7 @@
   // same as the ⋮ menu's Archive shoot), or brings them all back once the
   // whole project is archived. Days already archived on their own just stay
   // archived. The popup stays open on the result, now reading Unarchive.
-  document.getElementById('projectArchiveBtn').addEventListener('click', () => {
+  document.getElementById('projectArchiveBtn').addEventListener('click', async () => {
     const project = findProject(activeProjectId);
     // Not mid-copy: a day still being added would miss the change.
     if (!project || projectPopupBusy) return;
@@ -2994,10 +2994,13 @@
     const unarchiving = members.every(s => s.archived);
     const n = members.length;
     const who = n === 1 ? 'Its 1 shoot moves' : `All ${n} shoots move`;
-    const question = unarchiving
-      ? `Unarchive ${project.name}? ${who} back to Shoots.`
-      : `Archive ${project.name}? ${who} to Archive.`;
-    if (!confirm(question)) return;
+    // Not red: archiving is undone from this same button.
+    const ok = await askConfirm(unarchiving
+      ? { title: `Unarchive ${project.name}?`, text: `${who} back to Shoots.`, confirmLabel: 'Unarchive', cancelLabel: 'Keep archived' }
+      : { title: `Archive ${project.name}?`, text: `${who} to Archive.`, confirmLabel: 'Archive', cancelLabel: 'Keep in Shoots' });
+    // The popup only asks; the project is re-checked in case it's gone (or
+    // a copy started) while it was up.
+    if (!ok || activeProjectId !== project.id || !findProject(project.id) || projectPopupBusy) return;
     state.shoots = state.shoots.map(s => (s.projectId === project.id ? { ...s, archived: !unarchiving } : s));
     saveState();
     renderAll();
@@ -3005,15 +3008,18 @@
     showToast(unarchiving ? `${project.name} is back in Shoots` : `${project.name} moved to Archive`);
   });
 
-  document.getElementById('projectUngroupBtn').addEventListener('click', () => {
+  document.getElementById('projectUngroupBtn').addEventListener('click', async () => {
     const project = findProject(activeProjectId);
     // Not mid-copy: the day being added would otherwise land after its
     // project is already gone.
     if (!project || projectPopupBusy) return;
-    const members = projectMembers(project.id);
-    const n = members.length;
+    const n = projectMembers(project.id).length;
     const rest = n === 1 ? 'Its 1 shoot stays as a separate shoot.' : `Its ${n} shoots stay as separate shoots.`;
-    if (!confirm(`Ungroup ${project.name}? ${rest}`)) return;
+    // Not red: every shoot stays, only the grouping goes.
+    const ok = await askConfirm({ title: `Ungroup ${project.name}?`, text: rest, confirmLabel: 'Ungroup', cancelLabel: 'Keep together' });
+    if (!ok || activeProjectId !== project.id || !findProject(project.id) || projectPopupBusy) return;
+    // Read again after the answer, so it's exactly the days in it now.
+    const members = projectMembers(project.id);
     members.forEach(s => setShootProject(s.id, ''));
     // Removed explicitly as well, rather than leaning only on the prune
     // inside setShootProject, so ungrouping never depends on how that
@@ -3979,6 +3985,12 @@
       : journalImagesKey(currentJournalEntry.id);
   }
 
+  // The one question behind every photo's × (journal, mood board, final
+  // images) and the image viewer's Delete, so they all read the same.
+  function askDeletePhoto() {
+    return askConfirm({ title: 'Delete this photo?', text: "This can't be undone.", confirmLabel: 'Delete photo', cancelLabel: 'Keep it', danger: true });
+  }
+
   // Shared renderer for both the edit-mode grid (add/delete affordances) and
   // the view-mode grid (read-only gallery) — same images, same image viewer,
   // just with the mutating controls left out when editable is false.
@@ -4000,8 +4012,8 @@
       });
       if (editable) {
         grid.querySelectorAll('.final-thumb-delete').forEach(btn => {
-          btn.addEventListener('click', () => {
-            if (!confirm("Delete this photo? This can't be undone.")) return;
+          btn.addEventListener('click', async () => {
+            if (!(await askDeletePhoto())) return;
             idbGetImages(key).then(imgs => {
               imgs.splice(Number(btn.dataset.idx), 1);
               return idbSetImages(key, imgs);
@@ -4625,11 +4637,17 @@
     if (e.target === e.currentTarget) closeJournalOptions();
   });
 
-  document.getElementById('deleteJournalOptionBtn').addEventListener('click', () => {
+  // Both ways of deleting an entry (its ⋮ here, or Delete inside the entry)
+  // ask the same thing.
+  function askDeleteJournalEntry() {
+    return askConfirm({ title: 'Delete this journal entry?', text: "This can't be undone.", confirmLabel: 'Delete entry', cancelLabel: 'Keep it', danger: true });
+  }
+
+  document.getElementById('deleteJournalOptionBtn').addEventListener('click', async () => {
     const id = optionsJournalEntryId;
     closeJournalOptions();
     if (!id) return;
-    if (!confirm("Delete this journal entry? This can't be undone.")) return;
+    if (!(await askDeleteJournalEntry())) return;
     const entry = state.journalEntries.find(e => e.id === id);
     if (entry && !entry.sourceShootId) {
       idbDeleteImages(journalImagesKey(entry.id)).catch(() => {});
@@ -4813,9 +4831,17 @@
 
   // Auto-compiled entries never edit in place — "editing" always hands off
   // to the shoot's own reflection fields instead, so the two stay in sync.
-  function revisitLinkedJournalEntry() {
-    const shootId = currentJournalEntry.sourceShootId;
-    if (!confirm('Do you want to revisit this shoot and modify the entry?')) return;
+  async function revisitLinkedJournalEntry() {
+    const entry = currentJournalEntry;
+    const shootId = entry.sourceShootId;
+    const ok = await askConfirm({
+      title: 'Revisit this shoot?',
+      text: "This entry is written from the shoot's reflection, so that's where it's changed.",
+      confirmLabel: 'Go to shoot',
+      cancelLabel: 'Stay here',
+    });
+    // Still the entry that asked (the popup sits over it, so it should be).
+    if (!ok || currentJournalEntry !== entry) return;
     closeJournalModal();
     openPostShootJournalPrompt(shootId);
   }
@@ -4852,9 +4878,10 @@
     else closeJournalModal();
   });
 
-  function deleteCurrentJournalEntry() {
-    if (!currentJournalEntry) return;
-    if (!confirm('Delete this journal entry? This can\'t be undone.')) return;
+  async function deleteCurrentJournalEntry() {
+    const entry = currentJournalEntry;
+    if (!entry) return;
+    if (!(await askDeleteJournalEntry()) || currentJournalEntry !== entry) return;
     // Linked entries share the shoot's own final-images store — only
     // standalone entries own a dedicated image key to clean up here.
     if (!currentJournalEntry.sourceShootId) {
@@ -5078,19 +5105,31 @@
       card.addEventListener('click', () => openTalentModal(Number(card.dataset.idx)));
     });
     container.querySelectorAll('.talent-summary-delete').forEach(btn => {
-      btn.addEventListener('click', (ev) => {
+      btn.addEventListener('click', async (ev) => {
         // The card itself opens the edit popup, so the delete "x" has to stop
         // the click here or it also reopens a popup for the talent it just removed.
+        // Stopped before the await below, while the click is still on its way.
         ev.stopPropagation();
         const idx = Number(btn.dataset.idx);
         const talent = currentTalents[idx];
         if (!talent) return;
+        const shootId = currentShootId;
         // Removing a talent also throws away their handles and photo, so it
         // asks first rather than vanishing on a mis-tap.
         const who = hasText(talent.name) ? talent.name.trim() : `Talent ${idx + 1}`;
-        if (!confirm(`Remove ${who} from this shoot? Their handles and photo will be removed too.`)) return;
+        const ok = await askConfirm({
+          title: `Remove ${who} from this shoot?`,
+          text: 'Their handles and photo will be removed too.',
+          confirmLabel: 'Remove',
+          cancelLabel: 'Keep them',
+          danger: true,
+        });
+        if (!ok || currentShootId !== shootId) return;
+        // Found again by the talent itself, in case the list moved meanwhile.
+        const at = currentTalents.indexOf(talent);
+        if (at === -1) return;
         if (currentShootId && talent.id) idbDeleteImages(talentPhotoKey(currentShootId, talent.id)).catch(() => {});
-        currentTalents.splice(idx, 1);
+        currentTalents.splice(at, 1);
         renderTalents();
         scheduleShootAutosave();
       });
@@ -5425,9 +5464,14 @@
         // the click here or it also reopens a popup for the member it just removed.
         ev.stopPropagation();
         const idx = Number(btn.dataset.idx);
-        currentTeamMembers.splice(idx, 1);
+        const [removed] = currentTeamMembers.splice(idx, 1);
         renderTeamMembers();
         scheduleShootAutosave();
+        // Gone straight away (no asking), with a few seconds to take it back.
+        if (removed) {
+          const shootId = currentShootId;
+          showUndoToast('Team member removed', () => restoreRemovedShootItem(shootId, 'teamMembers', idx, removed));
+        }
       });
     });
   }
@@ -5714,6 +5758,34 @@
     requestAnimationFrame(apply);
   }
 
+  // Undo (showUndoToast) for the quick removals that don't ask first — a
+  // shot, a lighting setup, a team member: the item goes back where it was.
+  // While that shoot's page is open, into the page's own working list,
+  // re-rendered and saved the same way the × was; otherwise (Shoot mode, or
+  // the page closed within the toast's few seconds) straight into the saved
+  // shoot, the way Shoot mode's own edits are, so Undo never quietly does
+  // nothing. A spot past the end (the list got shorter since) is the end.
+  function restoreRemovedShootItem(shootId, listKey, idx, item) {
+    if (!shootModalOverlay.hidden && currentShootId === shootId) {
+      const [list, render] = {
+        shotList: [currentShotList, renderShotList],
+        lightingSetups: [currentLightingSetups, renderLightingSetups],
+        teamMembers: [currentTeamMembers, renderTeamMembers],
+      }[listKey];
+      list.splice(Math.min(idx, list.length), 0, item);
+      render();
+      scheduleShootAutosave();
+      return;
+    }
+    const shoot = state.shoots.find(s => s.id === shootId);
+    if (!shoot) return;
+    if (!Array.isArray(shoot[listKey])) shoot[listKey] = [];
+    shoot[listKey].splice(Math.min(idx, shoot[listKey].length), 0, item);
+    saveState();
+    if (listKey === 'shotList' && !shootModeOverlay.hidden && getShootModeShootId() === shootId) renderShootModeShots(shoot);
+    renderAll();
+  }
+
   function renderShotList(focusIdx, refocusCheckIdx) {
     const container = document.getElementById('shotListItems');
     const scroller = shootListScroller(container);
@@ -5763,9 +5835,15 @@
     });
     container.querySelectorAll('.delete-shot').forEach(btn => {
       btn.addEventListener('click', () => {
-        currentShotList.splice(Number(btn.dataset.idx), 1);
+        const idx = Number(btn.dataset.idx);
+        const [removed] = currentShotList.splice(idx, 1);
         renderShotList();
         scheduleShootAutosave();
+        // An empty row has nothing to take back, so no toast for it.
+        if (removed && hasText(removed.text)) {
+          const shootId = currentShootId;
+          showUndoToast('Shot removed', () => restoreRemovedShootItem(shootId, 'shotList', idx, removed));
+        }
       });
     });
     container.querySelectorAll('.shot-drag-handle').forEach(handle => {
@@ -6359,9 +6437,15 @@
     });
     container.querySelectorAll('.delete-lighting-setup').forEach(btn => {
       btn.addEventListener('click', () => {
-        currentLightingSetups.splice(Number(btn.dataset.idx), 1);
+        const idx = Number(btn.dataset.idx);
+        const [removed] = currentLightingSetups.splice(idx, 1);
         renderLightingSetups();
         scheduleShootAutosave();
+        // Same as a shot: a never-filled-in card has nothing to take back.
+        if (removed && (hasText(removed.name) || hasText(removed.characteristics) || hasText(removed.description))) {
+          const shootId = currentShootId;
+          showUndoToast('Lighting setup removed', () => restoreRemovedShootItem(shootId, 'lightingSetups', idx, removed));
+        }
       });
     });
     container.querySelectorAll('.lighting-setup-name').forEach(input => {
@@ -11139,7 +11223,8 @@
       else if (summary && withStory) text = conceptHelperPick(summary[out.key], answers, conceptHelperMax(out), deeperKeys);
       document.getElementById(out.boxId).value = text;
       conceptHelperOutputEl(out).hidden = out.key !== 'concept' && !text;
-      // On a shoot that already has its own text there, say how to keep it.
+      // On a shoot that already has its own text there, say so — and that
+      // Use this asks before replacing it (Replace / Keep mine).
       const field = document.getElementById(out.fieldId);
       conceptHelperOutputEl(out).querySelector('.concept-helper-keep').hidden = !(text && hasText(field.value) && field.value.trim() !== text);
     });
@@ -11421,18 +11506,46 @@
     return labels.length > 1 ? `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}` : labels[0];
   }
 
+  // Both helpers ask this when what they wrote would go over text that's
+  // already on the page. Replace is red: what's there is gone for good.
+  // "Keep mine" leaves those fields as they are, and the helper still fills
+  // any that were empty and closes. `fillsOthers`: some of them were, so
+  // the popup says so.
+  function askHelperReplace(labels, fillsOthers) {
+    return askConfirm({
+      title: `Replace what's already in ${conceptHelperJoin(labels)}?`,
+      text: fillsOthers
+        ? 'Keep mine leaves what you wrote there and still fills in the rest.'
+        : 'Keep mine leaves what you wrote there.',
+      confirmLabel: 'Replace',
+      cancelLabel: 'Keep mine',
+      danger: true,
+    });
+  }
+
   // Fills each page field that has something in its box (the real fields —
   // on a wizard slide they're typed into directly) and lets the form's own
-  // input listener save them. A box emptied on purpose leaves its field be.
-  function useConceptHelperOutputs() {
+  // input listener save them. A box emptied on purpose leaves its field be,
+  // and so does "Keep mine" for a field that already has its own text.
+  async function useConceptHelperOutputs() {
+    const h = conceptHelper;
+    // Once at a time: asking again would answer the first popup "Keep mine"
+    // (see askConfirm) and fill twice.
+    if (!h || h.asking) return;
     const picks = conceptHelperShownOutputs()
       .map(out => ({ out, text: document.getElementById(out.boxId).value.trim(), field: document.getElementById(out.fieldId) }))
       .filter(pick => pick.text);
     if (!picks.length || picks.some(pick => pick.text.length > conceptHelperMax(pick.out))) return;
-    const replacing = picks.filter(pick => hasText(pick.field.value) && pick.field.value.trim() !== pick.text)
-      .map(pick => pick.out.label);
-    if (replacing.length && !confirm(`Replace what's already in ${conceptHelperJoin(replacing)}? To keep one, cancel and clear its box.`)) return;
-    picks.forEach(({ field, text }) => {
+    const replacing = picks.filter(pick => hasText(pick.field.value) && pick.field.value.trim() !== pick.text);
+    let keepExisting = false;
+    if (replacing.length) {
+      h.asking = true;
+      keepExisting = !(await askHelperReplace(replacing.map(pick => pick.out.label), picks.length > replacing.length));
+      h.asking = false;
+      // Closed some other way while it asked: nothing to fill from.
+      if (conceptHelper !== h) return;
+    }
+    picks.filter(pick => !(keepExisting && replacing.includes(pick))).forEach(({ field, text }) => {
       field.value = text;
       field.dispatchEvent(new Event('input', { bubbles: true }));
       syncFieldFilledState(field);
@@ -11479,7 +11592,8 @@
     h.leaving = null;
     if (action === 'write') writeConceptHelperOwn();
     else if (action === 'use') {
-      // Back to the end screen first, in case the replace check is cancelled.
+      // Back to the end screen first: it's what shows behind the replace
+      // question, and what stays if there turns out to be nothing to fill.
       renderConceptHelper();
       useConceptHelperOutputs();
     } else closeConceptHelper();
@@ -12156,10 +12270,12 @@
   }
 
   // Writes each field from its own answers — a field with none is left as
-  // it is. Replacing text that's already there asks first.
-  function finishReflectHelper() {
+  // it is. Replacing text that's already there asks first (askHelperReplace).
+  async function finishReflectHelper() {
     const h = reflectHelper;
-    if (!h) return;
+    // Once at a time: asking again would answer the first popup "Keep mine"
+    // (see askConfirm) and fill twice.
+    if (!h || h.asking) return;
     storeReflectAnswer();
     const fills = Object.keys(REFLECTION_FIELDS).map(key => {
       const field = document.getElementById(REFLECTION_FIELDS[key].fieldId);
@@ -12170,10 +12286,16 @@
       return { key, field, text };
     }).filter(fill => fill.text);
     const replacing = fills.filter(fill => hasText(fill.field.value) && fill.field.value.trim() !== fill.text);
-    // Cancel keeps what's there, but still fills the fields that were empty
-    // — and closes either way, so Close is never a dead end.
-    const keepExisting = replacing.length
-      && !confirm(`Replace what's already in ${conceptHelperJoin(replacing.map(fill => REFLECTION_FIELDS[fill.key].label))}?`);
+    // Keep mine keeps what's there, but still fills the fields that were
+    // empty — and closes either way, so Close is never a dead end.
+    let keepExisting = false;
+    if (replacing.length) {
+      h.asking = true;
+      keepExisting = !(await askHelperReplace(replacing.map(fill => REFLECTION_FIELDS[fill.key].label), fills.length > replacing.length));
+      h.asking = false;
+      // Closed some other way while it asked: leave the page as it is.
+      if (reflectHelper !== h) return;
+    }
     fills.filter(fill => !(keepExisting && replacing.includes(fill))).forEach(({ field, text }) => {
       field.value = text;
       field.dispatchEvent(new Event('input', { bubbles: true }));
@@ -12463,9 +12585,10 @@
         grid.appendChild(item);
       });
       grid.querySelectorAll('.moodboard-thumb-delete').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (!confirm("Delete this photo? This can't be undone.")) return;
+        btn.addEventListener('click', async () => {
+          // Taken before asking: the photo belongs to the shoot it was tapped on.
           const shootId = currentShootId;
+          if (!(await askDeletePhoto())) return;
           idbGetImages(shootId).then(imgs => {
             imgs.splice(Number(btn.dataset.idx), 1);
             return idbSetImages(shootId, imgs);
@@ -12650,12 +12773,16 @@
     openProjectPhotoCrop(img.src);
   });
 
-  document.getElementById('deleteImageFromViewer').addEventListener('click', () => {
+  document.getElementById('deleteImageFromViewer').addEventListener('click', async () => {
     imageViewerMenu.hidden = true;
     if (!viewerImages[viewerIndex]) return;
-    if (!confirm("Delete this image? This can't be undone.")) return;
+    // Which photo is taken before asking, so it's the one that was showing.
     const deletedIndex = viewerIndex;
     const key = viewerStorageKey;
+    if (!(await askDeletePhoto())) return;
+    // Only while the viewer's still up on the same photos — it should be,
+    // with the popup sitting over it.
+    if (imageViewerOverlay.hidden || viewerStorageKey !== key) return;
     idbGetImages(key).then(imgs => {
       imgs.splice(deletedIndex, 1);
       return idbSetImages(key, imgs).then(() => imgs);
@@ -12932,11 +13059,13 @@
         grid.appendChild(thumb);
       });
       grid.querySelectorAll('.final-thumb-delete').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (!confirm("Delete this photo? This can't be undone.")) return;
-          idbGetImages(finalImagesKey(currentShootId)).then(imgs => {
+        btn.addEventListener('click', async () => {
+          // Taken before asking: the photo belongs to the shoot it was tapped on.
+          const key = finalImagesKey(currentShootId);
+          if (!(await askDeletePhoto())) return;
+          idbGetImages(key).then(imgs => {
             imgs.splice(Number(btn.dataset.idx), 1);
-            return idbSetImages(finalImagesKey(currentShootId), imgs);
+            return idbSetImages(key, imgs);
           }).then(renderFinalImages);
         });
       });
@@ -13263,7 +13392,7 @@
     document.getElementById(id).addEventListener('input', (e) => e.stopPropagation());
   });
 
-  document.getElementById('shootMultiDay').addEventListener('change', (e) => {
+  document.getElementById('shootMultiDay').addEventListener('change', async (e) => {
     e.stopPropagation();
     const checkbox = e.target;
     const membership = multiDayMembership();
@@ -13271,14 +13400,25 @@
       // A member's box only ever goes from ticked to unticked by hand —
       // that's the "take it out of the project" gesture.
       if (checkbox.checked) return;
-      if (!confirm(`Take this shoot out of ${membership.project.name}? It stays as its own shoot.`)) {
-        checkbox.checked = true;
-        return;
-      }
+      // Ticked again while it asks: the box only reads unticked once the
+      // shoot really is out (updateMultiDayRow below), so "Keep it in"
+      // needs nothing undone.
+      checkbox.checked = true;
+      const shootId = membership.shoot.id;
+      const ok = await askConfirm({
+        title: `Take this shoot out of ${membership.project.name}?`,
+        text: 'It stays as its own shoot.',
+        confirmLabel: 'Take it out',
+        cancelLabel: 'Keep it in',
+      });
+      // Still this shoot's page, and still in that project (the popup sits
+      // over the page, so both should be).
+      const current = multiDayMembership();
+      if (!ok || shootModalOverlay.hidden || !current || current.shoot.id !== shootId) return;
       // Commit any edit still sitting in the debounce first, so the lists
       // re-rendered below already show it.
       saveShootNow();
-      setShootProject(membership.shoot.id, '');
+      setShootProject(current.shoot.id, '');
       saveState();
       renderAll();
       refreshOpenStatBoxDetail();
@@ -13556,10 +13696,18 @@
     saveState();
   }
 
-  document.getElementById('deleteShootBtn').addEventListener('click', () => {
-    if (!confirm('Delete this shoot? This can\'t be undone.')) return;
+  // The page's Delete shoot and the ⋮ menu's ask the same thing.
+  function askDeleteShoot() {
+    return askConfirm({ title: 'Delete this shoot?', text: "This can't be undone.", confirmLabel: 'Delete shoot', cancelLabel: 'Keep it', danger: true });
+  }
+
+  document.getElementById('deleteShootBtn').addEventListener('click', async () => {
+    const id = currentShootId;
+    // Only if the page is still on that shoot — it should be, with the
+    // popup sitting over it.
+    if (!(await askDeleteShoot()) || currentShootId !== id || shootModalOverlay.hidden) return;
     clearTimeout(shootSaveTimer);
-    deleteShootById(currentShootId);
+    deleteShootById(id);
     if (!shootModalOverlay.hidden) unlockBodyScroll();
     shootModalOverlay.hidden = true;
     editingShootId = null;
@@ -13832,11 +13980,11 @@
     refreshOpenStatBoxDetail();
   });
 
-  document.getElementById('deleteShootOptionBtn').addEventListener('click', () => {
+  document.getElementById('deleteShootOptionBtn').addEventListener('click', async () => {
     const id = optionsShootId;
     closeShootOptions();
     if (!id) return;
-    if (!confirm('Delete this shoot? This can\'t be undone.')) return;
+    if (!(await askDeleteShoot())) return;
     if (id === currentShootId && !shootModalOverlay.hidden) {
       clearTimeout(shootSaveTimer);
       unlockBodyScroll();
@@ -14019,6 +14167,13 @@
 
   function askConfirm({ title = '', text = '', confirmLabel = 'OK', cancelLabel = 'Cancel', danger = false } = {}) {
     if (appConfirmResolve) settleAppConfirm(false);
+    // Takes the focus, as the browser's confirm() did: a field left focused
+    // underneath (tapping a button on iOS never blurs one) would keep the
+    // keyboard up over this popup and go on taking typing and Return. The
+    // blur commits it the usual way (its change/blur listeners) before the
+    // answer can re-render the list it's in.
+    const focused = document.activeElement;
+    if (focused && focused !== document.body && typeof focused.blur === 'function') focused.blur();
     document.getElementById('appConfirmTitle').textContent = title;
     const textEl = document.getElementById('appConfirmText');
     textEl.textContent = text;
@@ -15610,10 +15765,17 @@
     });
 
     frameworksBody.querySelectorAll('.delete-framework').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const fw = state.frameworks.find(f => f.id === btn.dataset.id);
         const name = fw && hasText(fw.name) ? fw.name : 'this framework';
-        if (!confirm(`Delete ${name}? This removes every one of its tags from every shoot that used them, and can't be undone.`)) return;
+        const ok = await askConfirm({
+          title: `Delete ${name}?`,
+          text: "This removes every one of its tags from every shoot that used them, and can't be undone.",
+          confirmLabel: 'Delete framework',
+          cancelLabel: 'Keep it',
+          danger: true,
+        });
+        if (!ok) return;
         state.frameworks = state.frameworks.filter(f => f.id !== btn.dataset.id);
         saveState();
         renderFrameworksList();
@@ -15633,13 +15795,24 @@
     });
 
     frameworksBody.querySelectorAll('.delete-framework-tag').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const fw = state.frameworks.find(f => f.id === btn.dataset.fw);
         if (fw) {
-          const tag = fw.tags[Number(btn.dataset.idx)];
+          const idx = Number(btn.dataset.idx);
+          const tag = fw.tags[idx];
           const label = hasText(tag) ? `"${tag}"` : 'this tag';
-          if (!confirm(`Delete ${label}? This removes it from every shoot that used it, and can't be undone.`)) return;
-          fw.tags.splice(Number(btn.dataset.idx), 1);
+          const ok = await askConfirm({
+            title: `Delete ${label}?`,
+            text: "This removes it from every shoot that used it, and can't be undone.",
+            confirmLabel: 'Delete tag',
+            cancelLabel: 'Keep it',
+            danger: true,
+          });
+          // By place, not by name: the popup's blur may have just saved an
+          // edit to this very tag (askConfirm), and nothing else can add or
+          // remove tags while it's up.
+          if (!ok || !state.frameworks.includes(fw) || idx >= fw.tags.length) return;
+          fw.tags.splice(idx, 1);
           saveState();
           renderFrameworksList();
           syncShootFrameworkTags();
@@ -16796,10 +16969,16 @@
     });
     list.querySelectorAll('.delete-shot').forEach(btn => {
       btn.addEventListener('click', () => {
-        shoot.shotList.splice(Number(btn.dataset.idx), 1);
+        const idx = Number(btn.dataset.idx);
+        const [removed] = shoot.shotList.splice(idx, 1);
         saveState();
         renderShootModeShots(shoot);
         renderAll();
+        // Same Undo as the shoot page's shot list (restoreRemovedShootItem
+        // puts it back into the saved shoot, since that's what this edits).
+        if (removed && hasText(removed.text)) {
+          showUndoToast('Shot removed', () => restoreRemovedShootItem(shoot.id, 'shotList', idx, removed));
+        }
       });
     });
     list.querySelectorAll('.shot-drag-handle').forEach(handle => {

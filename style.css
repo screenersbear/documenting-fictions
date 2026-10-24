@@ -3142,12 +3142,6 @@ h2.status-group-heading.heading-navy {
   text-align: left;
 }
 
-#addFinalPhotos.post-shoot-toggle {
-  margin-top: 0;
-  justify-content: center;
-  cursor: pointer;
-}
-
 .toggle-chevron {
   font-size: 18px;
   transition: transform 0.15s ease;
@@ -4417,6 +4411,13 @@ h2.status-group-heading.heading-navy {
   overflow-y: auto;
   background: var(--ink);
   border-color: var(--surface);
+}
+
+/* The pop-in is the daily report's alone. The popups that borrow its card
+   (Add deadline, Multi-day, the journal's starting prompt, "Referring to")
+   aren't notifications landing, so they keep .intro-modal's quiet slideUp
+   like every other intro popup. */
+#dailyReportOverlay .daily-report-modal {
   animation: dailyReportPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
