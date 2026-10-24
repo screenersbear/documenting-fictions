@@ -1002,13 +1002,11 @@
     if (now - storageFullNoticeAt < 5000) return;
     storageFullNoticeAt = now;
     // Deferred: saveState can run while the app is still starting up,
-    // before the toast code further down has been reached.
-    setTimeout(() => {
-      showToast(STORAGE_FULL_MESSAGE);
-      // Up longer than a routine toast: it's more to read, and it matters.
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => { document.getElementById('toast').hidden = true; }, 6000);
-    }, 0);
+    // before the toast code further down has been reached. Up longer than a
+    // routine toast: it's more to read, and it matters. A notice, so it
+    // waits for an Undo toast that's up (the removal it follows) rather
+    // than wiping out its button.
+    setTimeout(() => showNoticeToast(STORAGE_FULL_MESSAGE, 6000), 0);
   }
 
   function saveState() {
@@ -1632,10 +1630,18 @@
       }
       return new Promise((resolve, reject) => {
         let settled = false;
-        const fail = () => {
+        const fail = (e) => {
           if (settled) return;
           settled = true;
-          const err = tx.error;
+          // A request that fails (a full store comes as one on iPhone, a
+          // QuotaExceededError on the put) reaches tx.onerror as its error
+          // bubbles up, before the transaction has aborted — tx.error is
+          // still null then, so it's read off the request instead. Without
+          // that the storage-full notice was handed null and stayed quiet.
+          let err = tx.error;
+          if (!err && e && e.target && e.target !== tx) {
+            try { err = e.target.error; } catch (x) { /* not finished */ }
+          }
           if (err && (err.name === 'UnknownError' || err.name === 'InvalidStateError')) {
             try { db.close(); } catch (e) { /* already gone */ }
             Promise.resolve().then(() => retry(err)).then(resolve, reject);
@@ -2249,7 +2255,14 @@
     const leadInfo = projectDayInfo(lead);
     const dayName = info ? `Day ${info.day}` : 'This day';
     const leadName = leadInfo ? `Day ${leadInfo.day}` : 'the first day';
-    showToast(`${dayName} now has its own changes, so later edits to ${leadName} won't copy to it`);
+    // A notice: the removal that set this off usually has its Undo toast
+    // up, which this waits for — and if that Undo puts the day back to
+    // following (reattachDayIfMatchingLead), it's dropped.
+    const dayId = day.id;
+    showNoticeToast(`${dayName} now has its own changes, so later edits to ${leadName} won't copy to it`, 3200, () => {
+      const live = state.shoots.find(s => s.id === dayId);
+      return !!live && !live.followsLead;
+    });
     if (!shootModalOverlay.hidden && currentShootId === day.id) updateMultiDayRow();
   }
 
@@ -2288,9 +2301,16 @@
   // every following day; on a following day it counts as making that day
   // its own. A cover set from a day's own final images is never reported:
   // it belongs to that day.
+  //
+  // shootImagesChangedAt: when each project day last had its photos changed
+  // this way (this session only). An Undo that would put a day back to
+  // following its lead (reattachDayIfMatchingLead) leaves it be when its own
+  // or the lead's photos were changed since — the signature can't see them.
+  const shootImagesChangedAt = new Map();
   function onShootImagesChanged(shootId, what) {
     const shoot = state.shoots.find(s => s.id === shootId);
     if (!shoot || !shoot.projectId) return;
+    shootImagesChangedAt.set(shootId, Date.now());
     const project = findProject(shoot.projectId);
     const lead = projectLeadOf(project);
     if (!lead) return;
@@ -5554,7 +5574,8 @@
         // Gone straight away (no asking), with a few seconds to take it back.
         if (removed) {
           const shootId = currentShootId;
-          showUndoToast('Team member removed', () => restoreRemovedShootItem(shootId, 'teamMembers', idx, removed));
+          const following = followingAtRemoval(shootId);
+          showUndoToast('Team member removed', () => restoreRemovedShootItem(shootId, 'teamMembers', idx, removed, following));
         }
       });
     });
@@ -5563,7 +5584,10 @@
   document.getElementById('addTeamMemberBtn').addEventListener('click', () => openTeamMemberModal(null));
 
   // ---------- Team member popup (name/role/handle + a "returning member" picker) ----------
-  let teamMemberModalTargetIdx = null;
+  // The member being edited (null when adding one) — the member itself, not
+  // its place in the list: an Undo of a removal can put someone back in
+  // front of them while the popup's open, and Save must still land on them.
+  let teamMemberModalTarget = null;
   let teamMemberModalDraft = null;
   let pastTeamMemberSamples = [];
 
@@ -5673,8 +5697,8 @@
   }
 
   function openTeamMemberModal(idx) {
-    teamMemberModalTargetIdx = (idx === null || idx === undefined) ? null : idx;
-    const existing = teamMemberModalTargetIdx !== null ? currentTeamMembers[teamMemberModalTargetIdx] : null;
+    const existing = (idx === null || idx === undefined) ? null : (currentTeamMembers[idx] || null);
+    teamMemberModalTarget = existing;
     teamMemberModalDraft = existing
       ? { ...existing }
       : { role: 'makeup_artist', name: '', socialPlatform: 'instagram', socialHandle: '' };
@@ -5717,11 +5741,14 @@
     draft.name = document.getElementById('teamMemberModalNameInput').value.trim();
     draft.socialHandle = normalizeSocialHandle(draft.socialHandle);
 
-    if (teamMemberModalTargetIdx !== null) currentTeamMembers[teamMemberModalTargetIdx] = draft;
+    // Found again by the member itself, in case the list moved meanwhile.
+    const at = teamMemberModalTarget ? currentTeamMembers.indexOf(teamMemberModalTarget) : -1;
+    if (at !== -1) currentTeamMembers[at] = draft;
     else currentTeamMembers.push(draft);
 
     document.getElementById('teamMemberModalOverlay').hidden = true;
     teamMemberModalDraft = null;
+    teamMemberModalTarget = null;
     renderTeamMembers();
     scheduleShootAutosave();
   });
@@ -5877,7 +5904,13 @@
   // the page closed within the toast's few seconds) straight into the saved
   // shoot, the way Shoot mode's own edits are, so Undo never quietly does
   // nothing. A spot past the end (the list got shorter since) is the end.
-  function restoreRemovedShootItem(shootId, listKey, idx, item) {
+  //
+  // `following` (from followingAtRemoval, for a team member or lighting
+  // setup) says the shoot was a day following its project's lead when the
+  // item was taken out. Those lists are mirrored, so the removal made the
+  // day its own (syncProjectMirrors); taking it back puts the day back to
+  // following, if it now matches the lead again (reattachDayIfMatchingLead).
+  function restoreRemovedShootItem(shootId, listKey, idx, item, following) {
     if (!shootModalOverlay.hidden && currentShootId === shootId) {
       const [list, render] = {
         shotList: [currentShotList, renderShotList],
@@ -5887,15 +5920,79 @@
       list.splice(Math.min(idx, list.length), 0, item);
       render();
       scheduleShootAutosave();
+      if (following) {
+        // Saved straight away rather than in a moment, so the check below
+        // compares the day as it now is.
+        saveShootNow();
+        reattachDayIfMatchingLead(shootId, following);
+      }
       return;
     }
+    // Another shoot's page is open: it's committed first, so its own
+    // pending edits count against it (and make it its own, if they do)
+    // before anything below is mirrored onto it.
+    const openOtherId = !shootModalOverlay.hidden && currentShootId ? currentShootId : null;
+    if (openOtherId) saveShootNow();
     const shoot = state.shoots.find(s => s.id === shootId);
     if (!shoot) return;
     if (!Array.isArray(shoot[listKey])) shoot[listKey] = [];
     shoot[listKey].splice(Math.min(idx, shoot[listKey].length), 0, item);
     saveState();
+    if (following) reattachDayIfMatchingLead(shootId, following);
+    // The open page is a day following this one: the save above mirrored
+    // the item back onto its saved copy, so it goes back into the page's
+    // own list too, at the same spot — or the page, still showing the list
+    // without it, would save that over the mirror and make the day its own.
+    // Spliced in rather than the whole list reloaded, so the rest of the
+    // page (folded setups, a team member popup that's open) stays as it is.
+    const openDay = openOtherId && (listKey === 'lightingSetups' || listKey === 'teamMembers')
+      ? state.shoots.find(s => s.id === openOtherId) : null;
+    const openLead = openDay && openDay.followsLead ? projectLeadOf(findProject(openDay.projectId)) : null;
+    if (openLead && openLead.id === shootId) {
+      const isSetups = listKey === 'lightingSetups';
+      const working = isSetups ? currentLightingSetups : currentTeamMembers;
+      // A copy (a setup with an id of its own, as the mirror gives it), so
+      // the two days never share one object.
+      working.splice(Math.min(idx, working.length), 0, isSetups ? { ...item, id: uid() } : { ...item });
+      // Shouldn't differ (the day matched its lead), but if it somehow
+      // does, the saved list as it now stands is the one to show.
+      if (mirrorSignature({ ...openDay, [listKey]: working }) !== mirrorSignature(openDay)) {
+        working.splice(0, working.length, ...(openDay[listKey] || []).map(x => ({ ...x })));
+      }
+      if (isSetups) renderLightingSetups(); else renderTeamMembers();
+      scheduleShootAutosave();
+    }
     if (listKey === 'shotList' && !shootModeOverlay.hidden && getShootModeShootId() === shootId) renderShootModeShots(shoot);
     renderAll();
+  }
+
+  // Taken at the moment of a quick removal, for restoreRemovedShootItem: for
+  // a day of a multi-day project that's following its lead, which project
+  // and when — null for anything else.
+  function followingAtRemoval(shootId) {
+    const s = state.shoots.find(x => x.id === shootId);
+    return s && s.followsLead && s.projectId ? { projectId: s.projectId, at: Date.now() } : null;
+  }
+
+  // After an Undo on a day that was following its lead when the item was
+  // removed (`following`, from followingAtRemoval): if the removal made it
+  // its own and it now matches the lead again, it follows again, as if the
+  // removal never happened. Left as it is when it's following already, has
+  // moved project, or its own or the lead's photos were changed by hand
+  // since (shootImagesChangedAt) — those aren't in the signature, and the
+  // day's would be replaced by the lead's next change.
+  function reattachDayIfMatchingLead(shootId, following) {
+    const day = state.shoots.find(s => s.id === shootId);
+    if (!day || day.followsLead || day.projectId !== following.projectId) return;
+    const lead = projectLeadOf(findProject(following.projectId));
+    if (!lead || lead.id === day.id) return;
+    if ([day.id, lead.id].some(id => (shootImagesChangedAt.get(id) || 0) >= following.at)) return;
+    const sig = mirrorSignature(day);
+    if (sig !== mirrorSignature(lead)) return;
+    day.followsLead = true;
+    day.mirrorSig = sig;
+    saveState();
+    if (!shootModalOverlay.hidden && currentShootId === day.id) updateMultiDayRow();
   }
 
   function renderShotList(focusIdx, refocusCheckIdx) {
@@ -6556,7 +6653,8 @@
         // Same as a shot: a never-filled-in card has nothing to take back.
         if (removed && (hasText(removed.name) || hasText(removed.characteristics) || hasText(removed.description))) {
           const shootId = currentShootId;
-          showUndoToast('Lighting setup removed', () => restoreRemovedShootItem(shootId, 'lightingSetups', idx, removed));
+          const following = followingAtRemoval(shootId);
+          showUndoToast('Lighting setup removed', () => restoreRemovedShootItem(shootId, 'lightingSetups', idx, removed, following));
         }
       });
     });
@@ -14317,12 +14415,48 @@
 
   // ---------- Toast ----------
   let toastTimer = null;
-  function showToast(message) {
+  // True while an Undo toast (showUndoToast) is up. A notice the app raises
+  // by itself rather than in answer to a tap — the storage-full warning, a
+  // day of a multi-day project going its own way — waits in heldNotices
+  // meanwhile (showNoticeToast) instead of wiping out the Undo button, and
+  // shows once the toast is free. A toast for something the user just did
+  // still replaces it, as before.
+  let undoToastLive = false;
+  let heldNotices = [];
+
+  function showToast(message, ms = 3200) {
     const toast = document.getElementById('toast');
     toast.textContent = message;
     toast.hidden = false;
+    undoToastLive = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { toast.hidden = true; }, 3200);
+    toastTimer = setTimeout(hideToast, ms);
+  }
+
+  function hideToast() {
+    document.getElementById('toast').hidden = true;
+    undoToastLive = false;
+    showHeldNotice();
+  }
+
+  // `stillTrue`, if given, is asked again before a held notice shows: an
+  // Undo can make it untrue meanwhile (see announceDayDetached).
+  function showNoticeToast(message, ms, stillTrue) {
+    if (undoToastLive) {
+      heldNotices = heldNotices.filter(n => n.message !== message);
+      heldNotices.push({ message, ms, stillTrue });
+      return;
+    }
+    showToast(message, ms);
+  }
+
+  function showHeldNotice() {
+    while (heldNotices.length) {
+      const next = heldNotices.shift();
+      if (next.stillTrue && !next.stillTrue()) continue;
+      showToast(next.message, next.ms);
+      return;
+    }
   }
 
   // "Shot removed · Undo": for quick removals that don't ask first (a shot,
@@ -14338,12 +14472,17 @@
     undo.addEventListener('click', () => {
       clearTimeout(toastTimer);
       toast.hidden = true;
+      undoToastLive = false;
       onUndo();
+      // Whatever was held back shows now, after the undo has had its say
+      // (unless the undo itself put up a toast — then once that's gone).
+      if (toast.hidden) showHeldNotice();
     });
     toast.appendChild(undo);
     toast.hidden = false;
+    undoToastLive = true;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { toast.hidden = true; }, 5000);
+    toastTimer = setTimeout(hideToast, 5000);
   }
 
   // Two buttons side by side while both labels fit their half; stacked full
@@ -14367,6 +14506,9 @@
   // anything that can't be taken back. One at a time: asking again while
   // one is up answers the first with false.
   let appConfirmResolve = null;
+  // When the card last opened (performance.now()): see the action button's
+  // listener below.
+  let appConfirmOpenedAt = 0;
 
   function askConfirm({ title = '', text = '', confirmLabel = 'OK', cancelLabel = 'Cancel', danger = false } = {}) {
     if (appConfirmResolve) settleAppConfirm(false);
@@ -14385,6 +14527,7 @@
     ok.textContent = confirmLabel;
     ok.className = danger ? 'danger' : 'primary';
     document.getElementById('appConfirmCancelBtn').textContent = cancelLabel;
+    appConfirmOpenedAt = performance.now();
     document.getElementById('appConfirmOverlay').hidden = false;
     fitButtonPair(document.getElementById('appConfirmActions'));
     return new Promise(resolve => { appConfirmResolve = resolve; });
@@ -14397,7 +14540,17 @@
     if (resolve) resolve(answer);
   }
 
-  document.getElementById('appConfirmOkBtn').addEventListener('click', () => settleAppConfirm(true));
+  // The browser's confirm() swallowed the second tap of a quick double-tap;
+  // this card is up at once, so that tap (on a photo's ×, say) could land on
+  // the action — "Delete photo" — before the question's been read. The
+  // action ignores taps for its first moment; going by the clock, not the
+  // card's entrance animation, whose end event can't be relied on. The
+  // other button ("Keep it") answers straight away: a stray tap there is
+  // harmless, and backing out quickly should always work.
+  document.getElementById('appConfirmOkBtn').addEventListener('click', () => {
+    if (performance.now() - appConfirmOpenedAt < 400) return;
+    settleAppConfirm(true);
+  });
   document.getElementById('appConfirmCancelBtn').addEventListener('click', () => settleAppConfirm(false));
 
   // ---------- Share shoot as PDF ----------
@@ -15823,7 +15976,20 @@
       pdfPreviewFilename = `${safeName}.pdf`;
       if (canWebShare) {
         const file = new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' });
-        await navigator.share({ files: [file], title: pdfPreviewTitle });
+        try {
+          await navigator.share({ files: [file], title: pdfPreviewTitle });
+        } catch (shareErr) {
+          // A big archive can take longer to build than iOS lets a share
+          // follow the tap that started it (a few seconds), and the share is
+          // then refused (NotAllowedError) — the PDF itself is fine. So it
+          // opens in the app's own preview instead, whose Share button is a
+          // fresh tap; closing that asks "Did it save?" before anything's
+          // offered for deletion, the same as when there's no Web Share.
+          if (!shareErr || shareErr.name !== 'NotAllowedError') throw shareErr;
+          showPdfPreview(pdfPreviewBlob);
+          exportArchiveAwaitingSave = shoots;
+          return;
+        }
         // The share sheet only resolves once the PDF went somewhere (Save to
         // Files, Mail…), so the clean-up offer can follow straight away.
         openExportDeleteAsk(shoots);
