@@ -3510,6 +3510,12 @@
     if (!img) return;
     const shoot = state.shoots.find(s => s.id === img.dataset.shootId);
     if (!shoot) return;
+    // An archived shoot's photo opens its Archive mode recap, same as its
+    // row in the list below (its "shoot details" button goes on to the
+    // page). The slideshow also shows final images from shoots that aren't
+    // archived yet, which have no Archive mode, so those still open the
+    // page on the Shoots tab.
+    if (shoot.archived) { openArchiveMode(shoot.id); return; }
     document.querySelector(`.tab[data-view="${shoot.archived ? 'archive' : 'shoots'}"]`).click();
     openShootModal(shoot.id);
   });
@@ -7408,6 +7414,10 @@
         shootWizardBlock('shootGoals', 'label'),
         shootWizardBlock('videoDeliverablesBlock'),
       ],
+      // "Last time" under the goals: the lessons from the newest finished
+      // shoot of this same kind, if there's one (see showLastTimeNote).
+      enter: () => showGoalsLastTimeNote(),
+      leave: () => clearLastTimeNotes(document.getElementById('shootWizardBody')),
     },
     {
       key: 'idea',
@@ -9166,11 +9176,13 @@
         {
           "id": "people_story",
           "type": "yesno",
-          "text": "Is there a little story to it, with a beginning, middle and end?",
-          "hint": "No is totally fine. A theme or a look counts as an idea too.",
+          "text": "Is it more of a theme or a look, or a little story with a beginning, middle and end?",
+          "hint": "Either is great. Some of the best sessions are just a theme.",
           "key": "story",
           "yes": "people_plot",
-          "no": "people_theme"
+          "no": "people_theme",
+          "noLabel": "A theme",
+          "yesLabel": "A story"
         },
         {
           "id": "people_plot",
@@ -9183,17 +9195,19 @@
         {
           "id": "people_real",
           "type": "yesno",
-          "text": "Is it pulled from their real life?",
+          "text": "Is the story made up just for them, or pulled from their real life?",
           "key": "real",
           "yes": "people_setting",
           "no": "people_setting",
           "yesValue": "taken from real life",
           "noValue": "made up just for them",
           "categoryText": {
-            "engagement": "Is it pulled from their real story, like how they met?",
-            "family": "Is it pulled from real family life, like a story they always tell?",
-            "maternity": "Is it pulled from their real life, like how they found out?"
-          }
+            "engagement": "Is the story made up just for them, or pulled from their real one, like how they met?",
+            "family": "Is the story made up just for them, or pulled from real family life, like a story they always tell?",
+            "maternity": "Is the story made up just for them, or pulled from their real life, like how they found out?"
+          },
+          "noLabel": "Made up",
+          "yesLabel": "Real life"
         },
         {
           "id": "people_theme",
@@ -9557,11 +9571,13 @@
         {
           "id": "wedding_story",
           "type": "yesno",
-          "text": "Is there a little story to it, with a beginning, middle and end?",
-          "hint": "No is totally fine. A theme or a look counts as an idea too.",
+          "text": "Is it more of a theme or a look, or a little story with a beginning, middle and end?",
+          "hint": "Either is great. Some of the best styled shoots are just a theme.",
           "key": "story",
           "yes": "wedding_plot",
-          "no": "wedding_theme"
+          "no": "wedding_theme",
+          "noLabel": "A theme",
+          "yesLabel": "A story"
         },
         {
           "id": "wedding_plot",
@@ -10269,11 +10285,12 @@
         {
           "id": "headshot_q1",
           "type": "yesno",
-          "text": "Is this for acting or modeling, like casting and agent submissions?",
-          "hint": "Say no for work, business or personal-brand headshots.",
+          "text": "Are these headshots for work or a personal brand, or for acting and modeling, like casting and agent submissions?",
           "key": "acting",
           "yes": "headshot_actor",
-          "no": "headshot_who"
+          "no": "headshot_who",
+          "noLabel": "Work & brand",
+          "yesLabel": "Acting"
         },
         {
           "id": "headshot_actor",
@@ -10294,12 +10311,14 @@
         {
           "id": "headshot_looks",
           "type": "yesno",
-          "text": "Want two looks, a bright commercial one and a moodier theatrical one?",
+          "text": "One strong, consistent look, or two: a bright commercial one and a moodier theatrical one?",
           "key": "looks",
           "yes": "headshot_words",
           "no": "headshot_words",
           "yesValue": "Two looks: bright commercial and moody theatrical",
-          "noValue": "One strong, consistent look"
+          "noValue": "One strong, consistent look",
+          "noLabel": "One look",
+          "yesLabel": "Two looks"
         },
         {
           "id": "headshot_who",
@@ -10628,11 +10647,13 @@
         {
           "id": "video_q1",
           "type": "yesno",
-          "text": "Is this video telling a story, with a character and something happening to them?",
-          "hint": "Narrative music videos count. Say no for promos, recaps or behind-the-scenes.",
+          "text": "Is this video a promo or a doc-style piece, or a story, with a character and something happening to them?",
+          "hint": "Narrative music videos count as a story. Recaps and behind-the-scenes count as doc-style.",
           "key": "narrative",
           "yes": "video_who",
-          "no": "video_promo"
+          "no": "video_promo",
+          "noLabel": "Promo or doc",
+          "yesLabel": "A story"
         },
         {
           "id": "video_who",
@@ -10653,11 +10674,12 @@
         {
           "id": "video_arc",
           "type": "yesno",
-          "text": "Does something happen that changes things by the end?",
-          "hint": "Say no if it's more of a vibe that lives in one moment.",
+          "text": "Is it a vibe that lives in one moment, or does something happen that changes things by the end?",
           "key": "arc",
           "yes": "video_turn",
-          "no": "video_image"
+          "no": "video_image",
+          "noLabel": "One moment",
+          "yesLabel": "It changes"
         },
         {
           "id": "video_turn",
@@ -10708,11 +10730,12 @@
         {
           "id": "video_promo",
           "type": "yesno",
-          "text": "Is it promoting something, like a brand, product, song or event?",
-          "hint": "Say no if it's more of a mini-doc, recap or behind-the-scenes piece.",
+          "text": "Is it a mini-doc, recap or behind-the-scenes piece, or a promo for something, like a brand, product, song or event?",
           "key": "promo",
           "yes": "video_product",
-          "no": "video_subject"
+          "no": "video_subject",
+          "noLabel": "A mini-doc",
+          "yesLabel": "A promo"
         },
         {
           "id": "video_product",
@@ -10875,11 +10898,12 @@
         {
           "id": "lighting_q1",
           "type": "yesno",
-          "text": "Are you comparing a few lighting setups side by side?",
-          "hint": "Say no if you're dialing in one specific look.",
+          "text": "Are you dialing in one specific look, or comparing a few lighting setups side by side?",
           "key": "multi",
           "yes": "lighting_compare",
-          "no": "lighting_look"
+          "no": "lighting_look",
+          "noLabel": "One look",
+          "yesLabel": "Compare"
         },
         {
           "id": "lighting_look",
@@ -10940,13 +10964,14 @@
         {
           "id": "lighting_sitter",
           "type": "yesno",
-          "text": "Last one: will a real person be sitting in for it?",
-          "hint": "Say no if you're using a stand-in or a mannequin.",
+          "text": "Last one: are you lighting a stand-in or a mannequin, or a real person sitting in?",
           "key": "sitter",
           "yes": "END",
           "no": "END",
           "yesValue": "on a live model",
-          "noValue": "on a stand-in"
+          "noValue": "on a stand-in",
+          "noLabel": "Stand-in",
+          "yesLabel": "Live model"
         }
       ],
       "summaries": [
@@ -17011,11 +17036,11 @@
 
   // ---------- Archive mode ----------
   // A read-only counterpart to Shoot mode for a shoot that's already done —
-  // a condensed report (Basic info, a trimmed Logistics/Team, the reflection
-  // in full, final images) instead of a working view, since there's nothing
-  // left to plan or shoot. No persisted "survives a restart" id like Shoot
-  // mode's — this is a quick look, not a mode you'd want to still be in after
-  // relaunching the app.
+  // a condensed report (Basic info, a trimmed Logistics/Team, the idea, the
+  // reflection in full, final images) instead of a working view, since
+  // there's nothing left to plan or shoot. No persisted "survives a
+  // restart" id like Shoot mode's — this is a quick look, not a mode you'd
+  // want to still be in after relaunching the app.
   const archiveModeOverlay = document.getElementById('archiveModeOverlay');
   let archiveModeShootId = null;
 
@@ -17041,6 +17066,14 @@
   function renderArchiveModeBody(shoot) {
     const body = document.getElementById('archiveModeBody');
     body.innerHTML = '';
+    // The heading bars alternate yellow/navy down the report whichever
+    // sections this shoot actually has — fixed colours per section put two
+    // of the same next to each other whenever one in between was skipped
+    // (a solo shoot's Logistics and Reflection, say). With every section
+    // there it's the same Basic info yellow, Logistics navy, Team yellow
+    // as before.
+    let headingCount = 0;
+    const sectionHeading = (text) => archiveModeSectionHeading(text, headingCount++ % 2 ? 'heading-navy' : 'heading-yellow');
 
     // Whichever of Title/Talent the header's shootDisplayName actually drew
     // from is skipped below so it isn't said twice — titleDisplayMode picks
@@ -17057,7 +17090,7 @@
       basicInfoFields.push(['Talent', talentNames.join(', ')]);
     }
     if (basicInfoFields.length) {
-      body.appendChild(archiveModeSectionHeading('Basic info', 'heading-yellow'));
+      body.appendChild(sectionHeading('Basic info'));
       basicInfoFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
     }
 
@@ -17066,17 +17099,36 @@
     const locationText = formatLocationDisplay(shoot.location);
     if (hasText(locationText)) logisticsFields.push(['Location', locationText]);
     if (logisticsFields.length) {
-      body.appendChild(archiveModeSectionHeading('Logistics', 'heading-navy'));
+      body.appendChild(sectionHeading('Logistics'));
       logisticsFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
     }
 
-    const teamMembers = (shoot.teamMembers || []).filter(tm => hasText(tm.name));
+    // Only a shoot that had a team says who was on it — the same "team
+    // required: yes" switch the page and the PDFs go by. Members kept on a
+    // shoot that was switched to solo stay saved, just not listed here.
+    const teamMembers = (shoot.teamRequired === 'yes' ? (shoot.teamMembers || []) : []).filter(tm => hasText(tm.name));
     if (teamMembers.length) {
-      body.appendChild(archiveModeSectionHeading('Team', 'heading-yellow'));
+      body.appendChild(sectionHeading('Team'));
       teamMembers.forEach(tm => {
         const roleLabel = (TEAM_ROLE_OPTIONS.find(([val]) => val === tm.role) || [null, 'Other'])[1];
         body.appendChild(archiveModeField(roleLabel, tm.name));
       });
+    }
+
+    // What the shoot was about, in the page's own Direction wording, so the
+    // report says more than who/when/where: only the boxes this kind of
+    // shoot has on its page (directionFieldApplies — no story boxes on a
+    // headshot, no concept on an event) and only ones with something in
+    // them. Comes after Team, where Direction sits on the page.
+    const ideaFields = [
+      ['premise', 'Concept'],
+      ['elevatorPitch', 'Elevator pitch'],
+      ['character', 'Character/Personality'],
+      ['worldNotes', 'World-building notes'],
+    ].filter(([key]) => directionFieldApplies(shoot, key) && hasText(shoot[key]));
+    if (ideaFields.length) {
+      body.appendChild(sectionHeading('The idea'));
+      ideaFields.forEach(([key, label]) => body.appendChild(archiveModeField(label, shoot[key])));
     }
 
     const reflectionFields = [];
@@ -17084,7 +17136,7 @@
     if (hasText(shoot.couldBeBetter)) reflectionFields.push(["What could've gone better", shoot.couldBeBetter]);
     if (hasText(shoot.lessonsLearned)) reflectionFields.push(['Lessons for next time', shoot.lessonsLearned]);
     if (reflectionFields.length) {
-      body.appendChild(archiveModeSectionHeading('Reflection', 'heading-navy'));
+      body.appendChild(sectionHeading('Reflection'));
       reflectionFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
     }
 
@@ -17094,7 +17146,7 @@
     // video stay in IndexedDB, just aren't shown.
     const deliverableFields = videoDeliverableFields(shoot);
     if (deliverableFields.length) {
-      body.appendChild(archiveModeSectionHeading('Deliverables', 'heading-yellow'));
+      body.appendChild(sectionHeading('Deliverables'));
       deliverableFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
     }
     if (isVideoShoot(shoot)) return;
@@ -17103,7 +17155,8 @@
     finalImagesGrid.className = 'moodboard-grid archive-mode-final-images';
     idbGetImages(finalImagesKey(shoot.id)).then(images => {
       if (!images.length) return;
-      if (!reflectionFields.length) body.appendChild(archiveModeSectionHeading('Reflection', 'heading-navy'));
+      // Always the last heading in the report, so the next colour in turn.
+      if (!reflectionFields.length) body.appendChild(sectionHeading('Reflection'));
       body.appendChild(finalImagesGrid);
       images.forEach((img, idx) => {
         const thumb = document.createElement('div');
@@ -17152,6 +17205,112 @@
     if (currentShootId) openArchiveMode(currentShootId);
   });
 
+  // ---------- "Last time" notes (lessons carried into planning) ----------
+  // When planning runs into something you've done before — picking a
+  // returning talent or a past location, or reaching the new-shoot guide's
+  // Goals slide for a kind of shoot you've done — this brings back what you
+  // wrote under "Lessons for next time" the most recent time: one quiet
+  // line under the pick, quoting that shoot's name and date, with an
+  // optional button that copies it into this shoot's Shooting notes. Only
+  // from shoots that have actually been shot (post-capture) with lessons
+  // written, and never from the shoot that's open. It never stops you doing
+  // anything: one note per popup or slide at most, replaced by the next
+  // pick, and gone with the popup or slide it's on.
+
+  // The newest shoot (by shoot date; undated ones last) that passes
+  // `matches` and has lessons to pass on, or null.
+  function lastShootWithLessons(matches) {
+    return state.shoots
+      .filter(s => s.id !== currentShootId && isPostCaptureStatus(s.status) && hasText(s.lessonsLearned) && matches(s))
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0] || null;
+  }
+
+  function clearLastTimeNotes(container) {
+    if (container) container.querySelectorAll(':scope > .last-time-note').forEach(note => note.remove());
+  }
+
+  // Puts the note for `shoot` right after `anchor` (the field it's about),
+  // replacing any note already beside it; a null shoot just clears it.
+  function showLastTimeNote(anchor, shoot) {
+    if (!anchor) return;
+    clearLastTimeNotes(anchor.parentElement);
+    if (!shoot) return;
+    const lessons = shoot.lessonsLearned.trim();
+    const when = prettyDate(shoot.date);
+    const source = when ? `${shootDisplayName(shoot)}, ${when}` : shootDisplayName(shoot);
+    const note = document.createElement('div');
+    note.className = 'last-time-note';
+    const text = document.createElement('p');
+    text.className = 'field-hint';
+    text.innerHTML = `<span class="field-hint-bold">Last time</span> (${escapeHtml(source)}): “${escapeHtml(lessons)}”`;
+    note.appendChild(text);
+    // Written straight into the page's own Shooting notes box (it's on the
+    // page even while a popup or the guide is over it), then the same
+    // 'input' event typing sends, so the form's autosave and filled-in look
+    // pick it up. Offered only while those notes don't already have it — the
+    // same lessons can turn up from more than one pick.
+    const notesField = document.getElementById('shootShootingNotes');
+    if (!notesField.value.includes(lessons)) {
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'secondary small-btn';
+      addBtn.textContent = '+ Add to shooting notes';
+      addBtn.addEventListener('click', () => {
+        const existing = notesField.value.replace(/\s+$/, '');
+        const combined = `${existing ? `${existing}\n\n` : ''}From last time (${source}): ${lessons}`;
+        const result = document.createElement('p');
+        result.className = 'field-hint';
+        if (combined.length > notesField.maxLength) {
+          result.textContent = "There's not enough room left in Shooting notes for this.";
+        } else {
+          notesField.value = combined;
+          notesField.dispatchEvent(new Event('input', { bubbles: true }));
+          result.textContent = 'Added to shooting notes.';
+        }
+        addBtn.replaceWith(result);
+      });
+      note.appendChild(addBtn);
+    }
+    anchor.after(note);
+  }
+
+  function showGoalsLastTimeNote() {
+    const category = document.getElementById('shootCategory').value;
+    const goalsLabel = document.getElementById('shootGoals').closest('label');
+    showLastTimeNote(goalsLabel, category ? lastShootWithLessons(s => s.category === category) : null);
+  }
+
+  // Alongside each picker's own change handler (which fills in the popup),
+  // never instead of it. "Select a…" or "Manage…" just clears the note.
+  document.getElementById('pastTalentsSelect').addEventListener('change', (e) => {
+    const t = /^\d+$/.test(e.target.value) ? pastTalentSamples[Number(e.target.value)] : null;
+    const key = t && hasText(t.name) ? t.name.trim().toLowerCase() : '';
+    showLastTimeNote(e.target.closest('label'), key
+      ? lastShootWithLessons(s => (s.talents || []).some(other => (other.name || '').trim().toLowerCase() === key))
+      : null);
+  });
+
+  document.getElementById('pastLocationsSelect').addEventListener('change', (e) => {
+    const loc = /^\d+$/.test(e.target.value) ? pastLocationSamples[Number(e.target.value)] : null;
+    const key = loc ? locationKey(loc) : '';
+    showLastTimeNote(e.target.closest('label'), key
+      ? lastShootWithLessons(s => !!s.location && locationKey(s.location) === key)
+      : null);
+  });
+
+  // Each popup's note goes when the popup does — Save, the close button
+  // and a tap outside all just hide the overlay — so it never greets the
+  // next talent or location you open. Watched rather than wired into each
+  // of those ways out.
+  const lastTimeNoteObserver = new MutationObserver(records => {
+    records.forEach(({ target }) => {
+      if (target.hidden) target.querySelectorAll('.last-time-note').forEach(note => note.remove());
+    });
+  });
+  ['talentModalOverlay', 'locationModalOverlay'].forEach(id => {
+    lastTimeNoteObserver.observe(document.getElementById(id), { attributes: true, attributeFilter: ['hidden'] });
+  });
+
   // ---------- Shoot mode: Quick review (editable Direction / Lighting setups) ----------
   const SHOOT_MODE_DIRECTION_FIELDS = [
     // Concept's limit comes from the field itself (raised to 300 so the
@@ -17188,16 +17347,26 @@
     return btn;
   }
 
-  function openShootModeReview(kind) {
+  // Setups added from the Lighting setups review itself ("+ Add lighting
+  // setup" below). They stay listed while still blank, so a new one has
+  // somewhere to show up while you name it, even though the review
+  // otherwise skips blank setups. Emptied whenever the popup is opened
+  // fresh (not on its own re-renders), so one added and left blank drops
+  // out of the review like any other blank setup — it's still on the
+  // shoot, same as a blank card added on the page.
+  let shootModeReviewAddedSetups = new Set();
+
+  function openShootModeReview(kind, isRefresh) {
     const shootId = getShootModeShootId();
     const shoot = shootId ? state.shoots.find(s => s.id === shootId) : null;
     if (!shoot) return;
     const body = document.getElementById('shootModeReviewBody');
     body.innerHTML = '';
+    if (!isRefresh) shootModeReviewAddedSetups = new Set();
 
     // Re-opens on the same kind, so editing one field doesn't lose your
     // place among the rest of the list.
-    const refresh = () => openShootModeReview(kind);
+    const refresh = () => openShootModeReview(kind, true);
     const commit = () => {
       saveState();
       refresh();
@@ -17217,7 +17386,7 @@
     } else {
       document.getElementById('shootModeReviewTitle').textContent = 'Lighting setups';
       const setups = (shoot.lightingSetups || [])
-        .filter(item => hasText(item.name) || hasText(item.characteristics) || hasText(item.description));
+        .filter(item => shootModeReviewAddedSetups.has(item) || hasText(item.name) || hasText(item.characteristics) || hasText(item.description));
       if (!setups.length) {
         body.innerHTML = '<p class="shoot-mode-empty">No lighting setups logged for this shoot.</p>';
       } else {
@@ -17245,6 +17414,30 @@
           body.appendChild(group);
         });
       }
+      // The one thing this review adds to Shoot mode: a light you set up
+      // on the spot can be logged without leaving for the shoot page. Same
+      // look and spot as "+ Add shot" under the shot list, and the same
+      // shape as the page's own "+ Add" (addLightingSetupBtn), written
+      // straight to the shoot like everything else here. It opens the new
+      // setup's name for typing in the same editor tapping a name uses;
+      // the list scrolls down first so the setup's there once that closes.
+      const addSetupBtn = document.createElement('button');
+      addSetupBtn.type = 'button';
+      addSetupBtn.className = 'primary small-btn shoot-mode-add-shot-btn';
+      addSetupBtn.textContent = '+ Add lighting setup';
+      addSetupBtn.addEventListener('click', () => {
+        if (!Array.isArray(shoot.lightingSetups)) shoot.lightingSetups = [];
+        const item = { id: uid(), name: '', characteristics: '', description: '' };
+        shoot.lightingSetups.push(item);
+        shootModeReviewAddedSetups.add(item);
+        commit();
+        body.scrollTop = body.scrollHeight;
+        openExpandField({
+          title: 'Setup name', value: '', maxLength: 200,
+          onSave: (newValue) => { item.name = newValue; commit(); },
+        });
+      });
+      body.appendChild(addSetupBtn);
     }
     document.getElementById('shootModeReviewOverlay').hidden = false;
   }

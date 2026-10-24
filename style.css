@@ -1952,6 +1952,20 @@ h2.status-group-heading.heading-navy {
   margin: 0;
 }
 
+/* "Last time" under a returning-talent / past-location pick and on the
+   guide's Goals slide (see showLastTimeNote): a plain .field-hint with its
+   optional button, spaced like .talent-social-section. The quoted lessons
+   keep their own line breaks. */
+.last-time-note {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.last-time-note .field-hint {
+  white-space: pre-line;
+}
+
 /* ---------- Storage usage popup ---------- */
 #storageUsageBody {
   margin-top: 12px;
