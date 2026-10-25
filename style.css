@@ -5803,6 +5803,14 @@ h2.status-group-heading.heading-navy {
   border-bottom: 0;
 }
 
+/* The report starts right at its first heading bar, so a pull down at the
+   top bounced it away from the header and showed the card's white above
+   it. No bounce here at all (contain, from .shoot-mode-body, only keeps
+   the scroll from reaching the page). */
+#archiveModeBody {
+  overscroll-behavior: none;
+}
+
 .archive-mode-final-images {
   padding: 4px 20px 14px;
 }

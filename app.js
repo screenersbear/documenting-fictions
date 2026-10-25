@@ -18017,21 +18017,22 @@
 
   // ---------- Archive mode ----------
   // A read-only counterpart to Shoot mode for a shoot that's already done —
-  // a condensed report (Basic info, a trimmed Logistics/Team, the idea, the
-  // reflection in full, final images) instead of a working view, since
-  // there's nothing left to plan or shoot. No persisted "survives a
-  // restart" id like Shoot mode's — this is a quick look, not a mode you'd
-  // want to still be in after relaunching the app.
+  // a condensed report (Basic info, a trimmed Logistics/Team, the idea,
+  // shooting notes, the reflection in full, final images) instead of a
+  // working view, since there's nothing left to plan or shoot. No persisted
+  // "survives a restart" id like Shoot mode's — this is a quick look, not a
+  // mode you'd want to still be in after relaunching the app.
   const archiveModeOverlay = document.getElementById('archiveModeOverlay');
   let archiveModeShootId = null;
 
   // One label-over-value block, styled like Shoot Mode's Quick review fields
-  // but a plain div rather than a button — nothing here is tappable.
+  // but a plain div rather than a button — nothing here is tappable. An
+  // empty label leaves just the value, under a heading that already names it.
   function archiveModeField(label, value) {
     const div = document.createElement('div');
     div.className = 'archive-mode-field';
     div.innerHTML = `
-      <p class="shoot-mode-review-label">${escapeHtml(label)}</p>
+      ${label ? `<p class="shoot-mode-review-label">${escapeHtml(label)}</p>` : ''}
       <p class="shoot-mode-review-value">${escapeHtml(value)}</p>
     `;
     return div;
@@ -18112,6 +18113,14 @@
     if (ideaFields.length) {
       body.appendChild(sectionHeading('The idea'));
       ideaFields.forEach(([key, label]) => body.appendChild(archiveModeField(label, shoot[key])));
+    }
+
+    // Shooting notes, worth looking back on — after the idea, where they
+    // sit on the page (under the shot list, which isn't repeated here). The
+    // heading already says what they are, so no label over the text.
+    if (hasText(shoot.shootingNotes)) {
+      body.appendChild(sectionHeading('Shooting notes'));
+      body.appendChild(archiveModeField('', shoot.shootingNotes.trim()));
     }
 
     // Reflection answers are kept when a shoot steps back from Captured, but
