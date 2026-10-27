@@ -5463,10 +5463,15 @@ h2.status-group-heading.heading-navy {
   color: #fff;
 }
 
+/* Shoot mode and Archive mode each start right at a heading bar, so a pull
+   down at the top bounced the content away from the header and showed the
+   card's white above it (Quick review shares this, so it doesn't bounce
+   either). none, not contain: contain only keeps the scroll from reaching
+   the page, and still bounces. */
 .shoot-mode-body {
   flex: 1;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
   padding-bottom: 8px;
 }
 
@@ -5801,14 +5806,6 @@ h2.status-group-heading.heading-navy {
 
 .archive-mode-field:last-child {
   border-bottom: 0;
-}
-
-/* The report starts right at its first heading bar, so a pull down at the
-   top bounced it away from the header and showed the card's white above
-   it. No bounce here at all (contain, from .shoot-mode-body, only keeps
-   the scroll from reaching the page). */
-#archiveModeBody {
-  overscroll-behavior: none;
 }
 
 .archive-mode-final-images {
