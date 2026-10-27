@@ -2759,7 +2759,6 @@
   document.getElementById('newShootBtn').addEventListener('click', () => openShootModal(null));
 
   const STAT_BOX_FILTERS = {
-    selects: s => !s.archived && s.status === 'waiting_for_selects',
     // Photo shoots in Editing, plus every video step after Captured and
     // before Delivered (Rough cut, Client review, Revisions): video has no
     // separate selects stage, so its whole edit lives in this one tile.
@@ -2771,12 +2770,17 @@
     // through an unfinalized team alone, under a title that says "mood
     // boards pending".
     pending: s => !s.archived && (s.status === 'planning' || s.status === 'waiting_to_shoot') && shootPendingLabels(s).length > 0,
+    // Captured or later with no reflection written yet — the same shoots
+    // whose rows say "Pending: Reflection" and that the daily report
+    // reminds about (archived ones aren't counted, as with the other tiles).
+    reflections: s => !s.archived && isPostCaptureStatus(s.status)
+      && !hasText(s.whatWentRight) && !hasText(s.couldBeBetter) && !hasText(s.lessonsLearned),
   };
 
   const STAT_BOX_TITLES = {
     pending: 'Teams + mood boards pending',
-    selects: 'Waiting for selects',
     editing: 'In the edit',
+    reflections: 'Pending reflections',
   };
 
   document.getElementById('statsRow').addEventListener('click', (e) => {
@@ -3171,21 +3175,25 @@
     const deadlineItems = collapseProjects(deadlineShoots);
 
     const pendingTeamMoodboardCount = collapseProjects(state.shoots.filter(STAT_BOX_FILTERS.pending)).length;
-    const waitingForSelectsCount = collapseProjects(state.shoots.filter(STAT_BOX_FILTERS.selects)).length;
     const inTheEditCount = collapseProjects(state.shoots.filter(STAT_BOX_FILTERS.editing)).length;
+    const pendingReflectionsCount = collapseProjects(state.shoots.filter(STAT_BOX_FILTERS.reflections)).length;
+
+    // "REFLECTIONS" is wider than a tile on most phones, which stretched its
+    // column past the other two: the soft hyphen lets it break as
+    // "REFLEC-TIONS" only where it doesn't fit, so the tiles stay equal.
 
     document.getElementById('statsRow').innerHTML = `
       <div class="stat-box" data-stat="pending">
         <span class="stat-num">${pendingTeamMoodboardCount}</span>
         <span class="stat-label">Teams + mood boards pending</span>
       </div>
-      <div class="stat-box" data-stat="selects">
-        <span class="stat-num">${waitingForSelectsCount}</span>
-        <span class="stat-label">Waiting for selects</span>
-      </div>
       <div class="stat-box" data-stat="editing">
         <span class="stat-num">${inTheEditCount}</span>
         <span class="stat-label">In the edit</span>
+      </div>
+      <div class="stat-box" data-stat="reflections">
+        <span class="stat-num">${pendingReflectionsCount}</span>
+        <span class="stat-label">Pending reflec&shy;tions</span>
       </div>
     `;
 
