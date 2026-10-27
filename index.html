@@ -1420,6 +1420,10 @@
       <div class="shoot-mode-quick-review">
         <button type="button" class="shoot-mode-quick-review-btn" id="shootModeReviewDirectionBtn">Direction</button>
         <button type="button" class="shoot-mode-quick-review-btn" id="shootModeReviewLightingBtn">Lighting setups</button>
+        <!-- Not a review like the two beside it: a random "try this" card
+             (see Wild card in app.js). Same pill, so the row reads as one
+             set of quick taps. -->
+        <button type="button" class="shoot-mode-quick-review-btn" id="shootModeWildCardBtn">Wild card</button>
       </div>
 
       <h3 class="shoot-mode-section-heading heading-navy">Shot list</h3>
@@ -1463,6 +1467,28 @@
     </div>
     <div class="shoot-mode-body" id="shootModeReviewBody"></div>
     <button type="button" class="primary shoot-mode-bottom-cta" id="shootModeReviewOkBtn">OK</button>
+  </div>
+</div>
+
+<!-- Wild card: one card from a shuffled deck. The Quick review popup's
+     rounded, ink-outlined card (and its yellow eyebrow), but only as tall as
+     the card itself, with Shoot mode's own split bar: "Another" draws the
+     next one in place, OK puts it away. -->
+<div id="shootModeWildCardOverlay" class="modal-overlay shoot-mode-overlay" hidden>
+  <div class="modal shoot-mode-modal shoot-mode-review-modal shoot-mode-wild-card-modal">
+    <div class="shoot-mode-header shoot-mode-wild-card-header">
+      <div class="shoot-mode-heading-wrap">
+        <p class="shoot-mode-eyebrow">Wild card</p>
+      </div>
+      <button type="button" class="icon-btn close-btn" id="shootModeWildCardCloseBtn" aria-label="Close"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="shoot-mode-body">
+      <p class="shoot-mode-wild-card-text" id="shootModeWildCardText" aria-live="polite"></p>
+    </div>
+    <div class="shoot-mode-bottom-bar">
+      <button type="button" class="shoot-mode-bottom-cta shoot-mode-bottom-cta-secondary" id="shootModeWildCardAnotherBtn">Another</button>
+      <button type="button" class="primary shoot-mode-bottom-cta" id="shootModeWildCardOkBtn">OK</button>
+    </div>
   </div>
 </div>
 
