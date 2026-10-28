@@ -2865,8 +2865,14 @@
     const open = anyPopupOpen();
     if (open === popupScrollLocked) return;
     popupScrollLocked = open;
-    if (open) lockBodyScroll();
-    else unlockBodyScroll();
+    if (open) {
+      lockBodyScroll();
+    } else {
+      unlockBodyScroll();
+      // A launch popup that had to wait for the screen to clear (see the
+      // Monday brief).
+      runOwedLaunchPopups();
+    }
   }
 
   const popupLayerObserver = new MutationObserver(syncPopupScrollLock);
@@ -4692,6 +4698,10 @@
     if (!shootId) return;
     const s = state.shoots.find(x => x.id === shootId);
     if (!s) return;
+    // Asked from the Monday brief's copy of the week, which would otherwise
+    // sit on top of the shoot it's opening (the same layer, later in the
+    // page).
+    leaveMondayBrief();
     document.querySelector(`.tab[data-view="${s.archived ? 'archive' : 'shoots'}"]`).click();
     openShootModal(shootId);
     // Land on the Reflection section rather than the top of the shoot — that's
@@ -4718,17 +4728,10 @@
     if (e.target === e.currentTarget) e.currentTarget.hidden = true;
   });
 
-  // One week of the Log, on the same lined notebook paper the written entries
-  // use — the Log is the other half of the same journal, so it reads as
-  // written on the same pad rather than as a report about it.
-  function renderLogWeekCard(container, w) {
-    const card = document.createElement('div');
-    card.className = 'card log-card';
-    // Anchor the table of contents scrolls to (see scrollToJournalItem).
-    card.dataset.weekKey = formatDate(w.start);
-    // Alternates within the month it lands in, so collapsing a month never
-    // leaves two same-coloured banners stacked against each other.
-    const headingColorClass = container.children.length % 2 === 0 ? 'heading-yellow' : 'heading-navy';
+  // A week's page of the Log: its shoots and takeaways on the lined paper.
+  // The Monday brief shows last week's too, under labels of its own (on a
+  // Monday, "this week" is the new one).
+  function logWeekPaperHtml(w, shootsLabel, noTakeawaysText) {
     const shootsHtml = w.shoots.map(s =>
       `<li data-shoot-id="${s.id}">${escapeHtml(shootDisplayName(s))} <span class="log-shoot-category">(${escapeHtml(CATEGORY_LABELS[s.category] || 'Uncategorized')})</span></li>`
     ).join('');
@@ -4740,19 +4743,39 @@
           const credit = from ? `<span class="log-takeaway-source"> --- ${escapeHtml(from)}</span>` : '';
           return `<li data-shoot-id="${t.shootId}">${escapeHtml(t.text)}${credit}</li>`;
         }).join('')}</ul>`
-      : `<p class="log-no-takeaways">No takeaways logged this week.</p>`;
-    card.innerHTML = `
-      <p class="log-week-heading ${headingColorClass}">${escapeHtml(w.label)}</p>
+      : `<p class="log-no-takeaways">${noTakeawaysText}</p>`;
+    return `
       <div class="journal-paper log-paper">
-        <p class="log-section-label">Shoots this week</p>
+        <p class="log-section-label">${shootsLabel}</p>
         <ul class="log-shoots">${shootsHtml}</ul>
         <p class="log-section-label">Takeaways</p>
         ${takeawaysHtml}
       </div>
     `;
+  }
+
+  function wireLogShootRefs(card) {
     card.querySelectorAll('.log-shoots li[data-shoot-id], .log-takeaways li[data-shoot-id]').forEach(li => {
       li.addEventListener('click', () => showLogShootRef(li.dataset.shootId));
     });
+  }
+
+  // One week of the Log, on the same lined notebook paper the written entries
+  // use — the Log is the other half of the same journal, so it reads as
+  // written on the same pad rather than as a report about it.
+  function renderLogWeekCard(container, w) {
+    const card = document.createElement('div');
+    card.className = 'card log-card';
+    // Anchor the table of contents scrolls to (see scrollToJournalItem).
+    card.dataset.weekKey = formatDate(w.start);
+    // Alternates within the month it lands in, so collapsing a month never
+    // leaves two same-coloured banners stacked against each other.
+    const headingColorClass = container.children.length % 2 === 0 ? 'heading-yellow' : 'heading-navy';
+    card.innerHTML = `
+      <p class="log-week-heading ${headingColorClass}">${escapeHtml(w.label)}</p>
+      ${logWeekPaperHtml(w, 'Shoots this week', 'No takeaways logged this week.')}
+    `;
+    wireLogShootRefs(card);
     container.appendChild(card);
   }
 
@@ -13575,6 +13598,9 @@
   // daily report can compute "N days since capture" / "N days since editing".
   // Never overwrites an already-set timestamp, even if status bounces back
   // and forth, so it always reflects the first time each milestone was hit.
+  // Delivered is the exception: deliveredAt is when it was last marked
+  // Delivered, for the Monday brief's count of last week's deliveries — one
+  // sent back for revisions and delivered again went out that second time.
   function applyStatusTimestamps(shoot, oldStatus, newStatus) {
     if (oldStatus === newStatus) return;
     if (isPostCaptureStatus(newStatus) && !shoot.capturedAt) {
@@ -13582,6 +13608,9 @@
     }
     if (isInTheEditStatus(newStatus) && !shoot.editingAt) {
       shoot.editingAt = new Date().toISOString();
+    }
+    if (newStatus === 'delivered') {
+      shoot.deliveredAt = new Date().toISOString();
     }
   }
 
@@ -18737,6 +18766,9 @@
 
   document.getElementById('dayAfterOkBtn').addEventListener('click', () => {
     document.getElementById('dayAfterPromptOverlay').hidden = true;
+    // On a Monday the check-in holds back last week's brief, which then
+    // counts a weekend shoot just answered "Shot it".
+    maybeShowMondayBrief();
   });
 
   // ---------- Daily report (in-app "notifications" shown once per day on open) ----------
@@ -19243,6 +19275,219 @@
     if (dailyReportWasAutomatic) showTabIntro('report:bell');
   });
 
+  // ---------- Monday brief (last week, once a week on open) ----------
+  // The first time the app's opened on a Monday — from 5am, the same day
+  // boundary as the daily report (effectiveReportDateStr) — a look back at
+  // last week to take into the new one: its numbers first (shoots, photos
+  // delivered, locations), then that week's page of the Journal's weekly log
+  // (its shoots and the lessons learned from each), and a nudge for any shoot
+  // still without a reflection. "Last week" is the weekly log's own week,
+  // Sunday to Saturday, so the two always agree — which leaves yesterday,
+  // Sunday, to next Monday's.
+  // It's the last launch popup before the daily report, which follows it
+  // once it's closed, so a Monday still gets both. It's checked when the app
+  // comes back from the background too (a home-screen app is rarely
+  // launched fresh), but only with nothing else on screen.
+  const MONDAY_BRIEF_SHOWN_KEY = 'dailies_monday_brief_shown_v1';
+  // A brief on its way (it waits on an IndexedDB read), so a second check
+  // meanwhile doesn't start another.
+  let mondayBriefPending = false;
+  // The end of the launch line-up (this brief, then the daily report) when
+  // it couldn't show: something else opened while the brief was on its way,
+  // or the brief was left for a shoot. It runs once nothing's open (see
+  // syncPopupScrollLock) rather than waiting for the next launch.
+  let launchTailOwed = false;
+
+  function runOwedLaunchPopups() {
+    if (!launchTailOwed) return;
+    launchTailOwed = false;
+    // After the tap that cleared the screen has finished, in case it opens
+    // something of its own (a tab intro, say).
+    setTimeout(() => {
+      if (document.documentElement.classList.contains('update-reloading')) return;
+      if (anyPopupOpen()) { launchTailOwed = true; return; }
+      if (!maybeShowMondayBrief()) checkDailyReportPrompt();
+    }, 0);
+  }
+
+  // Today's date when it's a Monday whose brief hasn't shown yet, else null.
+  function mondayBriefWaiting() {
+    const today = effectiveReportDateStr();
+    if (parseShootDate(today).getDay() !== 1) return null;
+    let lastShown;
+    try { lastShown = localStorage.getItem(MONDAY_BRIEF_SHOWN_KEY); } catch (e) { lastShown = null; }
+    return lastShown === today ? null : today;
+  }
+
+  // Last week's window and contents, or null when it isn't Monday, this
+  // Monday's brief has already shown, or there's nothing to look back on:
+  // no shoot shot and nothing delivered.
+  function mondayBriefDue() {
+    const today = mondayBriefWaiting();
+    if (!today) return null;
+    const start = shootWeekWindow(today).start;
+    start.setDate(start.getDate() - 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    const startStr = formatDate(start);
+    const endStr = formatDate(end);
+    // Weeks with no shoot shot aren't in the log at all.
+    const week = computeWeeklyLog().find(w => formatDate(w.start) === startStr) || null;
+    // Delivered last week means marked Delivered last week (deliveredAt),
+    // whenever it was shot, and still Delivered — one sent back for
+    // revisions since hasn't gone out yet.
+    const delivered = state.shoots.filter(s => {
+      if (s.status !== 'delivered' || !s.deliveredAt) return false;
+      const at = new Date(s.deliveredAt);
+      if (isNaN(at)) return false;
+      const day = formatDate(at);
+      return day >= startStr && day <= endStr;
+    });
+    if (!week && !delivered.length) return null;
+    return { today, label: weekRangeLabel(start, end), week, delivered };
+  }
+
+  // Shows this Monday's brief if one's due. True when it's on its way, so
+  // the launch leaves the daily report for after it.
+  function maybeShowMondayBrief() {
+    if (mondayBriefPending) return true;
+    if (document.documentElement.classList.contains('update-reloading')) return false;
+    const brief = mondayBriefDue();
+    if (!brief) return false;
+    mondayBriefPending = true;
+    // Photos delivered are the final images on those shoots — the only count
+    // of photos the app has. Video has none.
+    const keys = brief.delivered.filter(s => !isVideoShoot(s)).map(s => finalImagesKey(s.id));
+    (keys.length ? idbGetManyImages(keys) : Promise.resolve(new Map()))
+      .catch(() => new Map())
+      .then(finals => {
+        mondayBriefPending = false;
+        // A page an update's about to replace never shows it.
+        if (document.documentElement.classList.contains('update-reloading')) return;
+        // Something opened meanwhile (an entry being restored, a shoot from
+        // the list) keeps the screen; the brief waits until it's closed.
+        if (anyPopupOpen()) { launchTailOwed = true; return; }
+        try { localStorage.setItem(MONDAY_BRIEF_SHOWN_KEY, brief.today); } catch (e) { /* ignore */ }
+        renderMondayBrief(brief, finals);
+      });
+    return true;
+  }
+
+  function renderMondayBrief({ label, week, delivered }, finals) {
+    document.getElementById('mondayBriefTitle').textContent = label;
+    const body = document.getElementById('mondayBriefBody');
+    body.innerHTML = '';
+    // Alternating bars, as in Archive mode.
+    let headingCount = 0;
+    const sectionHeading = (text) => archiveModeSectionHeading(text, headingCount++ % 2 ? 'heading-navy' : 'heading-yellow');
+    const shoots = week ? week.shoots : [];
+
+    // Different locations: the same place twice (a shoot's later days copy
+    // the first's) is one. A country on its own isn't a place — every new
+    // shoot starts with the default one (see getAllPastLocations).
+    const locations = new Set();
+    shoots.forEach(s => {
+      const loc = normalizeLocation(s.location);
+      if (['name', 'street', 'city', 'state', 'zip'].some(k => hasText(loc[k]))) locations.add(locationKey(loc));
+    });
+    const photoShoots = delivered.filter(s => !isVideoShoot(s));
+    const finalsOf = s => finals.get(finalImagesKey(s.id)) || [];
+    const photoCount = photoShoots.reduce((n, s) => n + finalsOf(s).length, 0);
+    const tile = (n, one, many) => `<div class="stat-box"><span class="stat-num">${n}</span><span class="stat-label">${n === 1 ? one : many}</span></div>`;
+
+    body.appendChild(sectionHeading('Last week'));
+    const stats = document.createElement('div');
+    stats.className = 'stats-row monday-brief-stats';
+    // Soft hyphens, as on the Overview's tiles: a word too long for a third
+    // of a phone breaks inside its own tile rather than stretching it.
+    stats.innerHTML = tile(shoots.length, 'Shoot', 'Shoots')
+      + tile(photoCount, 'Photo deliv&shy;ered', 'Photos deliv&shy;ered')
+      + tile(locations.size, 'Loca&shy;tion', 'Loca&shy;tions');
+    body.appendChild(stats);
+
+    // What the photo count leaves out, so a low one isn't a mystery.
+    const notes = [];
+    const videos = delivered.length - photoShoots.length;
+    if (videos) notes.push(`${videos} video${videos === 1 ? '' : 's'} delivered too.`);
+    const unphotographed = photoShoots.filter(s => !finalsOf(s).length).length;
+    if (unphotographed) {
+      notes.push(unphotographed === 1
+        ? "One delivered shoot has no final images added yet, so its photos aren't counted."
+        : `${unphotographed} delivered shoots have no final images added yet, so their photos aren't counted.`);
+    }
+    if (notes.length) {
+      const note = document.createElement('p');
+      note.className = 'shoot-mode-empty';
+      note.textContent = notes.join(' ');
+      body.appendChild(note);
+    }
+
+    if (week) {
+      body.appendChild(sectionHeading('Weekly log'));
+      const card = document.createElement('div');
+      card.className = 'card log-card monday-brief-log';
+      card.innerHTML = logWeekPaperHtml(week, 'Shoots', 'No takeaways logged last week.');
+      wireLogShootRefs(card);
+      body.appendChild(card);
+    }
+
+    // Still waiting on one: the Overview's Pending reflections, so not an
+    // archived shoot — the list "Reflect now" opens leaves those out too.
+    const reflected = s => hasText(s.whatWentRight) || hasText(s.couldBeBetter) || hasText(s.lessonsLearned);
+    const unreflected = shoots.filter(s => !s.archived && !reflected(s));
+    if (unreflected.length) {
+      body.appendChild(sectionHeading('Reflections'));
+      // A shoot's days share its name, so each name once.
+      const names = joinWithAnd([...new Set(unreflected.map(shootDisplayName))]);
+      const text = document.createElement('p');
+      text.className = 'monday-brief-text';
+      text.textContent = shoots.some(reflected)
+        ? `Reflections still missing for ${names}.`
+        : `You didn't write any reflections last week. Still missing for ${names}.`;
+      body.appendChild(text);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'primary small-btn shoot-mode-add-shot-btn';
+      btn.textContent = 'Reflect now';
+      // One: straight to its Reflection. More: the Overview's Pending
+      // reflections list, to pick which.
+      btn.addEventListener('click', () => {
+        leaveMondayBrief();
+        if (unreflected.length === 1) {
+          document.querySelector('.tab[data-view="shoots"]').click();
+          openShootPageAtReflection(unreflected[0].id);
+        } else {
+          openStatBoxDetail(STAT_BOX_FILTERS.reflections, STAT_BOX_TITLES.reflections, 'reflections');
+        }
+      });
+      body.appendChild(btn);
+    }
+
+    // Like askConfirm: a field left focused would keep the keyboard up over it.
+    if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    body.scrollTop = 0;
+    document.getElementById('mondayBriefOverlay').hidden = false;
+  }
+
+  // Left for somewhere else (a shoot, the Pending reflections list): the
+  // daily report it was holding back waits until that's closed too.
+  function leaveMondayBrief() {
+    const overlay = document.getElementById('mondayBriefOverlay');
+    if (overlay.hidden) return;
+    overlay.hidden = true;
+    launchTailOwed = true;
+  }
+
+  // OK and the X: done reading, so the daily report it held back comes next
+  // (it does nothing if that's already shown today). No backdrop dismiss,
+  // like the other launch popups.
+  ['mondayBriefOkBtn', 'mondayBriefCloseBtn'].forEach(id => {
+    document.getElementById(id).addEventListener('click', () => {
+      document.getElementById('mondayBriefOverlay').hidden = true;
+      checkDailyReportPrompt();
+    });
+  });
+
   // Nothing used to flush pending edits when the app went away, so anything
   // typed inside the debounce window was lost if iOS discarded the backgrounded
   // tab — which it does aggressively. visibilitychange is the reliable signal on
@@ -19258,8 +19503,17 @@
     if (document.hidden) {
       flushPendingEdits();
       stopArchiveSlideshow();
-    } else if (!views.archive.hidden) {
-      startArchiveSlideshow();
+      return;
+    }
+    if (!views.archive.hidden) startArchiveSlideshow();
+    // Back from the background, which is how a home-screen app mostly
+    // "opens": Monday's brief, if it hasn't shown yet and nothing else is
+    // up. Not mid-launch, where the launch popups decide. The check-in goes
+    // first, as at launch, so a weekend shoot it asks about is in the brief
+    // once it's answered (its OK brings the brief).
+    if (!anyPopupOpen() && !document.documentElement.classList.contains('booting') && mondayBriefWaiting()) {
+      checkDayAfterPrompt();
+      if (document.getElementById('dayAfterPromptOverlay').hidden) maybeShowMondayBrief();
     }
   });
   window.addEventListener('pagehide', flushPendingEdits);
@@ -19312,7 +19566,9 @@
         if (document.getElementById('tabIntroOverlay').hidden) {
           checkDayAfterPrompt();
           if (document.getElementById('dayAfterPromptOverlay').hidden) {
-            checkDailyReportPrompt();
+            // On a Monday, last week's brief goes first and the daily
+            // report follows once it's closed.
+            if (!maybeShowMondayBrief()) checkDailyReportPrompt();
           }
         }
       }

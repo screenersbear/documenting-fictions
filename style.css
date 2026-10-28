@@ -5437,7 +5437,8 @@ h2.status-group-heading.heading-navy {
 /* Matches #shootModeTitle's own treatment (same header shape, one screen
    over) rather than the plain white/19px it had before — same bigger
    accent-coloured title both places, not a look unique to this one popup. */
-#shootModeReviewTitle {
+#shootModeReviewTitle,
+#mondayBriefTitle {
   margin: 0;
   font-family: var(--font-title);
   font-size: 22px;
@@ -5755,8 +5756,10 @@ h2.status-group-heading.heading-navy {
 
 /* Wild card popup: the Quick review card, but sized to its one card —
    .shoot-mode-modal's fixed working-view height would leave a short line
-   floating in an empty screen. Its max-height still caps a long one. */
-.shoot-mode-wild-card-modal {
+   floating in an empty screen. Its max-height still caps a long one.
+   The Monday brief sizes the same way, to however much last week had. */
+.shoot-mode-wild-card-modal,
+.monday-brief-modal {
   height: auto;
 }
 
@@ -5777,6 +5780,36 @@ h2.status-group-heading.heading-navy {
   line-height: 1.3;
   color: var(--text);
   overflow-wrap: break-word;
+}
+
+/* Monday brief: last week's numbers as the Overview's own tiles, then the
+   week's page of the Journal's weekly log, each inside the body's 20px
+   gutter (the body has none of its own, see .shoot-mode-body). The tiles
+   here are a read-out, not buttons, so they drop the tap look the
+   Overview's open a list with — the same way .log-card drops .card's. */
+.monday-brief-stats {
+  margin: 14px 20px;
+}
+
+.monday-brief-stats .stat-box {
+  cursor: default;
+}
+
+.monday-brief-stats .stat-box:active {
+  opacity: 1;
+}
+
+.monday-brief-log {
+  margin: 14px 20px;
+}
+
+.monday-brief-text {
+  margin: 0;
+  padding: 14px 20px 0;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--text);
+  overflow-wrap: anywhere;
 }
 
 /* Direction fields inside the Quick review popup — every field is its own

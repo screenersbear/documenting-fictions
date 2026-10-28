@@ -1582,6 +1582,24 @@
   </div>
 </div>
 
+<!-- Monday brief: last week at a glance, once a week (see Monday brief in
+     app.js). Quick review's card (its yellow eyebrow, a title, the X, a
+     scrolling body and one OK across the bottom), only as tall as what it
+     has to say, like Wild card. The body is filled in from app.js. -->
+<div id="mondayBriefOverlay" class="modal-overlay shoot-mode-overlay" hidden>
+  <div class="modal shoot-mode-modal shoot-mode-review-modal monday-brief-modal">
+    <div class="shoot-mode-header">
+      <div class="shoot-mode-heading-wrap">
+        <p class="shoot-mode-eyebrow">Monday brief</p>
+        <h2 id="mondayBriefTitle"></h2>
+      </div>
+      <button type="button" class="icon-btn close-btn" id="mondayBriefCloseBtn" aria-label="Close"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="shoot-mode-body" id="mondayBriefBody"></div>
+    <button type="button" class="primary shoot-mode-bottom-cta" id="mondayBriefOkBtn">OK</button>
+  </div>
+</div>
+
 <!-- ============ ADD DEADLINE PROMPT ============ -->
 <div id="deadlinePromptOverlay" class="modal-overlay intro-overlay" hidden>
   <div class="modal intro-modal daily-report-modal">
