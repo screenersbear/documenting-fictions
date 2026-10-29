@@ -2502,10 +2502,11 @@
         description: item.description !== undefined ? item.description : (item.text || ''),
       }));
       // Blank rows are dropped too — they'd only be empty lines to delete.
+      // A must-have still not got stays one.
       shoot.shotList = isPostCaptureStatus(source.status)
         ? (source.shotList || [])
           .filter(item => item && !item.checked && typeof item.text === 'string' && hasText(item.text))
-          .map(item => ({ ...(item.id ? { id: uid() } : {}), text: item.text, checked: false }))
+          .map(item => ({ ...(item.id ? { id: uid() } : {}), text: item.text, checked: false, ...(item.starred ? { starred: true } : {}) }))
         : [];
 
       const sourceTalents = source.talents || [];
@@ -4661,18 +4662,22 @@
         start: w.start,
         label: weekRangeLabel(w.start, w.end),
         shoots: w.shoots.slice().sort((a, b) => a.date.localeCompare(b.date)),
-        // Keeps each takeaway tied to the shoot it came from (rather than a
-        // flat list of strings) so tapping one can open that same shoot.
-        // One shoot's Lessons Learned is always exactly one takeaway here —
-        // splitting on every newline used to turn a single entry into
-        // several bullets the moment it had a paragraph break in it, which
-        // read as several distinct lessons instead of the one the shoot
-        // actually had. Internal line breaks are collapsed to spaces rather
-        // than dropped outright, so the text stays readable as one bullet.
-        takeaways: w.shoots
-          .map(s => ({ text: (s.lessonsLearned || '').replace(/\s*\n+\s*/g, ' ').trim(), shootId: s.id }))
-          .filter(t => t.text),
+        takeaways: logTakeaways(w.shoots),
       }));
+  }
+
+  // Keeps each takeaway tied to the shoot it came from (rather than a
+  // flat list of strings) so tapping one can open that same shoot.
+  // One shoot's Lessons Learned is always exactly one takeaway here —
+  // splitting on every newline used to turn a single entry into
+  // several bullets the moment it had a paragraph break in it, which
+  // read as several distinct lessons instead of the one the shoot
+  // actually had. Internal line breaks are collapsed to spaces rather
+  // than dropped outright, so the text stays readable as one bullet.
+  function logTakeaways(shoots) {
+    return shoots
+      .map(s => ({ text: (s.lessonsLearned || '').replace(/\s*\n+\s*/g, ' ').trim(), shootId: s.id }))
+      .filter(t => t.text);
   }
 
   // Tapping a shoot or takeaway in the Log opens a small "this refers to"
@@ -6056,6 +6061,24 @@
     if (!shootModalOverlay.hidden && currentShootId === day.id) updateMultiDayRow();
   }
 
+  // A shot's must-have star, between its text and its × on both shot lists
+  // (the shoot page's and Shoot mode's): the × button's own circle, with a
+  // navy star that fills yellow once the shot is a must-have. Stored as
+  // `starred: true` on the item, and left off rather than false.
+  function shotStarButtonHtml(item, idx) {
+    return `<button type="button" class="star-shot${item.starred ? ' starred' : ''}" data-idx="${idx}" aria-label="Must-have shot" aria-pressed="${item.starred ? 'true' : 'false'}"><svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.6 1-4.75 4.6 1.1 6.5L12 17.4l-5.85 3.1 1.1-6.5L2.5 9.4l6.6-1z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>`;
+  }
+
+  // Flips a shot's star in place (no re-render, so nothing jumps), and
+  // returns whether it's starred now.
+  function toggleShotStar(item, btn) {
+    if (item.starred) delete item.starred;
+    else item.starred = true;
+    btn.classList.toggle('starred', !!item.starred);
+    btn.setAttribute('aria-pressed', item.starred ? 'true' : 'false');
+    return !!item.starred;
+  }
+
   function renderShotList(focusIdx, refocusCheckIdx) {
     const container = document.getElementById('shotListItems');
     const scroller = shootListScroller(container);
@@ -6067,10 +6090,18 @@
         <button type="button" class="shot-drag-handle" aria-label="Drag to reorder shot" tabindex="-1">&#8942;</button>
         <input type="checkbox" class="shot-check" data-idx="${item.idx}" ${item.checked ? 'checked' : ''} />
         <textarea class="shot-text" data-idx="${item.idx}" rows="1" placeholder="Describe the shot">${escapeHtml(item.text || '')}</textarea>
+        ${shotStarButtonHtml(item, item.idx)}
         <button type="button" class="delete-shot" data-idx="${item.idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     `).join('');
 
+    // A button fires none of the form's own autosave events, so it asks.
+    container.querySelectorAll('.star-shot').forEach(btn => {
+      btn.addEventListener('click', () => {
+        toggleShotStar(currentShotList[Number(btn.dataset.idx)], btn);
+        scheduleShootAutosave();
+      });
+    });
     container.querySelectorAll('.shot-check').forEach(cb => {
       cb.addEventListener('change', () => {
         const idx = Number(cb.dataset.idx);
@@ -12579,7 +12610,9 @@
     }
   ];
 
-  let reflectHelper = null; // { flow, index, answers: [text per question], voiceTip }
+  // { flow, questions (the flow's, plus any wild card ones), index,
+  //   answers: [text per question], voiceTip }
+  let reflectHelper = null;
 
   // The first time the helper opens on this device, question 1 also says
   // talking works (the keyboard's mic). A page can't start dictation itself,
@@ -12600,9 +12633,33 @@
     reflectHelper.answers[reflectHelper.index] = document.getElementById('reflectHelperInput').value.trim();
   }
 
+  // A Wild card tapped "Tried it" on in Shoot mode gets a question of its
+  // own, among the "What went right" ones — the three most recent, at most.
+  // One whose words are already in that box (the helper run before) isn't
+  // asked again. A bare "yes" still says something (sayYes); a "no" is
+  // left out like any other.
+  function wildCardReflectQuestions() {
+    const shoot = state.shoots.find(s => s.id === currentShootId);
+    const cards = shoot && Array.isArray(shoot.triedWildCards) ? shoot.triedWildCards : [];
+    const wentRight = document.getElementById('shootWentRight').value;
+    // Only a closing full stop comes off for the sentence: a card that ends
+    // on a question keeps its question mark.
+    return cards.map(card => ({ card, plain: card.trim().replace(/[.…]+$/, '') }))
+      .filter(({ plain }) => plain && !wentRight.includes(plain))
+      .slice(-3)
+      .map(({ card, plain }) => ({
+        field: 'right',
+        text: `You tried “${card.trim()}” Did it give you anything?`,
+        placeholder: 'e.g. the shot of her hands on the rail',
+        say: `From the wild card “${plain}”: {a}.`,
+        sayYes: `The wild card “${plain}” paid off.`,
+        lower: true,
+      }));
+  }
+
   function renderReflectHelper() {
     const h = reflectHelper;
-    const questions = h.flow.questions;
+    const questions = h.questions;
     const q = questions[h.index];
     const isLast = h.index === questions.length - 1;
     document.getElementById('reflectHelperStep').textContent = `Question ${h.index + 1} of ${questions.length}`;
@@ -12630,7 +12687,7 @@
     if (!h) return;
     storeReflectAnswer();
     const next = h.index + step;
-    if (next >= h.flow.questions.length) { finishReflectHelper(); return; }
+    if (next >= h.questions.length) { finishReflectHelper(); return; }
     h.index = Math.max(0, next);
     renderReflectHelper();
   }
@@ -12645,6 +12702,7 @@
   // "I'll" isn't doubled, and an answer with its own "I…" ("I need to…")
   // uses `sayOwn` instead.
   function reflectSentence(q, answer) {
+    if (q.sayYes && /^(yes|yeah|yep|yup|definitely|it did)[\s!.]*$/i.test((answer || '').trim())) return q.sayYes;
     let text = (answer || '').trim().replace(/[.!?…]+$/, '')
       .replace(/^(yes|yeah|yep|yup|definitely)\b[\s,;:!.—–-]*/i, '');
     if (!text || CONCEPT_HELPER_NONE.test(text) || REFLECTION_NOTHING.test(text)) return '';
@@ -12672,7 +12730,7 @@
     storeReflectAnswer();
     const fills = Object.keys(REFLECTION_FIELDS).map(key => {
       const field = document.getElementById(REFLECTION_FIELDS[key].fieldId);
-      const text = h.flow.questions
+      const text = h.questions
         .map((q, i) => (q.field === key ? reflectSentence(q, h.answers[i]) : ''))
         .filter(Boolean).join(' ')
         .slice(0, field.maxLength > 0 ? field.maxLength : 1000);
@@ -12703,7 +12761,12 @@
       voiceTip = localStorage.getItem(REFLECT_VOICE_TIP_KEY) !== '1';
       if (voiceTip) localStorage.setItem(REFLECT_VOICE_TIP_KEY, '1');
     } catch (err) { voiceTip = false; /* storage unavailable — nothing to remember it in, so not shown every time */ }
-    reflectHelper = { flow: reflectFlowFor(document.getElementById('shootCategory').value || ''), index: 0, answers: [], voiceTip };
+    const flow = reflectFlowFor(document.getElementById('shootCategory').value || '');
+    // Wild card questions go after the flow's own "What went right" ones.
+    const questions = [...flow.questions];
+    const firstBetter = questions.findIndex(q => q.field !== 'right');
+    questions.splice(firstBetter === -1 ? questions.length : firstBetter, 0, ...wildCardReflectQuestions());
+    reflectHelper = { flow, questions, index: 0, answers: [], voiceTip };
     renderReflectHelper();
     document.getElementById('reflectHelperOverlay').hidden = false;
   }
@@ -17709,10 +17772,22 @@
         <button type="button" class="shot-drag-handle" aria-label="Drag to reorder shot" tabindex="-1">&#8942;</button>
         <input type="checkbox" class="shoot-mode-shot-check" data-idx="${idx}" ${item.checked ? 'checked' : ''} />
         <textarea class="shot-text" data-idx="${idx}" rows="1" placeholder="Describe the shot">${escapeHtml(item.text || '')}</textarea>
+        ${shotStarButtonHtml(item, idx)}
         <button type="button" class="delete-shot" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
       </div>
     `).join('');
     document.getElementById('shootModeShotsEmpty').hidden = shots.length !== 0;
+
+    list.querySelectorAll('.star-shot').forEach(btn => {
+      btn.addEventListener('click', () => {
+        toggleShotStar(shoot.shotList[Number(btn.dataset.idx)], btn);
+        saveState();
+        renderShootModeClock();
+      });
+    });
+    // The must-haves still to get (see renderShootModeClock) can change
+    // with any re-render: a shot deleted, or put back.
+    renderShootModeClock();
 
     list.querySelectorAll('.shoot-mode-shot-check').forEach(cb => {
       cb.addEventListener('change', () => {
@@ -17721,6 +17796,7 @@
         saveState();
         cb.closest('.shoot-mode-shot-row').classList.toggle('shot-checked', cb.checked);
         renderAll();
+        renderShootModeClock();
       });
     });
     list.querySelectorAll('.shot-text').forEach(textarea => {
@@ -17930,6 +18006,8 @@
     renderShootModeShots(shoot);
     renderShootModeMoodboard(shoot);
     document.getElementById('shootModeShootingNotes').value = shoot.shootingNotes || '';
+    showShootModeLastTime(shoot);
+    startShootModeClock();
     shootModeOverlay.hidden = false;
     // renderShootModeShots() ran while shootModeOverlay was still hidden, so
     // every row measured zero height and kept its one-line default — same
@@ -17944,7 +18022,253 @@
 
   function exitShootMode() {
     setShootModeShootId(null);
+    stopShootModeClock();
+    shootCoordsAsked = false;
     shootModeOverlay.hidden = true;
+  }
+
+  // ---------- Shoot mode clock ----------
+  // Under the shoot's name: when it wraps and, on the shoot's day, how long
+  // is left ("Wrap 6:30 PM · 1h 12m left", then "10m over"). Tapping the wrap
+  // time moves it: the shoot's own end time, for a shoot that's running
+  // long. Under that, golden hour when it falls inside the shoot, and with
+  // MUST_HAVE_WARNING_MINUTES or less to go, how many must-have (starred)
+  // shots are still to get. Redrawn every 30 seconds while Shoot mode is up,
+  // and whenever a shot is ticked, starred or removed.
+  const MUST_HAVE_WARNING_MINUTES = 45;
+  let shootModeClockTimer = null;
+
+  function startShootModeClock() {
+    stopShootModeClock();
+    renderShootModeClock();
+    shootModeClockTimer = setInterval(renderShootModeClock, 30000);
+  }
+
+  function stopShootModeClock() {
+    clearInterval(shootModeClockTimer);
+    shootModeClockTimer = null;
+  }
+
+  // 'HH:MM' on a shoot's date, as a Date; null without both.
+  function shootDateTime(dateStr, timeStr) {
+    if (!dateStr || !/^\d{1,2}:\d{2}/.test(timeStr || '')) return null;
+    const at = parseShootDate(dateStr);
+    const [h, m] = timeStr.split(':').map(Number);
+    at.setHours(h, m, 0, 0);
+    return at;
+  }
+
+  // When a shoot wraps: its end time on its date, or the next morning for a
+  // shoot that runs past midnight — an end at or before its start, or with
+  // no start time, an end before 5am (the hour the app's day turns over,
+  // see effectiveReportDateStr).
+  function shootWrapAt(shoot) {
+    const wrap = shootDateTime(shoot.date, shoot.endTime);
+    const start = shootDateTime(shoot.date, shoot.startTime);
+    if (wrap && (start ? wrap <= start : wrap.getHours() < 5)) wrap.setDate(wrap.getDate() + 1);
+    return wrap;
+  }
+
+  function clockTimeOf(date) {
+    return prettyTime(`${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`);
+  }
+
+  // "5:41–6:29 PM", or "11:40 AM–12:15 PM" across noon.
+  function clockRangeOf(from, to) {
+    const a = clockTimeOf(from);
+    const b = clockTimeOf(to);
+    return a.slice(-2) === b.slice(-2) ? `${a.slice(0, -3)}–${b}` : `${a}–${b}`;
+  }
+
+  // "1h 12m", "2h", "45m".
+  function formatMinutes(mins) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (!h) return `${m}m`;
+    return m ? `${h}h ${m}m` : `${h}h`;
+  }
+
+  // The next whole or half hour from now, as 'HH:MM': what the picker opens
+  // on for a shoot with no wrap time yet. Left empty, iOS fills in the time
+  // right now as it opens.
+  function nextHalfHour(now) {
+    const at = new Date(now);
+    at.setSeconds(0, 0);
+    at.setMinutes(at.getMinutes() < 30 ? 30 : 60);
+    return `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+  }
+
+  function renderShootModeClock() {
+    const shoot = state.shoots.find(s => s.id === getShootModeShootId());
+    if (!shoot) return;
+    const now = new Date();
+    const input = document.getElementById('shootModeWrapInput');
+    document.getElementById('shootModeWrapPill').textContent = shoot.endTime ? `Wrap ${prettyTime(shoot.endTime)}` : 'Set wrap time';
+    // Not while the picker's open on it: its wheel writes as it turns.
+    if (document.activeElement !== input) input.value = shoot.endTime || nextHalfHour(now);
+
+    // A countdown only on the shoot's own day (from 5am, the same day the
+    // launch popups use), and only with a wrap time to count to.
+    const onTheDay = !!shoot.date && shoot.date === effectiveReportDateStr();
+    const wrap = onTheDay ? shootWrapAt(shoot) : null;
+    let minsLeft = null;
+    let leftText = '';
+    if (wrap) {
+      const ms = wrap - now;
+      minsLeft = ms > 0 ? Math.ceil(ms / 60000) : -Math.floor(-ms / 60000);
+      if (minsLeft > 0) leftText = `${formatMinutes(minsLeft)} left`;
+      else leftText = minsLeft < 0 ? `${formatMinutes(-minsLeft)} over` : "It's wrap time";
+    }
+    document.getElementById('shootModeTimeLeft').textContent = leftText;
+
+    const mustHaves = (shoot.shotList || []).filter(item => item && item.starred && !item.checked && hasText(item.text)).length;
+    const mustHavesEl = document.getElementById('shootModeMustHaves');
+    mustHavesEl.hidden = !(mustHaves && minsLeft !== null && minsLeft <= MUST_HAVE_WARNING_MINUTES);
+    mustHavesEl.textContent = `${mustHaves} must-have${mustHaves === 1 ? '' : 's'} to go`;
+
+    const goldenEl = document.getElementById('shootModeGoldenHour');
+    const coords = onTheDay ? shootModeCoords() : null;
+    const golden = coords ? shootGoldenHour(shoot, coords, now) : null;
+    goldenEl.hidden = !golden;
+    if (golden) {
+      goldenEl.textContent = golden.start <= now
+        ? `Golden hour now, until ${clockTimeOf(golden.end)}`
+        : `Golden hour ${clockRangeOf(golden.start, golden.end)}`;
+    }
+  }
+
+  // A wrap time picked on the pill. Saved on 'change' and again on blur —
+  // iOS changes the value as its wheel turns, and its Done may close the
+  // picker without one — straight to the shoot, like everything else in
+  // Shoot mode. A project's days don't share their times, so a day's own
+  // wrap moves alone. An empty value (the picker's Reset) changes nothing.
+  function saveShootModeWrap() {
+    const shoot = state.shoots.find(s => s.id === getShootModeShootId());
+    const value = document.getElementById('shootModeWrapInput').value.slice(0, 5);
+    if (!shoot || !/^\d{2}:\d{2}$/.test(value) || value === shoot.endTime) return;
+    shoot.endTime = value;
+    saveState();
+    renderShootModeClock();
+  }
+
+  document.getElementById('shootModeWrapInput').addEventListener('change', saveShootModeWrap);
+  document.getElementById('shootModeWrapInput').addEventListener('blur', saveShootModeWrap);
+
+  // ---------- Golden hour ----------
+  // Where the phone is, for the sun: asked the first time Shoot mode's up on
+  // a shoot day, then kept for COORDS_FRESH_MS, since iOS asks again almost
+  // every time a home-screen app wants it, and a few kilometres move the sun
+  // by seconds. Turned down, it isn't asked again for COORDS_DENIED_MS. With
+  // no location there's no golden hour line, and nothing else changes.
+  const SHOOT_COORDS_KEY = 'dailies_shoot_coords_v1';
+  const COORDS_FRESH_MS = 12 * 60 * 60 * 1000;
+  const COORDS_DENIED_MS = 30 * 24 * 60 * 60 * 1000;
+  let shootCoords = null;
+  let shootCoordsAsked = false; // once each time Shoot mode opens (exitShootMode resets it)
+
+  function loadShootCoords() {
+    if (shootCoords) return shootCoords;
+    try { shootCoords = JSON.parse(localStorage.getItem(SHOOT_COORDS_KEY)) || null; } catch (e) { shootCoords = null; }
+    return shootCoords;
+  }
+
+  function saveShootCoords(value) {
+    shootCoords = value;
+    try { localStorage.setItem(SHOOT_COORDS_KEY, JSON.stringify(value)); } catch (e) { /* kept in memory for now */ }
+  }
+
+  // Coordinates to work the sun out from, or null — asking for new ones
+  // when they're missing or stale (the clock redraws once they arrive).
+  // Stale ones still stand in, up to COORDS_FALLBACK_MS old, while that ask
+  // is out or if it fails (no signal indoors), so golden hour doesn't vanish
+  // from a long shoot day when the morning's fix turns 12 hours old.
+  const COORDS_FALLBACK_MS = 3 * 24 * 60 * 60 * 1000;
+
+  function shootModeCoords() {
+    const saved = loadShootCoords();
+    const age = saved ? Date.now() - (saved.at || 0) : Infinity;
+    const usable = !!saved && !saved.denied && typeof saved.lat === 'number' && typeof saved.lng === 'number';
+    if (saved && saved.denied) {
+      if (age < COORDS_DENIED_MS) return null;
+    } else if (usable && age < COORDS_FRESH_MS) {
+      return saved;
+    }
+    if (!shootCoordsAsked && navigator.geolocation) {
+      shootCoordsAsked = true;
+      navigator.geolocation.getCurrentPosition(pos => {
+        saveShootCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude, at: Date.now() });
+        if (!shootModeOverlay.hidden) renderShootModeClock();
+      }, err => {
+        // Turned down (not just slow, or no signal indoors).
+        if (err && err.code === 1) saveShootCoords({ denied: true, at: Date.now() });
+      }, { timeout: 20000, maximumAge: 30 * 60 * 1000 });
+    }
+    return usable && age < COORDS_FALLBACK_MS ? saved : null;
+  }
+
+  // When the sun crosses `altitude` degrees on `day` at lat/lng, rising and
+  // setting, or null when it doesn't that day (far north or south). From
+  // SunCalc's formulas (Vladimir Agafonkin, BSD-2-Clause), which land within
+  // a few minutes: closer than golden hour needs. Worked from the day's
+  // local noon, so it's that day's sun.
+  function sunCrossings(day, lat, lng, altitude) {
+    const rad = Math.PI / 180;
+    const J2000 = 2451545;
+    const J0 = 0.0009;
+    const noon = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12);
+    const d = noon.getTime() / 86400000 - 0.5 + 2440588 - J2000;
+    const lw = rad * -lng;
+    const phi = rad * lat;
+    const n = Math.round(d - J0 - lw / (2 * Math.PI));
+    const ds = J0 + lw / (2 * Math.PI) + n;
+    const M = rad * (357.5291 + 0.98560028 * ds);
+    const C = rad * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
+    const L = M + C + rad * 102.9372 + Math.PI;
+    const dec = Math.asin(Math.sin(rad * 23.4397) * Math.sin(L));
+    const transit = J2000 + ds + 0.0053 * Math.sin(M) - 0.0069 * Math.sin(2 * L);
+    const x = (Math.sin(rad * altitude) - Math.sin(phi) * Math.sin(dec)) / (Math.cos(phi) * Math.cos(dec));
+    if (x < -1 || x > 1) return null;
+    const w = Math.acos(x);
+    const set = J2000 + J0 + (w + lw) / (2 * Math.PI) + n + 0.0053 * Math.sin(M) - 0.0069 * Math.sin(2 * L);
+    const toDate = j => new Date((j + 0.5 - 2440588) * 86400000);
+    return { rise: toDate(2 * transit - set), set: toDate(set) };
+  }
+
+  // The golden hour — the sun between 6° up and 4° below the horizon — that
+  // falls in the shoot: whichever of the day's two (morning, evening) isn't
+  // over yet and overlaps the shoot from its start time to its wrap. With
+  // no start or wrap time, that end is left open. Null when neither does.
+  function shootGoldenHour(shoot, { lat, lng }, now) {
+    const day = parseShootDate(shoot.date);
+    const high = sunCrossings(day, lat, lng, 6);
+    const low = sunCrossings(day, lat, lng, -4);
+    if (!high || !low) return null;
+    const from = shootDateTime(shoot.date, shoot.startTime);
+    const to = shootWrapAt(shoot);
+    return [{ start: low.rise, end: high.rise }, { start: high.set, end: low.set }]
+      .find(w => w.end > now && (!from || w.end > from) && (!to || w.start < to)) || null;
+  }
+
+  // ---------- Last time, in Shoot mode ----------
+  // The first sentence of the lessons from the newest shoot of the same
+  // category shot on or before this one (lastShootWithLessons), in the same
+  // "Last time (name, date)" line the shoot page's guide uses. Read-only
+  // here: the Shooting notes box is right below if it's worth copying.
+  function showShootModeLastTime(shoot) {
+    const el = document.getElementById('shootModeLastTime');
+    const past = shoot.category
+      ? lastShootWithLessons(s => s.category === shoot.category && (!s.date || !shoot.date || s.date <= shoot.date), shoot.id)
+      : null;
+    el.hidden = !past;
+    if (!past) return;
+    const lessons = past.lessonsLearned.trim().replace(/\s*\n+\s*/g, ' ');
+    // A sentence ends where the next one starts with a capital (or the text
+    // ends), so "9 a.m." or "e.g." doesn't cut it short.
+    const first = (lessons.match(/^.*?[.!?…](?=\s+[A-Z“"‘'(]|$)/) || [lessons])[0];
+    const line = first.length > 160 ? `${first.slice(0, 160).replace(/\s+\S*$/, '')}…` : first;
+    const when = prettyDate(past.date);
+    const source = when ? `${shootDisplayName(past)}, ${when}` : shootDisplayName(past);
+    el.innerHTML = `<span class="field-hint-bold">Last time</span> (${escapeHtml(source)}): “${escapeHtml(line)}”`;
   }
 
   document.getElementById('shootModeExitBtn').addEventListener('click', exitShootMode);
@@ -18251,10 +18575,11 @@
   // pick, and gone with the popup or slide it's on.
 
   // The newest shoot (by shoot date; undated ones last) that passes
-  // `matches` and has lessons to pass on, or null.
-  function lastShootWithLessons(matches) {
+  // `matches` and has lessons to pass on, or null. Never `excludeId`: the
+  // shoot that's open (Shoot mode passes its own).
+  function lastShootWithLessons(matches, excludeId = currentShootId) {
     return state.shoots
-      .filter(s => s.id !== currentShootId && isPostCaptureStatus(s.status) && hasText(s.lessonsLearned) && matches(s))
+      .filter(s => s.id !== excludeId && isPostCaptureStatus(s.status) && hasText(s.lessonsLearned) && matches(s))
       .sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0] || null;
   }
 
@@ -18624,6 +18949,7 @@
     const focused = document.activeElement;
     if (focused && focused !== document.body && typeof focused.blur === 'function') focused.blur();
     document.getElementById('shootModeWildCardText').textContent = drawWildCard();
+    syncWildCardTried();
     document.getElementById('shootModeWildCardOverlay').hidden = false;
   }
 
@@ -18631,11 +18957,34 @@
     document.getElementById('shootModeWildCardOverlay').hidden = true;
   }
 
+  // "Tried it", or once it's been tapped for this card on this shoot, the
+  // line saying it's kept.
+  function syncWildCardTried() {
+    const shoot = state.shoots.find(s => s.id === getShootModeShootId());
+    const card = document.getElementById('shootModeWildCardText').textContent;
+    const tried = !!shoot && Array.isArray(shoot.triedWildCards) && shoot.triedWildCards.includes(card);
+    document.getElementById('shootModeWildCardTriedBtn').hidden = tried;
+    document.getElementById('shootModeWildCardSaved').hidden = !tried;
+  }
+
   document.getElementById('shootModeWildCardBtn').addEventListener('click', showWildCard);
   // "Another" draws the next card in place, from the same deck.
   document.getElementById('shootModeWildCardAnotherBtn').addEventListener('click', showWildCard);
   document.getElementById('shootModeWildCardCloseBtn').addEventListener('click', closeWildCard);
   document.getElementById('shootModeWildCardOkBtn').addEventListener('click', closeWildCard);
+  // Keeps the card on screen with the shoot (triedWildCards: the card's own
+  // words, oldest first, each once) for its reflection to ask how it went
+  // (see wildCardReflectQuestions). Looked up fresh: the shoot page's
+  // autosave swaps the shoot object for a new one.
+  document.getElementById('shootModeWildCardTriedBtn').addEventListener('click', () => {
+    const shoot = state.shoots.find(s => s.id === getShootModeShootId());
+    const card = document.getElementById('shootModeWildCardText').textContent;
+    if (!shoot || !card) return;
+    if (!Array.isArray(shoot.triedWildCards)) shoot.triedWildCards = [];
+    if (!shoot.triedWildCards.includes(card)) shoot.triedWildCards.push(card);
+    saveState();
+    syncWildCardTried();
+  });
 
   function resumeShootModeIfActive() {
     const id = getShootModeShootId();
@@ -19278,19 +19627,20 @@
   // ---------- Monday brief (last week, once a week on open) ----------
   // The first time the app's opened on a Monday — from 5am, the same day
   // boundary as the daily report (effectiveReportDateStr) — a look back at
-  // last week to take into the new one: its numbers first (shoots, photos
-  // delivered, locations), then that week's page of the Journal's weekly log
-  // (its shoots and the lessons learned from each), and a nudge for any shoot
-  // still without a reflection. "Last week" is the weekly log's own week,
-  // Sunday to Saturday, so the two always agree — which leaves yesterday,
-  // Sunday, to next Monday's.
+  // last week to take into the new one: its numbers first (shoots, shoots
+  // delivered, locations), then the week laid out like a page of the
+  // Journal's weekly log (its shoots and the lessons learned from each), and
+  // a nudge for any shoot still without a reflection. "Last week" is Monday
+  // to Sunday, the seven days up to yesterday — not the weekly log's own
+  // Sunday-to-Saturday week, which would leave yesterday's shoot for next
+  // Monday.
   // It's the last launch popup before the daily report, which follows it
   // once it's closed, so a Monday still gets both. It's checked when the app
   // comes back from the background too (a home-screen app is rarely
   // launched fresh), but only with nothing else on screen.
   const MONDAY_BRIEF_SHOWN_KEY = 'dailies_monday_brief_shown_v1';
-  // A brief on its way (it waits on an IndexedDB read), so a second check
-  // meanwhile doesn't start another.
+  // A brief on its way (it shows on the next tick, see maybeShowMondayBrief),
+  // so a second check meanwhile doesn't start another.
   let mondayBriefPending = false;
   // The end of the launch line-up (this brief, then the daily report) when
   // it couldn't show: something else opened while the brief was on its way,
@@ -19325,14 +19675,17 @@
   function mondayBriefDue() {
     const today = mondayBriefWaiting();
     if (!today) return null;
-    const start = shootWeekWindow(today).start;
-    start.setDate(start.getDate() - 7);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
+    const end = parseShootDate(today);
+    end.setDate(end.getDate() - 1);
+    const start = new Date(end);
+    start.setDate(end.getDate() - 6);
     const startStr = formatDate(start);
     const endStr = formatDate(end);
-    // Weeks with no shoot shot aren't in the log at all.
-    const week = computeWeeklyLog().find(w => formatDate(w.start) === startStr) || null;
+    // Shot last week: the weekly log's own rule (a date and Captured or
+    // later), over these seven days.
+    const shoots = state.shoots
+      .filter(s => s.date && s.date >= startStr && s.date <= endStr && POST_CAPTURE_STATUSES.includes(s.status))
+      .sort((a, b) => a.date.localeCompare(b.date));
     // Delivered last week means marked Delivered last week (deliveredAt),
     // whenever it was shot, and still Delivered — one sent back for
     // revisions since hasn't gone out yet.
@@ -19343,37 +19696,35 @@
       const day = formatDate(at);
       return day >= startStr && day <= endStr;
     });
-    if (!week && !delivered.length) return null;
+    if (!shoots.length && !delivered.length) return null;
+    const week = shoots.length ? { shoots, takeaways: logTakeaways(shoots) } : null;
     return { today, label: weekRangeLabel(start, end), week, delivered };
   }
 
   // Shows this Monday's brief if one's due. True when it's on its way, so
-  // the launch leaves the daily report for after it.
+  // the launch leaves the daily report for after it. It shows on the next
+  // tick, after the rest of the launch: an entry being written when the app
+  // went away (restoreOpenJournalEntry) opens first, and the brief waits.
   function maybeShowMondayBrief() {
     if (mondayBriefPending) return true;
     if (document.documentElement.classList.contains('update-reloading')) return false;
     const brief = mondayBriefDue();
     if (!brief) return false;
     mondayBriefPending = true;
-    // Photos delivered are the final images on those shoots — the only count
-    // of photos the app has. Video has none.
-    const keys = brief.delivered.filter(s => !isVideoShoot(s)).map(s => finalImagesKey(s.id));
-    (keys.length ? idbGetManyImages(keys) : Promise.resolve(new Map()))
-      .catch(() => new Map())
-      .then(finals => {
-        mondayBriefPending = false;
-        // A page an update's about to replace never shows it.
-        if (document.documentElement.classList.contains('update-reloading')) return;
-        // Something opened meanwhile (an entry being restored, a shoot from
-        // the list) keeps the screen; the brief waits until it's closed.
-        if (anyPopupOpen()) { launchTailOwed = true; return; }
-        try { localStorage.setItem(MONDAY_BRIEF_SHOWN_KEY, brief.today); } catch (e) { /* ignore */ }
-        renderMondayBrief(brief, finals);
-      });
+    Promise.resolve().then(() => {
+      mondayBriefPending = false;
+      // A page an update's about to replace never shows it.
+      if (document.documentElement.classList.contains('update-reloading')) return;
+      // Something opened meanwhile (an entry being restored, a shoot from
+      // the list) keeps the screen; the brief waits until it's closed.
+      if (anyPopupOpen()) { launchTailOwed = true; return; }
+      try { localStorage.setItem(MONDAY_BRIEF_SHOWN_KEY, brief.today); } catch (e) { /* ignore */ }
+      renderMondayBrief(brief);
+    });
     return true;
   }
 
-  function renderMondayBrief({ label, week, delivered }, finals) {
+  function renderMondayBrief({ label, week, delivered }) {
     document.getElementById('mondayBriefTitle').textContent = label;
     const body = document.getElementById('mondayBriefBody');
     body.innerHTML = '';
@@ -19390,37 +19741,19 @@
       const loc = normalizeLocation(s.location);
       if (['name', 'street', 'city', 'state', 'zip'].some(k => hasText(loc[k]))) locations.add(locationKey(loc));
     });
-    const photoShoots = delivered.filter(s => !isVideoShoot(s));
-    const finalsOf = s => finals.get(finalImagesKey(s.id)) || [];
-    const photoCount = photoShoots.reduce((n, s) => n + finalsOf(s).length, 0);
     const tile = (n, one, many) => `<div class="stat-box"><span class="stat-num">${n}</span><span class="stat-label">${n === 1 ? one : many}</span></div>`;
 
     body.appendChild(sectionHeading('Last week'));
     const stats = document.createElement('div');
     stats.className = 'stats-row monday-brief-stats';
-    // Soft hyphens, as on the Overview's tiles: a word too long for a third
-    // of a phone breaks inside its own tile rather than stretching it.
+    // Delivered counts shoots, photo and video alike: the app keeps no count
+    // of the photos in a delivery. Soft hyphens, as on the Overview's tiles:
+    // a word too long for a third of a phone breaks inside its own tile
+    // rather than stretching it.
     stats.innerHTML = tile(shoots.length, 'Shoot', 'Shoots')
-      + tile(photoCount, 'Photo deliv&shy;ered', 'Photos deliv&shy;ered')
+      + tile(delivered.length, 'Shoot deliv&shy;ered', 'Shoots deliv&shy;ered')
       + tile(locations.size, 'Loca&shy;tion', 'Loca&shy;tions');
     body.appendChild(stats);
-
-    // What the photo count leaves out, so a low one isn't a mystery.
-    const notes = [];
-    const videos = delivered.length - photoShoots.length;
-    if (videos) notes.push(`${videos} video${videos === 1 ? '' : 's'} delivered too.`);
-    const unphotographed = photoShoots.filter(s => !finalsOf(s).length).length;
-    if (unphotographed) {
-      notes.push(unphotographed === 1
-        ? "One delivered shoot has no final images added yet, so its photos aren't counted."
-        : `${unphotographed} delivered shoots have no final images added yet, so their photos aren't counted.`);
-    }
-    if (notes.length) {
-      const note = document.createElement('p');
-      note.className = 'shoot-mode-empty';
-      note.textContent = notes.join(' ');
-      body.appendChild(note);
-    }
 
     if (week) {
       body.appendChild(sectionHeading('Weekly log'));
@@ -19506,6 +19839,9 @@
       return;
     }
     if (!views.archive.hidden) startArchiveSlideshow();
+    // iOS holds timers in the background, so Shoot mode's time left is
+    // brought up to date straight away rather than at its next tick.
+    if (!shootModeOverlay.hidden) renderShootModeClock();
     // Back from the background, which is how a home-screen app mostly
     // "opens": Monday's brief, if it hasn't shown yet and nothing else is
     // up. Not mid-launch, where the launch popups decide. The check-in goes

@@ -1412,10 +1412,29 @@
       <div class="shoot-mode-heading-wrap">
         <p class="shoot-mode-eyebrow">Shoot mode</p>
         <h2 id="shootModeTitle"></h2>
+        <!-- The shoot's clock (see renderShootModeClock in app.js): the wrap
+             time as Archive mode's header pill, with the time left beside
+             it. The time input lies invisibly over the pill, so a tap opens
+             the phone's own time picker to move the wrap when the shoot
+             runs long. Under it, golden hour when it falls in the shoot, and
+             the must-haves still to get once time's short. -->
+        <div class="shoot-mode-clock">
+          <span class="shoot-mode-wrap">
+            <span class="archive-mode-details-btn shoot-mode-wrap-pill" id="shootModeWrapPill"></span>
+            <input type="time" class="shoot-mode-wrap-input" id="shootModeWrapInput" aria-label="Wrap time" />
+          </span>
+          <span class="shoot-mode-clock-text" id="shootModeTimeLeft"></span>
+        </div>
+        <p class="shoot-mode-clock-text shoot-mode-clock-line" id="shootModeGoldenHour" hidden></p>
+        <p class="shoot-mode-clock-text shoot-mode-clock-line shoot-mode-must-haves" id="shootModeMustHaves" hidden></p>
       </div>
       <button type="button" class="icon-btn close-btn" id="shootModeExitBtn" aria-label="Exit shoot mode"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div class="shoot-mode-body">
+      <!-- What last time's shoot of this kind taught (see
+           showShootModeLastTime in app.js), the same "Last time" line the
+           shoot page's guide shows. -->
+      <p class="field-hint shoot-mode-last-time" id="shootModeLastTime" hidden></p>
       <h3 class="shoot-mode-section-heading heading-yellow">Quick review</h3>
       <div class="shoot-mode-quick-review">
         <button type="button" class="shoot-mode-quick-review-btn" id="shootModeReviewDirectionBtn">Direction</button>
@@ -1484,6 +1503,13 @@
     </div>
     <div class="shoot-mode-body">
       <p class="shoot-mode-wild-card-text" id="shootModeWildCardText" aria-live="polite"></p>
+      <!-- "Tried it" keeps the card with this shoot, for its reflection to
+           ask about (see Wild card in app.js). White, like the "+ Add to
+           shooting notes" sub-action, under the yellow OK. -->
+      <div class="shoot-mode-wild-card-tried">
+        <button type="button" class="secondary small-btn" id="shootModeWildCardTriedBtn">Tried it</button>
+        <p class="field-hint" id="shootModeWildCardSaved" hidden>Saved. Your reflection will ask how it went.</p>
+      </div>
     </div>
     <div class="shoot-mode-bottom-bar">
       <button type="button" class="shoot-mode-bottom-cta shoot-mode-bottom-cta-secondary" id="shootModeWildCardAnotherBtn">Another</button>

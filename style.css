@@ -2815,7 +2815,8 @@ h2.status-group-heading.heading-navy {
   opacity: 0.55;
 }
 
-.delete-shot {
+.delete-shot,
+.star-shot {
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -2828,6 +2829,24 @@ h2.status-group-heading.heading-navy {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* The must-have star beside each shot's × (see shotStarButtonHtml): the
+   same circle, but a navy star rather than red, so it doesn't read as a
+   second delete. A must-have fills it yellow; the navy outline keeps it
+   visible on the white. Only the star changes — the row looks as it did. */
+.star-shot {
+  color: var(--text);
+}
+
+.star-icon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+}
+
+.star-shot.starred .star-icon {
+  fill: var(--accent);
 }
 
 .modal-actions[hidden] {
@@ -5464,6 +5483,66 @@ h2.status-group-heading.heading-navy {
   color: #fff;
 }
 
+/* Shoot mode's clock under the shoot's name (see renderShootModeClock): the
+   wrap time in Archive mode's header pill (.archive-mode-details-btn, the
+   one tappable thing an ink header already has), the time left beside it,
+   and golden hour and the must-haves on lines of their own. White on the
+   ink, like the eyebrow; the must-haves take the title's yellow, being the
+   one line that asks for something. */
+.shoot-mode-clock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 10px;
+}
+
+.shoot-mode-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Lies invisibly over the pill at its exact size, so a tap lands on the
+   input itself: the one way iOS opens its time picker (showPicker() doesn't
+   for a time input there). 16px so focusing it doesn't zoom the page. */
+.shoot-mode-wrap-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  font-size: 16px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.shoot-mode-clock-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.shoot-mode-clock-line {
+  margin: 6px 0 0;
+}
+
+.shoot-mode-clock-line.shoot-mode-must-haves {
+  color: var(--accent);
+}
+
+/* "Last time" at the top of Shoot mode (see showShootModeLastTime): the
+   shoot page's own .field-hint line, given the body's 20px gutter (it has
+   none of its own). The Quick review heading under it keeps its 14px. */
+.shoot-mode-last-time {
+  padding: 14px 20px 0;
+  overflow-wrap: anywhere;
+}
+
 /* Shoot mode and Archive mode each start right at a heading bar, so a pull
    down at the top bounced the content away from the header and showed the
    card's white above it (Quick review shares this, so it doesn't bounce
@@ -5773,13 +5852,23 @@ h2.status-group-heading.heading-navy {
    readable at arm's length with a camera in the other hand. */
 .shoot-mode-wild-card-text {
   margin: 0;
-  padding: 32px 24px 36px;
+  padding: 32px 24px 20px;
   font-family: var(--font-title);
   font-weight: 700;
   font-size: 22px;
   line-height: 1.3;
   color: var(--text);
   overflow-wrap: break-word;
+}
+
+/* "Tried it" under the card, lined up with its text, and the line that
+   replaces it once tapped. */
+.shoot-mode-wild-card-tried {
+  padding: 0 24px 28px;
+}
+
+.shoot-mode-wild-card-tried [hidden] {
+  display: none;
 }
 
 /* Monday brief: last week's numbers as the Overview's own tiles, then the
