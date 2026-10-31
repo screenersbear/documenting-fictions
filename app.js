@@ -18035,8 +18035,9 @@
   }
 
   // ---------- Shoot mode clock ----------
-  // Under the shoot's name: when it wraps and, on the shoot's day, how long
-  // is left ("Wrap 6:30 PM · 1h 12m left", then "10m over"). Tapping the wrap
+  // Under the shoot's name: when it wraps and, on the shoot's day, when it
+  // starts until it has, then how long is left ("Wrap 6:30 PM · 1h 12m
+  // left", then "10m over"). Tapping the wrap
   // time moves it: the shoot's own end time, for a shoot that's running
   // long. Under that, golden hour when it falls inside the shoot, and with
   // MUST_HAVE_WARNING_MINUTES or less to go, how many must-have (starred)
@@ -18115,12 +18116,16 @@
     if (document.activeElement !== input) input.value = shoot.endTime || nextHalfHour(now);
 
     // A countdown only on the shoot's own day (from 5am, the same day the
-    // launch popups use), and only with a wrap time to count to.
+    // launch popups use), with a wrap time to count to, and once the shoot
+    // has started: before its start time, that's what shows instead.
     const onTheDay = !!shoot.date && shoot.date === effectiveReportDateStr();
     const wrap = onTheDay ? shootWrapAt(shoot) : null;
+    const start = onTheDay ? shootDateTime(shoot.date, shoot.startTime) : null;
     let minsLeft = null;
     let leftText = '';
-    if (wrap) {
+    if (start && now < start) {
+      leftText = `Starts ${prettyTime(shoot.startTime)}`;
+    } else if (wrap) {
       const ms = wrap - now;
       minsLeft = ms > 0 ? Math.ceil(ms / 60000) : -Math.floor(-ms / 60000);
       if (minsLeft > 0) leftText = `${formatMinutes(minsLeft)} left`;
@@ -18261,6 +18266,9 @@
   // category shot on or before this one (lastShootWithLessons), in the same
   // "Last time (name, date)" line the shoot page's guide uses. Read-only
   // here: the Shooting notes box is right below if it's worth copying.
+  // When that leaves some of the lessons out, a small "…" pill closes the
+  // quote: a tap on it (or on the quote) opens all of it in place, the pill
+  // turning to an up arrow to fold it back — no "Read more" words added.
   function showShootModeLastTime(shoot) {
     const el = document.getElementById('shootModeLastTime');
     const past = shoot.category
@@ -18272,10 +18280,31 @@
     // A sentence ends where the next one starts with a capital (or the text
     // ends), so "9 a.m." or "e.g." doesn't cut it short.
     const first = (lessons.match(/^.*?[.!?…](?=\s+[A-Z“"‘'(]|$)/) || [lessons])[0];
-    const line = first.length > 160 ? `${first.slice(0, 160).replace(/\s+\S*$/, '')}…` : first;
+    const line = first.length > 160 ? first.slice(0, 160).replace(/\s+\S*$/, '') : first;
     const when = prettyDate(past.date);
     const source = when ? `${shootDisplayName(past)}, ${when}` : shootDisplayName(past);
-    el.innerHTML = `<span class="field-hint-bold">Last time</span> (${escapeHtml(source)}): “${escapeHtml(line)}”`;
+    const lead = `<span class="field-hint-bold">Last time</span> (${escapeHtml(source)}): `;
+    if (line === lessons) {
+      el.innerHTML = `${lead}“${escapeHtml(line)}”`;
+      return;
+    }
+    // The quote stays plain text, so it runs on from "Last time (…):" like
+    // before (a <button> always lays out as a block); only the pill is one.
+    el.innerHTML = `${lead}<span class="shoot-mode-last-time-quote"></span><button type="button" class="shoot-mode-last-time-more" aria-expanded="false"></button>”`;
+    const quote = el.querySelector('.shoot-mode-last-time-quote');
+    const more = el.querySelector('.shoot-mode-last-time-more');
+    const show = (open) => {
+      quote.textContent = `“${open ? lessons : line}`;
+      more.setAttribute('aria-expanded', open ? 'true' : 'false');
+      more.setAttribute('aria-label', open ? 'Show less' : 'Show the rest');
+      more.innerHTML = open
+        ? '<svg class="shoot-mode-last-time-less" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        : '<span aria-hidden="true">…</span>';
+    };
+    show(false);
+    const flip = () => show(more.getAttribute('aria-expanded') !== 'true');
+    more.addEventListener('click', flip);
+    quote.addEventListener('click', flip);
   }
 
   document.getElementById('shootModeExitBtn').addEventListener('click', exitShootMode);

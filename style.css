@@ -5543,6 +5543,37 @@ h2.status-group-heading.heading-navy {
   overflow-wrap: anywhere;
 }
 
+/* A lesson that's been cut short: a small pill closing the quote — "…",
+   then an up arrow once it's open — the one sign there's more to read,
+   with no words added for it. The quote itself can be tapped too. */
+.shoot-mode-last-time-quote {
+  cursor: pointer;
+}
+
+.shoot-mode-last-time-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 20px;
+  margin: 0 2px 0 4px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.shoot-mode-last-time-less {
+  width: 12px;
+  height: 12px;
+}
+
 /* Shoot mode and Archive mode each start right at a heading bar, so a pull
    down at the top bounced the content away from the header and showed the
    card's white above it (Quick review shares this, so it doesn't bounce
