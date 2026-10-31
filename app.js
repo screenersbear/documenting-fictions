@@ -1079,15 +1079,22 @@
     return `${y}-${m}-${day}`;
   }
 
+  // Weeks run Monday to Sunday everywhere in the app (Upcoming's This week /
+  // Next week, the shoot-date sort, the Journal's weekly log, the Monday
+  // brief): how many days `date` is past its week's Monday, 0-6.
+  function daysIntoWeek(date) {
+    return (date.getDay() + 6) % 7;
+  }
+
   // Buckets a future date string into this week / next week / later, for
-  // the Overview's Upcoming subheadings. Weeks run Sunday-Saturday.
+  // the Overview's Upcoming subheadings.
   function weekBucket(dateStr) {
     const [y, m, d] = dateStr.split('-').map(Number);
     const date = new Date(y, m - 1, d);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const endOfThisWeek = new Date(today);
-    endOfThisWeek.setDate(today.getDate() + (6 - today.getDay()));
+    endOfThisWeek.setDate(today.getDate() + (6 - daysIntoWeek(today)));
     const endOfNextWeek = new Date(endOfThisWeek);
     endOfNextWeek.setDate(endOfThisWeek.getDate() + 7);
     if (date <= endOfThisWeek) return 'this_week';
@@ -3340,7 +3347,7 @@
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const startOfThisWeek = new Date(today);
-    startOfThisWeek.setDate(today.getDate() - today.getDay());
+    startOfThisWeek.setDate(today.getDate() - daysIntoWeek(today));
     const endOfThisWeek = new Date(startOfThisWeek);
     endOfThisWeek.setDate(startOfThisWeek.getDate() + 6);
     const startOfNextWeek = new Date(endOfThisWeek);
@@ -4505,7 +4512,7 @@
 
   // Every card on the Journal page, newest first: the auto-generated weekly
   // log weeks and the entries written by hand, merged by date. A tie goes to
-  // the entry — a week is dated by its Sunday start, so anything written that
+  // the entry — a week is dated by its Monday start, so anything written that
   // day is the more recent of the two.
   function journalFeedItems() {
     const entries = journalFilter === 'log' ? [] : sortJournalEntriesRecent(state.journalEntries)
@@ -4623,13 +4630,13 @@
   // ---------- Journal weekly log (auto-generated recap) ----------
   // Fully derived from state.shoots — nothing here is persisted, so editing
   // a shoot's category or lessons-learned later just updates the log the
-  // next time it's opened. Weeks run Sunday-Saturday, matching weekBucket()'s
-  // convention elsewhere in the app.
+  // next time it's opened. Weeks run Monday to Sunday, like everywhere else
+  // in the app (daysIntoWeek).
   function shootWeekWindow(dateStr) {
     const [y, m, d] = dateStr.split('-').map(Number);
     const date = new Date(y, m - 1, d);
     const start = new Date(date);
-    start.setDate(date.getDate() - date.getDay());
+    start.setDate(date.getDate() - daysIntoWeek(date));
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
     return { start, end };
@@ -19631,9 +19638,8 @@
   // delivered, locations), then the week laid out like a page of the
   // Journal's weekly log (its shoots and the lessons learned from each), and
   // a nudge for any shoot still without a reflection. "Last week" is Monday
-  // to Sunday, the seven days up to yesterday — not the weekly log's own
-  // Sunday-to-Saturday week, which would leave yesterday's shoot for next
-  // Monday.
+  // to Sunday, the seven days up to yesterday: the same week as the weekly
+  // log's (see daysIntoWeek).
   // It's the last launch popup before the daily report, which follows it
   // once it's closed, so a Monday still gets both. It's checked when the app
   // comes back from the background too (a home-screen app is rarely
