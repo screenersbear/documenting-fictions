@@ -1,4 +1,4 @@
-const CACHE_NAME = 'starky-v123';
+const CACHE_NAME = 'starky-v124';
 const ASSETS = [
   './',
   './index.html',

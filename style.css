@@ -3984,8 +3984,11 @@ h2.status-group-heading.heading-navy {
 }
 
 /* Same for each lighting setup card: always open there (see
-   renderLightingSetups), so no fold toggle in its bar. */
-#shootWizardBody .lighting-setup-collapse-toggle {
+   renderLightingSetups), so no fold toggle in its bar. Its spot holds the
+   saved-setups chevron instead (toggleLightingBrowse in app.js), same
+   look, flagged hidden when no other shoot has a setup saved. */
+#shootWizardBody .lighting-setup-collapse-toggle:not(.lighting-setup-browse-toggle),
+.lighting-setup-browse-toggle[hidden] {
   display: none;
 }
 

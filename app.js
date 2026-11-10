@@ -6497,14 +6497,18 @@
   // Grouped by name across every shoot's lightingSetups, most-recent shoot's
   // version winning ties — same "most recent wins" shape as
   // getAllPastTalents/getLastLocationDirections, just without lead-count
-  // tiering since setups aren't ranked, only deduped.
-  function getPastLightingSetups() {
+  // tiering since setups aren't ranked, only deduped. `excludeId` leaves one
+  // setup out BEFORE the grouping (a card's own, see
+  // updateLightingSetupSuggestions), so a same-named setup from another shoot
+  // still gets listed instead of losing to the card's own newer copy.
+  function getPastLightingSetups(excludeId) {
     const sampleDates = {};
     const samples = {};
     const dismissed = new Set(state.dismissedLightingSetupKeys);
     state.shoots.forEach(s => {
       (s.lightingSetups || []).forEach(item => {
         if (!hasText(item.name)) return;
+        if (excludeId && item.id === excludeId) return;
         const key = item.name.trim().toLowerCase();
         if (dismissed.has(key)) return;
         const d = s.date || '';
@@ -6526,23 +6530,24 @@
   // setups are far more likely than a person's identity to legitimately
   // vary shoot to shoot under the same name (a different room, different
   // gear), so silently keeping every past "Rembrandt lighting" in sync
-  // would rewrite descriptions the user never touched.
-  function updateLightingSetupSuggestions(idx, input) {
+  // would rewrite descriptions the user never touched. Returns whether the
+  // dropdown ended up open (there was something to show). `browseAll` lists
+  // every saved setup whatever the name says (the guide's chevron).
+  function updateLightingSetupSuggestions(idx, input, browseAll = false) {
     const wrap = input.closest('.lighting-setup-name-wrap');
     const box = wrap.querySelector('.lighting-setup-suggestions');
     const card = input.closest('.lighting-setup-card');
-    const query = input.value.trim().toLowerCase();
-    const ownId = currentLightingSetups[idx].id;
-    const matches = getPastLightingSetups()
-      // Autosave can land mid-typing, which briefly puts THIS setup's own
-      // in-progress name into state.shoots — without this it would then
-      // suggest itself back to whoever's still typing it.
-      .filter(item => item.id !== ownId)
+    const query = browseAll ? '' : input.value.trim().toLowerCase();
+    // Its own id left out: autosave can land mid-typing, which briefly puts
+    // THIS setup's own in-progress name into state.shoots — it would then
+    // suggest itself back to whoever's still typing it.
+    const matches = getPastLightingSetups(currentLightingSetups[idx].id)
       .filter(item => !query || item.name.toLowerCase().includes(query));
     if (!matches.length) {
       box.hidden = true;
       card.classList.remove('lighting-setup-suggestions-open');
-      return;
+      setLightingBrowseExpanded(card, false);
+      return false;
     }
     // Manage leads the list, and every match is listed (the box scrolls past
     // its max-height) rather than a capped handful with Manage buried last.
@@ -6554,23 +6559,146 @@
       // mousedown (not click) fires before the field's blur, so the copy
       // lands before blur's own handler hides this dropdown out from
       // under it — preventDefault keeps focus on the field throughout.
-      btn.addEventListener('mousedown', (e) => {
-        e.preventDefault();
+      const pick = () => {
         const picked = matches[i];
         currentLightingSetups[idx].name = picked.name || '';
         currentLightingSetups[idx].characteristics = picked.characteristics || '';
         currentLightingSetups[idx].description = picked.description || '';
         renderLightingSetups();
         scheduleShootAutosave();
+      };
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        pick();
       });
+      // Enter/Space on a row reached with Tab — the guide's keyboard-free
+      // list stays open without its field focused — is a click with
+      // detail 0. Taps and mouse clicks already picked on mousedown.
+      btn.addEventListener('click', (e) => { if (e.detail === 0) pick(); });
     });
-    box.querySelector('.lighting-setup-suggestion-manage').addEventListener('mousedown', (e) => {
-      e.preventDefault();
+    const manageBtn = box.querySelector('.lighting-setup-suggestion-manage');
+    const openManage = () => {
+      // From a list with nobody typing in its name (the guide's keyboard-
+      // free one), the list comes back when Manage closes (see below).
+      manageLightingReturn = document.activeElement === input ? null : input;
       openManageLightingSetupsModal();
+    };
+    manageBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      openManage();
     });
+    manageBtn.addEventListener('click', (e) => { if (e.detail === 0) openManage(); });
     box.hidden = false;
     card.classList.add('lighting-setup-suggestions-open');
+    setLightingBrowseExpanded(card, true);
+    return true;
   }
+
+  // Setups saved on OTHER shoots: what the guide's keyboard-free list is
+  // for. This shoot's own cards land in state.shoots too once autosave runs,
+  // and on a multi-day shoot the days following it get copies of them (see
+  // syncProjectMirrors), so counting either would flip + Add's behavior a
+  // couple of seconds into typing the first setup.
+  function hasOtherShootLightingSetups() {
+    const mine = new Set([currentShootId]);
+    const me = state.shoots.find(s => s.id === currentShootId);
+    const project = (me && me.projectId && findProject(me.projectId))
+      || (state.projects || []).find(p => p.leadShootId === currentShootId);
+    const lead = projectLeadOf(project);
+    if (lead && (lead.id === currentShootId || (me && me.followsLead))) {
+      mine.add(lead.id);
+      projectFollowers(project, lead).forEach(day => mine.add(day.id));
+    }
+    const dismissed = new Set(state.dismissedLightingSetupKeys);
+    return state.shoots.some(s => !mine.has(s.id) && (s.lightingSetups || [])
+      .some(item => hasText(item.name) && !dismissed.has(item.name.trim().toLowerCase())));
+  }
+
+  function setLightingBrowseExpanded(card, open) {
+    const toggle = card && card.querySelector('.lighting-setup-browse-toggle');
+    if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  // On the guide each card's bar has a chevron (where the page has its fold
+  // arrow) that shows the saved list without the keyboard: after a stray
+  // tap closed it, or to swap a picked setup for another. Tapped while any
+  // field is being typed in, it puts the keyboard away (iOS doesn't blur a
+  // field when a button's tapped; the blur also closes another card's list)
+  // and lists them all.
+  function toggleLightingBrowse(btn) {
+    const card = btn.closest('.lighting-setup-card');
+    const input = card.querySelector('.lighting-setup-name');
+    const box = card.querySelector('.lighting-setup-suggestions');
+    if (!box.hidden && document.activeElement !== input) {
+      hideLightingSuggestionBox(box);
+      return;
+    }
+    const active = document.activeElement;
+    if (active && active.matches('input, textarea, select')) active.blur();
+    updateLightingSetupSuggestions(Number(input.dataset.idx), input, true);
+  }
+
+  function syncLightingBrowseToggles() {
+    const show = hasOtherShootLightingSetups();
+    document.querySelectorAll('#lightingSetupsItems .lighting-setup-browse-toggle').forEach(btn => { btn.hidden = !show; });
+  }
+
+  // On the new-shoot guide the saved list opens without its name field
+  // being focused (the + Add handler, the chevron), so there's no blur to
+  // close it: a tap anywhere outside that card's bar and its list does.
+  // Only a real tap: a drag that scrolls the slide leaves it open (touch
+  // scrolling sends pointercancel; a mouse drag moves too far), and so does
+  // a touch that just stops a flick's glide (iOS sends no pointercancel for
+  // that, but the slide was still scrolling a moment before). Taps in the
+  // Manage popup opened from the list don't count either. A list whose own
+  // field has focus is left to that field's blur, as before.
+  let lightingTapOutside = null;
+  let lastScrollAt = 0;
+  document.addEventListener('scroll', () => { lastScrollAt = performance.now(); }, { capture: true, passive: true });
+  function unfocusedLightingSuggestions() {
+    return [...document.querySelectorAll('#lightingSetupsItems .lighting-setup-suggestions:not([hidden])')]
+      .filter(box => document.activeElement !== box.closest('.lighting-setup-name-wrap').querySelector('.lighting-setup-name'));
+  }
+  function hideLightingSuggestionBox(box) {
+    box.hidden = true;
+    const card = box.closest('.lighting-setup-card');
+    if (card) {
+      card.classList.remove('lighting-setup-suggestions-open');
+      setLightingBrowseExpanded(card, false);
+    }
+  }
+  document.addEventListener('pointerdown', (e) => {
+    lightingTapOutside = null;
+    if (!(e.target instanceof Element) || performance.now() - lastScrollAt < 150 || e.target.closest('#manageLightingSetupsOverlay')) return;
+    const boxes = unfocusedLightingSuggestions().filter(box => !box.closest('.lighting-setup-card-bar').contains(e.target));
+    if (boxes.length) lightingTapOutside = { boxes, x: e.clientX, y: e.clientY };
+  }, true);
+  document.addEventListener('pointercancel', () => { lightingTapOutside = null; }, true);
+  document.addEventListener('pointerup', (e) => {
+    const tap = lightingTapOutside;
+    lightingTapOutside = null;
+    if (tap && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 10) tap.boxes.forEach(hideLightingSuggestionBox);
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') unfocusedLightingSuggestions().forEach(hideLightingSuggestionBox);
+  });
+
+  // The name field of the keyboard-free list Manage was opened from (set by
+  // its "Manage saved…" row). Every way of closing Manage just hides it, so
+  // that's watched: the list comes back, freshly built, unless the card's
+  // gone or a field is being typed in by then. The chevrons are re-checked
+  // too, in case every saved setup was just removed.
+  let manageLightingReturn = null;
+  new MutationObserver(() => {
+    if (!document.getElementById('manageLightingSetupsOverlay').hidden) return;
+    const input = manageLightingReturn;
+    manageLightingReturn = null;
+    syncLightingBrowseToggles();
+    const active = document.activeElement;
+    if (input && input.isConnected && !(active && active.matches('input, textarea, select'))) {
+      updateLightingSetupSuggestions(Number(input.dataset.idx), input, true);
+    }
+  }).observe(document.getElementById('manageLightingSetupsOverlay'), { attributes: true, attributeFilter: ['hidden'] });
 
   // Same non-destructive "dismiss" pattern as Manage Locations — deleting
   // here only hides a name from future suggestions (dismissedLightingSetup-
@@ -6597,13 +6725,14 @@
         saveState();
         renderManageLightingSetupsList();
         // Unlike the other three "manage saved" lists, this one opens from a
-        // transient typeahead rather than a persistent select still sitting
-        // open behind it — but that typeahead's field never lost focus (see
-        // updateLightingSetupSuggestions' preventDefault), so its box is
-        // still showing whatever it last rendered, dismissed entry and all.
-        // Hiding it here avoids a stale delete offer; it rebuilds correctly
-        // on the field's next input/focus.
-        document.querySelectorAll('.lighting-setup-suggestions').forEach(box => { box.hidden = true; });
+        // dropdown rather than a persistent select still sitting open behind
+        // it — and that dropdown is still showing whatever it last rendered,
+        // dismissed entry and all (a typeahead's field never lost focus, see
+        // updateLightingSetupSuggestions' preventDefault; the guide's
+        // keyboard-free list has no field focused at all). Hiding it here
+        // avoids a stale delete offer; it rebuilds on the field's next
+        // input/focus, or when Manage closes for the keyboard-free one.
+        document.querySelectorAll('#lightingSetupsItems .lighting-setup-suggestions').forEach(hideLightingSuggestionBox);
       });
     });
   }
@@ -6617,6 +6746,7 @@
     document.querySelectorAll('#lightingSetupsItems .lighting-setup-suggestions').forEach(box => { box.hidden = true; });
     document.querySelectorAll('#lightingSetupsItems .lighting-setup-suggestions-open')
       .forEach(card => card.classList.remove('lighting-setup-suggestions-open'));
+    document.querySelectorAll('#lightingSetupsItems .lighting-setup-card').forEach(card => setLightingBrowseExpanded(card, false));
   }
 
   // The part of the modal a dragged card can actually be seen in: below the
@@ -6699,10 +6829,13 @@
 
   function renderLightingSetups() {
     const container = document.getElementById('lightingSetupsItems');
-    // On the wizard's Lighting setups slide every card is open and its fold
-    // toggle is hidden (style.css) — no folding in the wizard. Its
-    // enter/leave re-render, so the page gets each card's own fold back.
+    // On the wizard's Lighting setups slide every card is open, with no fold
+    // toggle — no folding in the wizard. Its enter/leave re-render, so the
+    // page gets each card's own fold back.
     const inWizard = !!container.closest('#shootWizard');
+    // There the fold arrow's spot holds the saved-list chevron instead (see
+    // toggleLightingBrowse), shown only when other shoots have setups saved.
+    const browseSaved = inWizard && hasOtherShootLightingSetups();
     container.innerHTML = currentLightingSetups.map((item, idx) => {
       const collapsed = !inWizard && isSectionCollapsed(lightingSetupCollapseKey(item));
       return `
@@ -6713,9 +6846,11 @@
             <input type="text" class="lighting-setup-name" data-idx="${idx}" placeholder="Setup ${idx + 1}" aria-label="Lighting setup ${idx + 1} name" value="${escapeHtml(item.name || '')}" autocomplete="off" />
             <div class="lighting-setup-suggestions" hidden></div>
           </div>
-          <button type="button" class="lighting-setup-collapse-toggle" data-idx="${idx}" aria-label="Collapse lighting setup" aria-expanded="${collapsed ? 'false' : 'true'}">
+          ${inWizard ? `<button type="button" class="lighting-setup-collapse-toggle lighting-setup-browse-toggle" data-idx="${idx}" aria-label="Show saved lighting setups" aria-expanded="false"${browseSaved ? '' : ' hidden'}>
             ${COLLAPSE_ARROW_SVG}
-          </button>
+          </button>` : `<button type="button" class="lighting-setup-collapse-toggle" data-idx="${idx}" aria-label="Collapse lighting setup" aria-expanded="${collapsed ? 'false' : 'true'}">
+            ${COLLAPSE_ARROW_SVG}
+          </button>`}
           <button type="button" class="delete-lighting-setup" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
         </div>
         <div class="lighting-setup-card-body"${collapsed ? ' hidden' : ''}>
@@ -6729,6 +6864,10 @@
     container.querySelectorAll('.lighting-setup-description').forEach(autoSizeTextarea);
 
     container.querySelectorAll('.lighting-setup-collapse-toggle').forEach(btn => {
+      if (btn.classList.contains('lighting-setup-browse-toggle')) {
+        btn.addEventListener('click', () => toggleLightingBrowse(btn));
+        return;
+      }
       btn.addEventListener('click', () => {
         const setup = currentLightingSetups[Number(btn.dataset.idx)];
         if (!setup) return;
@@ -6770,6 +6909,7 @@
       input.addEventListener('blur', () => {
         input.closest('.lighting-setup-name-wrap').querySelector('.lighting-setup-suggestions').hidden = true;
         input.closest('.lighting-setup-card').classList.remove('lighting-setup-suggestions-open');
+        setLightingBrowseExpanded(input.closest('.lighting-setup-card'), false);
       });
       input.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
@@ -6804,7 +6944,18 @@
     // keyboard opens on the right box and the browser scrolls it into view.
     const cards = document.querySelectorAll('#lightingSetupsItems .lighting-setup-card');
     const newField = cards.length ? cards[cards.length - 1].querySelector('.lighting-setup-name') : null;
-    if (newField) {
+    if (newField && newField.closest('#shootWizard') && hasOtherShootLightingSetups() && updateLightingSetupSuggestions(cards.length - 1, newField)) {
+      // Except on the new-shoot guide when other shoots have setups saved:
+      // there the new card opens on that list with its name left unfocused,
+      // so no keyboard comes up over it — picking an old setup never needs
+      // one (the user's call, 2026-11-10). Tapping the name still types a
+      // new one; the bar's chevron brings the list back without the
+      // keyboard. The list closes on a tap outside it.
+      const active = document.activeElement;
+      if (active && active.matches('input, textarea, select')) active.blur();
+      newField.closest('.lighting-setup-name-wrap').querySelector('.lighting-setup-suggestions')
+        .scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    } else if (newField) {
       newField.scrollIntoView({ block: 'center', behavior: 'smooth' });
       newField.focus();
     }
