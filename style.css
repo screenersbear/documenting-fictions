@@ -2081,8 +2081,12 @@ h2.status-group-heading.heading-navy {
    instead of becoming one long scroll — the bar is why this drops
    .team-member-card's own padding (and its absolutely-positioned delete
    button): the bar goes edge to edge and the delete × lives inside it,
-   with the padding moved onto .lighting-setup-card-body instead. */
-.lighting-setup-card {
+   with the padding moved onto .lighting-setup-card-body instead. Both
+   classes in the selector: .team-member-card comes later in this file, so
+   at equal weight its padding (with the 44px kept for its corner ×) won,
+   boxing the bar in and squeezing the fields — worst on the narrower
+   new-shoot guide slide, where the placeholders got cut off. */
+.team-member-card.lighting-setup-card {
   padding: 0;
   gap: 0;
   overflow: hidden;
@@ -3990,6 +3994,13 @@ h2.status-group-heading.heading-navy {
    wrapping word by word inside the first column. */
 #shootWizardBody .moodboard-grid .empty-hint {
   grid-column: 1 / -1;
+}
+
+/* On the slide the "complete or not required" box comes before the photos
+   (the user's call, 2026-11-10), so a full board can't push it out of sight
+   under them. The section is a flex column, so the grid just goes last. */
+#shootWizardBody .moodboard-grid {
+  order: 1;
 }
 
 /* Same as the tour's .modal-actions row and buttons — copied, not reused,

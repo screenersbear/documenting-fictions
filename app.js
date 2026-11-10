@@ -18600,7 +18600,8 @@
 
   // ---------- "Last time" notes (lessons carried into planning) ----------
   // When planning runs into something you've done before — picking a
-  // returning talent or a past location, or reaching the new-shoot guide's
+  // returning talent or a past location (that one not in the new-shoot
+  // guide, see the pastLocationsSelect listener), or reaching the guide's
   // Goals slide for a kind of shoot you've done — this brings back what you
   // wrote under "Lessons for next time" the most recent time: one quiet
   // line under the pick, quoting that shoot's name and date, with an
@@ -18688,8 +18689,10 @@
       : null);
   });
 
+  // Not while the new-shoot guide is up (the user's call, 2026-11-10): there
+  // a past location is just picked, with no lesson under it.
   document.getElementById('pastLocationsSelect').addEventListener('change', (e) => {
-    const loc = /^\d+$/.test(e.target.value) ? pastLocationSamples[Number(e.target.value)] : null;
+    const loc = !shootWizardActive && /^\d+$/.test(e.target.value) ? pastLocationSamples[Number(e.target.value)] : null;
     const key = loc ? locationKey(loc) : '';
     showLastTimeNote(e.target.closest('label'), key
       ? lastShootWithLessons(s => !!s.location && locationKey(s.location) === key)
