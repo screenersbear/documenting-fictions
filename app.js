@@ -15338,9 +15338,13 @@
   });
 
   // ---------- PDF preview (shows the built PDF before offering to share it) ----------
+  // Every navigator.share in this app sends the file and nothing else: an
+  // emailed call sheet went out with no attachment while a title was being
+  // shared alongside it (the user's report, 2026-11-10), and iOS can hand a
+  // title to the share sheet as a separate text item. Don't add title or
+  // text back to a file share.
   let pdfPreviewBlob = null;
   let pdfPreviewFilename = '';
-  let pdfPreviewTitle = '';
 
   // The last call sheet built, kept so reopening it with everything unchanged
   // skips rebuilding (the slow part: laying out the pages and embedding every
@@ -15394,10 +15398,9 @@
         // dash for a plain hyphen rather than dropping it, since the sanitizer
         // strips anything that isn't word/hyphen/space/dot.
         const safeName = title.replace(/—/g, '-').replace(/[^\w\- .]+/g, '').trim() || 'call sheet';
-        callSheetCache = { key, blob: doc.output('blob'), title, filename: `${safeName}.pdf` };
+        callSheetCache = { key, blob: doc.output('blob'), filename: `${safeName}.pdf` };
       }
       pdfPreviewBlob = callSheetCache.blob;
-      pdfPreviewTitle = callSheetCache.title;
       pdfPreviewFilename = callSheetCache.filename;
       showPdfPreview(pdfPreviewBlob);
     } catch (err) {
@@ -15671,7 +15674,7 @@
     try {
       const file = new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: pdfPreviewTitle });
+        await navigator.share({ files: [file] });
       } else {
         const url = URL.createObjectURL(pdfPreviewBlob);
         const a = document.createElement('a');
@@ -15815,12 +15818,12 @@
       pdfPreviewBlob = doc.output('blob');
       const dateLabel = prettyDate(entry.createdAt);
       const titleOrUntitled = entry.title || 'Untitled entry';
-      pdfPreviewTitle = dateLabel ? `${dateLabel} — ${titleOrUntitled}` : titleOrUntitled;
-      const safeName = pdfPreviewTitle.replace(/—/g, '-').replace(/[^\w\- .]+/g, '').trim() || 'journal entry';
+      const entryName = dateLabel ? `${dateLabel} — ${titleOrUntitled}` : titleOrUntitled;
+      const safeName = entryName.replace(/—/g, '-').replace(/[^\w\- .]+/g, '').trim() || 'journal entry';
       pdfPreviewFilename = `${safeName}.pdf`;
       if (canWebShare) {
         const file = new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' });
-        await navigator.share({ files: [file], title: pdfPreviewTitle });
+        await navigator.share({ files: [file] });
         return;
       }
       if (previewWindow) previewWindow.location.href = URL.createObjectURL(pdfPreviewBlob);
@@ -16376,13 +16379,12 @@
       const doc = await buildArchivePdf(shoots);
       pdfPreviewBlob = doc.output('blob');
       const label = archiveExportLabel(shoots);
-      pdfPreviewTitle = label;
       const safeName = label.replace(/[^\w\- .]+/g, '').trim() || 'shoot archive';
       pdfPreviewFilename = `${safeName}.pdf`;
       if (canWebShare) {
         const file = new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' });
         try {
-          await navigator.share({ files: [file], title: pdfPreviewTitle });
+          await navigator.share({ files: [file] });
         } catch (shareErr) {
           // A big archive can take longer to build than iOS lets a share
           // follow the tap that started it (a few seconds), and the share is
@@ -17050,7 +17052,7 @@
         return;
       }
       try {
-        await navigator.share({ files: [file], title: 'Documenting Fictions backup' });
+        await navigator.share({ files: [file] });
       } catch (err) {
         // A big library can take long enough to gather that the tap no
         // longer counts for opening the share sheet — offer a fresh one.
@@ -17062,7 +17064,7 @@
           confirmLabel: 'Save backup',
         });
         if (!again) { showToast('Backup not saved'); return; }
-        await navigator.share({ files: [file], title: 'Documenting Fictions backup' });
+        await navigator.share({ files: [file] });
       }
       rememberBackup();
     } catch (err) {
