@@ -2619,6 +2619,7 @@
     btn.addEventListener('click', () => {
       const view = btn.dataset.view;
       document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
+      document.documentElement.dataset.view = view;
       Object.entries(views).forEach(([key, el]) => { el.hidden = key !== view; });
       // Stop the Archive photo rotation the moment you leave it, rather than
       // waiting on renderArchiveSlideshow's async pass to notice.
@@ -2662,7 +2663,7 @@
     // "fine, but how do I get it back?" actually occurs to you.
     'shootmode:where': {
       title: 'Whenever you want it',
-      text: "no problem. Shoot mode is always one tap away: open the shoot and hit the 'shoot mode' button at the top of the page.",
+      text: "no problem. Shoot mode is always one tap away: open the shoot and hit 'Shoot mode' in the bar at the bottom of the page.",
     },
     'report:bell': {
       title: 'Find this again',
@@ -4716,24 +4717,11 @@
     leaveMondayBrief();
     document.querySelector(`.tab[data-view="${s.archived ? 'archive' : 'shoots'}"]`).click();
     openShootModal(shootId);
-    // Land on the Reflection section rather than the top of the shoot — that's
-    // where the takeaway was written, so it's what you came to look at.
-    // openShootModal restores its own saved scroll position on a double-rAF, so
-    // this has to run after that or it gets undone; two frames puts it in the
-    // same tick, ordered after. scrollTop is set directly rather than via
-    // scrollIntoView because a smooth scroll here is both a long animated jump
-    // and easily clobbered by that restore. The header offset keeps the section
-    // heading clear of the sticky modal header.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const content = showPostShootContentExpanded();
-        const modalEl = shootModalOverlay.querySelector('.modal');
-        const header = shootModalOverlay.querySelector('.shoot-modal-header');
-        const headerH = header ? header.getBoundingClientRect().height : 0;
-        modalEl.scrollTop += content.getBoundingClientRect().top - modalEl.getBoundingClientRect().top - headerH;
-        updateShootModalTitleFromScroll();
-      });
-    });
+    // Land on the Reflection page rather than the first one: that's where
+    // the takeaway was written, so it's what you came to look at.
+    showPostShootContentExpanded();
+    showShootPage('postShootHeading');
+    updateShootModalTitleFromScroll();
   });
 
   document.getElementById('logShootRefOverlay').addEventListener('click', (e) => {
@@ -4838,11 +4826,7 @@
     if (!s) { showToast("This shoot no longer exists."); return; }
     document.querySelector(`.tab[data-view="${s.archived ? 'archive' : 'shoots'}"]`).click();
     openShootModal(shootId);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        document.getElementById('postShootContent').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    });
+    showShootPage('postShootHeading');
   }
 
   function renderJournalTagsChips() {
@@ -5251,6 +5235,7 @@
   let currentTalents = [];
 
   function renderTalents() {
+    updateShootRunningHead();
     const container = document.getElementById('talentsList');
     container.innerHTML = currentTalents.map((talent, idx) => {
       const handles = (talent.socialHandles || []).filter(sh => hasText(sh.handle));
@@ -6758,7 +6743,7 @@
     const vv = window.visualViewport;
     return {
       top: Math.max(m.top, header ? header.getBoundingClientRect().bottom : m.top),
-      bottom: Math.min(m.bottom, actions ? actions.getBoundingClientRect().top : m.bottom, vv ? vv.offsetTop + vv.height : m.bottom),
+      bottom: Math.min(m.bottom, actions && actions.offsetParent ? actions.getBoundingClientRect().top : m.bottom, vv ? vv.offsetTop + vv.height : m.bottom),
     };
   }
 
@@ -7522,35 +7507,26 @@
     return content;
   }
 
-  // Opens a shoot's page, from a row, already scrolled to its Reflection.
-  // The scroll rides on openShootModal's own restore, which snaps a
-  // remembered position to the nearest section heading at or above it — so
-  // "as far down as it goes" lands on the last section, Reflection (shown
-  // and opened just below, before that restore measures anything).
+  // Opens a shoot, from a row, already on its Reflection page.
   function openShootPageAtReflection(shootId) {
     if (!state.shoots.some(x => x.id === shootId)) return false;
-    shootScrollPositions[shootId] = Number.MAX_SAFE_INTEGER;
     openShootModal(shootId);
-    const content = showPostShootContentExpanded();
+    showPostShootContentExpanded();
+    showShootPage('postShootHeading');
     updateShootModalJumpMenuVisibility();
-    // Then lined up exactly, once that restore's two frames have also sized
-    // the fields above it (which can push it down a little).
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (shootPageOpenOn(shootId)) content.scrollIntoView({ block: 'start' });
-    }));
     return true;
   }
 
-  // "Reflect now": straight to the Reflection section of that shoot's page.
+  // "Reflect now": straight to the Reflection page of that shoot.
   function goToPostShootReflection(shootId) {
     if (!shootPageOpenOn(shootId)) return openShootPageAtReflection(shootId);
     // From the new-shoot wizard's first slide (a shoot being logged after
     // the fact) this means "take me to the reflection now" — close the
-    // wizard first so the scroll below lands on the page, not behind it.
+    // wizard first so the page turns behind nothing.
     if (shootWizardActive) endShootWizard();
-    const content = showPostShootContentExpanded();
+    showPostShootContentExpanded();
+    showShootPage('postShootHeading', { turn: true });
     updateShootModalJumpMenuVisibility();
-    content.scrollIntoView({ behavior: 'smooth', block: 'start' });
     return true;
   }
 
@@ -7577,7 +7553,7 @@
       showPostShootContentExpanded();
       updateShootModalJumpMenuVisibility();
     }
-    document.getElementById('postShootPromptText').textContent = "the post-shoot reflection questions will be at the bottom of this shoot whenever you're ready.";
+    document.getElementById('postShootPromptText').textContent = "the post-shoot reflection questions will be on the Reflection tab of this shoot whenever you're ready.";
     document.getElementById('postShootPromptActions').hidden = true;
     document.getElementById('postShootPromptWalkBtn').hidden = true;
     document.getElementById('postShootPromptDismissBtn').hidden = false;
@@ -7761,7 +7737,6 @@
   let pendingProjectPhoto = null;
   let shootHasImages = false;
   let shootSaveTimer = null;
-  const shootScrollPositions = {};
   let shootModalBaseTitle = '';
   // New-shoot planning wizard (see SHOOT_WIZARD_STEPS). Tracked by its own
   // flag rather than by editingShootId === null: Multi-day's "Create days"
@@ -7773,9 +7748,8 @@
   let shootWizardStartTimer = null;
   let shootWizardViewportMaxH = 0;    // tallest visible height seen this run — the keyboard yardstick
 
-  // Shared by the scroll-position-restore anchors below, the jump menu, and
-  // the scrollspy title — the one canonical list of top-level sections in
-  // the form, in on-page order.
+  // The one canonical list of top-level sections in the form, in on-page
+  // order: the notebook's pages and side tabs, and the guided tour.
   const SHOOT_MODAL_SECTIONS = [
     { id: 'basicInfoHeading', label: 'Basic Info' },
     { id: 'logisticsHeading', label: 'Logistics' },
@@ -7785,39 +7759,6 @@
     { id: 'shotListHeading', label: 'Shot list' },
     { id: 'postShootHeading', label: 'Reflection' },
   ];
-
-  // The only prominent section dividers in the form. Restoring scroll
-  // snaps to whichever of these sits at or above the remembered position,
-  // rather than landing mid-field, which would feel arbitrary. Anchors are
-  // offset by the sticky header's height so the heading lands just below it
-  // instead of hidden behind it.
-  function shootModalSectionAnchors(container) {
-    const anchors = [0];
-    const containerRect = container.getBoundingClientRect();
-    const header = document.querySelector('.shoot-modal-header');
-    // Use the gap between the container's own top edge and the sticky
-    // header's bottom edge, not just the header's own height — the modal
-    // has top padding the header sits inside of, so headerOffset needs to
-    // cover that too or the heading still lands partly behind the header.
-    const headerOffset = header ? header.getBoundingClientRect().bottom - containerRect.top : 0;
-    SHOOT_MODAL_SECTIONS.forEach(sec => {
-      const el = document.getElementById(sec.id);
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) return;
-      const top = rect.top - containerRect.top + container.scrollTop - headerOffset;
-      anchors.push(Math.max(0, top));
-    });
-    return anchors.sort((a, b) => a - b);
-  }
-
-  function snapScrollTarget(rawTarget, container) {
-    let snapped = 0;
-    shootModalSectionAnchors(container).forEach(a => {
-      if (a <= rawTarget + 1) snapped = a;
-    });
-    return snapped;
-  }
 
   // ---- Title jump menu + scrollspy ----
   const shootModalTitleBtn = document.getElementById('shootModalTitleBtn');
@@ -7866,6 +7807,145 @@
     }
   });
 
+  // ---------- A shoot as a chapter ----------
+  // Each section of the form is one page of the notebook, picked from the
+  // tabs down the page's edge. The form itself is unchanged: the pages only
+  // hide the sections that aren't open (direct children of the form only, so
+  // a section body borrowed onto a wizard slide is never hidden).
+  const shootPageEls = (() => {
+    const ids = SHOOT_MODAL_SECTIONS.map(sec => sec.id);
+    const els = [];
+    let page = null;
+    [...shootForm.children].forEach(el => {
+      if (el.id === 'postShootContent') { els.push({ el, page: 'postShootHeading' }); page = null; return; }
+      if (ids.includes(el.id)) page = el.id;
+      if (page && !el.classList.contains('folder-tab-deco') && el.id !== 'deleteShootBtn' && !el.classList.contains('modal-actions') && el.id !== 'shootWizard') els.push({ el, page });
+    });
+    return els;
+  })();
+  const shootPageTabs = document.getElementById('nbSectionTabs');
+  const shootPageMemory = {};
+  let shootPageId = 'basicInfoHeading';
+  let shootTurnTimer = 0;
+
+  function availableShootPages() {
+    const reflection = !document.getElementById('postShootContent').hidden;
+    return SHOOT_MODAL_SECTIONS.filter(sec => sec.id !== 'postShootHeading' || reflection);
+  }
+
+  function drawShootPageTabs() {
+    const pages = availableShootPages();
+    shootPageTabs.querySelectorAll('[data-page]').forEach(btn => {
+      btn.hidden = !pages.some(p => p.id === btn.dataset.page);
+      const on = btn.dataset.page === shootPageId;
+      btn.classList.toggle('on', on);
+      if (on) btn.setAttribute('aria-current', 'page');
+      else btn.removeAttribute('aria-current');
+    });
+    document.getElementById('nbPageFoot').textContent = `${pages.findIndex(p => p.id === shootPageId) + 1} / ${pages.length}`;
+  }
+
+  // The running head: the shoot's name, written at the top of each page.
+  function updateShootRunningHead() {
+    document.getElementById('nbShootRun').textContent = shootDisplayName({
+      title: document.getElementById('shootTitle').value.trim(),
+      talents: currentTalents,
+    });
+  }
+
+  // A sheet swings over on its hinge. Taken away on a timer, not on its
+  // animation's end, so it can never be left covering the page.
+  function turnShootPage(forward) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const board = shootModalOverlay.querySelector('.nb-turn-layer');
+    board.querySelectorAll('.nb-turn').forEach(el => el.remove());
+    clearTimeout(shootTurnTimer);
+    const leaf = document.createElement('div');
+    leaf.className = `nb-turn${forward ? '' : ' back'}`;
+    board.appendChild(leaf);
+    shootTurnTimer = setTimeout(() => leaf.remove(), 640);
+  }
+
+  function showShootPage(id, opts = {}) {
+    const pages = availableShootPages();
+    if (!pages.some(p => p.id === id)) {
+      if (!opts.orFirst) return;
+      id = pages[0].id;
+    }
+    const from = pages.findIndex(p => p.id === shootPageId);
+    const to = pages.findIndex(p => p.id === id);
+    const changed = id !== shootPageId;
+    shootPageId = id;
+    if (currentShootId) shootPageMemory[currentShootId] = id;
+    shootPageEls.forEach(({ el, page }) => el.classList.toggle('nb-off', page !== id));
+    // A section folded on the old long page would be a blank page here.
+    expandShootFormSection(id);
+    if (id === 'visualsHeading') expandShootFormSection('lightingSetupsHeading');
+    drawShootPageTabs();
+    updateShootRunningHead();
+    shootModalOverlay.querySelector('.modal').scrollTop = 0;
+    // Boxes on a page that was hidden measured zero height.
+    autoSizeAllListTextareas();
+    syncAllShootFormFields();
+    if (opts.turn && changed) turnShootPage(to > from || from === -1);
+  }
+
+  shootPageTabs.addEventListener('click', (e) => {
+    const tab = e.target.closest('[data-page]');
+    if (!tab) return;
+    if (document.activeElement && shootForm.contains(document.activeElement)) document.activeElement.blur();
+    showShootPage(tab.dataset.page, { turn: true });
+  });
+  shootForm.addEventListener('input', (e) => { if (e.target.id === 'shootTitle') updateShootRunningHead(); });
+  // Reflection comes and goes with the status: its tab follows, and if its
+  // page is the open one when it goes, the book falls back to the first page.
+  new MutationObserver(() => {
+    if (shootModalOverlay.hidden) return;
+    if (document.getElementById('postShootContent').hidden && shootPageId === 'postShootHeading') showShootPage('basicInfoHeading');
+    else drawShootPageTabs();
+  }).observe(document.getElementById('postShootContent'), { attributes: true, attributeFilter: ['hidden'] });
+
+  // The bottom bar stands in for the buttons that used to sit on the page.
+  // They're still there (hidden) and still decide when they apply, so each
+  // bar button simply follows its original.
+  [
+    ['nbBarShootMode', 'enterShootModeBtn'],
+    ['nbBarArchiveMode', 'enterArchiveModeBtn'],
+    ['nbBarComplete', 'completeShootBtn'],
+    ['nbBarUnarchive', 'unarchiveShootBtn'],
+  ].forEach(([barId, realId]) => {
+    const barBtn = document.getElementById(barId);
+    const real = document.getElementById(realId);
+    const follow = () => { barBtn.hidden = real.hidden; };
+    follow();
+    new MutationObserver(follow).observe(real, { attributes: true, attributeFilter: ['hidden'] });
+    barBtn.addEventListener('click', () => real.click());
+  });
+  document.getElementById('nbBarBack').addEventListener('click', () => {
+    shootModalOverlay.querySelector('[data-close="shoot"]').click();
+  });
+  (function setupShootMoreMenu() {
+    const overlay = document.getElementById('shootMoreOverlay');
+    const close = () => { overlay.hidden = true; };
+    const share = document.getElementById('shareShootBtn');
+    const del = document.getElementById('deleteShootBtn');
+    document.getElementById('nbBarMore').addEventListener('click', () => {
+      document.getElementById('shootMoreShareBtn').hidden = share.hidden;
+      document.getElementById('shootMoreShareDivider').hidden = share.hidden;
+      document.getElementById('shootMoreDeleteBtn').hidden = del.hidden;
+      document.getElementById('shootMoreDeleteDivider').hidden = del.hidden;
+      overlay.hidden = false;
+    });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.getElementById('shootMoreCancelBtn').addEventListener('click', close);
+    [['shootMoreGuideBtn', 'shootTourBtn'], ['shootMoreShareBtn', 'shareShootBtn'], ['shootMoreDeleteBtn', 'deleteShootBtn']].forEach(([menuId, realId]) => {
+      document.getElementById(menuId).addEventListener('click', () => {
+        close();
+        document.getElementById(realId).click();
+      });
+    });
+  })();
+
   // ---------- Guided tour of the shoot page ----------
   // Steps through the same sections as the title jump-menu, one at a time,
   // scrolling to each and explaining what it's for.
@@ -7879,6 +7959,7 @@
     { id: 'postShootHeading', title: 'Reflection', text: 'What went right, what could be better, and lessons for next time — filled in after the shoot.' },
   ];
   let shootTourStepIndex = 0;
+  const shootTourSteps = () => SHOOT_TOUR_STEPS.filter(step => availableShootPages().some(page => page.id === step.id));
 
   // Force-expands a collapsed section (and any of its nested sub-sections)
   // so the tour's explanation always has real content visible above it
@@ -7897,12 +7978,14 @@
   }
 
   function renderShootTourStep() {
-    const step = SHOOT_TOUR_STEPS[shootTourStepIndex];
-    document.getElementById('shootTourStep').textContent = `Step ${shootTourStepIndex + 1} of ${SHOOT_TOUR_STEPS.length}`;
+    const steps = shootTourSteps();
+    const step = steps[shootTourStepIndex];
+    document.getElementById('shootTourStep').textContent = `Step ${shootTourStepIndex + 1} of ${steps.length}`;
     document.getElementById('shootTourTitle').textContent = step.title;
     document.getElementById('shootTourText').textContent = typeof step.text === 'function' ? step.text() : step.text;
     document.getElementById('shootTourBackBtn').hidden = shootTourStepIndex === 0;
-    document.getElementById('shootTourNextBtn').textContent = shootTourStepIndex === SHOOT_TOUR_STEPS.length - 1 ? 'Done' : 'Next';
+    document.getElementById('shootTourNextBtn').textContent = shootTourStepIndex === steps.length - 1 ? 'Done' : 'Next';
+    showShootPage(step.id, { turn: true });
     expandShootFormSection(step.id);
     (step.nestedIds || []).forEach(expandShootFormSection);
     const target = document.getElementById(step.id);
@@ -7930,7 +8013,7 @@
   });
 
   document.getElementById('shootTourNextBtn').addEventListener('click', () => {
-    if (shootTourStepIndex === SHOOT_TOUR_STEPS.length - 1) { closeShootTour(); return; }
+    if (shootTourStepIndex === shootTourSteps().length - 1) { closeShootTour(); return; }
     shootTourStepIndex++;
     renderShootTourStep();
   });
@@ -8308,7 +8391,7 @@
   // opens is a body-level overlay, so none of them is affected.
   function setShootPageInert(on) {
     const modalEl = shootModalOverlay.querySelector('.modal');
-    [...modalEl.children, ...shootForm.children].forEach(el => {
+    [...modalEl.children, ...shootForm.children, shootPageTabs, shootModalOverlay.querySelector('.nb-shoot-bar')].forEach(el => {
       if (el !== shootForm && el.id !== 'shootWizard') el.inert = on;
     });
   }
@@ -13166,12 +13249,10 @@
     if (!id && isNewShootGuideOn()) queueShootWizard();
     else if (!s) maybeShowStatusSwatchIntro();
 
-    const modalEl = shootModalOverlay.querySelector('.modal');
-    const savedScroll = (id && shootScrollPositions[id]) || 0;
+    // Back to the page this shoot was last open on, at its top.
+    showShootPage(shootPageMemory[currentShootId] || 'basicInfoHeading', { orFirst: true });
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        modalEl.scrollTop = snapScrollTarget(savedScroll, modalEl);
-        updateShootModalTitleFromScroll();
         // renderShotList() ran further up, while the overlay was still hidden,
         // so every row measured zero and kept its one-line default — a saved
         // multi-line shot would open clipped. This is the first frame where the
@@ -14299,9 +14380,6 @@
     // First: every borrowed field goes home (with its readonly back) before
     // the scroll position is recorded and the draft saved or discarded.
     endShootWizard({ closing: true });
-    if (currentShootId) {
-      shootScrollPositions[currentShootId] = shootModalOverlay.querySelector('.modal').scrollTop;
-    }
     clearTimeout(shootSaveTimer);
     autosaveShoot();
     if (!state.shoots.some(x => x.id === currentShootId)) {
@@ -14321,43 +14399,6 @@
   }
 
   document.getElementById('saveShootBtn').addEventListener('click', closeShootModal);
-
-  // ---------- Swipe down from the header to dismiss the shoot modal ----------
-  // Scoped to the sticky header (not the scrollable body) so it never fights
-  // with normal scrolling — a tap still works fine since it's ~0px of
-  // vertical movement. closeShootModal() already autosaves, same as Save/X.
-  (function setupShootModalSwipeDismiss() {
-    const header = document.querySelector('.shoot-modal-header');
-    const modalEl = shootModalOverlay.querySelector('.modal');
-    const DISMISS_THRESHOLD = 90;
-    let startY = null;
-
-    header.addEventListener('touchstart', (e) => {
-      if (e.touches.length !== 1) return;
-      startY = e.touches[0].clientY;
-      modalEl.style.transition = 'none';
-    }, { passive: true });
-
-    header.addEventListener('touchmove', (e) => {
-      if (startY === null) return;
-      const deltaY = e.touches[0].clientY - startY;
-      modalEl.style.transform = deltaY > 0 ? `translateY(${deltaY}px)` : '';
-    }, { passive: true });
-
-    header.addEventListener('touchend', (e) => {
-      if (startY === null) return;
-      const deltaY = e.changedTouches[0].clientY - startY;
-      startY = null;
-      if (deltaY > DISMISS_THRESHOLD) {
-        modalEl.style.transition = '';
-        modalEl.style.transform = '';
-        closeShootModal();
-        return;
-      }
-      modalEl.style.transition = 'transform 0.2s ease';
-      modalEl.style.transform = '';
-    });
-  })();
 
   function deleteShootById(id) {
     const doomed = state.shoots.find(x => x.id === id);
@@ -16725,9 +16766,8 @@
     });
   });
 
-  shootModalOverlay.addEventListener('click', (e) => {
-    if (e.target === shootModalOverlay) closeShootModal();
-  });
+  // No backdrop dismiss on a shoot: what's around the page is the notebook,
+  // right beside the tabs, and a near miss shouldn't close it. Back does.
   [frameworksModalOverlay, document.getElementById('locationModalOverlay'), document.getElementById('talentModalOverlay'), document.getElementById('teamMemberModalOverlay'), document.getElementById('journalTocOverlay'), document.getElementById('tabIntroOverlay'), categoryVisibilityOverlay, document.getElementById('manageLocationsOverlay'), document.getElementById('manageTeamMembersOverlay'), document.getElementById('manageTalentsOverlay'), document.getElementById('manageLightingSetupsOverlay'), document.getElementById('regionCountryPopupOverlay')].forEach(overlay => {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) overlay.hidden = true;
@@ -19847,6 +19887,9 @@
     setTimeout(() => {
       if (document.documentElement.classList.contains('update-reloading')) return;
       if (anyPopupOpen()) { launchTailOwed = true; return; }
+      // The check-in first, as at launch: its OK brings the brief.
+      checkDayAfterPrompt();
+      if (!document.getElementById('dayAfterPromptOverlay').hidden) return;
       if (!maybeShowMondayBrief()) checkDailyReportPrompt();
     }, 0);
   }
@@ -20038,9 +20081,14 @@
     // up. Not mid-launch, where the launch popups decide. The check-in goes
     // first, as at launch, so a weekend shoot it asks about is in the brief
     // once it's answered (its OK brings the brief).
-    if (!anyPopupOpen() && !document.documentElement.classList.contains('booting') && mondayBriefWaiting()) {
-      checkDayAfterPrompt();
-      if (document.getElementById('dayAfterPromptOverlay').hidden) maybeShowMondayBrief();
+    if (!document.documentElement.classList.contains('booting') && mondayBriefWaiting()) {
+      if (!anyPopupOpen()) {
+        checkDayAfterPrompt();
+        if (document.getElementById('dayAfterPromptOverlay').hidden) maybeShowMondayBrief();
+      } else if (!document.getElementById('bookOverlay').hidden) {
+        // Shut notebook: it comes up as soon as the book is opened.
+        launchTailOwed = true;
+      }
     }
   });
   window.addEventListener('pagehide', flushPendingEdits);
@@ -20166,6 +20214,9 @@
       return !!el && el.matches('textarea, [contenteditable], input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not([type="submit"])');
     }
 
+    let driftIsOffset = false;
+    let appliedShift = 0;
+
     function measureDrift() {
       if (vv.scale > 1.01 || isTyping()) return 0;
       const height = window.innerHeight;
@@ -20177,16 +20228,25 @@
         shortBy = tallestAtWidth[width] - height;
       }
       const drift = Math.max(pastBottom, shortBy);
+      driftIsOffset = pastBottom >= shortBy;
       // Once correcting, follow it all the way back to nothing: it can shrink
       // gradually as the page scrolls.
       return drift >= (applied ? 2 : START_AT) ? Math.round(drift) : 0;
     }
 
     function applyDrift(drift) {
+      // When the whole view has slid down, the full-page layers (the book, a
+      // shoot, the page frame) slide with it, or they'd leave a gap at the top.
+      const shift = drift && driftIsOffset ? Math.round(vv.offsetTop) : 0;
+      if (shift !== appliedShift) {
+        appliedShift = shift;
+        if (shift) document.documentElement.style.setProperty('--layer-shift', shift + 'px');
+        else document.documentElement.style.removeProperty('--layer-shift');
+      }
       if (drift === applied) return;
       applied = drift;
-      if (drift) tabbar.style.setProperty('--bar-drift', drift + 'px');
-      else tabbar.style.removeProperty('--bar-drift');
+      if (drift) document.documentElement.style.setProperty('--bar-drift', drift + 'px');
+      else document.documentElement.style.removeProperty('--bar-drift');
     }
 
     function sync() {
@@ -20239,6 +20299,104 @@
   }
   setupTabbarDriftFix();
 
+  // ---------- The notebook ----------
+  // The shut book, and the first spread it opens to: Overview on the left,
+  // New shoot on the right. Stays how it was left: shut until opened, then
+  // straight in on later launches until it's shut again.
+  (function setupNotebook() {
+    const BOOK_KEY = 'df-book';
+    const RATIO = 1000 / 1360; // the cover art's width over its height
+    const STACK = 16;          // sheets drawn for the shut book's thickness
+    const TURNED = (20 * Math.PI) / 180; // the shut book's turn; matches style.css
+    const PERSPECTIVE = 1100;  // matches .nb in style.css
+    const TAB_OUT = 0.06;      // how far the side tabs stick out, of the book's width
+    const ZOOM_MS = 780;
+    const overlay = document.getElementById('bookOverlay');
+    const book = document.getElementById('book');
+    let timer = 0;
+
+    document.getElementById('bookStack').innerHTML =
+      Array.from({ length: STACK }, (_, i) => `<i style="--i:${i + 1}"></i>`).join('') + `<b style="--i:${STACK + 1}"></b>`;
+    // One tab per section of a shoot, each on a sheet of its own. No words.
+    document.getElementById('bookSideTabs').innerHTML =
+      Array.from({ length: 7 }, (_, i) => `<i class="${i % 2 ? 'n' : 'y'}" style="--t:${i};--i:${3 + i * 2}"></i>`).join('');
+
+    function remember(state) {
+      try { localStorage.setItem(BOOK_KEY, state); } catch (err) { /* storage unavailable: it just opens shut next time */ }
+    }
+
+    function measure() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const W = Math.min(vw * 0.78, vh * 0.66 * RATIO, 460);
+      const H = W / RATIO;
+      const k = Math.min(1, (vw - 14) / (2 * W), (vh * 0.82) / H);
+      book.style.setProperty('--W', `${W}px`);
+      book.style.setProperty('--H', `${H}px`);
+      book.style.setProperty('--k', String(k));
+      // Turned, the near side looks bigger and the pages and tabs show down
+      // the right, so what you see would sit right of the middle. This slides
+      // it back by half that difference.
+      const cos = Math.cos(TURNED);
+      const sin = Math.sin(TURNED);
+      const depth = (STACK + 1) * W * 0.0112;
+      const seen = [[-W / 2, 0], [W / 2, 0], [-W / 2, -depth], [W / 2 + W * TAB_OUT, -depth * 0.8]].map(
+        ([x, d]) => ((x * cos - d * sin) * PERSPECTIVE) / (PERSPECTIVE - (x * sin + d * cos)),
+      );
+      book.style.setProperty('--shut-x', `${-(Math.min(...seen) + Math.max(...seen)) / 2 / cos}px`);
+      // Zoomed in, the page lands exactly on the page frame behind it.
+      const frame = document.querySelector('.nb-board').getBoundingClientRect();
+      const top = Math.max(0, frame.top);
+      const bottom = Math.min(vh, frame.bottom);
+      book.style.setProperty('--zoom-x', `${vw / 2}px`);
+      book.style.setProperty('--zoom-y', `${(top + bottom) / 2 - vh / 2}px`);
+      book.style.setProperty('--zoom-sx', String((vw - 10) / W));
+      book.style.setProperty('--zoom-sy', String((bottom - top) / H));
+    }
+
+    function setMode(mode) { book.className = `nb ${mode}`; }
+
+    function show(mode) {
+      measure();
+      overlay.hidden = false;
+      book.className = `nb no-anim ${mode}`;
+      void book.offsetWidth;
+    }
+
+    function leaveTo(mode, then) {
+      clearTimeout(timer);
+      setMode(mode);
+      timer = setTimeout(() => {
+        overlay.hidden = true;
+        remember('open');
+        if (then) then();
+      }, ZOOM_MS);
+    }
+
+    document.getElementById('bookOpenHit').addEventListener('click', () => setMode('opened'));
+    document.getElementById('bookShutHit').addEventListener('click', () => setMode('closed'));
+    document.getElementById('bookOverviewHit').addEventListener('click', () => {
+      document.querySelector('.tabbar .tab[data-view="overview"]').click();
+      leaveTo('opened zoom-l');
+    });
+    document.getElementById('bookNewHit').addEventListener('click', () => {
+      leaveTo('opened zoom-r', () => document.getElementById('newShootBtn').click());
+    });
+    document.getElementById('bookSunBtn').addEventListener('click', () => document.getElementById('appMenuBtn').click());
+    document.getElementById('shutBookBtn').addEventListener('click', () => {
+      clearTimeout(timer);
+      show('opened zoom-l');
+      setMode('closed');
+      remember('shut');
+    });
+    window.addEventListener('resize', () => { if (!overlay.hidden) measure(); });
+
+    document.documentElement.dataset.view = (document.querySelector('.tabbar .tab.active') || { dataset: { view: 'overview' } }).dataset.view;
+    let saved = null;
+    try { saved = localStorage.getItem(BOOK_KEY); } catch (err) { /* treated as shut */ }
+    if (saved !== 'open') show('closed');
+  })();
+
   // ---------- service worker (offline caching) ----------
   // Skipped inside a native wrapper (Capacitor injects window.Capacitor) —
   // a native build already bundles every file locally, so the service
@@ -20275,7 +20433,9 @@
     // after 1.5s even if .booting is still on. Slow work with no popup up
     // (busyTasks: a backup, a PDF) counts as in use too.
     function updateCanReloadNow() {
-      if (anyPopupOpen() || !document.getElementById('toast').hidden || busyTasks > 0) return false;
+      // The shut notebook isn't work in progress: it never holds an update back.
+      const popupUp = popupLayers.some(layer => !layer.hidden && layer.id !== 'bookOverlay');
+      if (popupUp || !document.getElementById('toast').hidden || busyTasks > 0) return false;
       if (document.hidden) return true;
       return document.documentElement.classList.contains('booting')
         && getComputedStyle(document.body).visibility === 'hidden';

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'starky-v126';
+const CACHE_NAME = 'starky-v127';
 const ASSETS = [
   './',
   './index.html',
@@ -12,6 +12,9 @@ const ASSETS = [
   './icon-512.png',
   './logo.png',
   './world-map.svg',
+  './art/df-mango-cover.webp',
+  './art/df-mango-block.webp',
+  './fonts/mansalva-latin.woff2',
 ];
 
 // A version that came in from the network (a 'network' page load, below) is
