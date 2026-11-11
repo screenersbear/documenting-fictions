@@ -1435,8 +1435,8 @@ h2.status-group-heading.heading-navy {
      detach and scroll with the page (the "bottom nav sliding up" glitch) —
      forcing this onto its own GPU-composited layer is the standard fix,
      on top of the existing visualViewport-driven reflow in app.js. */
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
+  -webkit-transform: translate3d(0, var(--bar-drift, 0px), 0);
+  transform: translate3d(0, var(--bar-drift, 0px), 0);
   will-change: transform;
 }
 
