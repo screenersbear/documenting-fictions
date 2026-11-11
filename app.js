@@ -2716,7 +2716,7 @@
   // Installed, the navigator hangs from the top at the screen's real bottom (see style.css).
   if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('nb-installed');
   let screenGap = 0;
-  let screenFullHeight = 0;
+  let screenShortHeight = 0;
   let screenGapUpright = null;
   const screenHeightNow = () => layoutBoxProbe.getBoundingClientRect().height + screenGap;
 
@@ -2734,14 +2734,16 @@
     const smallShort = shortBy(smallHeightProbe);
     if (upright && (boxShort > SCREEN_GAP_MAX || smallShort > SCREEN_GAP_MAX)) return false;
     screenGapUpright = upright;
-    const gap = hasStatusBar && boxShort >= 8 ? Math.round(boxShort) : 0;
-    const fullHeight = hasStatusBar && smallShort >= 8 ? full : 0;
-    if (gap === screenGap && fullHeight === screenFullHeight) return false;
-    screenGap = gap;
-    screenFullHeight = fullHeight;
+    // iOS draws nothing in the strip it's short by (on the iPhone the
+    // navigator vanished in it), so everything stays above it: --nb-h is the
+    // height iOS laid out, and .nb-short drops the room kept for the home bar,
+    // which is that strip's height further down anyway.
+    const shortHeight = hasStatusBar && boxShort >= 8 ? Math.round(full - boxShort) : 0;
+    if (shortHeight === screenShortHeight) return false;
+    screenShortHeight = shortHeight;
+    document.documentElement.classList.toggle('nb-short', !!shortHeight);
     const style = document.documentElement.style;
-    if (gap) style.setProperty('--screen-gap', `${gap}px`); else style.removeProperty('--screen-gap');
-    if (fullHeight) style.setProperty('--nb-h', `${fullHeight}px`); else style.removeProperty('--nb-h');
+    if (shortHeight) style.setProperty('--nb-h', `${shortHeight}px`); else style.removeProperty('--nb-h');
     return true;
   }
   measureScreenGap();

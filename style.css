@@ -6671,6 +6671,10 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
    moved down that far) off the screen. Things held by their top, like the
    page frame, stay put. */
 :root.nb-installed .tabbar { top: calc(var(--nb-h) - var(--nb-bar) + var(--layer-shift, 0px)); bottom: auto; -webkit-transform: translateZ(0); transform: translateZ(0); }
+/* Laid out short (see measureScreenGap): the navigator sits on the bottom of
+   what iOS laid out, above the strip it leaves blank, so it needs no room for
+   the home bar. */
+:root.nb-short { --nb-foot: 0px; }
 
 /* Moving along the open spread. */
 .nb-pan { position: fixed; z-index: 8; top: 0; left: 0; right: 0; bottom: calc(0px - var(--screen-gap)); overflow: hidden; background: #fff; pointer-events: none; }
