@@ -3,6 +3,88 @@
   // touch listener — this no-op unlocks tap-flash feedback app-wide.
   document.body.addEventListener('touchstart', () => {}, false);
 
+  // ---------- held upright: what the app sees while it's turned back ----------
+  // Turned sideways, the page is turned back upright (index.html decides it,
+  // style.css turns the body). Everything the app reads about where a finger
+  // or a box is, and how big the screen is, is then read the way up the page
+  // is, so the swipes, drags and page breaks work as they do upright. Upright,
+  // every reading goes straight through.
+  (function setupTurnShim() {
+    const root = document.documentElement;
+    const turnNow = () => (root.classList.contains('nb-turned') ? (root.dataset.turn === '-90' ? -90 : 90) : 0);
+    const W = () => Math.min(screen.width, screen.height);
+    const H = () => Math.max(screen.width, screen.height);
+    const wrapXY = (proto) => {
+      const gx = Object.getOwnPropertyDescriptor(proto, 'clientX');
+      const gy = Object.getOwnPropertyDescriptor(proto, 'clientY');
+      if (!gx || !gy || !gx.get || !gy.get) return;
+      Object.defineProperty(proto, 'clientX', {
+        configurable: true,
+        enumerable: gx.enumerable,
+        get() { const t = turnNow(); if (!t) return gx.get.call(this); const vy = gy.get.call(this); return t === 90 ? W() - vy : vy; },
+      });
+      Object.defineProperty(proto, 'clientY', {
+        configurable: true,
+        enumerable: gy.enumerable,
+        get() { const t = turnNow(); if (!t) return gy.get.call(this); const vx = gx.get.call(this); return t === 90 ? vx : H() - vx; },
+      });
+    };
+    try { wrapXY(MouseEvent.prototype); } catch (e) { /* the readings stay as they are */ }
+    try { if (window.Touch) wrapXY(Touch.prototype); } catch (e) { /* the readings stay as they are */ }
+    const mapRect = (r, t) => (t === 90
+      ? new DOMRect(W() - r.bottom, r.left, r.height, r.width)
+      : new DOMRect(r.top, H() - r.right, r.height, r.width));
+    const rectOf = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function getBoundingClientRect() {
+      const r = rectOf.call(this);
+      const t = turnNow();
+      return t ? mapRect(r, t) : r;
+    };
+    const rectsOf = Element.prototype.getClientRects;
+    Element.prototype.getClientRects = function getClientRects() {
+      const list = rectsOf.call(this);
+      const t = turnNow();
+      return t ? Array.from(list, r => mapRect(r, t)) : list;
+    };
+    ['innerWidth', 'innerHeight'].forEach((key) => {
+      const d = Object.getOwnPropertyDescriptor(window, key) || Object.getOwnPropertyDescriptor(Object.getPrototypeOf(window), key);
+      if (!d || !d.get) return;
+      try {
+        Object.defineProperty(window, key, {
+          configurable: true,
+          enumerable: true,
+          get() { if (!turnNow()) return d.get.call(window); return key === 'innerWidth' ? W() : H(); },
+        });
+      } catch (e) { /* the readings stay as they are */ }
+    });
+    if (window.VisualViewport) {
+      const proto = VisualViewport.prototype;
+      [['width', W], ['height', H], ['offsetLeft', () => 0], ['offsetTop', () => 0]].forEach(([key, value]) => {
+        const d = Object.getOwnPropertyDescriptor(proto, key);
+        if (!d || !d.get) return;
+        try {
+          Object.defineProperty(proto, key, {
+            configurable: true,
+            enumerable: d.enumerable,
+            get() { return turnNow() ? value() : d.get.call(this); },
+          });
+        } catch (e) { /* the readings stay as they are */ }
+      });
+    }
+    // The upright safe areas, kept for a launch that starts sideways.
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)';
+    document.body.appendChild(probe);
+    const keepSafeAreas = () => {
+      if (turnNow()) return;
+      const cs = getComputedStyle(probe);
+      try { localStorage.setItem('df_safe_areas', JSON.stringify({ top: parseFloat(cs.paddingTop) || 0, bottom: parseFloat(cs.paddingBottom) || 0 })); } catch (e) { /* not kept */ }
+    };
+    keepSafeAreas();
+    window.addEventListener('resize', keepSafeAreas);
+  })();
+  const isTurned = () => document.documentElement.classList.contains('nb-turned');
+
   const STORAGE_KEY = 'dailies_state_v1';
   const IDB_NAME = 'starky-moodboards';
   const IDB_STORE = 'images';
@@ -658,7 +740,10 @@
     const p = saved && typeof saved === 'object' ? saved : {};
     return {
       color: APP_COLORS.some(([key]) => key === p.color) ? p.color : 'mango',
-      start: p.start === 'first' ? 'first' : 'notebook',
+      // Where it opens: where you left off unless you picked otherwise since
+      // that became the default (11-11), so an old 'notebook' carries over.
+      start: p.startPicked && (p.start === 'first' || p.start === 'notebook') ? p.start : 'last',
+      startPicked: !!p.startPicked,
       stickers: (Array.isArray(p.stickers) ? p.stickers : []).filter(s => s && typeof s.id === 'string'
         && (s.shape === 'circle' || s.shape === 'square' || s.shape === 'rect') && [s.x, s.y, s.size].every(Number.isFinite)),
     };
@@ -2698,6 +2783,49 @@
   let statsFlows = [];
   const currentScreen = () => document.documentElement.dataset.view;
 
+  // ---------- Where you left off ----------
+  // iOS closes a home-screen app whenever it likes, so the place is kept in
+  // localStorage: the book shut or open, the section and its pages, an open
+  // shoot and its page, Archive mode and its page, and the filters. Read once
+  // at launch (setupNotebook); written a moment after each page change, and
+  // straight away when the app goes to the background. Nothing is written
+  // until the launch has put the last place back.
+  const LAST_PLACE_KEY = 'df_last_place';
+  let lastPlaceTimer = 0;
+  let lastPlaceArmed = false;
+  let resumePlace = null;
+  function readLastPlace() {
+    try {
+      const place = JSON.parse(localStorage.getItem(LAST_PLACE_KEY) || 'null');
+      return place && typeof place === 'object' ? place : null;
+    } catch (e) { return null; }
+  }
+  function saveLastPlace() {
+    clearTimeout(lastPlaceTimer);
+    if (!lastPlaceArmed) return;
+    try {
+      const shootOpen = !shootModalOverlay.hidden && currentShootId;
+      const archiveOpen = !archiveModeOverlay.hidden && archiveModeShootId;
+      localStorage.setItem(LAST_PLACE_KEY, JSON.stringify({
+        book: document.getElementById('bookOverlay').hidden ? 'open' : 'shut',
+        view: currentScreen(),
+        pages: screenAt,
+        scrollY: bodyScrollLockCount > 0 ? bodyScrollLockY : window.scrollY,
+        archiveFilter,
+        journalFilter,
+        statsYearFilter,
+        shoot: shootOpen ? { id: currentShootId, page: { id: shootPageId, sub: shootSub } } : null,
+        archive: archiveOpen ? { id: archiveModeShootId, at: archiveAt } : null,
+        shootMode: !shootModeOverlay.hidden && getShootModeShootId() ? { id: getShootModeShootId(), at: shootModeAt } : null,
+      }));
+    } catch (e) { /* storage unavailable: it just opens where the sun menu's fallback says */ }
+  }
+  function queueLastPlace() {
+    if (!lastPlaceArmed) return;
+    clearTimeout(lastPlaceTimer);
+    lastPlaceTimer = setTimeout(saveLastPlace, 500);
+  }
+
   // Installed on the home screen, iOS can lay the page out a status bar short
   // of the real screen (WebKit bug 254868): bottom:0 and 100svh stop that far
   // above the bottom, leaving a blank band. --screen-gap carries what bottom:0
@@ -2722,6 +2850,7 @@
 
   function measureScreenGap() {
     if (!(navigator.standalone === true || matchMedia('(display-mode: standalone)').matches)) return false;
+    if (isTurned()) return false; // turned back upright: the page is its own upright screen
     const upright = window.innerWidth < window.innerHeight;
     // A keyboard makes for odd readings, unless the phone has just been turned.
     const field = document.activeElement;
@@ -2985,6 +3114,7 @@
   }
 
   function drawScreenPage(view) {
+    queueLastPlace();
     const count = screenPageCount(view);
     const at = screenNow(view);
     syncPageSide();
@@ -3117,7 +3247,14 @@
   }
   function stepScreenPage(by) {
     const view = currentScreen();
-    turnScreenPage(view, screenNow(view) + by);
+    const to = screenNow(view) + by;
+    if (to >= 0 && to < screenPageCount(view)) { turnScreenPage(view, to); return; }
+    // Turning past a section's last page (or back past its first) carries on
+    // into the next section, as a leaf turn, landing on its first page either
+    // way. Nothing comes before Overview: the book only shuts from the navigator.
+    const order = [...document.querySelectorAll('.tabbar .tab')].map(tab => tab.dataset.view);
+    const next = order[order.indexOf(view) + Math.sign(by)];
+    if (next) turnToView(next);
   }
   document.getElementById('nbScreenPrev').addEventListener('click', () => stepScreenPage(-1));
   document.getElementById('nbScreenNext').addEventListener('click', () => stepScreenPage(1));
@@ -8327,6 +8464,7 @@
   }
 
   function drawShootPageNumber() {
+    queueLastPlace();
     const pages = shootFlatPages();
     const at = pages.findIndex(p => p.id === shootPageId && p.sub === shootSub);
     document.getElementById('nbPageFoot').textContent = `${at + 1} / ${pages.length}`;
@@ -8424,7 +8562,7 @@
       if (e.touches.length !== 1 || !wizard.hidden || typingNow()) return;
       const selection = window.getSelection();
       if (selection && !selection.isCollapsed) return;
-      if (e.target.closest('[class*="drag-handle"], input[type="range"], .nb-shoot-bar') || scrollsSideways(e.target)) return;
+      if (e.target.closest('[class*="drag-handle"], input[type="range"], .nb-shoot-bar, .nb-page-num') || scrollsSideways(e.target)) return;
       start = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }, { passive: true });
     shootModalOverlay.addEventListener('touchcancel', () => { start = null; }, { passive: true });
@@ -9043,8 +9181,8 @@
   });
 
   // On/off for the whole guide, remembered on this device. Turned off from
-  // the first slide's "Don't show again", and back on (or off) from the app
-  // menu's New shoot guide pane.
+  // the first slide's "Don't show again", and back on (or off) from the App
+  // options' New shoots open switch.
   const NEW_SHOOT_GUIDE_OFF_KEY = 'dailies_new_shoot_guide_off_v1';
 
   function isNewShootGuideOn() {
@@ -17313,19 +17451,20 @@
   });
 
   // ---------- App menu (hamburger) ----------
+  // One sheet, laid out like ref's Options (user, 11-11): every setting is
+  // on it at once, each choice marked where it stands, so nothing slides in.
   const appMenuOverlay = document.getElementById('appMenuOverlay');
-  const appMenuPaneTrack = document.getElementById('appMenuPaneTrack');
 
   function closeAppMenu() {
     appMenuOverlay.hidden = true;
-    appMenuPaneTrack.classList.remove('show-second');
-    appMenuPaneTrack.classList.remove('show-third');
-    appMenuPaneTrack.classList.remove('show-fourth');
   }
 
   document.getElementById('appMenuBtn').addEventListener('click', () => {
+    updateThemeChoiceHighlight();
+    updateDisplayChoiceHighlight();
+    updateNewShootGuideChoice();
     appMenuOverlay.hidden = false;
-    syncPaneTrackHeight(appMenuPaneTrack);
+    appMenuOverlay.querySelector('.opt-sheet-body').scrollTop = 0;
   });
 
   document.getElementById('notificationBellBtn').addEventListener('click', () => {
@@ -17339,23 +17478,17 @@
   });
 
   // ---------- Shoot display options (app-wide talent/title preference) ----------
+  const markChoice = (id, on) => {
+    const btn = document.getElementById(id);
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', String(on));
+  };
+
   function updateDisplayChoiceHighlight() {
     const isTitleMode = state.titleDisplayMode === 'title';
-    document.getElementById('displayModeTalentBtn').classList.toggle('active', !isTitleMode);
-    document.getElementById('displayModeTitleBtn').classList.toggle('active', isTitleMode);
+    markChoice('displayModeTalentBtn', !isTitleMode);
+    markChoice('displayModeTitleBtn', isTitleMode);
   }
-
-  document.getElementById('shootDisplayOptionsBtn').addEventListener('click', () => {
-    updateDisplayChoiceHighlight();
-    appMenuPaneTrack.classList.remove('show-third');
-    appMenuPaneTrack.classList.add('show-second');
-    syncPaneTrackHeight(appMenuPaneTrack);
-  });
-
-  document.getElementById('displayOptionsBackBtn').addEventListener('click', () => {
-    appMenuPaneTrack.classList.remove('show-second');
-    syncPaneTrackHeight(appMenuPaneTrack);
-  });
 
   document.getElementById('displayModeTalentBtn').addEventListener('click', () => {
     state.titleDisplayMode = 'talent';
@@ -17374,22 +17507,9 @@
   // ---------- New shoot guide (on/off for the new-shoot wizard) ----------
   function updateNewShootGuideChoice() {
     const on = isNewShootGuideOn();
-    document.getElementById('newShootGuideOnBtn').classList.toggle('active', on);
-    document.getElementById('newShootGuideOffBtn').classList.toggle('active', !on);
+    markChoice('newShootGuideOnBtn', on);
+    markChoice('newShootGuideOffBtn', !on);
   }
-
-  document.getElementById('newShootGuideBtn').addEventListener('click', () => {
-    updateNewShootGuideChoice();
-    appMenuPaneTrack.classList.remove('show-second');
-    appMenuPaneTrack.classList.remove('show-third');
-    appMenuPaneTrack.classList.add('show-fourth');
-    syncPaneTrackHeight(appMenuPaneTrack);
-  });
-
-  document.getElementById('newShootGuideBackBtn').addEventListener('click', () => {
-    appMenuPaneTrack.classList.remove('show-fourth');
-    syncPaneTrackHeight(appMenuPaneTrack);
-  });
 
   document.getElementById('newShootGuideOnBtn').addEventListener('click', () => {
     setNewShootGuideOn(true);
@@ -17419,27 +17539,15 @@
   function updateThemeChoiceHighlight() {
     THEME_KEYS.forEach(key => {
       const btn = document.getElementById(`theme${key[0].toUpperCase()}${key.slice(1)}Btn`);
-      if (btn) btn.classList.toggle('active', state.colorTheme === key);
+      if (btn) {
+        btn.classList.toggle('active', state.colorTheme === key);
+        btn.setAttribute('aria-pressed', String(state.colorTheme === key));
+      }
     });
   }
 
-  document.getElementById('changeThemeBtn').addEventListener('click', () => {
-    updateThemeChoiceHighlight();
-    appMenuPaneTrack.classList.remove('show-second');
-    appMenuPaneTrack.classList.add('show-third');
-    syncPaneTrackHeight(appMenuPaneTrack);
-  });
-
-  document.getElementById('themeOptionsBackBtn').addEventListener('click', () => {
-    appMenuPaneTrack.classList.remove('show-third');
-    syncPaneTrackHeight(appMenuPaneTrack);
-  });
-
-  // The theme is already saved and applied the moment it's tapped, so this just
-  // dismisses the menu — there's nothing left to commit.
-  document.getElementById('themeOkayBtn').addEventListener('click', closeAppMenu);
-
-  document.querySelectorAll('#appMenuPaneTrack .choice-item[data-theme]').forEach(btn => {
+  // A theme is saved and shows the moment it's tapped; the sheet stays up.
+  document.querySelectorAll('#appMenuOverlay .opt-theme[data-theme]').forEach(btn => {
     btn.addEventListener('click', () => {
       state.colorTheme = btn.dataset.theme;
       saveState();
@@ -18588,32 +18696,11 @@
       wireShootModeShotDragHandle(handle, list, shoot);
     });
 
-    if (focusIdx !== undefined) {
-      const focusInput = list.querySelector(`.shot-text[data-idx="${focusIdx}"]`);
-      if (focusInput) {
-        focusInput.focus();
-        // A row added via Enter can land low enough in this scrolling list
-        // to come up right against the Done button fixed below it (or the
-        // iOS keyboard) — the browser's own scroll-into-view-on-focus
-        // doesn't know that button is there and won't leave it any
-        // clearance. Centering it ourselves guarantees a clear look at
-        // what's being typed instead of a sliver hidden behind either one.
-        focusInput.scrollIntoView({ block: 'center' });
-        // The on-screen keyboard opens AFTER focus, animating the visible
-        // area shorter well after the call above already ran — without
-        // re-centering once that settles, the row can end up freshly
-        // covered by the keyboard on a real phone even though the call
-        // above looked correct against the keyboard-less layout it had to
-        // work with at the time.
-        if (window.visualViewport) {
-          window.visualViewport.addEventListener(
-            'resize',
-            () => focusInput.scrollIntoView({ block: 'center' }),
-            { once: true }
-          );
-        }
-      }
-    }
+    // The pages are cut again, on whichever page the new row landed (a row
+    // added at the foot of a page starts the next one).
+    const focusInput = focusIdx !== undefined ? list.querySelector(`.shot-text[data-idx="${focusIdx}"]`) : null;
+    breakShootModePages({ show: focusInput ? focusInput.closest('.shoot-mode-shot-row') : null, force: true });
+    if (focusInput) focusInput.focus();
   }
 
   // Same press-and-hold reorder as the edit form's shot list
@@ -18628,7 +18715,8 @@
       if (!row) return;
       const pointerId = e.pointerId;
 
-      const rowRects = Array.from(container.querySelectorAll('.shoot-mode-shot-row')).map(r => r.getBoundingClientRect());
+      // Only this page's rows: the rest are on other pages and measure nothing.
+      const rowRects = Array.from(container.querySelectorAll('.shoot-mode-shot-row')).filter(r => r.getClientRects().length).map(r => r.getBoundingClientRect());
       const bucketTop = Math.min(...rowRects.map(r => r.top));
       const bucketBottom = Math.max(...rowRects.map(r => r.bottom));
 
@@ -18662,7 +18750,7 @@
         const before = row.getBoundingClientRect();
         let swapped = false;
         while (true) {
-          const rows = Array.from(container.querySelectorAll('.shoot-mode-shot-row'));
+          const rows = Array.from(container.querySelectorAll('.shoot-mode-shot-row')).filter(r => r.getClientRects().length);
           const idx = rows.indexOf(row);
           const rowRect = row.getBoundingClientRect();
           const rowCenter = rowRect.top + rowRect.height / 2;
@@ -18723,18 +18811,29 @@
     document.getElementById('shootModeMoodEmpty').textContent = `No ${term.toLowerCase()} images for this shoot.`;
     const grid = document.getElementById('shootModeMoodboard');
     grid.innerHTML = '';
+    shootModeBoardIn = false;
     return idbGetImages(shoot.id).then(images => {
       document.getElementById('shootModeMoodEmpty').hidden = images.length !== 0;
+      // A grid per row of three, so a page can break between rows.
+      let row = null;
       images.forEach((img, idx) => {
+        if (idx % 3 === 0) {
+          row = document.createElement('div');
+          row.className = 'moodboard-grid shoot-mode-moodboard-row';
+          grid.appendChild(row);
+        }
         const thumb = document.createElement('div');
         thumb.className = 'moodboard-thumb';
         thumb.innerHTML = `<img src="${img.src}" alt="" />`;
         thumb.querySelector('img').addEventListener('click', () => {
           openImageViewer(images, idx, shoot.id, () => renderShootModeMoodboard(shoot), false);
         });
-        grid.appendChild(thumb);
+        row.appendChild(thumb);
       });
-    }).catch(() => { document.getElementById('shootModeMoodEmpty').hidden = false; });
+      shootModeBoardIn = true;
+      breakShootModePages();
+      shootModeWanted = null;
+    }).catch(() => { document.getElementById('shootModeMoodEmpty').hidden = false; shootModeBoardIn = true; breakShootModePages(); shootModeWanted = null; });
   }
 
   function openShootMode(shootId) {
@@ -18753,14 +18852,17 @@
     renderShootModeMoodboard(shoot);
     document.getElementById('shootModeShootingNotes').value = shoot.shootingNotes || '';
     showShootModeLastTime(shoot);
+    renderShootModePeeks(shoot);
     startShootModeClock();
     shootModeOverlay.hidden = false;
     // renderShootModeShots() ran while shootModeOverlay was still hidden, so
     // every row measured zero height and kept its one-line default — same
-    // trap as openShootModal, same fix: re-size once there's real layout.
+    // trap as openShootModal, same fix: re-size once there's real layout
+    // (breakShootModePages sizes them before it cuts the pages).
+    breakShootModePages({ at: 0, force: true });
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        autoSizeAllListTextareas();
+        breakShootModePages({ force: true });
       });
     });
     return true;
@@ -18770,8 +18872,216 @@
     setShootModeShootId(null);
     stopShootModeClock();
     shootCoordsAsked = false;
+    clearTurn(shootModeOverlay.querySelector('.nb-turn-layer'));
+    shootModeFlows = null;
+    shootModeWanted = null;
+    shootModeShowDue = null;
     shootModeOverlay.hidden = true;
   }
+
+  // ---------- Shoot mode's pages ----------
+  // Shoot mode is a page of the notebook as well, with the notebook around it
+  // dimmed. Two parts, each a flow of its own so the second always starts on
+  // a fresh page: the shot list, Wild card and the mood board, then last
+  // time's lesson, the quick review with a look at what's in it, and the
+  // shooting notes. When the first part runs past one page the mood board
+  // moves over to the second, after the quick review.
+  const shootModePage = shootModeOverlay.querySelector('.shoot-mode-modal');
+  const shootModeSheet = document.getElementById('shootModeSheet');
+  const shootModeMain = document.getElementById('shootModeMain');
+  const shootModeMore = document.getElementById('shootModeMore');
+  const shootModeBoard = document.getElementById('shootModeMoodboardBlock');
+  const shootModeNotes = shootModeMore.querySelector('.shoot-mode-shooting-notes-label');
+  let shootModeFlows = null;
+  let shootModeAt = 0;
+  let shootModeBreakDue = false;
+  let shootModeShowDue = null;  // a `show` held back while typing
+  let shootModeWanted = null;   // a page asked for before the mood board's photos are in
+  let shootModeBoardIn = false; // the mood board's photos are in
+
+  function shootModeAtoms(root) {
+    const atoms = [];
+    const shown = el => el && !el.hidden && el.getClientRects().length > 0;
+    const add = (el, heads) => { if (shown(el)) atoms.push({ el, heads: heads.filter(shown) }); };
+    [...root.children].forEach((child) => {
+      if (child.id === 'shootModeShotList') {
+        const head = root.querySelector(':scope > h3');
+        [...child.children].forEach(row => add(row, [head]));
+      } else if (child === shootModeBoard) {
+        const head = document.getElementById('shootModeMoodboardHeading');
+        [...child.children].forEach((part) => {
+          if (part === head || part.tagName === 'INPUT') return;
+          if (part.id === 'shootModeMoodboard') [...part.children].forEach(row => add(row, [head]));
+          else add(part, [head]);
+        });
+      } else if (child.matches('.shoot-mode-review-peek')) {
+        add(child, [[...root.children].find(el => el.matches('h3') && el.textContent.trim() === 'Quick review')]);
+      } else if (child.matches('#shootModeShotsEmpty, #shootModeAddShotBtn')) {
+        add(child, [root.querySelector(':scope > h3')]);
+      } else if (!child.matches('h3')) {
+        add(child, []);
+      }
+    });
+    return atoms;
+  }
+
+  const shootModePages = () => (shootModeFlows ? [
+    ...shootModeFlows.main.pages.map((page, i) => ({ part: 'main', i })),
+    ...shootModeFlows.more.pages.map((page, i) => ({ part: 'more', i })),
+  ] : []);
+
+  function drawShootModePage() {
+    const pages = shootModePages();
+    shootModeAt = Math.max(0, Math.min(shootModeAt, pages.length - 1));
+    const page = pages[shootModeAt];
+    if (page) {
+      shootModeSheet.dataset.part = page.part;
+      drawFlowPage(shootModeFlows[page.part], page.i);
+    }
+    shootModePage.scrollTop = 0;
+    document.getElementById('shootModeFoot').textContent = `${shootModeAt + 1} / ${Math.max(1, pages.length)}`;
+    document.getElementById('shootModePrev').disabled = shootModeAt <= 0;
+    document.getElementById('shootModeNext').disabled = shootModeAt >= pages.length - 1;
+    queueLastPlace();
+  }
+
+  // `show`: something that has to end up on the page showing (a new shot
+  // row, the newest photo). Held while typing in it, and done on focusout.
+  function breakShootModePages(opts = {}) {
+    if (shootModeOverlay.hidden) return;
+    const active = document.activeElement;
+    if (!opts.force && typingNow() && shootModeOverlay.contains(active)) {
+      shootModeBreakDue = true;
+      if (opts.show) shootModeShowDue = opts.show;
+      return;
+    }
+    shootModeBreakDue = false;
+    const show = opts.show || shootModeShowDue;
+    shootModeShowDue = null;
+    const pages = shootModePages();
+    const was = pages[shootModeAt];
+    // Whatever was at the top of the page showing stays on the page showing.
+    const anchor = show || (was && shootModeFlows[was.part].pages[was.i] && shootModeFlows[was.part].pages[was.i].atoms[0] && shootModeFlows[was.part].pages[was.i].atoms[0].el);
+    shootModePage.scrollTop = 0;
+    const limit = () => shootModePage.getBoundingClientRect().top + shootModePage.clientHeight - parseFloat(getComputedStyle(shootModePage).paddingBottom);
+    // Each part is measured while it's the one showing, its writing sized to
+    // fit first (a hidden one would measure nothing and lose its height).
+    shootModeMain.appendChild(shootModeBoard);
+    shootModeSheet.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
+    shootModeSheet.dataset.part = 'main';
+    shootModeMain.querySelectorAll('.shot-text').forEach(autoSizeTextarea);
+    let main = buildFlow(shootModeMain, shootModeAtoms, limit());
+    if (main.pages.length > 1) {
+      shootModeMore.insertBefore(shootModeBoard, shootModeNotes);
+      main = buildFlow(shootModeMain, shootModeAtoms, limit());
+    }
+    shootModeSheet.dataset.part = 'more';
+    autoSizeTextarea(document.getElementById('shootModeShootingNotes'));
+    const more = buildFlow(shootModeMore, shootModeAtoms, limit());
+    shootModeFlows = { main, more };
+    const holds = (el) => ({ part, i }) => shootModeFlows[part].pages[i].atoms.some(a => a.el === el || a.el.contains(el));
+    if (shootModeWanted !== null) shootModeAt = shootModeWanted;
+    else if (Number.isInteger(opts.at)) shootModeAt = opts.at;
+    else if (anchor) {
+      const at = shootModePages().findIndex(holds(anchor));
+      if (at >= 0) shootModeAt = at;
+    }
+    // Something just written that grew past the page's foot: the page turns with it.
+    if (opts.follow && shootModeWanted === null) {
+      const now = shootModePages();
+      if (now[shootModeAt] && !holds(opts.follow)(now[shootModeAt])) {
+        const at = now.findIndex(holds(opts.follow));
+        if (at >= 0) shootModeAt = at;
+      }
+    }
+    drawShootModePage();
+  }
+
+  // The header sets where every page starts, and its clock lines come and
+  // go (golden hour, the must-haves) on their own: the pages are cut again.
+  (function watchShootModeHeader() {
+    const header = shootModeSheet.querySelector('.shoot-mode-header');
+    if (!header || !window.ResizeObserver) return;
+    let height = 0;
+    new ResizeObserver(() => {
+      const now = header.offsetHeight;
+      if (now === height) return;
+      height = now;
+      if (!shootModeOverlay.hidden && shootModeFlows) breakShootModePages();
+    }).observe(header);
+  })();
+
+  // The copy keeps its ids, and so its look (the shot rows', the mood
+  // board's and the title's come from them): it sits in the turn layer after
+  // the real page, so a look-up by id still finds the real one first.
+  const shootModeSheetCopy = () => pageCopy(shootModeSheet, copy => copy.removeAttribute('id'));
+
+  function stepShootModePage(by) {
+    const to = shootModeAt + by;
+    if (to < 0 || to >= shootModePages().length) return;
+    const turning = motionOk();
+    const oldCopy = turning ? shootModeSheetCopy() : null;
+    shootModeWanted = null;
+    shootModeAt = to;
+    drawShootModePage();
+    if (!turning) return;
+    const layer = shootModeOverlay.querySelector('.nb-turn-layer');
+    if (by > 0) playTurn(layer, '', oldCopy);
+    else playTurn(layer, 'back', shootModeSheetCopy(), oldCopy);
+  }
+  document.getElementById('shootModePrev').addEventListener('click', () => stepShootModePage(-1));
+  document.getElementById('shootModeNext').addEventListener('click', () => stepShootModePage(1));
+
+  (function setupShootModePageSwipe() {
+    let start = null;
+    shootModeOverlay.addEventListener('touchstart', (e) => {
+      start = null;
+      if (e.touches.length !== 1 || typingNow()) return;
+      if (e.target.closest('.shoot-mode-bottom-bar, [class*="drag-handle"], input[type=range], .nb-page-foot')) return;
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) return;
+      start = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }, { passive: true });
+    shootModeOverlay.addEventListener('touchcancel', () => { start = null; }, { passive: true });
+    shootModeOverlay.addEventListener('touchend', (e) => {
+      if (!start) return;
+      const dx = e.changedTouches[0].clientX - start.x;
+      const dy = e.changedTouches[0].clientY - start.y;
+      start = null;
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      stepShootModePage(dx < 0 ? 1 : -1);
+    }, { passive: true });
+    // Typing grows a row or the notes: the pages are cut again once it's done.
+    shootModeOverlay.addEventListener('focusout', (e) => {
+      const written = e.target.closest && e.target.closest('.shoot-mode-shot-row, #shootModeMain > *, #shootModeMore > *');
+      setTimeout(() => { if (shootModeBreakDue || !typingNow()) breakShootModePages({ follow: written }); }, 0);
+    });
+  })();
+
+  // A look at what the quick review holds, to fill the second page: each
+  // written direction field and each lighting setup, a line or two of each.
+  // A tap opens the review itself, the same as its button.
+  function renderShootModePeeks(shoot) {
+    const line = (label, text) => `<p class="shoot-mode-peek-line"><span class="shoot-mode-peek-label">${escapeHtml(label)}</span> ${escapeHtml(text)}</p>`;
+    const direction = SHOOT_MODE_DIRECTION_FIELDS.filter(([key]) => directionFieldApplies(shoot, key) && hasText(shoot[key]));
+    document.getElementById('shootModeDirectionPeek').innerHTML = direction.length
+      ? direction.map(([key, label]) => line(label, shoot[key])).join('')
+      : '<p class="shoot-mode-peek-empty">Nothing written yet.</p>';
+    const setups = (shoot.lightingSetups || []).filter(item => hasText(item.name) || hasText(item.characteristics) || hasText(item.description));
+    document.getElementById('shootModeLightingPeek').innerHTML = setups.length
+      ? setups.map((item, i) => line(hasText(item.name) ? item.name : `Setup ${i + 1}`, item.characteristics || item.description || '')).join('')
+      : '<p class="shoot-mode-peek-empty">No lighting setups logged.</p>';
+  }
+  document.getElementById('shootModeDirectionPeek').addEventListener('click', () => openShootModeReview('direction'));
+  document.getElementById('shootModeLightingPeek').addEventListener('click', () => openShootModeReview('lighting'));
+  // Back from the review (edits write straight to the shoot): the look is redrawn.
+  new MutationObserver(() => {
+    if (!document.getElementById('shootModeReviewOverlay').hidden || shootModeOverlay.hidden) return;
+    const shoot = state.shoots.find(x => x.id === getShootModeShootId());
+    if (!shoot) return;
+    renderShootModePeeks(shoot);
+    breakShootModePages();
+  }).observe(document.getElementById('shootModeReviewOverlay'), { attributes: true, attributeFilter: ['hidden'] });
 
   // ---------- Shoot mode clock ----------
   // Under the shoot's name: when it wraps and, on the shoot's day, when it
@@ -19041,7 +19351,8 @@
         : '<span aria-hidden="true">…</span>';
     };
     show(false);
-    const flip = () => show(more.getAttribute('aria-expanded') !== 'true');
+    // Open or shut, it's a different height: Shoot mode's pages are cut again.
+    const flip = () => { show(more.getAttribute('aria-expanded') !== 'true'); breakShootModePages(); };
     more.addEventListener('click', flip);
     quote.addEventListener('click', flip);
   }
@@ -19115,7 +19426,7 @@
         if (!shoot || getShootModeShootId() !== uploadShootId) return;
         renderShootModeMoodboard(shoot).then(() => {
           const thumbs = document.querySelectorAll('#shootModeMoodboard .moodboard-thumb');
-          if (thumbs.length) thumbs[thumbs.length - 1].scrollIntoView({ block: 'nearest' });
+          if (thumbs.length) breakShootModePages({ show: thumbs[thumbs.length - 1].parentElement });
         });
       })
       .catch(noteStorageFull);
@@ -19277,7 +19588,7 @@
     if (isVideoShoot(shoot)) return;
 
     idbGetImages(finalImagesKey(shoot.id)).then(images => {
-      if (!images.length || archiveModeShootId !== shoot.id) return;
+      if (!images.length || archiveModeShootId !== shoot.id) { archiveWanted = null; return; }
       if (!reflectionFields.length) body.appendChild(sectionHeading('Reflection'));
       // A grid per row of three, so a page can break between rows.
       let row = null;
@@ -19296,7 +19607,8 @@
         row.appendChild(thumb);
       });
       breakArchivePages();
-    }).catch(() => {});
+      archiveWanted = null;
+    }).catch(() => { archiveWanted = null; });
   }
 
   // The summary is a page of the notebook: it breaks at the bottom and carries
@@ -19305,6 +19617,7 @@
   const archiveModeBody = document.getElementById('archiveModeBody');
   let archiveFlow = null;
   let archiveAt = 0;
+  let archiveWanted = null; // a page asked for at launch, held until the photos are in
 
   // Line by line, like a Journal entry: a long answer carries over the leaf,
   // under its heading and label again.
@@ -19324,6 +19637,7 @@
   }
 
   function drawArchivePage() {
+    queueLastPlace();
     const count = (archiveFlow && archiveFlow.pages.length) || 1;
     archiveAt = Math.max(0, Math.min(archiveAt, count - 1));
     if (archiveFlow) drawFlowPage(archiveFlow, archiveAt);
@@ -19337,6 +19651,7 @@
     archiveModePage.scrollTop = 0;
     const limit = archiveModePage.getBoundingClientRect().top + archiveModePage.clientHeight - parseFloat(getComputedStyle(archiveModePage).paddingBottom);
     archiveFlow = buildFlow(archiveModeBody, archiveAtoms, limit);
+    if (archiveWanted !== null) archiveAt = archiveWanted;
     drawArchivePage();
   }
 
@@ -19364,7 +19679,7 @@
     let start = null;
     archiveModeOverlay.addEventListener('touchstart', (e) => {
       start = null;
-      if (e.touches.length !== 1 || e.target.closest('.nb-shoot-bar')) return;
+      if (e.touches.length !== 1 || e.target.closest('.nb-shoot-bar, .nb-page-num')) return;
       const selection = window.getSelection();
       if (selection && !selection.isCollapsed) return;
       start = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -19380,20 +19695,23 @@
     }, { passive: true });
   })();
 
-  function openArchiveMode(shootId) {
+  function openArchiveMode(shootId, at = 0) {
     if (!shootModalOverlay.hidden) closeShootModal();
     const shoot = state.shoots.find(s => s.id === shootId);
     if (!shoot) return;
     archiveModeShootId = shootId;
+    archiveWanted = at > 0 && !isVideoShoot(shoot) ? at : null;
     document.getElementById('archiveModeTitle').textContent = shootDisplayName(shoot);
     renderArchiveModeBody(shoot);
     archiveModeOverlay.hidden = false;
-    archiveAt = 0;
+    archiveAt = at > 0 ? at : 0;
     breakArchivePages();
   }
 
   function exitArchiveMode() {
     archiveModeShootId = null;
+    archiveWanted = null;
+    queueLastPlace();
     archiveFlow = null;
     clearTurn(archiveModeOverlay.querySelector('.nb-turn-layer'));
     archiveModeOverlay.hidden = true;
@@ -20700,6 +21018,7 @@
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       flushPendingEdits();
+      saveLastPlace();
       stopArchiveSlideshow();
       return;
     }
@@ -20723,6 +21042,7 @@
     }
   });
   window.addEventListener('pagehide', flushPendingEdits);
+  window.addEventListener('pagehide', () => saveLastPlace());
 
   // Photos come from IndexedDB, which is async, so the first render below
   // has none and a second one fills them in. The page stays hidden meanwhile
@@ -20849,7 +21169,7 @@
     let appliedShift = 0;
 
     function measureDrift() {
-      if (vv.scale > 1.01 || isTyping()) return 0;
+      if (vv.scale > 1.01 || isTyping() || isTurned()) return 0;
       const height = window.innerHeight;
       const pastBottom = vv.offsetTop + vv.height - height;
       let shortBy = 0;
@@ -21051,6 +21371,7 @@
 
     function remember(state) {
       try { localStorage.setItem(BOOK_KEY, state); } catch (err) { /* storage unavailable: it just opens shut next time */ }
+      queueLastPlace();
     }
 
     function measure() {
@@ -21169,7 +21490,7 @@
     syncPageSide();
     repaginate(currentScreen());
     // The handwriting arrives after the first draw, and it's a different width.
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { repaginate(currentScreen()); breakShootPages(); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { repaginate(currentScreen()); breakShootPages(); breakShootModePages(); });
     let pagesWidth = window.innerWidth;
     function placeBook() {
       if (overlay.hidden) return;
@@ -21180,6 +21501,7 @@
       repaginate(currentScreen());
       breakShootPages();
       breakArchivePages();
+      breakShootModePages();
     }
     window.addEventListener('resize', () => {
       const gapMoved = measureScreenGap();
@@ -21220,6 +21542,17 @@
     document.addEventListener('focusout', () => setTimeout(settleScreenGap, 460));
     window.addEventListener('pageshow', settleScreenGap);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) settleScreenGap(); });
+    // More chances to notice iOS putting its layout right unannounced: the
+    // end of a zoom, and now and then as you use it (three reads of hidden
+    // probes, nothing at all when they haven't changed).
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', () => setTimeout(settleScreenGap, 120));
+    let lastTouchCheck = 0;
+    document.addEventListener('touchend', () => {
+      const now = performance.now();
+      if (now - lastTouchCheck < 1000) return;
+      lastTouchCheck = now;
+      setTimeout(settleScreenGap, 60);
+    }, { passive: true });
     let saved = null;
     let afterUpdate = false;
     try {
@@ -21227,8 +21560,14 @@
       afterUpdate = sessionStorage.getItem('df_update_reload_tab') !== null;
     } catch (err) { /* treated as shut */ }
     // A new version swapped in mid-use carries on where it was. Any other
-    // launch starts where the sun menu says.
-    const startShut = afterUpdate ? saved !== 'open' : state.presentation.start !== 'first';
+    // launch starts where the sun menu says: by default where you left off
+    // (before there's a record of that, the book as it was left).
+    const place = readLastPlace();
+    const resuming = !afterUpdate && state.presentation.start === 'last';
+    const startShut = afterUpdate ? saved !== 'open'
+      : resuming ? (place && (place.book === 'shut' || place.book === 'open') ? place.book === 'shut' : saved !== 'open')
+      : state.presentation.start !== 'first';
+    resumePlace = resuming && !startShut && place ? place : null;
     if (startShut) show('closed');
     remember(startShut ? 'shut' : 'open');
   })();
@@ -21539,6 +21878,7 @@
           </button>`).join('')}</div>`],
       start: () => ['Always start in', `
         <button type="button" class="options-item options-back" data-pane="main">&larr; Back</button>
+        <button type="button" class="options-item choice-item${state.presentation.start === 'last' ? ' active' : ''}" data-start="last">Where I left off</button>
         <button type="button" class="options-item choice-item${state.presentation.start === 'notebook' ? ' active' : ''}" data-start="notebook">Notebook</button>
         <button type="button" class="options-item choice-item${state.presentation.start === 'first' ? ' active' : ''}" data-start="first">First page</button>`],
     };
@@ -21569,6 +21909,7 @@
         showPane('colors');
       } else if (hit.dataset.start) {
         state.presentation.start = hit.dataset.start;
+        state.presentation.startPicked = true;
         saveState();
         showPane('start');
       } else if (hit.dataset.shape) {
@@ -21893,17 +22234,22 @@
         if (!updateCanReloadNow()) { updateReloadPending = true; return; }
         try {
           sessionStorage.setItem(UPDATE_RELOAD_AT_KEY, String(Date.now()));
+          // Swapped in before the launch has put the last place back: the
+          // new page launches as usual and puts it back from df_last_place.
+          const placeStillToCome = resumePlace && !lastPlaceArmed;
           const activeTab = document.querySelector('.tabbar .tab.active');
-          if (activeTab) sessionStorage.setItem(UPDATE_RELOAD_TAB_KEY, activeTab.dataset.view);
-          sessionStorage.setItem(UPDATE_RELOAD_VIEW_KEY, JSON.stringify({
-            // While a popup holds the page still, window.scrollY is 0 and
-            // the real place is the one the lock saved.
-            scrollY: bodyScrollLockCount > 0 ? bodyScrollLockY : window.scrollY,
-            archiveFilter,
-            journalFilter,
-            statsYearFilter,
-            pages: screenAt,
-          }));
+          if (activeTab && !placeStillToCome) sessionStorage.setItem(UPDATE_RELOAD_TAB_KEY, activeTab.dataset.view);
+          if (!placeStillToCome) {
+            sessionStorage.setItem(UPDATE_RELOAD_VIEW_KEY, JSON.stringify({
+              // While a popup holds the page still, window.scrollY is 0 and
+              // the real place is the one the lock saved.
+              scrollY: bodyScrollLockCount > 0 ? bodyScrollLockY : window.scrollY,
+              archiveFilter,
+              journalFilter,
+              statsYearFilter,
+              pages: screenAt,
+            }));
+          }
         } catch (e) { /* ignore */ }
         // At launch, this page stays hidden until the new one replaces it.
         // reload() doesn't stop it, and on a slow answer it would show itself
@@ -22006,6 +22352,60 @@
       launchShown.then(() => scrollPageTo(scrollAfterUpdate));
     }
   }
+
+  // A relaunch (not an update reload) goes back to where you left off:
+  // setupNotebook only sets resumePlace when the sun menu says so, the book
+  // was left open and no update is being carried over. The section with its
+  // filters, its pages once the photos and the map are in, then the shoot or
+  // archived shoot that was open, at its page. An entry restored mid-write
+  // keeps its Journal. Once that's done the place is followed again.
+  (function resumeLastPlace() {
+    const place = resumePlace;
+    const placeViews = [...document.querySelectorAll('.tabbar .tab')].map(tab => tab.dataset.view);
+    let back = launchShown;
+    if (place) {
+      if (place.archiveFilter === 'all' || (CATEGORY_FILTER_ORDER.includes(place.archiveFilter) && isCategoryVisible(place.archiveFilter))) archiveFilter = place.archiveFilter;
+      if (JOURNAL_FILTERS.some(f => f.key === place.journalFilter)) journalFilter = place.journalFilter;
+      if (typeof place.statsYearFilter === 'string' && /^(all|\d{4})$/.test(place.statsYearFilter)) statsYearFilter = place.statsYearFilter;
+      const tab = placeViews.includes(place.view) && journalModalOverlay.hidden && document.querySelector(`.tabbar .tab[data-view="${place.view}"]`);
+      if (tab && !tab.classList.contains('active')) tab.click();
+      else renderAll();
+      back = Promise.all([launchShown, Promise.resolve(worldMapFetchPromise).catch(() => {})]).then(() => {
+        if (place.pages && typeof place.pages === 'object') {
+          Object.keys(screenAt).forEach((key) => {
+            if (Number.isInteger(place.pages[key]) && place.pages[key] >= 0) screenAt[key] = place.pages[key];
+          });
+          drawScreenPage(currentScreen());
+        }
+        const scrollY = Number(place.scrollY);
+        if (Number.isFinite(scrollY) && scrollY > 0) scrollPageTo(scrollY);
+        const { shoot, archive } = place;
+        const kept = id => typeof id === 'string' && state.shoots.some(s => s.id === id);
+        const clear = shootModalOverlay.hidden && archiveModeOverlay.hidden;
+        if (clear && shoot && kept(shoot.id)) {
+          const page = shoot.page;
+          if (page && SHOOT_MODAL_SECTIONS.some(sec => sec.id === page.id) && Number.isInteger(page.sub) && page.sub >= 0) {
+            shootPageMemory[shoot.id] = { id: page.id, sub: page.sub };
+          }
+          openShootModal(shoot.id);
+        } else if (clear && archive && kept(archive.id)) {
+          openArchiveMode(archive.id, Number.isInteger(archive.at) && archive.at > 0 ? archive.at : 0);
+        }
+      });
+    }
+    Promise.resolve(back).catch(() => {}).then(() => {
+      // Shoot mode comes back on its own (resumeShootModeIfActive), whatever
+      // the sun menu says; it comes back on the page you were on, too.
+      const was = readLastPlace();
+      const mode = was && was.shootMode;
+      if (mode && !shootModeOverlay.hidden && mode.id === getShootModeShootId() && Number.isInteger(mode.at) && mode.at > 0) {
+        if (!shootModeBoardIn) shootModeWanted = mode.at;
+        breakShootModePages({ at: mode.at, force: true });
+      }
+      lastPlaceArmed = true;
+      queueLastPlace();
+    });
+  })();
 
   // ---------- pull to refresh ----------
   (function setupPullToRefresh() {
@@ -22124,7 +22524,7 @@
       if (e.touches.length !== 1 || anyModalOpen()) { tracking = false; return; }
       // The stats carousel and the image viewer already own horizontal
       // swipes for their own paging — don't hijack those.
-      if (e.target.closest('#statsCarousel') || e.target.closest('.image-viewer-stage') || e.target.closest('.tabbar')) {
+      if (e.target.closest('#statsCarousel') || e.target.closest('.image-viewer-stage') || e.target.closest('.tabbar') || e.target.closest('.nb-page-num')) {
         tracking = false;
         return;
       }
@@ -22144,6 +22544,117 @@
 
       stepScreenPage(dx < 0 ? 1 : -1);
     }, { passive: true });
+  })();
+
+  // Held still on a page number, it swells into a card: the number big and
+  // a tick for every page. Slide sideways and the pages flip under the
+  // finger, a tick at a time; let go to stay there (user, 11-11). The same
+  // on the screens, inside a shoot, in Archive mode and in Shoot mode.
+  (function setupPageNumberScrub() {
+    const card = document.createElement('div');
+    card.className = 'nb-scrub';
+    card.setAttribute('aria-hidden', 'true');
+    card.innerHTML = '<span class="nb-scrub-num"></span><span class="nb-scrub-ticks"></span>';
+    document.body.appendChild(card);
+    const cardNum = card.querySelector('.nb-scrub-num');
+    const ticks = card.querySelector('.nb-scrub-ticks');
+    const books = [
+      {
+        el: document.getElementById('nbScreenNum'),
+        ok: () => !anyPopupOpen(),
+        count: () => screenPageCount(currentScreen()),
+        at: () => screenNow(currentScreen()),
+        go: (i) => { const view = currentScreen(); clearPan(); scrollPageTo(0); screenAt[view] = i; drawScreenPage(view); },
+      },
+      {
+        el: document.getElementById('nbPageFoot'),
+        ok: () => !shootModalOverlay.hidden && !shootWizardActive && !shootWizardPendingId,
+        count: () => shootFlatPages().length,
+        at: () => Math.max(0, shootFlatPages().findIndex(p => p.id === shootPageId && p.sub === shootSub)),
+        go: (i) => { const page = shootFlatPages()[i]; if (page) showShootPage(page.id, { sub: page.sub }); },
+      },
+      {
+        el: document.getElementById('archiveModeFoot'),
+        ok: () => !archiveModeOverlay.hidden && !!archiveFlow,
+        count: () => (archiveFlow && archiveFlow.pages.length) || 1,
+        at: () => archiveAt,
+        go: (i) => { archiveAt = i; archiveModePage.scrollTop = 0; drawArchivePage(); },
+      },
+      {
+        el: document.getElementById('shootModeFoot'),
+        ok: () => !shootModeOverlay.hidden && !!shootModeFlows,
+        count: () => shootModePages().length,
+        at: () => shootModeAt,
+        go: (i) => { shootModeAt = i; drawShootModePage(); },
+      },
+    ];
+    let hold = null;
+    let scrub = null;
+    function draw() {
+      cardNum.textContent = `${scrub.at + 1} / ${scrub.count}`;
+      ticks.querySelectorAll('.nb-scrub-tick').forEach((tick, i) => tick.classList.toggle('is-on', i === scrub.at));
+    }
+    function open(h) {
+      hold = null;
+      const { book, el } = h;
+      if (!book.ok()) return;
+      const count = book.count();
+      if (count < 2) return;
+      const active = document.activeElement;
+      if (active && active !== document.body && typeof active.blur === 'function') active.blur();
+      const vw = window.innerWidth;
+      const at = Math.max(0, Math.min(book.at(), count - 1));
+      // One tick a page, with the page you're on right under the finger and
+      // every other one within reach of it before the screen's edge; the
+      // tick under the finger is the page showing.
+      const room = 26; // the card's padding and border, and a little air
+      const step = Math.max(3, Math.min(30,
+        at ? (h.x - room) / at : 30,
+        at < count - 1 ? (vw - room - h.x) / (count - 1 - at) : 30));
+      ticks.style.setProperty('--tick', `${step.toFixed(2)}px`);
+      ticks.innerHTML = '<span class="nb-scrub-tick"></span>'.repeat(count);
+      const ticksLeft0 = h.x - (at + 0.5) * step;
+      scrub = { id: h.id, el, book, at, count, step, ticksLeft: ticksLeft0 };
+      draw();
+      const r = el.getBoundingClientRect();
+      const w = card.offsetWidth;
+      const centre = Math.max(w / 2 + 8, Math.min(vw - w / 2 - 8, ticksLeft0 + (count * step) / 2));
+      scrub.ticksLeft = centre - (count * step) / 2; // the ticks sit in the card's middle
+      card.style.left = `${centre.toFixed(1)}px`;
+      card.style.top = `${(r.top - 6).toFixed(1)}px`;
+      card.classList.add('is-open');
+      el.classList.add('is-held');
+    }
+    function end(e) {
+      if (hold && e.pointerId === hold.id) { clearTimeout(hold.timer); hold = null; }
+      if (!scrub || e.pointerId !== scrub.id) return;
+      scrub.el.classList.remove('is-held');
+      scrub = null;
+      card.classList.remove('is-open');
+    }
+    document.addEventListener('pointermove', (e) => {
+      if (hold && e.pointerId === hold.id && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) >= 8) { clearTimeout(hold.timer); hold = null; }
+      if (!scrub || e.pointerId !== scrub.id) return;
+      const to = Math.max(0, Math.min(scrub.count - 1, Math.floor((e.clientX - scrub.ticksLeft) / scrub.step)));
+      if (to === scrub.at) return;
+      scrub.at = to;
+      scrub.book.go(to);
+      draw();
+    });
+    document.addEventListener('pointerup', end);
+    document.addEventListener('pointercancel', end);
+    books.forEach((book) => {
+      const { el } = book;
+      el.classList.add('nb-page-num');
+      el.addEventListener('pointerdown', (e) => {
+        if (e.button || !e.isPrimary || scrub) return;
+        if (hold) clearTimeout(hold.timer);
+        const h = { id: e.pointerId, x: e.clientX, y: e.clientY, el, book };
+        h.timer = setTimeout(() => { if (hold === h) open(h); }, 380);
+        hold = h;
+      });
+      el.addEventListener('contextmenu', e => e.preventDefault());
+    });
   })();
 
   // ---------- the navigator ----------
@@ -22256,6 +22767,83 @@
     slider.addEventListener('click', (e) => {
       if (performance.now() - draggedAt < 350) { e.preventDefault(); e.stopPropagation(); }
     }, true);
+
+    // Held still for a moment, the icon swells into a row of every section,
+    // the way the Mac's Dock grows under the pointer (user, 11-11). Slide
+    // along it and let go on one to turn there; let go without sliding and
+    // nothing changes. The shut book isn't on it: only the arrow shuts it.
+    const DOCK_SLOT = 46; // px from one icon to the next
+    const DOCK_PAD = 10;  // the card's padding and border, each side
+    const dock = document.createElement('div');
+    dock.className = 'nav-dock';
+    dock.setAttribute('aria-hidden', 'true');
+    dock.innerHTML = tabs.map(t => `<span class="nav-dock-slot"><span class="nav-dock-icon">${t.icon}</span></span>`).join('')
+      + '<span class="nav-dock-label"></span>';
+    bar.appendChild(dock);
+    const dockSlots = [...dock.querySelectorAll('.nav-dock-slot')];
+    const dockIcons = [...dock.querySelectorAll('.nav-dock-icon')];
+    const dockLabel = dock.querySelector('.nav-dock-label');
+    let hold = null;
+    let docked = null;
+    // Biggest under the finger, its neighbours a little, the rest as they are.
+    function dockShow(x) {
+      const fx = x === null ? docked.centers[idx] : x;
+      let near = idx;
+      if (x !== null) {
+        let best = Infinity;
+        docked.centers.forEach((c, i) => { if (Math.abs(fx - c) < best) { best = Math.abs(fx - c); near = i; } });
+      }
+      docked.at = near;
+      dockIcons.forEach((icon, i) => {
+        const grow = Math.max(0, 1 - Math.abs(fx - docked.centers[i]) / (DOCK_SLOT * 1.8));
+        icon.style.transform = `scale(${(1 + 0.55 * grow).toFixed(3)})`;
+      });
+      dockSlots.forEach((slot, i) => slot.classList.toggle('is-on', i === near));
+      dockLabel.textContent = tabs[near].name;
+      dockLabel.style.left = `${(docked.centers[near] - docked.left - 2).toFixed(1)}px`;
+    }
+    function openDock(h) {
+      hold = null;
+      drag = null; // the slide along the bar stands down
+      const r = bar.getBoundingClientRect();
+      const w = tabs.length * DOCK_SLOT + DOCK_PAD * 2;
+      const vw = window.innerWidth;
+      // The section you're on sits right over the finger, as far as the screen allows.
+      const left = Math.max(8, Math.min(vw - 8 - w, h.x - DOCK_PAD - (idx + 0.5) * DOCK_SLOT));
+      docked = { id: h.id, x0: h.x, y0: h.y, moved: false, at: idx, left, centers: tabs.map((t, i) => left + DOCK_PAD + (i + 0.5) * DOCK_SLOT) };
+      dock.style.left = `${(left - r.left).toFixed(1)}px`;
+      dock.style.transformOrigin = `${(h.x - left).toFixed(1)}px 100%`;
+      dockSlots.forEach((slot, i) => slot.classList.toggle('is-here', i === idx));
+      dockShow(null);
+      dock.classList.add('is-open');
+      try { bar.setPointerCapture(h.id); } catch (err) { /* capture is a nice-to-have */ }
+    }
+    now.addEventListener('pointerdown', (e) => {
+      if (e.button || !e.isPrimary) return;
+      if (hold) clearTimeout(hold.timer);
+      const h = { id: e.pointerId, x: e.clientX, y: e.clientY };
+      h.timer = setTimeout(() => { if (hold === h) openDock(h); }, 380);
+      hold = h;
+    });
+    now.addEventListener('contextmenu', e => e.preventDefault());
+    bar.addEventListener('pointermove', (e) => {
+      if (hold && e.pointerId === hold.id && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) >= 8) { clearTimeout(hold.timer); hold = null; }
+      if (!docked || e.pointerId !== docked.id) return;
+      if (!docked.moved && Math.hypot(e.clientX - docked.x0, e.clientY - docked.y0) < 10) return;
+      docked.moved = true;
+      dockShow(e.clientX);
+    });
+    const dockEnd = (e) => {
+      if (hold && e.pointerId === hold.id) { clearTimeout(hold.timer); hold = null; }
+      if (!docked || e.pointerId !== docked.id) return;
+      const { moved, at } = docked;
+      docked = null;
+      dock.classList.remove('is-open');
+      draggedAt = performance.now(); // the icon's own tap (back to page 1) stands down
+      if (e.type === 'pointerup' && moved && at !== idx) turnToView(tabs[at].view);
+    };
+    bar.addEventListener('pointerup', dockEnd);
+    bar.addEventListener('pointercancel', dockEnd);
 
     new MutationObserver(() => sync(true)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-view'] });
     sync(false);

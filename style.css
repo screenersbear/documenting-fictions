@@ -133,9 +133,9 @@ h1, h2, h3 {
 #app {
   max-width: 560px;
   margin: 0 auto;
-  min-height: 100dvh;
-  padding: env(safe-area-inset-top) 16px 0;
-  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  min-height: calc(100 * var(--dvh));
+  padding: var(--sa-top) 16px 0;
+  padding-bottom: calc(72px + var(--sa-bottom));
 }
 
 .view { padding-top: 4px; }
@@ -144,11 +144,11 @@ h1, h2, h3 {
 
 .hero-band {
   background: var(--ink);
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  margin-top: calc(-1 * env(safe-area-inset-top));
+  width: calc(100 * var(--vw));
+  margin-left: calc(50% - calc(50 * var(--vw)));
+  margin-top: calc(-1 * var(--sa-top));
   margin-bottom: 20px;
-  padding: env(safe-area-inset-top) 16px 20px;
+  padding: var(--sa-top) 16px 20px;
   border-bottom: 4px solid var(--accent);
 }
 
@@ -1428,7 +1428,7 @@ h2.status-group-heading.heading-navy {
   display: flex;
   background: var(--surface);
   border-top: 3px solid var(--ink);
-  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  padding: 8px 0 calc(8px + var(--sa-bottom));
   max-width: 560px;
   margin: 0 auto;
   /* iOS Safari has a known bug where position:fixed elements can visually
@@ -1499,13 +1499,13 @@ h2.status-group-heading.heading-navy {
 .modal {
   background: var(--surface);
   width: 100%;
-  max-height: 92svh;
+  max-height: calc(92 * var(--svh));
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-4xl) var(--radius-4xl) 0 0;
-  padding: 16px 20px calc(env(safe-area-inset-bottom) + 20px);
+  padding: 16px 20px calc(var(--sa-bottom) + 20px);
   animation: slideUp 0.2s ease;
 }
 
@@ -1531,7 +1531,7 @@ h2.status-group-heading.heading-navy {
   /* Top-anchored, so it's the BOTTOM corners that sit in open space —
      the reverse of every other bottom-sheet's top-only rounding. */
   border-radius: 0 0 28px 28px;
-  padding: calc(env(safe-area-inset-top) + 16px) 20px 20px;
+  padding: calc(var(--sa-top) + 16px) 20px 20px;
   animation: slideDown 0.2s ease;
 }
 
@@ -2874,7 +2874,7 @@ h2.status-group-heading.heading-navy {
   bottom: 0;
   z-index: 2;
   background: var(--surface);
-  padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+  padding-bottom: calc(var(--sa-bottom) + 16px);
 }
 
 /* The sticky Save bar doesn't span the modal's own full width (it sits
@@ -2926,7 +2926,7 @@ h2.status-group-heading.heading-navy {
      modal's bottom edge and content scrolling up from below (e.g. the Add
      photos button) can visually crowd it as it approaches. */
   padding-top: 10px;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 34px);
+  padding-bottom: calc(var(--sa-bottom) + 34px);
 }
 
 .complete-shoot-btn[hidden] {
@@ -3436,7 +3436,7 @@ h2.status-group-heading.heading-navy {
   position: relative;
   display: flex;
   align-items: center;
-  padding: calc(env(safe-area-inset-top) + 12px) 16px 12px;
+  padding: calc(var(--sa-top) + 12px) 16px 12px;
 }
 
 .image-viewer-close {
@@ -3514,7 +3514,7 @@ h2.status-group-heading.heading-navy {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px calc(env(safe-area-inset-bottom) + 12px);
+  padding: 12px 16px calc(var(--sa-bottom) + 12px);
 }
 
 #imageViewerAddCaptionBtn {
@@ -3604,7 +3604,7 @@ h2.status-group-heading.heading-navy {
   width: 100%;
   max-width: 380px;
   border-radius: var(--radius-4xl);
-  padding: 16px 20px calc(env(safe-area-inset-bottom) + 20px);
+  padding: 16px 20px calc(var(--sa-bottom) + 20px);
   animation: slideUp 0.2s ease;
 }
 
@@ -3624,8 +3624,8 @@ h2.status-group-heading.heading-navy {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 90dvh;
-  max-height: 90dvh;
+  height: calc(90 * var(--dvh));
+  max-height: calc(90 * var(--dvh));
   /* Overrides the base .modal's overflow-y: auto — this modal's content is
      sized to fit exactly (flex column, no overflow of its own), so without
      this the outer modal competes with the PDF viewer inside the iframe
@@ -3633,7 +3633,7 @@ h2.status-group-heading.heading-navy {
      scrolling at all. */
   overflow: hidden;
   border-radius: var(--radius-4xl);
-  padding: 16px 16px calc(env(safe-area-inset-bottom) + 16px);
+  padding: 16px 16px calc(var(--sa-bottom) + 16px);
   animation: slideUp 0.2s ease;
 }
 
@@ -3841,7 +3841,7 @@ h2.status-group-heading.heading-navy {
    cover the middle of the screen where that section sits. */
 #shootTourOverlay {
   align-items: flex-end;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
+  padding-bottom: calc(var(--sa-bottom) + 24px);
 }
 
 .shoot-tour-skip-row {
@@ -3885,7 +3885,7 @@ h2.status-group-heading.heading-navy {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px);
+  padding: calc(var(--sa-top) + 16px) 16px calc(var(--sa-bottom) + 16px);
   background: rgba(0,0,0,0.6);
   /* A drag on the dim (or on the card's own header/footer) mustn't pan the
      shoot page behind. The card body is its own scroller, so it still
@@ -4347,7 +4347,7 @@ h2.status-group-heading.heading-navy {
 .region-country-popup-modal {
   width: 100%;
   max-width: 380px;
-  max-height: 70vh;
+  max-height: calc(70 * var(--vh));
   overflow-y: auto;
   border: 3px solid var(--ink);
   border-radius: 28px;
@@ -4378,23 +4378,6 @@ h2.status-group-heading.heading-navy {
   flex-shrink: 0;
   margin: 0;
   padding: 16px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-family: var(--font-title);
-  font-size: 20px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  text-align: center;
-}
-
-/* "Go back" closes the menu — the same accent band as the header, run edge
-   to edge along the bottom (the negative margins undo the pane's 12px
-   padding, so its corners are the modal's own rounded ones). */
-#appMenuCancelBtn {
-  width: calc(100% + 24px);
-  margin: 4px -12px -12px;
-  padding: 16px;
-  border-radius: 0;
   background: var(--accent);
   color: var(--on-accent);
   font-family: var(--font-title);
@@ -4450,7 +4433,7 @@ h2.status-group-heading.heading-navy {
 }
 
 .daily-report-modal {
-  max-height: 80vh;
+  max-height: calc(80 * var(--vh));
   overflow-y: auto;
   background: var(--ink);
   border-color: var(--surface);
@@ -4681,29 +4664,6 @@ h2.status-group-heading.heading-navy {
   transform: translateX(-80%);
 }
 
-/* App menu has 4 panes now (main, shoot display options, change theme, new
-   shoot guide) — same idea as #shootOptionsPaneTrack above, just its own
-   proportions. */
-#appMenuPaneTrack {
-  width: 400%;
-}
-
-#appMenuPaneTrack .options-pane {
-  width: 25%;
-}
-
-#appMenuPaneTrack.show-second {
-  transform: translateX(-25%);
-}
-
-#appMenuPaneTrack.show-third {
-  transform: translateX(-50%);
-}
-
-#appMenuPaneTrack.show-fourth {
-  transform: translateX(-75%);
-}
-
 .menu-divider {
   height: 1px;
   flex-shrink: 0;
@@ -4722,7 +4682,7 @@ h2.status-group-heading.heading-navy {
 }
 
 .project-photo-picker-grid {
-  max-height: min(55vh, 420px);
+  max-height: min(calc(55 * var(--vh)), 420px);
   overflow-y: auto;
 }
 
@@ -4766,7 +4726,7 @@ h2.status-group-heading.heading-navy {
 /* ---- Pull to refresh ---- */
 .pull-refresh-indicator {
   position: fixed;
-  top: calc(env(safe-area-inset-top) + 10px);
+  top: calc(var(--sa-top) + 10px);
   left: 50%;
   transform: translateX(-50%) translateY(-60px);
   z-index: 999;
@@ -4804,7 +4764,7 @@ h2.status-group-heading.heading-navy {
 /* ---- Toast ---- */
 .toast {
   position: fixed;
-  bottom: calc(90px + env(safe-area-inset-bottom));
+  bottom: calc(90px + var(--sa-bottom));
   left: 50%;
   transform: translateX(-50%);
   background: var(--ink);
@@ -4864,7 +4824,7 @@ h2.status-group-heading.heading-navy {
 .scroll-top-btn {
   position: fixed;
   right: 20px;
-  bottom: calc(90px + env(safe-area-inset-bottom));
+  bottom: calc(90px + var(--sa-bottom));
   width: 46px;
   height: 46px;
   border-radius: 50%;
@@ -4953,8 +4913,8 @@ h2.status-group-heading.heading-navy {
 .pie-chart {
   width: 210px;
   height: 210px;
-  max-width: 68vw;
-  max-height: 68vw;
+  max-width: calc(68 * var(--vw));
+  max-height: calc(68 * var(--vw));
 }
 
 .pie-slice {
@@ -5082,7 +5042,7 @@ h2.status-group-heading.heading-navy {
    underneath without scrolling. */
 .world-map-scroll {
   width: 100%;
-  max-height: 38vh;
+  max-height: calc(38 * var(--vh));
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border);
@@ -5163,7 +5123,7 @@ h2.status-group-heading.heading-navy {
   height: 100%;
   background: var(--surface);
   box-shadow: -4px 0 24px rgba(0,0,0,0.2);
-  padding: env(safe-area-inset-top) 20px calc(env(safe-area-inset-bottom) + 20px);
+  padding: var(--sa-top) 20px calc(var(--sa-bottom) + 20px);
   overflow-y: auto;
   overscroll-behavior: none;
   transform: translateX(100%);
@@ -5222,7 +5182,7 @@ h2.status-group-heading.heading-navy {
 .stat-box-detail-modal {
   width: 100%;
   max-width: 420px;
-  max-height: 80vh;
+  max-height: calc(80 * var(--vh));
   background: var(--surface);
   border: 3px solid var(--ink);
   border-radius: 28px;
@@ -5401,8 +5361,8 @@ h2.status-group-heading.heading-navy {
   /* svh, not dvh — see the base .modal rule's comment. dvh shrinks with the
      keyboard, and since the Done button is a plain flex child (not sticky)
      the whole centered modal — button included — rides up with it. */
-  height: min(92svh, 880px);
-  max-height: 92svh;
+  height: min(calc(92 * var(--svh)), 880px);
+  max-height: calc(92 * var(--svh));
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -5723,7 +5683,7 @@ h2.status-group-heading.heading-navy {
   width: 100%;
   margin: 0;
   padding: 20px 16px;
-  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  padding-bottom: max(20px, var(--sa-bottom));
   border: none;
   border-top: 2px solid var(--ink);
   border-radius: 0;
@@ -6055,8 +6015,8 @@ h2.status-group-heading.heading-navy {
 }
 
 .journal-toc-modal {
-  height: 85dvh;
-  max-height: 85dvh;
+  height: calc(85 * var(--dvh));
+  max-height: calc(85 * var(--dvh));
   /* Overrides .rounded-modal's top-only rounding — this popup floats clear
      of the bottom edge now, so all four corners have open space to round
      into. */
@@ -6103,8 +6063,8 @@ h2.status-group-heading.heading-navy {
   --radius-pill: 6px;
   --dim: rgba(49, 61, 69, 0.74);
   --line: #d6dadd;
-  --nb-top: max(env(safe-area-inset-top), 10px);
-  --nb-bar: calc(58px + env(safe-area-inset-bottom));
+  --nb-top: max(var(--sa-top), 10px);
+  --nb-bar: calc(58px + var(--sa-bottom));
   --book-shadow: 0 16px 34px rgba(60, 40, 20, 0.2), 0 3px 8px rgba(60, 40, 20, 0.14);
 }
 
@@ -6144,7 +6104,7 @@ h2.status-group-heading.heading-navy {
   z-index: 9;
   border-top: none;
   background: #fff;
-  padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+  padding: 6px 0 calc(6px + var(--sa-bottom));
 }
 .tab { color: var(--text); padding: 8px 4px; min-height: 44px; justify-content: center; }
 .tab > span:not(.tab-icon) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -6350,7 +6310,7 @@ h2.status-group-heading.heading-navy {
 .brand-title, .topbar h1 { font-family: var(--font-head); font-weight: 400; font-size: 26px; line-height: 1.2; text-align: center; text-transform: none; letter-spacing: 0; color: var(--text); }
 .app-menu-btn { position: absolute; top: -6px; width: 44px; height: 44px; margin: 0; color: var(--text); }
 .app-menu-btn svg { width: 20px; height: 20px; }
-#shutBookBtn { left: -12px; }
+#shutBookBtn { display: none; } /* gone from the header (user, 11-11); the navigator still uses it to shut the book */
 #notificationBellBtn { right: 22px; }
 #appMenuBtn { right: -12px; }
 .topbar .icon-btn { position: absolute; right: -8px; top: -6px; width: 44px; height: 44px; background: none; color: var(--text); font-family: var(--font-body); font-weight: 400; font-size: 26px; }
@@ -6473,7 +6433,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 /* Shoot mode and Archive mode: one flat sheet, no book and no floating card. */
 .shoot-mode-overlay { padding: 0; background: #fff; align-items: stretch; }
 .shoot-mode-modal { max-width: 560px; margin: 0 auto; height: var(--nb-h); max-height: none; border: none; border-radius: 0; }
-.shoot-mode-header { padding-top: calc(env(safe-area-inset-top) + 18px); }
+.shoot-mode-header { padding-top: calc(var(--sa-top) + 18px); }
 #shootModeTitle { color: var(--on-accent); }
 .archive-mode-details-btn { background: var(--text); color: #fff; border: none; border-radius: 3px; padding: 2px 9px; font-family: var(--font-body); font-size: 12px; font-weight: 600; line-height: 20px; letter-spacing: 0; text-transform: none; }
 .shoot-mode-bottom-cta { font-family: var(--font-body); font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; }
@@ -6495,7 +6455,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 /* Shoot mode's chips and its bottom row, as the rest of the notebook. */
 .shoot-mode-quick-review { display: flex; flex-wrap: wrap; gap: 8px; }
 .shoot-mode-quick-review-btn { width: auto; height: auto; min-height: 32px; padding: 6px 11px; border: 1px solid var(--text); border-radius: 6px; background: none; color: var(--text); font-size: 13px; line-height: 18px; font-weight: 400; }
-#shootModeLeaveBtn, #shootModeDoneBtn { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 0 max(8px, env(safe-area-inset-bottom)); border: none; background: none; color: var(--text); font-size: 11px; font-weight: 500; }
+#shootModeLeaveBtn, #shootModeDoneBtn { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 0 max(8px, var(--sa-bottom)); border: none; background: none; color: var(--text); font-size: 11px; font-weight: 500; }
 #shootModeLeaveBtn svg, #shootModeDoneBtn svg { width: 21px; height: 21px; display: block; }
 
 /* Ticks and links */
@@ -6526,7 +6486,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 
 /* Every page is the same size, and its frame comes down close to the navigator. */
 :root {
-  --nb-bar: calc(48px + env(safe-area-inset-bottom));
+  --nb-bar: calc(48px + var(--sa-bottom));
   --nb-edge: max(14px, calc(50% - 270px));
 }
 .nb-board { right: var(--nb-edge); perspective: 1400px; }
@@ -6551,7 +6511,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 /* The tabs poking out of a right-hand page, one for each screen; the screen
    you're on has none showing. Each is wider than it looks, for the thumb. */
 .nb-screen-tabs { position: fixed; z-index: 9; top: calc(var(--nb-top) + var(--layer-shift, 0px)); bottom: calc(var(--nb-bar) - var(--bar-drift, 0px)); right: calc(var(--nb-edge) - 10px); width: 24px; display: flex; flex-direction: column; justify-content: center; gap: 6px; pointer-events: none; }
-.nb-screen-tabs > * { position: relative; display: block; flex: 0 0 min(64px, 9svh); width: 100%; min-height: 0; padding: 0; border: none; border-radius: 0; background: none; pointer-events: auto; }
+.nb-screen-tabs > * { position: relative; display: block; flex: 0 0 min(64px, calc(9 * var(--svh))); width: 100%; min-height: 0; padding: 0; border: none; border-radius: 0; background: none; pointer-events: auto; }
 .nb-screen-tabs > *::before { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 10px; border-radius: 0 5px 5px 0; }
 .nb-screen-tabs > .y::before { background: var(--accent); }
 .nb-screen-tabs > .n::before { background: var(--text); }
@@ -6567,7 +6527,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 .nb-screen-tabs-shoot > * { pointer-events: none; }
 
 /* The navigator, as in Callback: one icon, a triangle each side there's another. */
-.tabbar { justify-content: center; padding: 2px 0 calc(2px + env(safe-area-inset-bottom)); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.tabbar { justify-content: center; padding: 2px 0 calc(2px + var(--sa-bottom)); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
 .tabbar .tab { display: none; }
 .slider { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 44px; }
 .slide-arrow { appearance: none; -webkit-appearance: none; display: grid; place-items: center; width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; color: var(--text); }
@@ -6590,10 +6550,10 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 /* A thinner frame, closer to the navigator, with room for named tabs. */
 :root {
   --nb-rim: 5px;
-  --tab-light: #ffe372;
+  --tab-light: #fff0ae; /* a pale yellow, well apart from the mango */
   --screen-gap: 0px;
-  --nb-h: 100svh;
-  --nb-foot: min(env(safe-area-inset-bottom), 16px);
+  --nb-h: calc(100 * var(--svh));
+  --nb-foot: min(var(--sa-bottom), 16px);
   --nb-bar: calc(38px + var(--nb-foot));
   --nb-edge: max(22px, calc(50% - 270px));
 }
@@ -6606,7 +6566,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 
 /* Named tabs: the tab fills the gap at the page's edge, its touch area runs over the rim. */
 .nb-screen-tabs { right: 2px; width: calc(var(--nb-edge) + var(--nb-rim) - 2px); gap: 5px; }
-.nb-screen-tabs > * { flex: 0 0 min(72px, 10svh); }
+.nb-screen-tabs > * { flex: 0 0 min(72px, calc(10 * var(--svh))); }
 .nb-screen-tabs > *::before { display: none; }
 .nb-screen-tabs > * > span { position: absolute; top: 0; left: var(--nb-rim); bottom: 0; width: min(calc(100% - var(--nb-rim)), 40px); display: flex; align-items: center; justify-content: center; border-radius: 0 6px 6px 0; writing-mode: vertical-rl; white-space: nowrap; font-size: 12px; line-height: 1; font-weight: 400; letter-spacing: 0; }
 .nb-screen-tabs > .y > span { background: var(--tab-light); color: var(--text); }
@@ -6725,7 +6685,7 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
 :root[data-book="ink"] { --accent-on-ink: #fff; --accent: #313d45; --tab-light: #a3adb4; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(art/df-ink-cover.webp); --book-block: url(art/df-ink-block.webp); }
 
 /* The sun on the shut book, as in Contact Sheet. */
-.nb-sun { position: absolute; z-index: 7; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 16px); width: 48px; height: 48px; min-height: 0; margin-left: -24px; padding: 10px; border: none; background: none; color: var(--text); transition: opacity 0.25s; }
+.nb-sun { position: absolute; z-index: 7; left: 50%; bottom: calc(var(--sa-bottom) + 16px); width: 48px; height: 48px; min-height: 0; margin-left: -24px; padding: 10px; border: none; background: none; color: var(--text); transition: opacity 0.25s; }
 .nb-sun svg { width: 28px; height: 28px; display: block; }
 .nb:not(.closed) .nb-sun, .nb.placing .nb-sun { opacity: 0; pointer-events: none; }
 /* Right where the navigator's icon is once the book opens: the same middle,
@@ -6807,8 +6767,8 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
 .nb-crop-window { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 200vmax rgba(255, 255, 255, 0.8); outline: 2px solid var(--text); pointer-events: none; }
 .nb-crop-window.is-circle { border-radius: 50%; }
 .nb-crop-window.is-square, .nb-crop-window.is-rect { border-radius: 6px; }
-.nb-crop-hint { position: absolute; left: 0; right: 0; top: calc(max(env(safe-area-inset-top), 10px) + 18px); margin: 0; text-align: center; font-family: var(--font-body); font-size: 17px; color: var(--text); pointer-events: none; }
-.nb-crop-actions { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 16px); display: flex; justify-content: center; gap: 12px; }
+.nb-crop-hint { position: absolute; left: 0; right: 0; top: calc(max(var(--sa-top), 10px) + 18px); margin: 0; text-align: center; font-family: var(--font-body); font-size: 17px; color: var(--text); pointer-events: none; }
+.nb-crop-actions { position: absolute; left: 0; right: 0; bottom: calc(var(--sa-bottom) + 16px); display: flex; justify-content: center; gap: 12px; }
 .nb-crop-back, .nb-crop-ok { min-height: 44px; padding: 8px 34px; border-radius: 3px; font-family: var(--font-body); font-size: 17px; letter-spacing: 0; text-transform: none; }
 .nb-crop-ok { border: none; background: var(--text); color: #fff; }
 .nb-crop-back { border: 1.5px solid var(--text); background: #fff; color: var(--text); }
@@ -6816,7 +6776,7 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
 .nb.placing .nb-float { animation: none; }
 .nb-sticker-stage { position: absolute; z-index: 8; inset: 0; touch-action: none; }
 .nb-sticker-stage[hidden] { display: none; }
-.nb-sticker-ok { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 16px); transform: translateX(-50%); min-height: 44px; padding: 8px 34px; border: none; border-radius: 3px; background: var(--text); color: #fff; font-family: var(--font-body); font-size: 17px; letter-spacing: 0; text-transform: none; }
+.nb-sticker-ok { position: absolute; left: 50%; bottom: calc(var(--sa-bottom) + 16px); transform: translateX(-50%); min-height: 44px; padding: 8px 34px; border: none; border-radius: 3px; background: var(--text); color: #fff; font-family: var(--font-body); font-size: 17px; letter-spacing: 0; text-transform: none; }
 
 /* Each page is a sheet of paper lying in the notebook, as in the other
    notebook apps: rounder corners on its outer side, its own edge the end of
@@ -6835,3 +6795,165 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
      once the real page takes over rather than popping on. */
   :root:has(#bookOverlay:not([hidden])) .nb-board-page { box-shadow: 0 0 3px 1px var(--accent), 0 0 0 40px var(--accent); transition: none; }
 }
+
+/* The page number always sits right under the navigator's icon: each page sits
+   a little off the middle of the screen (the spine on one side, the rim and
+   tabs on the other), so the number's strip is shifted by that difference.
+   Inside the frame percentages would be of the frame, so the frame's own
+   insets are written in vw here (recto: left max(-20px, 50% - 280px), right
+   --nb-edge; verso: left max(6px, 50% - 270px), right max(-20px, 50% - 280px)). */
+.nb-screen-foot { left: calc(var(--nb-rim) + max(22px, calc(calc(50 * var(--vw)) - 270px)) - max(-20px, calc(calc(50 * var(--vw)) - 280px))); right: var(--nb-rim); }
+:root[data-side="verso"] .nb-screen-foot { left: var(--nb-rim); right: calc(var(--nb-rim) + max(6px, calc(calc(50 * var(--vw)) - 270px)) - max(-20px, calc(calc(50 * var(--vw)) - 280px))); }
+/* A shoot's and Archive mode's foot spans the page for its fade, so only its
+   content moves over (padding percentages are of the overlay, the screen). */
+.nb-page-foot { padding-left: max(0px, calc(var(--nb-edge) + var(--nb-rim) - max(0px, calc(50% - 280px)))); padding-right: max(0px, calc(max(0px, calc(50% - 280px)) - var(--nb-edge) - var(--nb-rim))); box-sizing: border-box; }
+
+/* On the installed app the frame and the side tabs hang from the top like the
+   navigator, so the frame's bottom edge always lands right on the navigator's
+   top. Held by the real bottom, a stale --nb-h (iOS fixing its short layout
+   unseen) slid the frame's edge down behind the navigator: no edge at all. */
+:root.nb-installed .nb-board, :root.nb-installed .nb-screen-tabs:not(.nb-screen-tabs-shoot) { bottom: auto; height: calc(var(--nb-h) - var(--nb-top) - var(--nb-bar)); }
+
+/* Bigger text (user, 11-11): Overview grows all round, and the small text and
+   headings elsewhere come up; the big text stays. Pages are packed from what's
+   drawn, so this only means a little more turning. The Journal keeps its 28px
+   ruled lines, so nothing there passes about 22px. */
+.brand-title, .topbar h1 { font-size: 28px; }
+.new-shoot-cta { font-size: 17px; line-height: 24px; }
+.stat-num { font-size: 31px; }
+.stat-label { font-size: 13.5px; }
+.section-block h2, .section-block h2.heading-yellow, .section-block h2.heading-navy { font-size: 22px; }
+.section-block h2 span { font-size: 15px; }
+.shoot-row-title, .shoot-row-compact-title { font-size: 22px; }
+.shoot-row-date-line, .shoot-row-due { font-size: 14.5px; }
+.shoot-row-status-pill, .shoot-row .badge, .badge { font-size: 13px; line-height: 18px; }
+.filter-toggle { font-size: 15.5px; }
+.chip { font-size: 15px; line-height: 20px; }
+h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group-heading.heading-navy { font-size: 17px; }
+.status-group-heading.archive-month-heading, .archive-month-heading.heading-yellow, .archive-month-heading.heading-navy, .upcoming-subheading { font-size: 15px; }
+.stats-legend-row { font-size: 15.5px; }
+#journalList h2.status-group-heading { font-size: 17px; }
+#journalList .log-week-heading { font-size: 15px; }
+#journalList .journal-entry-date { font-size: 14.5px; }
+#journalList .log-takeaway-source { font-size: 14px; }
+#journalList .beat-chip.view-only { font-size: 14px; }
+#journalList .log-section-label { font-size: 15px; }
+.nb-screen-foot, .nb-page-foot { font-size: 15px; }
+.nb-screen-tabs > * > span { font-size: 13px; }
+#shootForm label, #journalForm label, #locationForm label, #talentForm label, #teamMemberForm label, #photographerForm label { font-size: 14px; }
+.primary.small-btn { font-size: 15px !important; }
+.status-swatch-display { font-size: 14px; }
+.field-hint { font-size: 15px; }
+.nb-tool { font-size: 12px; }
+.archive-summary .shoot-mode-review-label { font-size: 14px; }
+.archive-mode-details-btn { font-size: 13px; }
+
+/* ---- Shoot mode: a page of the notebook, the notebook around it dimmed ----
+   Laid out as Archive mode's page. The dim is the app's own (the new-shoot
+   steps' rgba(49, 61, 69, .42)) over the white and over the notebook's color,
+   so the page is the one bright thing. Scoped to #shootModeOverlay: the
+   review, wild card and Monday brief popups share its classes. */
+:root { --sm-dim-white: #a9aeb2; }
+#shootModeOverlay { top: var(--layer-shift, 0px); bottom: calc(0px - var(--layer-shift, 0px)); padding: 0; background: var(--sm-dim-white); }
+#shootModeOverlay:not([hidden]) { display: block; }
+#shootModeOverlay .nb-chapter-board { z-index: 0; background: var(--accent); filter: brightness(0.62) saturate(0.85); }
+@supports (color: color-mix(in srgb, red, blue)) {
+  :root { --sm-dim-white: color-mix(in srgb, #fff, #313d45 42%); }
+  #shootModeOverlay .nb-chapter-board { filter: none; background: color-mix(in srgb, var(--accent), #313d45 42%); }
+}
+#shootModeOverlay > .modal.shoot-mode-modal { position: absolute; top: calc(var(--nb-top) + var(--nb-rim)); left: max(0px, calc(50% - 280px)); right: calc(var(--nb-edge) + var(--nb-rim)); width: auto; height: calc(var(--nb-h) - var(--nb-top) - var(--nb-bar) - var(--nb-rim) * 2); max-width: none; max-height: none; margin: 0; padding: 12px 12px 56px 20px; display: block; border: none; border-radius: 0 var(--pg-r) var(--pg-r) 0; background: #fff; box-shadow: 0 0 3px 1px rgba(0, 0, 0, 0.18); overflow-x: hidden; overflow-y: auto; scrollbar-width: none; animation: none; }
+#shootModeOverlay > .modal.shoot-mode-modal::-webkit-scrollbar { display: none; }
+.shoot-mode-sheet[data-part="main"] .shoot-mode-page-more, .shoot-mode-sheet[data-part="more"] .shoot-mode-page-main { display: none; }
+#shootModeOverlay .shoot-mode-header { padding: 0 0 4px; background: none; }
+#shootModeOverlay .shoot-mode-header h2, #shootModeOverlay .shoot-mode-header .close-btn, #shootModeOverlay .shoot-mode-clock-text, #shootModeOverlay .shoot-mode-clock-line.shoot-mode-must-haves { color: var(--text); }
+#shootModeOverlay .shoot-mode-eyebrow { color: var(--dim); }
+#shootModeOverlay .shoot-mode-header .close-btn { margin: -8px -6px 0 0; }
+#shootModeOverlay .shoot-mode-body { flex: none; overflow: visible; padding: 0; }
+#shootModeOverlay .shoot-mode-body .shoot-mode-section-heading { padding: 14px 0 0; }
+#shootModeOverlay .shoot-mode-wild-card-row { padding: 14px 20px 4px; }
+#shootModeOverlay .shoot-mode-review-peek { padding: 10px 20px 2px; }
+#shootModeOverlay .shoot-mode-peek { padding: 6px 0 0; cursor: pointer; }
+.shoot-mode-peek-line, .shoot-mode-peek-empty { margin: 0 0 4px; font-family: var(--font-body); font-size: 15px; line-height: 1.35; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.shoot-mode-peek-label { color: var(--dim); }
+.shoot-mode-peek-empty { color: var(--dim); }
+#shootModeMoodboard { display: block; }
+#shootModeMoodboard .shoot-mode-moodboard-row { margin-bottom: 6px; }
+#shootModeOverlay .shoot-mode-quick-review-btn { font-size: 15px; line-height: 20px; }
+#shootModeOverlay .shoot-mode-shooting-notes-label { display: block; padding-top: 16px; font-size: 14px; }
+/* Exit and Done shooting where the navigator is, on the dimmed white. */
+#shootModeOverlay .shoot-mode-bottom-bar { position: absolute; z-index: 4; left: 0; right: 0; top: calc(var(--nb-h) - var(--nb-bar)); height: var(--nb-bar); max-width: 560px; margin: 0 auto; padding: 0 0 var(--nb-foot); display: flex; background: none; }
+#shootModeOverlay #shootModeLeaveBtn, #shootModeOverlay #shootModeDoneBtn { padding: 0; border: none; background: none; font-size: 12px; }
+
+/* The navigator held down (user, 11-11): every section in a row above it,
+   swelling under the finger like the Mac's Dock, with the name of the one
+   under the finger over it. A dot under the one you're on. */
+.tabbar { -webkit-touch-callout: none; }
+.nav-dock { position: absolute; bottom: calc(100% + 10px); left: 0; z-index: 3; box-sizing: border-box; display: flex; align-items: flex-end; padding: 8px; border: 2px solid var(--text); border-radius: 20px; background: #fff; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18); pointer-events: none; opacity: 0; visibility: hidden; transform: translateY(8px) scale(0.9); transition: opacity 0.14s ease, transform 0.16s ease, visibility 0s linear 0.16s; }
+.nav-dock.is-open { opacity: 1; visibility: visible; transform: none; transition: opacity 0.14s ease, transform 0.16s ease, visibility 0s; }
+.nav-dock-slot { position: relative; flex: 0 0 46px; height: 44px; display: flex; align-items: flex-end; justify-content: center; }
+.nav-dock-icon { display: grid; place-items: center; width: 30px; height: 30px; color: var(--text); transform-origin: 50% 100%; transition: transform 0.09s ease-out; }
+.nav-dock-icon svg { display: block; width: 27px; height: 27px; stroke-width: 1.8; }
+.nav-dock-slot.is-here::after { content: ''; position: absolute; left: 50%; bottom: -6px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--text); }
+.nav-dock-label { position: absolute; left: 0; bottom: calc(100% + 8px); transform: translateX(-50%); white-space: nowrap; padding: 2px 10px; border: 1.5px solid var(--text); border-radius: 10px; background: #fff; color: var(--text); font-family: var(--font-head); font-size: 16px; line-height: 22px; }
+
+/* A page number held down (user, 11-11): a card over it with the number
+   big and a tick for every page; sliding flips the pages. The numbers take
+   the finger now, so they can be held. */
+.nb-page-num { pointer-events: auto; touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; padding: 0 10px; cursor: default; }
+.nb-scrub { position: fixed; left: 0; top: 0; z-index: 60; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; padding: 8px 14px 10px; border: 2px solid var(--text); border-radius: 18px; background: #fff; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18); color: var(--text); pointer-events: none; opacity: 0; visibility: hidden; transform: translate(-50%, calc(-100% + 8px)) scale(0.9); transform-origin: 50% 100%; transition: opacity 0.14s ease, transform 0.16s ease, visibility 0s linear 0.16s; }
+.nb-scrub.is-open { opacity: 1; visibility: visible; transform: translate(-50%, -100%); transition: opacity 0.14s ease, transform 0.16s ease, visibility 0s; }
+.nb-scrub-num { font-size: 26px; line-height: 32px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.nb-scrub-ticks { display: flex; align-items: flex-end; height: 14px; margin-top: 4px; }
+.nb-scrub-tick { flex: 0 0 var(--tick, 20px); height: 14px; display: flex; align-items: flex-end; justify-content: center; }
+.nb-scrub-tick::before { content: ''; width: 2px; height: 6px; border-radius: 1px; background: var(--dim); }
+.nb-scrub-tick.is-on::before { width: 3px; height: 14px; background: var(--text); }
+@media (prefers-reduced-motion: reduce) { .nav-dock, .nav-dock.is-open, .nav-dock-icon, .nb-scrub, .nb-scrub.is-open { transition: none; } }
+
+
+/* Held upright (user, 11-11; index.html decides :root.nb-turned). Every
+   screen-sized length goes through these, so a page turned back upright is
+   laid out exactly as it is upright: the body is the upright screen, turned
+   to face the way the phone does, and everything fixed lays out inside it. */
+:root { --vw: 1vw; --vh: 1vh; --svh: 1svh; --dvh: 1dvh; --sa-top: env(safe-area-inset-top); --sa-bottom: env(safe-area-inset-bottom); }
+:root.nb-turned {
+  --vw: calc(var(--turn-w) / 100); --vh: calc(var(--turn-h) / 100); --svh: calc(var(--turn-h) / 100); --dvh: calc(var(--turn-h) / 100);
+  --sa-top: var(--turn-sa-top, max(env(safe-area-inset-left), env(safe-area-inset-right)));
+  --sa-bottom: var(--turn-sa-bottom, env(safe-area-inset-bottom));
+  --nb-h: var(--turn-h) !important; --screen-gap: 0px !important; --layer-shift: 0px !important; --bar-drift: 0px !important;
+  overflow: hidden;
+}
+:root.nb-turned.nb-short { --nb-foot: min(var(--sa-bottom), 16px); }
+:root.nb-turned body { position: fixed !important; top: 0 !important; left: 0 !important; right: auto !important; width: var(--turn-w) !important; height: var(--turn-h) !important; margin: 0; overflow: hidden; transform-origin: 0 0; }
+:root.nb-turned[data-turn="90"] body { transform: translateY(var(--turn-w)) rotate(-90deg); }
+:root.nb-turned[data-turn="-90"] body { transform: translateX(var(--turn-h)) rotate(90deg); }
+
+/* App options, laid out like ref's Options sheet (user, 11-11): a sheet up
+   from the bottom with its name and an X, a soft dim behind, then a
+   labelled part for each setting: swatches for the theme, a two-part
+   switch for each either/or, a wide outlined button for each thing to do,
+   and the one that can't be undone filled in navy, last. Lines and the
+   "on" half of a switch are in the book's color (mango's a shade deeper,
+   as in ref, so its lines show on white). */
+:root { --opt-ink: var(--accent); --opt-on-ink: var(--on-accent); }
+:root:not([data-book]), :root[data-book="mango"] { --opt-ink: #e0b012; }
+#appMenuOverlay { align-items: flex-end; justify-content: center; padding: 0; background: rgba(49, 61, 69, 0.42); }
+#appMenuOverlay > .modal.opt-sheet { display: flex; flex-direction: column; width: 100%; max-width: 620px; max-height: calc(90 * var(--svh)); padding: 0; overflow: hidden; border: none; border-radius: 14px 14px 0 0; background: #fff; box-shadow: none; }
+#appMenuOverlay .opt-sheet-head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 12px 10px 10px 18px; border-bottom: 1px solid var(--line); }
+#appMenuOverlay .opt-sheet-head .app-menu-header { margin: 0; padding: 0; font-family: var(--font-hand); font-size: 26px; line-height: 1.2; text-align: left; color: var(--text); background: none; text-transform: none; letter-spacing: 0; }
+#appMenuOverlay .opt-close { flex: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; min-height: 0; padding: 0; border: none; background: none; color: var(--text); }
+#appMenuOverlay .opt-close .x-icon { width: 22px; height: 22px; }
+#appMenuOverlay .opt-sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 14px 18px calc(16px + var(--sa-bottom)); }
+#appMenuOverlay .opt-label { display: block; font-family: var(--font-hand); font-size: 19px; line-height: 1.3; color: var(--dim); }
+#appMenuOverlay .opt-gap { margin-top: 16px; }
+#appMenuOverlay button { font-family: var(--font-hand); letter-spacing: 0; text-transform: none; }
+#appMenuOverlay .opt-themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px; margin-top: 10px; }
+#appMenuOverlay .opt-theme { display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 0; padding: 8px 0; border: none; border-radius: 0; background: none; color: var(--text); font-size: 17px; }
+#appMenuOverlay .opt-swatch { width: 44px; height: 44px; border-radius: 50%; }
+#appMenuOverlay .opt-theme.active .opt-swatch { outline: 1.5px solid var(--text); outline-offset: 3px; }
+#appMenuOverlay .opt-seg { display: flex; margin-top: 8px; }
+#appMenuOverlay .opt-seg button { flex: 1; height: 38px; min-height: 0; padding: 0 6px; border: 2px solid var(--opt-ink); border-radius: 0; background: #fff; color: var(--text); font-size: 18px; line-height: 1; white-space: nowrap; }
+#appMenuOverlay .opt-seg button + button { border-left: 0; }
+#appMenuOverlay .opt-seg button.active { background: var(--opt-ink); color: var(--opt-on-ink); }
+#appMenuOverlay .opt-wide { display: block; width: 100%; height: 48px; min-height: 0; margin-top: 8px; padding: 0 12px; border: 2px solid var(--opt-ink); border-radius: 0; background: #fff; color: var(--text); font-size: 21px; line-height: 1; text-align: center; }
+#appMenuOverlay .opt-wide.opt-danger { border-color: var(--text); background: var(--text); color: #fff; }
+#appMenuOverlay .opt-hint { display: block; margin: 6px 0 0; font-size: 17px; line-height: 1.3; color: var(--dim); }
