@@ -6707,7 +6707,7 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
 /* The button in a page's top right corner that swaps a shoot and its summary. */
 .nb-corner-btn { position: absolute; z-index: 2; top: 6px; right: 8px; min-height: 0; height: auto; width: auto; padding: 4px 12px; border: none; border-radius: 3px; background: var(--text); color: #fff; font-family: var(--font-body); font-size: 14px; line-height: 20px; letter-spacing: 0; text-transform: none; }
 .nb-corner-btn[hidden] { display: none; }
-#shootModalOverlay .nb-corner-btn { top: 4px; right: 6px; }
+#shootModalOverlay .nb-corner-btn { top: 6px; right: 8px; } /* clear of the page's rounder corner */
 #archiveModeOverlay .nb-run, #shootModalOverlay[data-section="archive"] .nb-run { padding: 0 96px; }
 
 /* App color: the notebook, its rim and everything in the app's color. */
@@ -6813,3 +6813,21 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
 .nb-sticker-stage { position: absolute; z-index: 8; inset: 0; touch-action: none; }
 .nb-sticker-stage[hidden] { display: none; }
 .nb-sticker-ok { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 16px); transform: translateX(-50%); min-height: 44px; padding: 8px 34px; border: none; border-radius: 3px; background: var(--text); color: #fff; font-family: var(--font-body); font-size: 17px; letter-spacing: 0; text-transform: none; }
+
+/* Each page is a sheet of paper lying in the notebook, as in the other
+   notebook apps: rounder corners on its outer side, its own edge the end of
+   the page, and the notebook's color a shade deeper right around it, solid
+   again toward the notebook's outer edge. */
+:root { --pg-r: 16px; }
+.nb-board-page, .nb-turn, .nb-turn-under, #shootModalOverlay > .modal, #archiveModeOverlay > .modal { border-radius: 0 var(--pg-r) var(--pg-r) 0; }
+:root[data-side="verso"] .nb-board-page, :root[data-side="verso"] .nb-board > .nb-turn, :root[data-side="verso"] .nb-board > .nb-turn-under { border-radius: var(--pg-r) 0 0 var(--pg-r); }
+.nb-page-foot { border-bottom-right-radius: var(--pg-r); } /* its white mustn't square off the page's corner */
+@supports (color: color-mix(in oklab, red, blue)) {
+  :root { --rim-deep: color-mix(in oklab, var(--accent) 84%, #000); }
+  :root[data-book="ink"] { --rim-deep: color-mix(in oklab, var(--accent) 70%, #000); } /* navy needs more to show */
+  .nb-board-page { box-shadow: 0 0 3px 1px var(--rim-deep), 0 0 0 40px var(--accent); transition: box-shadow 0.3s; }
+  #shootModalOverlay > .modal, #archiveModeOverlay > .modal { box-shadow: 0 0 3px 1px var(--rim-deep); }
+  /* The opening book is a picture without the deeper shade, so it comes in
+     once the real page takes over rather than popping on. */
+  :root:has(#bookOverlay:not([hidden])) .nb-board-page { box-shadow: 0 0 3px 1px var(--accent), 0 0 0 40px var(--accent); transition: none; }
+}
