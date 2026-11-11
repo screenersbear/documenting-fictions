@@ -660,7 +660,7 @@
       color: APP_COLORS.some(([key]) => key === p.color) ? p.color : 'mango',
       start: p.start === 'first' ? 'first' : 'notebook',
       stickers: (Array.isArray(p.stickers) ? p.stickers : []).filter(s => s && typeof s.id === 'string'
-        && (s.shape === 'circle' || s.shape === 'square') && [s.x, s.y, s.size].every(Number.isFinite)),
+        && (s.shape === 'circle' || s.shape === 'square' || s.shape === 'rect') && [s.x, s.y, s.size].every(Number.isFinite)),
     };
   }
   const stickerKey = id => `${id}__sticker`;
@@ -1046,6 +1046,7 @@
   }
 
   let refreshStickers = () => {}; // set up with the sun menu
+  let relayStickers = () => {}; // the same: the folds are worked out in pixels
   let state = loadState();
   applyColorTheme(state.colorTheme);
   applyAppColor(state.presentation.color);
@@ -20942,7 +20943,97 @@
     const ZOOM_MS = 780;
     const overlay = document.getElementById('bookOverlay');
     const book = document.getElementById('book');
+    const spinEl = document.getElementById('bookSpin');
     let timer = 0;
+
+    // Turning the shut book by hand, the way Callback's head turns: sideways
+    // spins it, up and down tips it, harder the further it goes, and it turns
+    // back when let go.
+    const SPIN_TO_PAGES = 1.0;  // radians towards the page edges
+    const SPIN_TO_SPINE = 1.55; // and towards the spine: it rests turned the other way
+    const TILT_UP = 0.42;
+    const TILT_DOWN = 0.5;
+    const soften = (raw, limit) => limit * Math.tanh(raw / limit);
+    const unsoften = (value, limit) => limit * Math.atanh(Math.max(-0.999, Math.min(0.999, value / limit)));
+    const spinLimit = value => (value < 0 ? SPIN_TO_PAGES : SPIN_TO_SPINE);
+    const tiltLimit = value => (value > 0 ? TILT_UP : TILT_DOWN);
+    let spin = 0;
+    let spinV = 0;
+    let spinGoal = 0;
+    let tilt = 0;
+    let tiltV = 0;
+    let tiltGoal = 0;
+    let turn = null;
+    let turnedAt = 0;
+    let turnFrame = 0;
+    let turnClock = 0;
+
+    function drawTurn() {
+      spinEl.style.transform = spin || tilt
+        ? `translateZ(calc(var(--W) * -0.095)) rotateX(${tilt.toFixed(4)}rad) rotateY(${spin.toFixed(4)}rad) translateZ(calc(var(--W) * 0.095))`
+        : '';
+    }
+    function stepTurn(now) {
+      turnFrame = 0;
+      const dt = Math.min(0.032, Math.max(0.001, (now - turnClock) / 1000));
+      turnClock = now;
+      const held = turn && turn.moved;
+      spinV += (-(turn ? 40 : 14) * (spin - (held ? spinGoal : 0)) - (turn ? 12 : 7.5) * spinV) * dt;
+      spin += spinV * dt;
+      tiltV += (-(turn ? 40 : 30) * (tilt - (held ? tiltGoal : 0)) - (turn ? 12 : 10) * tiltV) * dt;
+      tilt += tiltV * dt;
+      if (!turn && Math.abs(spin) < 1e-3 && Math.abs(spinV) < 1e-2 && Math.abs(tilt) < 1e-3 && Math.abs(tiltV) < 1e-2) spin = spinV = tilt = tiltV = 0;
+      drawTurn();
+      if (turn || spin || tilt) kickTurn();
+    }
+    function kickTurn() {
+      if (turnFrame) return;
+      if (!turn && !spin && !tilt) return;
+      if (!turnClock || performance.now() - turnClock > 100) turnClock = performance.now();
+      turnFrame = requestAnimationFrame(stepTurn);
+    }
+    function settleTurn() {
+      turn = null;
+      spin = spinV = tilt = tiltV = 0;
+      if (turnFrame) cancelAnimationFrame(turnFrame);
+      turnFrame = 0;
+      drawTurn();
+    }
+    book.addEventListener('pointerdown', (e) => {
+      if (e.button || !e.isPrimary || turn) return;
+      if (!book.classList.contains('closed') || book.classList.contains('placing')) return;
+      if (e.target.closest('.nb-sun, .nb-sticker-stage, .nb-crop')) return;
+      turn = { id: e.pointerId, x0: e.clientX, y0: e.clientY, spin0: unsoften(spin, spinLimit(spin)), tilt0: unsoften(tilt, tiltLimit(tilt)), moved: false };
+    });
+    book.addEventListener('pointermove', (e) => {
+      if (!turn || turn.id !== e.pointerId) return;
+      const dx = e.clientX - turn.x0;
+      const dy = e.clientY - turn.y0;
+      if (!turn.moved) {
+        if (Math.hypot(dx, dy) <= 6) return;
+        turn.moved = true;
+        try { book.setPointerCapture(e.pointerId); } catch (err) { /* moves still arrive while over the book */ }
+      }
+      const perPixel = (Math.PI / (parseFloat(book.style.getPropertyValue('--W')) || 300)) * 0.55;
+      const rawSpin = turn.spin0 + dx * perPixel;
+      const rawTilt = turn.tilt0 - dy * perPixel;
+      spinGoal = soften(rawSpin, spinLimit(rawSpin));
+      tiltGoal = soften(rawTilt, tiltLimit(rawTilt));
+      kickTurn();
+    });
+    const letGoOfBook = (e) => {
+      if (!turn || turn.id !== e.pointerId) return;
+      if (turn.moved) turnedAt = performance.now();
+      const moved = turn.moved;
+      turn = null;
+      if (moved) kickTurn();
+    };
+    book.addEventListener('pointerup', letGoOfBook);
+    book.addEventListener('pointercancel', letGoOfBook);
+    // Letting go after a turn isn't a tap on the cover or a tab.
+    book.addEventListener('click', (e) => {
+      if (performance.now() - turnedAt < 350 && e.target.closest('.nb-hit')) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
 
     document.getElementById('bookStack').innerHTML =
       Array.from({ length: STACK }, (_, i) => `<i style="--i:${i + 1}"></i>`).join('') + `<b style="--i:${STACK + 1}"></b>`;
@@ -20977,6 +21068,7 @@
         ([x, d]) => ((x * cos - d * sin) * PERSPECTIVE) / (PERSPECTIVE - (x * sin + d * cos)),
       );
       book.style.setProperty('--shut-x', `${-(Math.min(...seen) + Math.max(...seen)) / 2 / cos}px`);
+      relayStickers();
       // Zoomed in, the page lands exactly on the page frame behind it.
       const frame = document.querySelector('.nb-board').getBoundingClientRect();
       const top = Math.max(0, frame.top);
@@ -20988,12 +21080,17 @@
       book.style.setProperty('--zoom-sy', String((bottom - top) / H));
     }
 
-    function setMode(mode) { book.className = `nb ${mode}`; }
+    function setMode(mode) {
+      if (mode !== 'closed') settleTurn();
+      book.className = `nb ${mode}`;
+    }
 
     // Where the side tabs land on screen with the book shut. Measured in that
     // pose in one go, before anything paints.
     function placeTabHits() {
       const before = book.className;
+      const turned = spinEl.style.transform;
+      spinEl.style.transform = '';
       book.className = 'nb no-anim closed';
       const rects = [...sideTabs.children].map(el => el.getBoundingClientRect());
       const hits = [...tabHits.children];
@@ -21003,10 +21100,12 @@
         hits[i].style.cssText = `left:${r.left - 12}px;right:0;top:${above}px;height:${below - above}px`;
       });
       book.className = before;
+      spinEl.style.transform = turned;
       void book.offsetWidth;
     }
 
     function show(mode) {
+      if (mode !== 'closed') settleTurn();
       measure();
       overlay.hidden = false;
       placeTabHits();
@@ -21121,31 +21220,227 @@
     const MAX_SIZE = 1.4;
     const photos = new Map(); // sticker id -> photo
     let pendingShape = null;
-    let placing = null; // the sticker being put down: { sticker, el, src }
+    let placing = null; // the sticker being put down: { sticker, group, src }
+
+    const RING = 0.009;     // the paper edge round the photo, of the book's width
+    const BEND = 0.05;      // how much of the cover the last of a sticker curves over
+    const EDGES = ['left', 'right', 'top', 'bottom'];
+    const stickerRatio = s => (s.shape === 'rect' && Number.isFinite(s.ratio) && s.ratio > 0 ? s.ratio : 1);
+    const isSideways = edge => edge === 'left' || edge === 'right';
+    let groups = [];
 
     function placeOnCover(el, sticker) {
       el.style.left = `${sticker.x * 100}%`;
       el.style.top = `${sticker.y * 100}%`;
       el.style.width = `${sticker.size * 100}%`;
+      el.style.setProperty('--r', String(stickerRatio(sticker)));
     }
 
-    function stickerEl(sticker, src) {
+    // Little creases of its own, the same every time it's drawn: thin folds
+    // with a soft shadow beside them, and a few dim patches on the paper.
+    const creases = new Map();
+    function creaseArt(sticker) {
+      if (creases.has(sticker.id)) return creases.get(sticker.id);
+      let seed = 2166136261;
+      for (let i = 0; i < sticker.id.length; i++) seed = Math.imul(seed ^ sticker.id.charCodeAt(i), 16777619);
+      const rnd = () => {
+        seed = (seed + 0x6D2B79F5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+      const ratio = stickerRatio(sticker);
+      const w = ratio >= 1 ? 520 : Math.round(520 * ratio);
+      const h = ratio >= 1 ? Math.round(520 / ratio) : 520;
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const g = canvas.getContext('2d');
+      if (!g) return '';
+      const big = Math.max(w, h);
+      const patches = 4 + Math.floor(rnd() * 3);
+      for (let i = 0; i < patches; i++) {
+        const x = rnd() * w;
+        const y = rnd() * h;
+        const r = big * (0.18 + rnd() * 0.3);
+        const shade = g.createRadialGradient(x, y, 0, x, y, r);
+        shade.addColorStop(0, `rgba(70, 50, 32, ${(0.1 + rnd() * 0.1).toFixed(3)})`);
+        shade.addColorStop(1, 'rgba(70, 50, 32, 0)');
+        g.fillStyle = shade;
+        g.fillRect(0, 0, w, h);
+      }
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      const count = 2 + Math.floor(rnd() * 3);
+      for (let i = 0; i < count; i++) {
+        // Starting at the rim and running in part of the way.
+        const side = Math.floor(rnd() * 4);
+        const x0 = side === 0 ? 0 : side === 1 ? w : rnd() * w;
+        const y0 = side === 2 ? 0 : side === 3 ? h : rnd() * h;
+        const toward = Math.atan2(h / 2 - y0, w / 2 - x0) + (rnd() - 0.5) * 1.5;
+        const length = big * (0.18 + rnd() * 0.36);
+        const steps = 4;
+        const points = [];
+        for (let s = 0; s <= steps; s++) {
+          const along = (length * s) / steps;
+          const wander = s === 0 ? 0 : (rnd() - 0.5) * big * 0.03;
+          points.push([x0 + Math.cos(toward) * along - Math.sin(toward) * wander, y0 + Math.sin(toward) * along + Math.cos(toward) * wander]);
+        }
+        const trace = (ox, oy) => {
+          // Smoothed through the midpoints: a soft crease, not a crack.
+          g.beginPath();
+          g.moveTo(points[0][0] + ox, points[0][1] + oy);
+          for (let s = 1; s < points.length - 1; s++) {
+            g.quadraticCurveTo(points[s][0] + ox, points[s][1] + oy, (points[s][0] + points[s + 1][0]) / 2 + ox, (points[s][1] + points[s + 1][1]) / 2 + oy);
+          }
+          g.lineTo(points[points.length - 1][0] + ox, points[points.length - 1][1] + oy);
+        };
+        const nx = -Math.sin(toward);
+        const ny = Math.cos(toward);
+        const depth = 0.7 + rnd() * 0.5;
+        trace(nx * 5, ny * 5);
+        g.strokeStyle = `rgba(62, 44, 28, ${(0.14 * depth).toFixed(3)})`;
+        g.lineWidth = 13;
+        g.stroke();
+        trace(0, 0);
+        g.strokeStyle = `rgba(52, 36, 22, ${(0.36 * depth).toFixed(3)})`;
+        g.lineWidth = 2.2;
+        g.stroke();
+      }
+      const art = canvas.toDataURL('image/png');
+      creases.set(sticker.id, art);
+      return art;
+    }
+
+    function stickerEl(sticker, src, creased) {
       const el = document.createElement('div');
       el.className = `nb-sticker is-${sticker.shape}`;
+      const face = document.createElement('div');
+      face.className = 'nb-sticker-face';
       const img = document.createElement('img');
       img.alt = '';
       img.draggable = false;
       img.src = src;
-      el.appendChild(img);
+      face.appendChild(img);
+      if (creased) {
+        const art = creaseArt(sticker);
+        if (art) {
+          const lines = document.createElement('img');
+          lines.className = 'nb-sticker-creases';
+          lines.alt = '';
+          lines.draggable = false;
+          lines.src = art;
+          face.appendChild(lines);
+        }
+      }
+      el.appendChild(face);
       placeOnCover(el, sticker);
       return el;
     }
 
+    // One sticker: what lies flat on the cover, the last of it curving over
+    // each edge it reaches, and the part that carries on round that edge.
+    function makeGroup(sticker, src, creased) {
+      const root = document.createElement('div');
+      root.className = 'nb-sticker-set';
+      const body = document.createElement('div');
+      body.className = 'nb-sticker-body';
+      const main = stickerEl(sticker, src, creased);
+      body.appendChild(main);
+      root.appendChild(body);
+      return { sticker, src, creased, root, body, main, bends: {}, wraps: {} };
+    }
+
+    function makeBend(group, edge) {
+      const bend = document.createElement('div');
+      bend.className = `nb-bend is-${edge}`;
+      const inner = document.createElement('div');
+      inner.className = 'nb-cover-copy';
+      const copy = stickerEl(group.sticker, group.src, group.creased);
+      const shade = document.createElement('i');
+      shade.className = `nb-bend-shade is-${edge}`;
+      copy.firstChild.appendChild(shade);
+      inner.appendChild(copy);
+      bend.appendChild(inner);
+      group.root.appendChild(bend);
+      return group.bends[edge] = { bend, inner, copy, shade };
+    }
+
+    function makeWrap(group, edge) {
+      const inner = document.createElement('div');
+      inner.className = 'nb-cover-copy';
+      const copy = stickerEl(group.sticker, group.src, group.creased);
+      inner.appendChild(copy);
+      wrapStrip(edge).appendChild(inner);
+      return group.wraps[edge] = { inner, copy };
+    }
+
+    const wrapsEl = document.getElementById('bookWraps');
+    wrapsEl.innerHTML = EDGES.map(edge => `<div class="nb-wrap is-${edge}"><div class="nb-wrap-in"></div></div>`).join('');
+    const wrapStrip = edge => wrapsEl.querySelector(`.nb-wrap.is-${edge} .nb-wrap-in`);
+
+    function placeGroup(group) {
+      const s = group.sticker;
+      const { w, h } = bookSize();
+      if (w < 2 || h < 2) return;
+      const halfW = (s.size * w) / 2 + RING * w;
+      const halfH = (s.size * w) / stickerRatio(s) / 2 + RING * w;
+      const over = {
+        left: halfW - s.x * w,
+        right: s.x * w + halfW - w,
+        top: halfH - s.y * h,
+        bottom: s.y * h + halfH - h,
+      };
+      const band = BEND * w;
+      placeOnCover(group.main, s);
+      group.body.style.clipPath = `inset(${over.top > 0 ? band : 0}px ${over.right > 0 ? band : 0}px ${over.bottom > 0 ? band : 0}px ${over.left > 0 ? band : 0}px)`;
+      EDGES.forEach((edge) => {
+        const reached = over[edge] > 0;
+        if (!reached) {
+          if (group.bends[edge]) group.bends[edge].bend.hidden = true;
+          if (group.wraps[edge]) group.wraps[edge].inner.hidden = true;
+          return;
+        }
+        const part = group.bends[edge] || makeBend(group, edge);
+        const wrap = group.wraps[edge] || makeWrap(group, edge);
+        part.bend.hidden = false;
+        wrap.inner.hidden = false;
+        placeOnCover(part.copy, s);
+        placeOnCover(wrap.copy, s);
+        // Round the edge it foreshortens: what's past the edge squeezes into
+        // the last sliver, and what's left of it carries on round the side.
+        const squeezed = Math.min(over[edge], band * 0.9);
+        const scale = band / (band + squeezed);
+        const line = edge === 'left' ? band : edge === 'right' ? w - band : edge === 'top' ? band : h - band;
+        part.inner.style.transformOrigin = isSideways(edge) ? `${line}px 0` : `0 ${line}px`;
+        part.inner.style.transform = isSideways(edge) ? `scaleX(${scale.toFixed(4)})` : `scaleY(${scale.toFixed(4)})`;
+        const away = edge === 'left' || edge === 'top' ? squeezed : -squeezed;
+        wrap.inner.style.transform = isSideways(edge) ? `translateX(${away.toFixed(1)}px)` : `translateY(${away.toFixed(1)}px)`;
+        // The shading covers just that stretch, measured on the sticker.
+        const faceLeft = s.x * w - halfW;
+        const faceTop = s.y * h - halfH;
+        const span = band + squeezed;
+        const st = part.shade.style;
+        st.opacity = Math.min(1, over[edge] / (band * 0.9)).toFixed(3);
+        st.width = isSideways(edge) ? `${span}px` : '100%';
+        st.height = isSideways(edge) ? '100%' : `${span}px`;
+        st.left = edge === 'left' ? `${band - span - faceLeft}px` : edge === 'right' ? `${w - band - faceLeft}px` : '0';
+        st.top = edge === 'top' ? `${band - span - faceTop}px` : edge === 'bottom' ? `${h - band - faceTop}px` : '0';
+      });
+    }
+
     // In the order they went on, so a newer one always lies over an older.
     function drawStickers() {
-      layer.replaceChildren(...state.presentation.stickers.filter(s => photos.has(s.id)).map(s => stickerEl(s, photos.get(s.id))));
-      if (placing) layer.appendChild(placing.el);
+      wrapsEl.querySelectorAll('.nb-wrap-in').forEach(el => el.replaceChildren());
+      groups = state.presentation.stickers.filter(s => photos.has(s.id)).map(s => makeGroup(s, photos.get(s.id), true));
+      if (placing) {
+        placing.group = makeGroup(placing.sticker, placing.src, false);
+        groups.push(placing.group);
+      }
+      layer.replaceChildren(...groups.map(group => group.root));
+      groups.forEach(placeGroup);
     }
+    relayStickers = () => groups.forEach(placeGroup);
 
     refreshStickers = () => {
       const stickers = state.presentation.stickers;
@@ -21176,6 +21471,7 @@
         <button type="button" class="options-item options-back" data-pane="main">&larr; Back</button>
         <button type="button" class="options-item" data-shape="circle">Circle</button>
         <button type="button" class="options-item" data-shape="square">Square</button>
+        <button type="button" class="options-item" data-shape="rect">Rectangle</button>
         ${state.presentation.stickers.length ? '<button type="button" class="options-item options-delete" data-pane="remove">Remove sticker</button>' : ''}`],
       remove: () => ['Remove sticker', `
         <button type="button" class="options-item options-back" data-pane="stickers">&larr; Back</button>
@@ -21227,6 +21523,7 @@
         saveState();
         photos.delete(id);
         idbDeleteImages(stickerKey(id)).catch(() => {});
+        creases.delete(id);
         drawStickers();
         showPane(state.presentation.stickers.length ? 'remove' : 'stickers');
       }
@@ -21236,21 +21533,151 @@
       const file = fileInput.files && fileInput.files[0];
       const shape = pendingShape;
       if (!file || !shape) return;
-      resizeImageFile(file, 1000, 0.85).then((src) => {
-        closeMenu();
-        startPlacing(shape, src);
-      }).catch(() => showToast("Couldn't open that photo"));
+      resizeImageFile(file, 1800, 0.9).then(src => startCrop(shape, src))
+        .catch(() => showToast("Couldn't open that photo"));
     });
 
     // Putting one down: the book turns to face you so a finger moves the
     // sticker exactly, and whatever hangs off the cover is cropped by it.
-    function startPlacing(shape, src) {
-      const sticker = { id: uid(), shape, x: 0.5, y: 0.5, size: 0.42 };
-      placing = { sticker, src, el: stickerEl(sticker, src) };
-      layer.appendChild(placing.el);
+    function startPlacing(shape, src, ratio) {
+      const size = shape !== 'rect' ? 0.42 : ratio >= 1 ? 0.54 : 0.36;
+      const sticker = { id: uid(), shape, x: 0.5, y: 0.5, size };
+      if (shape === 'rect') sticker.ratio = ratio;
+      placing = { sticker, src, group: makeGroup(sticker, src, false), startedAt: performance.now() };
+      groups.push(placing.group);
+      layer.appendChild(placing.group.root);
+      placeGroup(placing.group);
       book.classList.add('placing');
       stage.hidden = false;
     }
+
+    // Before it goes on: moving and pinching the photo behind the shape.
+    const cropStage = document.getElementById('stickerCrop');
+    const cropPhoto = document.getElementById('stickerCropPhoto');
+    const cropWindow = document.getElementById('stickerCropWindow');
+    const CROP_MAX_ZOOM = 5;
+    const CROP_OUT = 1000; // the saved sticker's longer side
+    let crop = null;
+    const cropFingers = new Map();
+    let cropGrab = null;
+
+    function drawCrop() {
+      const maxX = Math.max(0, (crop.nw * crop.base * crop.zoom - crop.w) / 2);
+      const maxY = Math.max(0, (crop.nh * crop.base * crop.zoom - crop.h) / 2);
+      crop.x = Math.max(-maxX, Math.min(maxX, crop.x));
+      crop.y = Math.max(-maxY, Math.min(maxY, crop.y));
+      cropPhoto.style.transform = `translate(-50%, -50%) translate(${crop.x.toFixed(1)}px, ${crop.y.toFixed(1)}px) scale(${crop.zoom.toFixed(4)})`;
+    }
+
+    function startCrop(shape, src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+          closeMenu();
+          const nw = img.naturalWidth;
+          const nh = img.naturalHeight;
+          // A rectangle stands the way the photo stands.
+          const ratio = shape !== 'rect' ? 1 : nw >= nh ? 3 / 2 : 2 / 3;
+          cropStage.hidden = false;
+          const room = cropStage.getBoundingClientRect();
+          const w = Math.min(room.width * 0.84, room.height * 0.6 * ratio);
+          const h = w / ratio;
+          const base = Math.max(w / nw, h / nh);
+          crop = { shape, src, img, nw, nh, ratio, w, h, base, zoom: 1, x: 0, y: 0 };
+          cropWindow.className = `nb-crop-window is-${shape}`;
+          cropWindow.style.width = `${w}px`;
+          cropWindow.style.height = `${h}px`;
+          cropPhoto.style.width = `${nw * base}px`;
+          cropPhoto.style.height = `${nh * base}px`;
+          cropPhoto.src = src;
+          drawCrop();
+          resolve();
+        };
+        img.src = src;
+      });
+    }
+
+    function closeCrop() {
+      crop = null;
+      cropFingers.clear();
+      cropGrab = null;
+      cropStage.hidden = true;
+      cropPhoto.removeAttribute('src');
+    }
+
+    function holdCrop() {
+      if (!crop || !cropFingers.size) { cropGrab = null; return; }
+      const points = [...cropFingers.values()].slice(0, 2);
+      cropGrab = {
+        x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+        y: points.reduce((sum, p) => sum + p.y, 0) / points.length,
+        apart: points.length === 2 ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) : 0,
+        photoX: crop.x,
+        photoY: crop.y,
+        zoom: crop.zoom,
+      };
+    }
+
+    function followCrop() {
+      if (!crop || !cropGrab) return;
+      const points = [...cropFingers.values()].slice(0, 2);
+      const x = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+      const y = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+      let zoom = cropGrab.zoom;
+      if (points.length === 2 && cropGrab.apart > 0) {
+        const apart = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+        zoom = Math.max(1, Math.min(CROP_MAX_ZOOM, cropGrab.zoom * (apart / cropGrab.apart)));
+      }
+      // Measured from the shape's centre, so the part under the fingers stays there.
+      const room = cropStage.getBoundingClientRect();
+      const cx = room.left + room.width / 2;
+      const cy = room.top + room.height / 2;
+      const k = zoom / cropGrab.zoom;
+      crop.zoom = zoom;
+      crop.x = (x - cx) - ((cropGrab.x - cx) - cropGrab.photoX) * k;
+      crop.y = (y - cy) - ((cropGrab.y - cy) - cropGrab.photoY) * k;
+      drawCrop();
+    }
+
+    cropStage.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('button')) return;
+      try { cropStage.setPointerCapture(e.pointerId); } catch (err) { /* moves still arrive on the stage */ }
+      cropFingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      holdCrop();
+    });
+    cropStage.addEventListener('pointermove', (e) => {
+      if (!cropFingers.has(e.pointerId)) return;
+      cropFingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      followCrop();
+    });
+    const letGoOfCrop = (e) => {
+      if (!cropFingers.delete(e.pointerId)) return;
+      holdCrop();
+    };
+    cropStage.addEventListener('pointerup', letGoOfCrop);
+    cropStage.addEventListener('pointercancel', letGoOfCrop);
+    cropStage.addEventListener('gesturestart', e => e.preventDefault());
+
+    document.getElementById('stickerCropBack').addEventListener('click', () => {
+      closeCrop();
+      showPane('stickers');
+      overlay.hidden = false;
+    });
+    document.getElementById('stickerCropOk').addEventListener('click', () => {
+      if (!crop) return;
+      const { shape, img, nw, nh, ratio, w, h, base, zoom, x, y } = crop;
+      const perPixel = base * zoom;
+      const outW = ratio >= 1 ? CROP_OUT : Math.round(CROP_OUT * ratio);
+      const outH = ratio >= 1 ? Math.round(CROP_OUT / ratio) : CROP_OUT;
+      const canvas = document.createElement('canvas');
+      canvas.width = outW;
+      canvas.height = outH;
+      canvas.getContext('2d').drawImage(img, nw / 2 - (w / 2 + x) / perPixel, nh / 2 - (h / 2 + y) / perPixel, w / perPixel, h / perPixel, 0, 0, outW, outH);
+      const out = canvas.toDataURL('image/jpeg', 0.88);
+      closeCrop();
+      startPlacing(shape, out, ratio);
+    });
 
     const fingers = new Map();
     let grab = null;
@@ -21287,7 +21714,7 @@
         const apart = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
         sticker.size = Math.max(MIN_SIZE, Math.min(MAX_SIZE, grab.size * (apart / grab.apart)));
       }
-      placeOnCover(placing.el, sticker);
+      placeGroup(placing.group);
     }
 
     stage.addEventListener('pointerdown', (e) => {
@@ -21322,6 +21749,8 @@
     let savingSticker = false;
     document.getElementById('stickerOkBtn').addEventListener('click', () => {
       if (!placing || savingSticker) return;
+      // A repeat tap on the crop's Okay lands here: it hasn't been placed yet.
+      if (performance.now() - placing.startedAt < 450) return;
       savingSticker = true;
       const { sticker, src } = placing;
       idbSetImages(stickerKey(sticker.id), [{ src, caption: '' }]).then(() => {
@@ -21380,7 +21809,7 @@
     function updateCanReloadNow() {
       // The shut notebook isn't work in progress: it never holds an update back.
       const popupUp = popupLayers.some(layer => !layer.hidden && layer.id !== 'bookOverlay');
-      const placingSticker = !document.getElementById('stickerStage').hidden;
+      const placingSticker = !document.getElementById('stickerStage').hidden || !document.getElementById('stickerCrop').hidden;
       if (popupUp || placingSticker || !document.getElementById('toast').hidden || busyTasks > 0) return false;
       if (document.hidden) return true;
       return document.documentElement.classList.contains('booting')
@@ -21678,7 +22107,7 @@
     const slider = document.createElement('div');
     slider.className = 'slider';
     slider.innerHTML = `<button type="button" class="slide-arrow is-prev">${triangle}</button>`
-      + `<button type="button" class="slide-now"><span class="slide-strip" aria-hidden="true">${tabs.map(t => `<span class="slide-icon">${t.icon}</span>`).join('')}</span></button>`
+      + `<button type="button" class="slide-now"><span class="slide-strip" aria-hidden="true"><span class="slide-icon slide-icon-shut">${document.getElementById('shutBookBtn').innerHTML}</span>${tabs.map(t => `<span class="slide-icon">${t.icon}</span>`).join('')}</span></button>`
       + `<button type="button" class="slide-arrow is-next">${triangle}</button>`;
     bar.appendChild(slider);
     const strip = slider.querySelector('.slide-strip');
@@ -21686,6 +22115,7 @@
     const prev = slider.querySelector('.is-prev');
     const next = slider.querySelector('.is-next');
     let idx = 0;
+    let arrivedAt = 0;
     let drag = null;
     let draggedAt = 0;
 
@@ -21695,19 +22125,25 @@
     }
     function sync(moving) {
       const found = tabs.findIndex(t => t.el.classList.contains('active'));
+      if (found >= 0 && found !== idx) arrivedAt = performance.now();
       if (found >= 0) idx = found;
       const before = tabs[idx - 1];
       const after = tabs[idx + 1];
       now.setAttribute('aria-label', tabs[idx].name);
-      prev.classList.toggle('is-off', !before);
+      // Before the first screen there's the shut book.
       next.classList.toggle('is-off', !after);
-      prev.disabled = !before;
       next.disabled = !after;
-      prev.setAttribute('aria-label', before ? `Previous: ${before.name}` : 'Nothing before this');
+      prev.setAttribute('aria-label', before ? `Previous: ${before.name}` : 'Shut the notebook');
       next.setAttribute('aria-label', after ? `Next: ${after.name}` : 'Nothing after this');
       if (!drag) stripTo(idx, 0, moving);
     }
     function go(by) {
+      if (idx + by < 0) {
+        stripTo(idx, 0, true);
+        // A repeat of the tap that just got here isn't asking to shut the book.
+        if (performance.now() - arrivedAt >= 700) document.getElementById('shutBookBtn').click();
+        return;
+      }
       const t = tabs[idx + by];
       if (t) turnToView(t.view);
     }
@@ -21719,7 +22155,7 @@
     // A finger the width of a third of the screen moves one icon over.
     const span = () => (window.innerWidth || 1) / 3;
     function follow(dx) {
-      const has = tabs[idx + (dx < 0 ? 1 : -1)];
+      const has = dx > 0 || tabs[idx + 1];
       const x = Math.max(-STEP, Math.min(STEP, (dx / span()) * STEP));
       stripTo(idx, has ? x : x * 0.25);
     }
@@ -21752,7 +22188,7 @@
       draggedAt = performance.now();
       const by = dx < 0 ? 1 : -1;
       const flick = Math.abs(v) > 0.45 && Math.sign(v) === Math.sign(dx) && Math.abs(dx) > 24;
-      if (e.type === 'pointerup' && tabs[idx + by] && (Math.abs(dx) > Math.min(span() * 0.6, 120) || flick)) go(by);
+      if (e.type === 'pointerup' && (by < 0 || tabs[idx + by]) && (Math.abs(dx) > Math.min(span() * 0.6, 120) || flick)) go(by);
       else stripTo(idx, 0, true);
     };
     bar.addEventListener('pointerup', end);

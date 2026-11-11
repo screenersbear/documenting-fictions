@@ -6621,6 +6621,10 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 .slide-arrow.is-next { justify-items: start; }
 .slide-now { width: 36px; height: 36px; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%); }
 .slide-icon { flex: 0 0 36px; height: 36px; }
+.slide-icon-shut { margin-left: -36px; }
+/* The arrows sit right up against the icon. */
+.slide-now { width: 30px; }
+.slide-strip { margin-left: -3px; }
 
 /* The cover's tabs carry the names too, and open the book at that section. */
 .nb-side-tabs i { top: calc(16% + var(--t) * 14.6%); height: 13.6%; display: flex; align-items: center; justify-content: flex-end; width: 10%; }
@@ -6723,16 +6727,77 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
 .sun-remove { display: block; width: 100%; min-height: 0; padding: 0; border: none; background: none; }
 .sun-remove-photo { display: block; aspect-ratio: 1; background: #f6f1e6 center / cover no-repeat; }
 .sun-remove-photo.is-circle { border-radius: 50%; }
-.sun-remove-photo.is-square { border-radius: 5px; }
+.sun-remove-photo.is-square, .sun-remove-photo.is-rect { border-radius: 5px; }
 
 /* Stickers: on the cover, cropped by its edges. A soft, slightly faded print
    with a paper edge and the book's own light across it. */
 .nb-stickers { position: absolute; inset: 0; overflow: hidden; border-radius: 0 calc(var(--W) * 0.044) calc(var(--W) * 0.044) 0; pointer-events: none; }
-.nb-sticker { position: absolute; aspect-ratio: 1; transform: translate(-50%, -50%); background: #f6f1e6; box-shadow: 0 0 0 calc(var(--W) * 0.009) #f6f1e6, 0 calc(var(--W) * 0.005) calc(var(--W) * 0.016) rgba(60, 40, 20, 0.3); }
-.nb-sticker.is-circle, .nb-sticker.is-circle img, .nb-sticker.is-circle::after { border-radius: 50%; }
-.nb-sticker.is-square, .nb-sticker.is-square img, .nb-sticker.is-square::after { border-radius: calc(var(--W) * 0.012); }
-.nb-sticker img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0.93; filter: saturate(0.74) contrast(0.9) brightness(1.05) sepia(0.1); -webkit-user-drag: none; }
-.nb-sticker::after { content: ''; position: absolute; inset: 0; background: linear-gradient(140deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.04) 42%, rgba(60, 40, 20, 0.16)); }
+.nb-sticker-set, .nb-sticker-body, .nb-cover-copy { position: absolute; inset: 0; }
+.nb-sticker { position: absolute; aspect-ratio: var(--r, 1); transform: translate(-50%, -50%); }
+.nb-sticker-face { position: absolute; inset: calc(var(--W) * -0.009); overflow: hidden; background: #f6f1e6; box-shadow: 0 calc(var(--W) * 0.005) calc(var(--W) * 0.016) rgba(60, 40, 20, 0.3); }
+.nb-sticker.is-circle .nb-sticker-face, .nb-sticker.is-circle .nb-sticker-face > img:first-child { border-radius: 50%; }
+.nb-sticker.is-square .nb-sticker-face, .nb-sticker.is-rect .nb-sticker-face { border-radius: calc(var(--W) * 0.018); }
+.nb-sticker.is-square .nb-sticker-face > img:first-child, .nb-sticker.is-rect .nb-sticker-face > img:first-child { border-radius: calc(var(--W) * 0.012); }
+.nb-sticker-face > img:first-child { position: absolute; left: calc(var(--W) * 0.009); top: calc(var(--W) * 0.009); width: calc(100% - var(--W) * 0.018); height: calc(100% - var(--W) * 0.018); object-fit: cover; opacity: 0.93; filter: saturate(0.74) contrast(0.9) brightness(1.05) sepia(0.1); -webkit-user-drag: none; }
+.nb-sticker-face::after { content: ''; position: absolute; inset: 0; background: linear-gradient(140deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.04) 42%, rgba(60, 40, 20, 0.16)); }
+.nb-sticker-creases { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; mix-blend-mode: multiply; -webkit-user-drag: none; }
+/* The last of a sticker curving over the cover's edge, and on round it. */
+.nb-bend { position: absolute; overflow: hidden; }
+.nb-bend[hidden], .nb-cover-copy[hidden] { display: none; }
+.nb-bend.is-left { left: 0; top: 0; bottom: 0; width: calc(var(--W) * 0.05); }
+.nb-bend.is-right { right: 0; top: 0; bottom: 0; width: calc(var(--W) * 0.05); }
+.nb-bend.is-top { top: 0; left: 0; right: 0; height: calc(var(--W) * 0.05); }
+.nb-bend.is-bottom { bottom: 0; left: 0; right: 0; height: calc(var(--W) * 0.05); }
+.nb-bend .nb-cover-copy { width: var(--W); height: var(--H); right: auto; bottom: auto; }
+.nb-bend.is-right .nb-cover-copy { left: auto; right: 0; }
+.nb-bend.is-bottom .nb-cover-copy { top: auto; bottom: 0; }
+.nb-bend-shade { position: absolute; z-index: 2; }
+.nb-bend-shade.is-right { background: linear-gradient(90deg, rgba(255, 255, 255, 0.5), rgba(44, 30, 18, 0.1) 22%, rgba(44, 30, 18, 0.62)); }
+.nb-bend-shade.is-left { background: linear-gradient(270deg, rgba(255, 255, 255, 0.5), rgba(44, 30, 18, 0.1) 22%, rgba(44, 30, 18, 0.62)); }
+.nb-bend-shade.is-bottom { background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(44, 30, 18, 0.1) 22%, rgba(44, 30, 18, 0.62)); }
+.nb-bend-shade.is-top { background: linear-gradient(0deg, rgba(255, 255, 255, 0.5), rgba(44, 30, 18, 0.1) 22%, rgba(44, 30, 18, 0.62)); }
+.nb-wraps { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+.nb:not(.closed) .nb-wraps { visibility: hidden; }
+/* Not until the cover has landed: they stand out from it as it swings. */
+.nb.closed .nb-wraps { transition: visibility 0s 0.82s; }
+.nb-wrap { position: absolute; overflow: hidden; background: var(--accent); }
+.nb-wrap-in { position: absolute; }
+.nb-wrap-in .nb-cover-copy { width: var(--W); height: var(--H); right: auto; bottom: auto; }
+.nb-wrap .nb-sticker-face::before { content: ''; position: absolute; z-index: 3; inset: 0; background: rgba(36, 24, 14, 0.34); }
+.nb-wrap.is-right { left: 100%; top: calc(var(--W) * 0.044); bottom: calc(var(--W) * 0.044); width: var(--T); transform-origin: 0 50%; transform: rotateY(90deg); }
+.nb-wrap.is-right .nb-wrap-in { left: calc(var(--W) * -1); top: calc(var(--W) * -0.044); }
+.nb-wrap.is-left { right: calc(100% + 0.5px); top: 0; bottom: 0; width: var(--D); transform-origin: 100% 50%; transform: rotateY(-90deg); background: none; }
+.nb-wrap.is-left .nb-wrap-in { left: var(--D); top: 0; }
+.nb-wrap.is-top { bottom: 100%; left: 0; right: calc(var(--W) * 0.044); height: var(--T); transform-origin: 50% 100%; transform: rotateX(90deg); }
+.nb-wrap.is-top .nb-wrap-in { top: var(--T); left: 0; }
+.nb-wrap.is-bottom { top: 100%; left: 0; right: calc(var(--W) * 0.044); height: var(--T); transform-origin: 50% 0; transform: rotateX(-90deg); }
+.nb-wrap.is-bottom .nb-wrap-in { top: calc(var(--H) * -1); left: 0; }
+/* The book's own sides, for when it's turned by hand. */
+.nb { --D: calc(var(--W) * 0.1904); --T: calc(var(--W) * 0.014); }
+.nb.closed { touch-action: none; }
+.nb-spin { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+.nb.placing .nb-spin { transform: none !important; }
+.nb:not(.closed) .nb-spin { transition: transform 0.3s ease-out; }
+.nb-sides { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+.nb:not(.closed) .nb-sides { visibility: hidden; }
+.nb-sides i { position: absolute; }
+/* Held clear of the spine's plane, or the two flicker where they meet. */
+.nb.closed .nb-block { left: 1.5px; }
+.nb-side-spine { right: 100%; top: 0; width: var(--D); height: 100%; transform-origin: 100% 50%; transform: translateZ(1px) rotateY(-90deg); background: linear-gradient(90deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.05) 28%, rgba(0, 0, 0, 0.05) 72%, rgba(0, 0, 0, 0.16)), var(--accent); }
+.nb-side-top { left: 0.5px; right: 1.2%; bottom: calc(99.1% + 0.6px); height: var(--D); transform-origin: 50% 100%; transform: rotateX(90deg); background: repeating-linear-gradient(0deg, #fff 0 3px, #e4e4e4 3px 4px); }
+.nb-side-bottom { left: 0.5px; right: 1.2%; top: calc(99.1% + 0.6px); height: var(--D); transform-origin: 50% 0; transform: rotateX(-90deg); background: repeating-linear-gradient(0deg, #fff 0 3px, #e4e4e4 3px 4px); }
+/* Fitting the photo into the shape. */
+.nb-crop { position: absolute; z-index: 9; inset: 0; overflow: hidden; background: #fff; touch-action: none; }
+.nb-crop[hidden] { display: none; }
+.nb-crop-photo { position: absolute; left: 50%; top: 50%; max-width: none; transform-origin: 50% 50%; -webkit-user-drag: none; pointer-events: none; }
+.nb-crop-window { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 200vmax rgba(255, 255, 255, 0.8); outline: 2px solid var(--text); pointer-events: none; }
+.nb-crop-window.is-circle { border-radius: 50%; }
+.nb-crop-window.is-square, .nb-crop-window.is-rect { border-radius: 6px; }
+.nb-crop-hint { position: absolute; left: 0; right: 0; top: calc(max(env(safe-area-inset-top), 10px) + 18px); margin: 0; text-align: center; font-family: var(--font-body); font-size: 17px; color: var(--text); pointer-events: none; }
+.nb-crop-actions { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 16px); display: flex; justify-content: center; gap: 12px; }
+.nb-crop-back, .nb-crop-ok { min-height: 44px; padding: 8px 34px; border-radius: 3px; font-family: var(--font-body); font-size: 17px; letter-spacing: 0; text-transform: none; }
+.nb-crop-ok { border: none; background: var(--text); color: #fff; }
+.nb-crop-back { border: 1.5px solid var(--text); background: #fff; color: var(--text); }
 .nb.closed.placing .nb-book { transform: rotateY(0deg) translate(calc(var(--W) / -2), 0) scale(1); }
 .nb.placing .nb-float { animation: none; }
 .nb-sticker-stage { position: absolute; z-index: 8; inset: 0; touch-action: none; }
