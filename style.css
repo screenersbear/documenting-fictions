@@ -6671,3 +6671,4 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 :root[data-view="overview"] .nb-board > .nb-turn.back { animation-name: nb-leaf-verso-back; }
 @keyframes nb-leaf-verso-back { 0% { transform: rotateY(100deg); } 100% { transform: rotateY(0deg); } }
 :root[data-view="journal"] #nbScreenNum { background: #fffdf7; padding: 0 8px; line-height: 24px; }
+#shootForm .subsection-heading { cursor: default; }

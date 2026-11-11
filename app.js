@@ -26,8 +26,8 @@
   }
 
   const collapsedSections = loadCollapsedSections();
-  // The list screens don't fold any more: forget what was folded on them.
-  [...collapsedSections].filter(k => /^(overview|shoots|archive|journal):/.test(k)).forEach(k => collapsedSections.delete(k));
+  // The notebook's pages don't fold any more: forget what was folded on them.
+  [...collapsedSections].filter(k => /^(overview|shoots|archive|journal|shoot|stats):/.test(k)).forEach(k => collapsedSections.delete(k));
   saveCollapsedSections();
 
   function isSectionCollapsed(key) {
@@ -5416,12 +5416,10 @@
 
   function renderFrameworkTagGroup(container, frameworks, selectedTags) {
     container.innerHTML = frameworks.map(fw => {
-      const collapseKey = `shoot:framework:${fw.id}`;
-      const collapsed = isSectionCollapsed(collapseKey);
       return `
         <div class="framework-subsection">
-          <h4 class="subsection-heading framework-heading${collapsed ? ' collapsed' : ''}" data-fw-id="${fw.id}">${escapeHtml(fw.name)}${COLLAPSE_ARROW_SVG}</h4>
-          <div class="framework-subsection-body" data-fw-body="${fw.id}" ${collapsed ? 'hidden' : ''}>
+          <h4 class="subsection-heading framework-heading" data-fw-id="${fw.id}">${escapeHtml(fw.name)}</h4>
+          <div class="framework-subsection-body" data-fw-body="${fw.id}">
             <div class="tag-group">
               ${fw.tags.map(tag => {
                 const entry = selectedTags.find(t => t.frameworkId === fw.id && t.tag === tag);
@@ -5432,22 +5430,9 @@
         </div>
       `;
     }).join('');
-
-    container.querySelectorAll('.framework-heading').forEach(heading => {
-      const fwId = heading.dataset.fwId;
-      const body = container.querySelector(`.framework-subsection-body[data-fw-body="${fwId}"]`);
-      heading.addEventListener('click', () => {
-        // Borrowed onto the wizard's Visual language slide: no folding there.
-        if (heading.closest('#shootWizard')) return;
-        const nowCollapsed = !body.hidden;
-        setSectionCollapsed(`shoot:framework:${fwId}`, nowCollapsed);
-        body.hidden = nowCollapsed;
-        heading.classList.toggle('collapsed', nowCollapsed);
-      });
-    });
   }
 
-  // Visual Language renders as its own smaller, collapsible subsection nested
+  // Visual Language renders as its own smaller subsection nested
   // under Visuals (same visual language as Shot list), in its own early
   // container so References/Mood board can sit between it and everything
   // else. Any custom frameworks a user adds via Manage render into the later
@@ -6778,10 +6763,6 @@
   // characteristics and a longer description.
   let currentLightingSetups = [];
 
-  function lightingSetupCollapseKey(setup) {
-    return `shoot:${currentShootId}:lightingSetup:${setup.id}`;
-  }
-
   // Grouped by name across every shoot's lightingSetups, most-recent shoot's
   // version winning ties — same "most recent wins" shape as
   // getAllPastTalents/getLastLocationDirections, just without lead-count
@@ -7117,17 +7098,14 @@
 
   function renderLightingSetups() {
     const container = document.getElementById('lightingSetupsItems');
-    // On the wizard's Lighting setups slide every card is open, with no fold
-    // toggle — no folding in the wizard. Its enter/leave re-render, so the
-    // page gets each card's own fold back.
     const inWizard = !!container.closest('#shootWizard');
-    // There the fold arrow's spot holds the saved-list chevron instead (see
-    // toggleLightingBrowse), shown only when other shoots have setups saved.
+    // On the wizard's Lighting setups slide each card's bar has the saved-list
+    // chevron (see toggleLightingBrowse), shown only when other shoots have
+    // setups saved.
     const browseSaved = inWizard && hasOtherShootLightingSetups();
     container.innerHTML = currentLightingSetups.map((item, idx) => {
-      const collapsed = !inWizard && isSectionCollapsed(lightingSetupCollapseKey(item));
       return `
-      <div class="team-member-card lighting-setup-card${collapsed ? ' lighting-setup-card-collapsed' : ''}" data-idx="${idx}">
+      <div class="team-member-card lighting-setup-card" data-idx="${idx}">
         <div class="lighting-setup-card-bar">
           <button type="button" class="shot-drag-handle lighting-drag-handle" aria-label="Drag to reorder lighting setup" tabindex="-1">&#8942;</button>
           <div class="lighting-setup-name-wrap">
@@ -7136,12 +7114,10 @@
           </div>
           ${inWizard ? `<button type="button" class="lighting-setup-collapse-toggle lighting-setup-browse-toggle" data-idx="${idx}" aria-label="Show saved lighting setups" aria-expanded="false"${browseSaved ? '' : ' hidden'}>
             ${COLLAPSE_ARROW_SVG}
-          </button>` : `<button type="button" class="lighting-setup-collapse-toggle" data-idx="${idx}" aria-label="Collapse lighting setup" aria-expanded="${collapsed ? 'false' : 'true'}">
-            ${COLLAPSE_ARROW_SVG}
-          </button>`}
+          </button>` : ''}
           <button type="button" class="delete-lighting-setup" data-idx="${idx}"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
         </div>
-        <div class="lighting-setup-card-body"${collapsed ? ' hidden' : ''}>
+        <div class="lighting-setup-card-body">
           <input type="text" class="lighting-setup-characteristics" data-idx="${idx}" placeholder="mood, quality, style, etc." aria-label="Characteristics" value="${escapeHtml(item.characteristics || '')}" />
           <textarea class="lighting-setup-description" data-idx="${idx}" rows="2" placeholder="Describe the setup." aria-label="Description">${escapeHtml(item.description || '')}</textarea>
         </div>
@@ -7151,24 +7127,8 @@
 
     container.querySelectorAll('.lighting-setup-description').forEach(autoSizeTextarea);
 
-    container.querySelectorAll('.lighting-setup-collapse-toggle').forEach(btn => {
-      if (btn.classList.contains('lighting-setup-browse-toggle')) {
-        btn.addEventListener('click', () => toggleLightingBrowse(btn));
-        return;
-      }
-      btn.addEventListener('click', () => {
-        const setup = currentLightingSetups[Number(btn.dataset.idx)];
-        if (!setup) return;
-        const key = lightingSetupCollapseKey(setup);
-        setSectionCollapsed(key, !isSectionCollapsed(key));
-        renderLightingSetups();
-        // Collapsing alone doesn't touch a form field, so nothing else would
-        // autosave — same reasoning (and same fix) as the talent collapse
-        // toggle: a setup saved before it had an id needs this to persist
-        // the one just minted on load, or the collapse key it's hanging off
-        // of is orphaned by the next reopen's fresh id.
-        scheduleShootAutosave();
-      });
+    container.querySelectorAll('.lighting-setup-browse-toggle').forEach(btn => {
+      btn.addEventListener('click', () => toggleLightingBrowse(btn));
     });
     container.querySelectorAll('.delete-lighting-setup').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -7557,61 +7517,13 @@
   // none), and picking one later only hides what doesn't apply, never
   // clearing it (updateCategoryTierUI).
 
-  // ---------- Shoot form section bubbles (Logistics/Direction/Visuals/Shoot-day
-  // notes, plus the Shot list sub-section) — collapse state is shared across
-  // every shoot, same as the Overview/Shoots tab collapsible headings.
-  const SHOOT_FORM_COLLAPSE_SECTIONS = [
-    ['shoot:basicInfo', '#basicInfoHeading', 'basicInfoBody'],
-    ['shoot:logistics', '#logisticsHeading', 'logisticsBody'],
-    ['shoot:team', '#teamHeading', 'teamBody'],
-    ['shoot:direction', '#directionHeading', 'directionBody'],
-    ['shoot:visuals', '#visualsHeading', 'visualsBody'],
-    ['shoot:lightingSetups', '#lightingSetupsHeading', 'lightingSetupsBody'],
-    // Keyed 'shoot:shootDayNotes' rather than 'shoot:shotList': this IS the old
-    // Shoot day section, renamed once its only remaining content was the shot
-    // list. Keeping the key means an existing fold state still applies to it.
-    ['shoot:shootDayNotes', '#shotListHeading', 'shotListBody'],
-    ['shoot:postShoot', '#postShootHeading', 'postShootBody'],
-  ];
-
-  // Any auto-sized textarea measured while its section was collapsed reports
-  // zero height and keeps the one-line/rows-default size — true for the shot
-  // list and lighting setups (handled below), but just as true for every
-  // other collapsible section's own readonly notes fields (Location
-  // directions, Character, Concept, Talent/Team directions, etc.): a shoot
-  // opened with, say, Logistics collapsed leaves Location directions stuck
-  // too short once Logistics is expanded, cutting its text off, since
-  // nothing else ever re-measures it. Every path that reveals a section runs
-  // this so everything inside gets its real height the moment it's actually
-  // on screen. Idempotent, so calling it broadly is fine.
+  // A section's auto-sized boxes measure zero while it's hidden and keep their
+  // rows-default size, so whatever reveals one measures them again on screen.
   function onShootSectionRevealed(bodyId) {
     if (bodyId === 'shotListBody' || bodyId === 'lightingSetupsBody') autoSizeAllListTextareas();
     const body = document.getElementById(bodyId);
     if (body) body.querySelectorAll('textarea').forEach(syncFieldFilledState);
   }
-
-  function applyShootFormCollapseState() {
-    SHOOT_FORM_COLLAPSE_SECTIONS.forEach(([key, headingSelector, bodyId]) => {
-      const heading = document.querySelector(headingSelector);
-      const body = document.getElementById(bodyId);
-      const collapsed = isSectionCollapsed(key);
-      body.hidden = collapsed;
-      heading.classList.toggle('collapsed', collapsed);
-      if (!collapsed) onShootSectionRevealed(bodyId);
-    });
-  }
-
-  SHOOT_FORM_COLLAPSE_SECTIONS.forEach(([key, headingSelector, bodyId]) => {
-    const heading = document.querySelector(headingSelector);
-    const body = document.getElementById(bodyId);
-    heading.addEventListener('click', () => {
-      const nowCollapsed = !body.hidden;
-      setSectionCollapsed(key, nowCollapsed);
-      body.hidden = nowCollapsed;
-      heading.classList.toggle('collapsed', nowCollapsed);
-      if (!nowCollapsed) onShootSectionRevealed(bodyId);
-    });
-  });
 
   // ---------- Expand field (every notes-style textarea in the shoot form) ----------
   // These fields are readonly on the small form; tapping one opens a bigger
@@ -7770,8 +7682,7 @@
         document.getElementById('postShootContent').hidden = false;
         // Its answers were measured while hidden (zero height, so they kept
         // their rows size and a longer one reads cut off): measured again
-        // now they're on screen. A folded section skips it, and is measured
-        // when it's opened.
+        // now they're on screen.
         onShootSectionRevealed('postShootBody');
         updateShootModalJumpMenuVisibility();
       }
@@ -7795,18 +7706,12 @@
     fitButtonPair(document.getElementById('postShootPromptActions'));
   }
 
-  // Reveals the Post-shoot Reflection section and forces it open, overriding
-  // any stale collapse state left over from a different shoot (the collapse
-  // flag isn't per-shoot, so a previously-collapsed shoot shouldn't cause a
-  // newly-appearing section to render pre-collapsed).
+  // Reveals the Post-shoot Reflection section.
   function showPostShootContentExpanded() {
     const content = document.getElementById('postShootContent');
     content.hidden = false;
-    setSectionCollapsed('shoot:postShoot', false);
-    document.getElementById('postShootBody').hidden = false;
-    document.getElementById('postShootHeading').classList.remove('collapsed');
-    // Sized now it's on screen: opened folded, its boxes were measured while
-    // hidden and would stay cut off at three lines.
+    // Sized now it's on screen: its boxes were measured while hidden and
+    // would stay cut off at three lines.
     onShootSectionRevealed('postShootBody');
     return content;
   }
@@ -8047,7 +7952,7 @@
   // saves a brand-new draft mid-wizard, which flips that to the shoot's id.
   let shootWizardActive = false;
   let shootWizardStepKey = null;
-  let shootWizardMoved = [];          // { el, placeholder, wasHidden, unhid, unlocked } per borrowed block
+  let shootWizardMoved = [];          // { el, placeholder, unlocked, wasInert } per borrowed block
   let shootWizardPendingId = null;    // shoot a queued wizard is waiting to open over
   let shootWizardStartTimer = null;
   let shootWizardViewportMaxH = 0;    // tallest visible height seen this run — the keyboard yardstick
@@ -8213,7 +8118,6 @@
     shootBreakChanged = [];
     shootForm.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
     shootPageEls.forEach(({ el }) => el.classList.remove('nb-off'));
-    SHOOT_MODAL_SECTIONS.forEach(({ id }) => expandShootFormSection(id));
     autoSizeAllListTextareas();
     syncAllShootFormFields();
     const limit = modal.getBoundingClientRect().top + modal.clientHeight - parseFloat(getComputedStyle(modal).paddingBottom);
@@ -8314,8 +8218,6 @@
     shootSub = sub;
     if (currentShootId) shootPageMemory[currentShootId] = { id, sub };
     shootPageEls.forEach(({ el, page }) => el.classList.toggle('nb-off', page !== id));
-    // A section folded on the old long page would be a blank page here.
-    expandShootFormSection(id);
     drawShootSub();
     drawShootPageNumber();
     updateShootRunningHead();
@@ -8443,29 +8345,12 @@
     { id: 'logisticsHeading', title: 'Logistics', text: 'Shoot date, deadline, time, and location — the when and where.' },
     { id: 'teamHeading', title: 'Team', text: "Who's on the shoot and how to reach them." },
     { id: 'directionHeading', title: 'Direction', text: "Concept, character, and creative direction — the story you're telling." },
-    { id: 'visualsHeading', title: 'Visuals', text: () => `${moodboardTerm(document.getElementById('shootCategory').value)}, references, and frameworks — the visual language for the shoot.`, nestedIds: ['lightingSetupsHeading'] },
+    { id: 'visualsHeading', title: 'Visuals', text: () => `${moodboardTerm(document.getElementById('shootCategory').value)}, references, and frameworks — the visual language for the shoot.` },
     { id: 'shotListHeading', title: 'Shot list', text: "Every shot you want to come away with — tap a line to write, Enter to start the next one, and tick them off as you go — plus notes for the day and what you'll be asking of the talent and the team." },
     { id: 'postShootHeading', title: 'Reflection', text: 'What went right, what could be better, and lessons for next time — filled in after the shoot.' },
   ];
   let shootTourStepIndex = 0;
   const shootTourSteps = () => SHOOT_TOUR_STEPS.filter(step => availableShootPages().some(page => page.id === step.id));
-
-  // Force-expands a collapsed section (and any of its nested sub-sections)
-  // so the tour's explanation always has real content visible above it
-  // instead of describing something the user can't currently see.
-  function expandShootFormSection(headingId) {
-    const entry = SHOOT_FORM_COLLAPSE_SECTIONS.find(([, headingSelector]) => headingSelector === `#${headingId}`);
-    if (!entry) return;
-    const [key, headingSelector, bodyId] = entry;
-    const heading = document.querySelector(headingSelector);
-    const body = document.getElementById(bodyId);
-    if (!heading || !body) return;
-    if (!body.hidden && !heading.classList.contains('collapsed')) return;
-    setSectionCollapsed(key, false);
-    body.hidden = false;
-    heading.classList.remove('collapsed');
-    onShootSectionRevealed(bodyId);
-  }
 
   function renderShootTourStep() {
     const steps = shootTourSteps();
@@ -8476,8 +8361,6 @@
     document.getElementById('shootTourBackBtn').hidden = shootTourStepIndex === 0;
     document.getElementById('shootTourNextBtn').textContent = shootTourStepIndex === steps.length - 1 ? 'Done' : 'Next';
     showShootPage(step.id, { turn: true });
-    expandShootFormSection(step.id);
-    (step.nestedIds || []).forEach(expandShootFormSection);
     const target = document.getElementById(step.id);
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -8546,21 +8429,6 @@
 
   function shootFieldHasText(fieldId) {
     return hasText(document.getElementById(fieldId).value);
-  }
-
-  // The framework tag groups are collapsible on the page (and the fold is
-  // remembered), but the wizard has no folding at all — it's already in
-  // bite-sized pieces. So every group is open while on the slide, its heading
-  // doesn't fold there (see renderFrameworkTagGroup, and the arrow's hidden in
-  // style.css), and on the way out each goes back to its remembered fold.
-  function setShootWizardFrameworkGroupsOpen(forceOpen) {
-    const selector = FRAMEWORK_TAG_CONTAINER_IDS.map(id => `#${id} .framework-subsection-body`).join(', ');
-    document.querySelectorAll(selector).forEach(body => {
-      const collapsed = !forceOpen && isSectionCollapsed(`shoot:framework:${body.dataset.fwBody}`);
-      body.hidden = collapsed;
-      const heading = body.parentElement.querySelector('.framework-heading');
-      if (heading) heading.classList.toggle('collapsed', collapsed);
-    });
   }
 
   const SHOOT_WIZARD_STEPS = [
@@ -8661,8 +8529,6 @@
         document.getElementById('frameworkTagsContainer').hidden ? null : shootWizardBlock('frameworkTagsContainer'),
       ],
       when: () => (state.frameworks || []).some(fw => (fw.tags || []).length > 0),
-      enter: () => setShootWizardFrameworkGroupsOpen(true),
-      leave: () => setShootWizardFrameworkGroupsOpen(false),
     },
     {
       key: 'references',
@@ -8766,11 +8632,7 @@
     const placeholder = document.createComment('shoot-wizard');
     el.before(placeholder);
     [el, ...el.querySelectorAll('.pg-off, .pg-first')].forEach(node => node.classList.remove('pg-off', 'pg-first'));
-    // A collapsible section body brings its remembered fold along — shown
-    // regardless while it's on a slide, given its fold back on the way out.
-    const isSectionBody = SHOOT_FORM_COLLAPSE_SECTIONS.some(([, , bodyId]) => bodyId === el.id);
-    const record = { el, placeholder, wasHidden: el.hidden, unhid: isSectionBody, unlocked: [], wasInert: el.inert };
-    if (isSectionBody) el.hidden = false;
+    const record = { el, placeholder, unlocked: [], wasInert: el.inert };
     // A block that sits directly under #shootForm (Team, Shot list) was made
     // inert itself along with the rest of the covered page — it has to come
     // alive in the card, then go back to how it was on the page.
@@ -8786,9 +8648,8 @@
   }
 
   function restoreShootWizardBlocks() {
-    shootWizardMoved.forEach(({ el, placeholder, wasHidden, unhid, unlocked, wasInert }) => {
+    shootWizardMoved.forEach(({ el, placeholder, unlocked, wasInert }) => {
       unlocked.forEach(field => { field.readOnly = true; });
-      if (unhid) el.hidden = wasHidden;
       el.inert = wasInert;
       if (placeholder.parentNode) placeholder.replaceWith(el);
     });
@@ -8960,8 +8821,6 @@
     modalEl.style.overflow = '';
     if (closing) return;
     // Everything was last measured at the card's width; the page is wider.
-    // The fold state goes first so only open sections get measured.
-    applyShootFormCollapseState();
     syncAllShootFormFields();
     autoSizeAllListTextareas();
     // Instant, not smooth: smooth scrolling doesn't run in a background tab.
@@ -13720,7 +13579,6 @@
     renderTeamMembers();
 
     renderShootFrameworkTags(s);
-    applyShootFormCollapseState();
 
     document.getElementById('postShootContent').hidden = !isPostCaptureStatus(previousStatusValue);
     document.getElementById('postShootPromptOverlay').hidden = true;
