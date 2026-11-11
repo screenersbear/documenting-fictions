@@ -6692,11 +6692,6 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
    held the same way as the navigator (by its top on the installed app). */
 .nb-sun { bottom: calc(var(--nb-foot) - 5px); }
 :root.nb-installed .nb-sun { top: calc(var(--nb-h) - var(--nb-bar) - 5px); bottom: auto; }
-.sun-menu-body { display: flex; flex-direction: column; gap: 8px; }
-.sun-colors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px; padding: 4px 0 8px; }
-.sun-color { display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 0; padding: 8px 0; border: none; background: none; color: var(--text); font-family: var(--font-body); font-size: 13px; letter-spacing: 0; text-transform: none; }
-.sun-book { width: 48px; height: 65px; border-radius: 0 5px 5px 0; background: center / 100% 100% no-repeat; }
-.sun-color[aria-pressed="true"] .sun-book { outline: 1.5px solid var(--text); outline-offset: 3px; }
 .sun-remove-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 4px 4px 10px; }
 .sun-remove { display: block; width: 100%; min-height: 0; padding: 0; border: none; background: none; }
 .sun-remove-photo { display: block; aspect-ratio: 1; background: #f6f1e6 center / cover no-repeat; }
@@ -6936,24 +6931,42 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
    as in ref, so its lines show on white). */
 :root { --opt-ink: var(--accent); --opt-on-ink: var(--on-accent); }
 :root:not([data-book]), :root[data-book="mango"] { --opt-ink: #e0b012; }
-#appMenuOverlay { align-items: flex-end; justify-content: center; padding: 0; background: rgba(49, 61, 69, 0.42); }
-#appMenuOverlay > .modal.opt-sheet { display: flex; flex-direction: column; width: 100%; max-width: 620px; max-height: calc(90 * var(--svh)); padding: 0; overflow: hidden; border: none; border-radius: 14px 14px 0 0; background: #fff; box-shadow: none; }
-#appMenuOverlay .opt-sheet-head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 12px 10px 10px 18px; border-bottom: 1px solid var(--line); }
-#appMenuOverlay .opt-sheet-head .app-menu-header { margin: 0; padding: 0; font-family: var(--font-hand); font-size: 26px; line-height: 1.2; text-align: left; color: var(--text); background: none; text-transform: none; letter-spacing: 0; }
-#appMenuOverlay .opt-close { flex: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; min-height: 0; padding: 0; border: none; background: none; color: var(--text); }
-#appMenuOverlay .opt-close .x-icon { width: 22px; height: 22px; }
-#appMenuOverlay .opt-sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 14px 18px calc(16px + var(--sa-bottom)); }
-#appMenuOverlay .opt-label { display: block; font-family: var(--font-hand); font-size: 19px; line-height: 1.3; color: var(--dim); }
-#appMenuOverlay .opt-gap { margin-top: 16px; }
-#appMenuOverlay button { font-family: var(--font-hand); letter-spacing: 0; text-transform: none; }
-#appMenuOverlay .opt-themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px; margin-top: 10px; }
-#appMenuOverlay .opt-theme { display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 0; padding: 8px 0; border: none; border-radius: 0; background: none; color: var(--text); font-size: 17px; }
-#appMenuOverlay .opt-swatch { width: 44px; height: 44px; border-radius: 50%; }
-#appMenuOverlay .opt-theme.active .opt-swatch { outline: 1.5px solid var(--text); outline-offset: 3px; }
-#appMenuOverlay .opt-seg { display: flex; margin-top: 8px; }
-#appMenuOverlay .opt-seg button { flex: 1; height: 38px; min-height: 0; padding: 0 6px; border: 2px solid var(--opt-ink); border-radius: 0; background: #fff; color: var(--text); font-size: 18px; line-height: 1; white-space: nowrap; }
-#appMenuOverlay .opt-seg button + button { border-left: 0; }
-#appMenuOverlay .opt-seg button.active { background: var(--opt-ink); color: var(--opt-on-ink); }
-#appMenuOverlay .opt-wide { display: block; width: 100%; height: 48px; min-height: 0; margin-top: 8px; padding: 0 12px; border: 2px solid var(--opt-ink); border-radius: 0; background: #fff; color: var(--text); font-size: 21px; line-height: 1; text-align: center; }
-#appMenuOverlay .opt-wide.opt-danger { border-color: var(--text); background: var(--text); color: #fff; }
-#appMenuOverlay .opt-hint { display: block; margin: 6px 0 0; font-size: 17px; line-height: 1.3; color: var(--dim); }
+:is(#appMenuOverlay, #sunMenuOverlay) { align-items: flex-end; justify-content: center; padding: 0; background: rgba(49, 61, 69, 0.42); }
+:is(#appMenuOverlay, #sunMenuOverlay) > .modal.opt-sheet { display: flex; flex-direction: column; width: 100%; max-width: 620px; max-height: calc(90 * var(--svh)); padding: 0; overflow: hidden; border: none; border-radius: 14px 14px 0 0; background: #fff; box-shadow: none; }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-sheet-head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 12px 10px 10px 18px; border-bottom: 1px solid var(--line); }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-sheet-head .app-menu-header { margin: 0; padding: 0; font-family: var(--font-hand); font-size: 26px; line-height: 1.2; text-align: left; color: var(--text); background: none; text-transform: none; letter-spacing: 0; }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-close { flex: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; min-height: 0; padding: 0; border: none; background: none; color: var(--text); }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-close .x-icon { width: 22px; height: 22px; }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 14px 18px calc(16px + var(--sa-bottom)); }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-label { display: block; font-family: var(--font-hand); font-size: 19px; line-height: 1.3; color: var(--dim); }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-gap { margin-top: 16px; }
+:is(#appMenuOverlay, #sunMenuOverlay) button { font-family: var(--font-hand); letter-spacing: 0; text-transform: none; }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px; margin-top: 10px; }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-theme { display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 0; padding: 8px 0; border: none; border-radius: 0; background: none; color: var(--text); font-size: 17px; }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-swatch { width: 44px; height: 44px; border-radius: 50%; }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-theme.active .opt-swatch { outline: 1.5px solid var(--text); outline-offset: 3px; }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-seg { display: flex; margin-top: 8px; }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-seg button { flex: 1; height: 38px; min-height: 0; padding: 0 6px; border: 2px solid var(--opt-ink); border-radius: 0; background: #fff; color: var(--text); font-size: 18px; line-height: 1; white-space: nowrap; }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-seg button + button { border-left: 0; }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-seg button.active { background: var(--opt-ink); color: var(--opt-on-ink); }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-wide { display: block; width: 100%; height: 48px; min-height: 0; margin-top: 8px; padding: 0 12px; border: 2px solid var(--opt-ink); border-radius: 0; background: #fff; color: var(--text); font-size: 21px; line-height: 1; text-align: center; }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-wide.opt-danger { border-color: var(--text); background: var(--text); color: #fff; }
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-hint { display: block; margin: 6px 0 0; font-size: 17px; line-height: 1.3; color: var(--dim); }
+
+/* The sun's Options, as ref's: the covers to pick from, the sticker kinds,
+   and a three-way start choice whose parts fit their words. */
+#sunMenuOverlay .opt-colors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px; margin-top: 10px; }
+#sunMenuOverlay .opt-color { display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 0; padding: 8px 0; border: none; border-radius: 0; background: none; color: var(--text); font-size: 17px; }
+#sunMenuOverlay .opt-book { width: 48px; height: 65px; border-radius: 0 5px 5px 0; background: center / 100% 100% no-repeat; }
+#sunMenuOverlay .opt-color[aria-pressed="true"] .opt-book { outline: 1.5px solid var(--text); outline-offset: 3px; }
+#sunMenuOverlay .opt-seg-fit button { flex: 1 1 auto; height: auto; min-height: 38px; padding: 3px 8px; white-space: normal; line-height: 1.05; }
+#sunMenuOverlay .opt-sticker-kinds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+#sunMenuOverlay .opt-sticker-kind { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; min-height: 0; padding: 14px 0 10px; border: 2px solid var(--opt-ink); border-radius: 0; background: #fff; color: var(--text); font-size: 18px; }
+#sunMenuOverlay .opt-shape { display: block; width: 58px; height: 58px; background: var(--opt-ink); }
+#sunMenuOverlay .opt-shape.is-circle { border-radius: 50%; }
+#sunMenuOverlay .opt-shape.is-square { border-radius: 4px; }
+#sunMenuOverlay .opt-shape.is-rect { width: 72px; height: 48px; margin: 5px 0; border-radius: 4px; }
+#sunMenuOverlay .opt-sticker-kinds + .opt-wide { margin-top: 12px; }
+/* Laid out short, the strip iOS leaves under the page already clears the
+   home bar, so the sheets need no room of their own for it. */
+:root.nb-short :is(#appMenuOverlay, #sunMenuOverlay) .opt-sheet-body { padding-bottom: 16px; }

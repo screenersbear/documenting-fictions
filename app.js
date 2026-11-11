@@ -9182,7 +9182,7 @@
 
   // On/off for the whole guide, remembered on this device. Turned off from
   // the first slide's "Don't show again", and back on (or off) from the App
-  // options' New shoots open switch.
+  // options' New shoot guide switch.
   const NEW_SHOOT_GUIDE_OFF_KEY = 'dailies_new_shoot_guide_off_v1';
 
   function isNewShootGuideOn() {
@@ -21577,6 +21577,7 @@
     const overlay = document.getElementById('sunMenuOverlay');
     const title = document.getElementById('sunMenuTitle');
     const body = document.getElementById('sunMenuBody');
+    const closeBtn = document.getElementById('sunMenuCloseBtn');
     const fileInput = document.getElementById('stickerFileInput');
     const book = document.getElementById('book');
     const layer = document.getElementById('bookStickers');
@@ -21851,67 +21852,81 @@
       }).catch(() => {});
     };
 
+    // Laid out like ref's Options sheet: the book's color, Stickers (its own
+    // part, as ref's own sheet), and where the app starts. On Stickers and
+    // Remove sticker the X goes one step back, as closing ref's sheet on top.
+    const START_CHOICES = [['last', 'Where I left off'], ['notebook', 'Notebook'], ['first', 'First page']];
+    const BACK_TO = { main: null, stickers: 'main', remove: 'stickers' };
+    let paneNow = 'main';
     const PANES = {
       main: () => ['Options', `
-        <button type="button" class="options-item" data-pane="colors">App color</button>
-        <button type="button" class="options-item" data-pane="stickers">Stickers</button>
-        <button type="button" class="options-item" data-pane="start">Always start in</button>
-        <button type="button" class="options-item options-cancel" data-close>Go back</button>`],
-      colors: () => ['App color', `
-        <button type="button" class="options-item options-back" data-pane="main">&larr; Back</button>
-        <div class="sun-colors">${APP_COLORS.map(([key, name]) => `
-          <button type="button" class="sun-color" data-color="${key}" aria-pressed="${key === state.presentation.color}">
-            <span class="sun-book" style="background-image:url(art/df-${key}-cover.webp)"></span>
+        <span class="opt-label">App color</span>
+        <div class="opt-colors">${APP_COLORS.map(([key, name]) => `
+          <button type="button" class="opt-color" data-color="${key}" aria-pressed="${key === state.presentation.color}">
+            <span class="opt-book" style="background-image:url(art/df-${key}-cover.webp)"></span>
             <span>${name}</span>
-          </button>`).join('')}</div>`],
+          </button>`).join('')}</div>
+        <span class="opt-label opt-gap">Stickers</span>
+        <button type="button" class="opt-wide" data-pane="stickers">Stickers</button>
+        <span class="opt-label opt-gap">Always start in</span>
+        <div class="opt-seg opt-seg-fit">${START_CHOICES.map(([key, name]) => `
+          <button type="button" data-start="${key}" class="${state.presentation.start === key ? 'active' : ''}" aria-pressed="${state.presentation.start === key}">${name}</button>`).join('')}</div>`],
       stickers: () => ['Stickers', `
-        <button type="button" class="options-item options-back" data-pane="main">&larr; Back</button>
-        <button type="button" class="options-item" data-shape="circle">Circle</button>
-        <button type="button" class="options-item" data-shape="square">Square</button>
-        <button type="button" class="options-item" data-shape="rect">Rectangle</button>
-        ${state.presentation.stickers.length ? '<button type="button" class="options-item options-delete" data-pane="remove">Remove sticker</button>' : ''}`],
+        <div class="opt-sticker-kinds">
+          <button type="button" class="opt-sticker-kind" data-shape="circle"><span class="opt-shape is-circle"></span><span>Circle</span></button>
+          <button type="button" class="opt-sticker-kind" data-shape="square"><span class="opt-shape is-square"></span><span>Square</span></button>
+          <button type="button" class="opt-sticker-kind" data-shape="rect"><span class="opt-shape is-rect"></span><span>Rectangle</span></button>
+        </div>
+        ${state.presentation.stickers.length ? '<button type="button" class="opt-wide opt-sticker-remove" data-pane="remove">Remove sticker</button>' : ''}`],
       remove: () => ['Remove sticker', `
-        <button type="button" class="options-item options-back" data-pane="stickers">&larr; Back</button>
         <div class="sun-remove-grid">${[...state.presentation.stickers].reverse().map(s => `
           <button type="button" class="sun-remove" data-remove="${escapeHtml(s.id)}" aria-label="Remove this sticker">
             <span class="sun-remove-photo is-${s.shape}" style="background-image:url('${photos.get(s.id) || ''}')"></span>
           </button>`).join('')}</div>`],
-      start: () => ['Always start in', `
-        <button type="button" class="options-item options-back" data-pane="main">&larr; Back</button>
-        <button type="button" class="options-item choice-item${state.presentation.start === 'last' ? ' active' : ''}" data-start="last">Where I left off</button>
-        <button type="button" class="options-item choice-item${state.presentation.start === 'notebook' ? ' active' : ''}" data-start="notebook">Notebook</button>
-        <button type="button" class="options-item choice-item${state.presentation.start === 'first' ? ' active' : ''}" data-start="first">First page</button>`],
     };
 
     function showPane(name) {
       const [heading, html] = PANES[name]();
+      const changed = name !== paneNow;
+      paneNow = name;
       title.textContent = heading;
       body.innerHTML = html;
+      if (changed) body.scrollTop = 0; // drawn again after a removal: keep the place
+      closeBtn.setAttribute('aria-label', BACK_TO[name] ? 'Back' : 'Close');
     }
 
     function closeMenu() { overlay.hidden = true; }
+    // The X and a tap on the dim: one step back, or shut on Options.
+    function stepBack() {
+      if (BACK_TO[paneNow]) showPane(BACK_TO[paneNow]);
+      else closeMenu();
+    }
 
     document.getElementById('bookSunBtn').addEventListener('click', () => {
       showPane('main');
+      body.scrollTop = 0;
       overlay.hidden = false;
     });
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeMenu(); });
+    closeBtn.addEventListener('click', stepBack);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) stepBack(); });
 
     body.addEventListener('click', (e) => {
       const hit = e.target.closest('button');
       if (!hit) return;
       if (hit.dataset.pane) showPane(hit.dataset.pane);
-      else if ('close' in hit.dataset) closeMenu();
       else if (hit.dataset.color) {
         state.presentation.color = hit.dataset.color;
         saveState();
         applyAppColor(state.presentation.color);
-        showPane('colors');
+        body.querySelectorAll('[data-color]').forEach(b => b.setAttribute('aria-pressed', String(b === hit)));
       } else if (hit.dataset.start) {
         state.presentation.start = hit.dataset.start;
         state.presentation.startPicked = true;
         saveState();
-        showPane('start');
+        body.querySelectorAll('[data-start]').forEach((b) => {
+          b.classList.toggle('active', b === hit);
+          b.setAttribute('aria-pressed', String(b === hit));
+        });
       } else if (hit.dataset.shape) {
         pendingShape = hit.dataset.shape;
         fileInput.value = '';

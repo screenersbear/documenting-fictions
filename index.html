@@ -1218,10 +1218,16 @@
 </div>
 
 <!-- ============ APP MENU ============ -->
+<!-- The sun's Options, laid out like ref's (user, 11-11): the same sheet as
+     App options. Its parts (Options, Stickers, Remove sticker) are drawn by
+     setupSunMenu in app.js; on Stickers and Remove sticker the X steps back. -->
 <div id="sunMenuOverlay" class="modal-overlay options-overlay app-menu-overlay" hidden>
-  <div class="modal options-modal app-menu-modal">
-    <h2 class="app-menu-header" id="sunMenuTitle">Options</h2>
-    <div class="sun-menu-body" id="sunMenuBody"></div>
+  <div class="modal app-menu-modal opt-sheet" role="dialog" aria-modal="true" aria-labelledby="sunMenuTitle">
+    <header class="opt-sheet-head">
+      <h2 class="app-menu-header" id="sunMenuTitle">Options</h2>
+      <button type="button" class="icon-btn close-btn opt-close" id="sunMenuCloseBtn" aria-label="Close"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </header>
+    <div class="opt-sheet-body" id="sunMenuBody"></div>
     <input type="file" id="stickerFileInput" accept="image/*" hidden />
   </div>
 </div>
@@ -1237,7 +1243,7 @@
       <button type="button" class="icon-btn close-btn opt-close" id="appMenuCancelBtn" aria-label="Close"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </header>
     <div class="opt-sheet-body">
-      <span class="opt-label">Theme</span>
+      <span class="opt-label">Change theme</span>
       <div class="opt-themes">
         <button type="button" class="opt-theme" id="themeBlueBtn" data-theme="blue"><span class="opt-swatch" style="background:#50a2ff"></span><span>Blue</span></button>
         <button type="button" class="opt-theme" id="themeDefaultBtn" data-theme="default"><span class="opt-swatch" style="background:#313d45"></span><span>Default</span></button>
@@ -1246,12 +1252,12 @@
         <button type="button" class="opt-theme" id="themePurpleBtn" data-theme="purple"><span class="opt-swatch" style="background:#9779dc"></span><span>Purple</span></button>
         <button type="button" class="opt-theme" id="themeRedBtn" data-theme="red"><span class="opt-swatch" style="background:#ff5356"></span><span>Red</span></button>
       </div>
-      <span class="opt-label opt-gap">Shoots show</span>
+      <span class="opt-label opt-gap">Shoot display options</span>
       <div class="opt-seg">
         <button type="button" id="displayModeTalentBtn">Talent name</button>
         <button type="button" id="displayModeTitleBtn">Shoot title</button>
       </div>
-      <span class="opt-label opt-gap">New shoots open</span>
+      <span class="opt-label opt-gap">New shoot guide</span>
       <div class="opt-seg">
         <button type="button" id="newShootGuideOnBtn">In the guide</button>
         <button type="button" id="newShootGuideOffBtn">On the page</button>
@@ -1401,7 +1407,7 @@
 <div id="shootWizardOffOverlay" class="modal-overlay intro-overlay" hidden>
   <div class="modal intro-modal">
     <h2>Guide turned off</h2>
-    <p>New shoots will open straight to the shoot page. You can turn the guide back on anytime: tap the menu button on the Overview page, then under New shoots open pick In the guide.</p>
+    <p>New shoots will open straight to the shoot page. You can turn the guide back on anytime: tap the menu button on the Overview page, then under New shoot guide pick In the guide.</p>
     <button type="button" class="primary" id="shootWizardOffOkBtn">got it!</button>
   </div>
 </div>
