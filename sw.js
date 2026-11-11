@@ -1,4 +1,4 @@
-const CACHE_NAME = 'starky-v130';
+const CACHE_NAME = 'starky-v131';
 const ASSETS = [
   './',
   './index.html',
@@ -14,6 +14,16 @@ const ASSETS = [
   './world-map.svg',
   './art/df-mango-cover.webp',
   './art/df-mango-block.webp',
+  './art/df-orange-cover.webp',
+  './art/df-orange-block.webp',
+  './art/df-berry-cover.webp',
+  './art/df-berry-block.webp',
+  './art/df-fern-cover.webp',
+  './art/df-fern-block.webp',
+  './art/df-ocean-cover.webp',
+  './art/df-ocean-block.webp',
+  './art/df-ink-cover.webp',
+  './art/df-ink-block.webp',
   './fonts/mansalva-latin.woff2',
 ];
 

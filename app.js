@@ -649,6 +649,21 @@
   }
 
   const THEME_KEYS = ['default', 'pink', 'purple', 'red', 'blue', 'green'];
+  const APP_COLORS = [['mango', 'Mango'], ['orange', 'Orange'], ['berry', 'Berry'], ['fern', 'Fern'], ['ocean', 'Ocean'], ['ink', 'Black']];
+  const APP_COLOR_KEY = 'df-app-color'; // also read in index.html, before the first paint
+
+  // How the notebook looks: its color, where the app starts, and the stickers
+  // on its cover (their photos are in IndexedDB, see stickerKey).
+  function normalizePresentation(saved) {
+    const p = saved && typeof saved === 'object' ? saved : {};
+    return {
+      color: APP_COLORS.some(([key]) => key === p.color) ? p.color : 'mango',
+      start: p.start === 'first' ? 'first' : 'notebook',
+      stickers: (Array.isArray(p.stickers) ? p.stickers : []).filter(s => s && typeof s.id === 'string'
+        && (s.shape === 'circle' || s.shape === 'square') && [s.x, s.y, s.size].every(Number.isFinite)),
+    };
+  }
+  const stickerKey = id => `${id}__sticker`;
 
   // Up here with THEME_KEYS for the same reason: normalizeProjects (run by
   // loadState) uses it, and a const declared any further down would throw
@@ -663,6 +678,7 @@
       journalEntries: [],
       titleDisplayMode: 'talent',
       colorTheme: 'default',
+      presentation: normalizePresentation(),
       defaultCountry: '',
       dismissedLocationKeys: [],
       dismissedTeamMemberKeys: [],
@@ -954,6 +970,7 @@
         journalEntries,
         titleDisplayMode: parsed.titleDisplayMode === 'title' ? 'title' : 'talent',
         colorTheme: THEME_KEYS.includes(parsed.colorTheme) ? parsed.colorTheme : 'default',
+        presentation: normalizePresentation(parsed.presentation),
         defaultCountry: typeof parsed.defaultCountry === 'string' ? parsed.defaultCountry : '',
         dismissedLocationKeys: Array.isArray(parsed.dismissedLocationKeys) ? parsed.dismissedLocationKeys : [],
         dismissedTeamMemberKeys: Array.isArray(parsed.dismissedTeamMemberKeys) ? parsed.dismissedTeamMemberKeys : [],
@@ -1028,8 +1045,10 @@
     }
   }
 
+  let refreshStickers = () => {}; // set up with the sun menu
   let state = loadState();
   applyColorTheme(state.colorTheme);
+  applyAppColor(state.presentation.color);
 
   // ---------- helpers ----------
   function todayStr() {
@@ -1796,6 +1815,7 @@
     if (key.endsWith('__cover')) return 'cover';
     if (key.endsWith('__final')) return 'final';
     if (key.endsWith('__journal')) return 'journal';
+    if (key.endsWith('__sticker')) return 'sticker';
     if (key.includes('__talent_')) return 'talent';
     return 'moodboard';
   }
@@ -1813,8 +1833,8 @@
 
   function computeIdbStorageBreakdown() {
     return idbTransaction('readonly', store => {
-      const totals = { moodboard: 0, cover: 0, talent: 0, final: 0, journal: 0 };
-      const counts = { moodboard: 0, cover: 0, talent: 0, final: 0, journal: 0 };
+      const totals = { moodboard: 0, cover: 0, talent: 0, final: 0, journal: 0, sticker: 0 };
+      const counts = { moodboard: 0, cover: 0, talent: 0, final: 0, journal: 0, sticker: 0 };
       const req = store.openCursor();
       req.onsuccess = (e) => {
         const cursor = e.target.result;
@@ -1842,6 +1862,7 @@
     ['cover', 'Cover photos'],
     ['talent', 'Talent photos'],
     ['journal', 'Journal photos'],
+    ['sticker', 'Stickers'],
   ];
 
   async function openStorageUsageModal() {
@@ -2675,9 +2696,56 @@
   const screenAt = { overview: 0, shoots: 0, archive: 0, journal: 0, stats: 0 };
   let statsFlows = [];
   const currentScreen = () => document.documentElement.dataset.view;
+
+  // Installed on the home screen, iOS can lay the page out a status bar short
+  // of the real screen (WebKit bug 254868): bottom:0 and 100svh stop that far
+  // above the bottom, leaving a blank band. --screen-gap carries what bottom:0
+  // is short by and --nb-h the screen's true height. Measured from what CSS
+  // itself gets, only as an installed app, only upright. A keyboard-sized
+  // reading is a different problem (see setupTabbarDriftFix) and is ignored.
+  const SCREEN_GAP_MAX = 80;
+  const layoutBoxProbe = document.createElement('div');
+  layoutBoxProbe.style.cssText = 'position:fixed;top:0;bottom:0;left:0;width:0;visibility:hidden;pointer-events:none';
+  const smallHeightProbe = document.createElement('div');
+  smallHeightProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none';
+  const statusBarProbe = document.createElement('div');
+  statusBarProbe.id = 'nbStatusBarProbe';
+  statusBarProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top);visibility:hidden;pointer-events:none';
+  document.body.append(layoutBoxProbe, smallHeightProbe, statusBarProbe);
+  let screenGap = 0;
+  let screenFullHeight = 0;
+  let screenGapUpright = null;
+  const screenHeightNow = () => layoutBoxProbe.getBoundingClientRect().height + screenGap;
+
+  function measureScreenGap() {
+    if (!(navigator.standalone === true || matchMedia('(display-mode: standalone)').matches)) return false;
+    const upright = window.innerWidth < window.innerHeight;
+    // A keyboard makes for odd readings, unless the phone has just been turned.
+    const field = document.activeElement;
+    if (upright === screenGapUpright && field && field.matches('input, textarea, select, [contenteditable]')) return false;
+    if (window.visualViewport && window.visualViewport.scale > 1.01) return false;
+    const full = Math.max(screen.width, screen.height);
+    const hasStatusBar = upright && statusBarProbe.getBoundingClientRect().height > 0;
+    const shortBy = (el) => full - el.getBoundingClientRect().height;
+    const boxShort = shortBy(layoutBoxProbe);
+    const smallShort = shortBy(smallHeightProbe);
+    if (upright && (boxShort > SCREEN_GAP_MAX || smallShort > SCREEN_GAP_MAX)) return false;
+    screenGapUpright = upright;
+    const gap = hasStatusBar && boxShort >= 8 ? Math.round(boxShort) : 0;
+    const fullHeight = hasStatusBar && smallShort >= 8 ? full : 0;
+    if (gap === screenGap && fullHeight === screenFullHeight) return false;
+    screenGap = gap;
+    screenFullHeight = fullHeight;
+    const style = document.documentElement.style;
+    if (gap) style.setProperty('--screen-gap', `${gap}px`); else style.removeProperty('--screen-gap');
+    if (fullHeight) style.setProperty('--nb-h', `${fullHeight}px`); else style.removeProperty('--nb-h');
+    return true;
+  }
+  measureScreenGap();
+
   const pageProbe = document.createElement('div');
   // Not the frame's own box: that moves with the iPhone's stuck-bar fix.
-  pageProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;visibility:hidden;pointer-events:none;height:calc(100svh - var(--nb-bar) - var(--nb-rim) - 34px)';
+  pageProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;visibility:hidden;pointer-events:none;height:calc(var(--nb-h) - var(--nb-bar) - var(--nb-rim) - 34px)';
   document.body.appendChild(pageProbe);
 
   function atomBottom(a) {
@@ -2759,6 +2827,9 @@
       const next = rects[i + 1];
       cost.set(el, next && next.top > rects[i].top ? next.top - rects[i].top : rects[i].height);
     });
+    // The last one has nothing after it to measure to.
+    const lastAtom = atoms[atoms.length - 1];
+    if (lastAtom && lastAtom.also && lastAtom.also.length) cost.set(lastAtom.el, atomBottom(lastAtom) - lastAtom.el.getBoundingClientRect().top);
     const live = atoms.filter(a => cost.get(a.el) > 0);
     const parts = new Set();
     const note = (el) => {
@@ -2768,6 +2839,7 @@
     live.forEach((a) => { note(a.el); (a.also || []).forEach(note); a.heads.forEach(note); });
     const flow = { root, parts, pageEnd: limit + window.scrollY, pages: [], bodies: new Set(live.filter(a => a.row !== undefined).map(a => a.el)) };
     let room = limit - (rects.length ? rects[0].top : 0);
+    const leastRoom = room / 2;
     // Then each page is drawn to check it really fits.
     for (let tries = 0; tries < 3; tries++) {
       flow.pages = packFlow(live, cost, room);
@@ -2778,7 +2850,7 @@
         over = Math.max(over, atomBottom(page.atoms[page.atoms.length - 1]) - limit);
       });
       if (over <= 0.5) break;
-      room -= Math.ceil(over);
+      room = Math.max(leastRoom, room - Math.ceil(over));
     }
     return flow;
   }
@@ -2900,9 +2972,17 @@
   // drawn before the photos are in can be shorter than the screen really is.
   const screenNow = view => Math.max(0, Math.min(screenAt[view], screenPageCount(view) - 1));
 
+  // Overview's first page is the left-hand page of the spread; everything
+  // after it is on the right.
+  function syncPageSide() {
+    const view = currentScreen();
+    document.documentElement.dataset.side = view === 'overview' && screenNow('overview') === 0 ? 'verso' : 'recto';
+  }
+
   function drawScreenPage(view) {
     const count = screenPageCount(view);
     const at = screenNow(view);
+    syncPageSide();
     let flow = screenFlows[view];
     let sub = at;
     if (view === 'stats') {
@@ -2936,10 +3016,91 @@
     drawScreenPage(view);
   }
 
+  // Moving along an open spread. Two pictures of the page, side by side, slide
+  // across over the real page, which is already the new one underneath.
+  const PAN_MS = 460;
+  let panLayer = null;
+  let panTimer = 0;
+
+  function clearPan() {
+    clearTimeout(panTimer);
+    if (panLayer) panLayer.remove();
+    panLayer = null;
+    document.documentElement.classList.remove('nb-panning');
+  }
+
+  function pinTo(el, rect) {
+    Object.assign(el.style, {
+      position: 'absolute', left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px`,
+      right: 'auto', bottom: 'auto',
+    });
+  }
+
+  // One side of the spread as it's drawn right now. Where the frame's parts
+  // sit depends on the side the book is on, so the picture keeps its own.
+  function spreadPicture(view) {
+    const board = document.querySelector('.nb-board');
+    const rect = board.getBoundingClientRect();
+    const frame = board.cloneNode(true);
+    frame.querySelectorAll('.nb-turn, .nb-turn-under').forEach(el => el.remove());
+    frame.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+    pinTo(frame, rect);
+    frame.style.boxShadow = 'none';
+    frame.style.borderRadius = getComputedStyle(board).borderRadius;
+    ['.nb-board-page', '.nb-screen-foot'].forEach((part) => {
+      const { left, right, top, bottom, borderRadius } = getComputedStyle(board.querySelector(part));
+      Object.assign(frame.querySelector(part).style, { left, right, top, bottom, borderRadius });
+    });
+    const side = document.createElement('div');
+    side.className = 'nb-pan-side';
+    const copy = pageCopy(views[view]);
+    copy.holder.style.left = `${copy.left}px`;
+    copy.holder.style.top = `${copy.top}px`;
+    side.append(copy.holder, frame);
+    const tabs = document.querySelector('.nb-screen-tabs:not(.nb-screen-tabs-shoot)');
+    if (tabs.getClientRects().length) {
+      const tabsCopy = tabs.cloneNode(true);
+      pinTo(tabsCopy, tabs.getBoundingClientRect());
+      tabsCopy.style.display = 'flex';
+      tabsCopy.style.visibility = 'visible';
+      side.appendChild(tabsCopy);
+    }
+    return { side, rect };
+  }
+
+  function panSpread(view, to) {
+    clearPan();
+    clearTurn(document.querySelector('.nb-board'));
+    const before = spreadPicture(view);
+    scrollPageTo(0);
+    screenAt[view] = to;
+    drawScreenPage(view);
+    const after = spreadPicture(view);
+    const goingOn = to > 0;
+    const left = goingOn ? before : after;
+    const right = goingOn ? after : before;
+    const distance = left.rect.right - right.rect.left;
+    right.side.style.left = `${distance}px`;
+    const strip = document.createElement('div');
+    strip.className = `nb-pan-strip ${goingOn ? 'on' : 'back'}`;
+    strip.style.setProperty('--pan', `${-distance}px`);
+    strip.append(left.side, right.side);
+    panLayer = document.createElement('div');
+    panLayer.className = 'nb-pan';
+    panLayer.setAttribute('aria-hidden', 'true');
+    panLayer.appendChild(strip);
+    document.body.appendChild(panLayer);
+    document.documentElement.classList.add('nb-panning');
+    panTimer = setTimeout(clearPan, PAN_MS + 40);
+  }
+
   function turnScreenPage(view, to) {
     const from = screenNow(view);
     if (to < 0 || to >= screenPageCount(view) || to === from) return;
+    clearPan();
     const turning = motionOk();
+    // The left and right pages lie open side by side: no leaf between them.
+    if (turning && view === 'overview' && (from === 0 || to === 0)) { panSpread(view, to); return; }
     const oldCopy = turning ? pageCopy(views[view]) : null;
     scrollPageTo(0); // only a page with something too tall on it could be scrolled
     screenAt[view] = to;
@@ -2972,6 +3133,7 @@
       const turning = turnNextTab && previous !== view;
       turnNextTab = false;
       const oldCopy = turning ? pageCopy(views[previous]) : null;
+      clearPan();
       document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
       document.documentElement.dataset.view = view;
       Object.entries(views).forEach(([key, el]) => { el.hidden = key !== view; });
@@ -2982,6 +3144,7 @@
       // Turning to a screen opens it at its first page.
       screenAt[view] = 0;
       if (view === 'stats') statsPageIdx = 0;
+      syncPageSide();
       renderAll();
       if (turning) {
         const order = [...document.querySelectorAll('.tabbar .tab')].map(tab => tab.dataset.view);
@@ -7931,12 +8094,6 @@
 
   document.getElementById('shootMoodboardComplete').addEventListener('change', updateMoodboardCompleteLabel);
 
-  function updateTeamFinalizedLabel() {
-    const checked = document.getElementById('shootTeamFinalized').checked;
-    document.getElementById('teamFinalizedLabel').textContent = checked ? 'Team finalized' : 'Team finalized?';
-  }
-
-  document.getElementById('shootTeamFinalized').addEventListener('change', updateTeamFinalizedLabel);
 
   // ---------- Shoot modal ----------
   const shootModalOverlay = document.getElementById('shootModalOverlay');
@@ -8301,7 +8458,6 @@
   // bar button simply follows its original.
   [
     ['nbBarShootMode', 'enterShootModeBtn'],
-    ['nbBarArchiveMode', 'enterArchiveModeBtn'],
     ['nbBarComplete', 'completeShootBtn'],
     ['nbBarUnarchive', 'unarchiveShootBtn'],
   ].forEach(([barId, realId]) => {
@@ -8728,7 +8884,9 @@
     shootWizardViewportMaxH = Math.max(shootWizardViewportMaxH, height);
     if (vv) {
       wizard.style.setProperty('--wiz-vv-top', `${vv.offsetTop}px`);
-      wizard.style.setProperty('--wiz-vv-h', `${vv.height}px`);
+      // With no keyboard up, the dim runs to the real bottom of the screen.
+      const keyboardUp = height < shootWizardViewportMaxH * 0.8;
+      wizard.style.setProperty('--wiz-vv-h', `${keyboardUp ? vv.height : Math.min(vv.height + screenGap, screenHeightNow())}px`);
     }
     // Also compact outright on a short screen (an iPhone on its side), where
     // the full step line + hint + buttons alone would leave no room for fields.
@@ -13574,7 +13732,6 @@
     // Also shows/hides the team list and Directions for team to match.
     setTeamRequiredChoice(s ? (s.teamRequired || '') : '');
     document.getElementById('shootTeamFinalized').checked = s ? !!s.teamFinalized : false;
-    updateTeamFinalizedLabel();
     currentTeamMembers = s && s.teamMembers ? s.teamMembers.map(tm => ({ ...tm })) : [];
     renderTeamMembers();
 
@@ -17241,6 +17398,11 @@
 
   // ---------- Color theme (restyles background/border/fill chrome only —
   // actual text color never changes, see --ink vs --text in style.css) ----------
+  function applyAppColor(color) {
+    document.documentElement.dataset.book = color;
+    try { localStorage.setItem(APP_COLOR_KEY, color); } catch (err) { /* it just paints mango first next launch */ }
+  }
+
   function applyColorTheme(theme) {
     if (theme && theme !== 'default') {
       document.documentElement.setAttribute('data-theme', theme);
@@ -17295,7 +17457,8 @@
       const req = store.getAllKeys();
       req.onsuccess = () => {
         req.result.forEach(key => {
-          if (categorizeStorageKey(String(key)) === 'journal') return;
+          const kind = categorizeStorageKey(String(key));
+          if (kind === 'journal' || kind === 'sticker') return;
           store.delete(key);
           deleted.push(key);
         });
@@ -17413,6 +17576,7 @@
     state.journalEntries.forEach(e => {
       if (!e.sourceShootId) keys.push(journalImagesKey(e.id));
     });
+    state.presentation.stickers.forEach(s => keys.push(stickerKey(s.id)));
     // One read for the lot, so the share sheet opens as soon after the tap
     // as it can.
     return idbGetManyImages(keys).then(found => {
@@ -17595,6 +17759,8 @@
         journalEntries: Array.isArray(payload.state.journalEntries) ? payload.state.journalEntries : [],
         titleDisplayMode: payload.state.titleDisplayMode === 'title' ? 'title' : 'talent',
         colorTheme: THEME_KEYS.includes(payload.state.colorTheme) ? payload.state.colorTheme : 'default',
+        // A backup from before the sun menu leaves the notebook as it is.
+        presentation: normalizePresentation(payload.state.presentation || state.presentation),
         defaultCountry: typeof payload.state.defaultCountry === 'string' ? payload.state.defaultCountry : '',
         dismissedLocationKeys: Array.isArray(payload.state.dismissedLocationKeys) ? payload.state.dismissedLocationKeys : [],
         dismissedTeamMemberKeys: Array.isArray(payload.state.dismissedTeamMemberKeys) ? payload.state.dismissedTeamMemberKeys : [],
@@ -17604,6 +17770,8 @@
       };
       saveState();
       applyColorTheme(state.colorTheme);
+      applyAppColor(state.presentation.color);
+      refreshStickers();
       renderAll();
       showToast('Backup restored');
       // Backups made before photos moved to IDB still carry them inline on the
@@ -18996,7 +19164,7 @@
     div.className = 'archive-mode-field';
     div.innerHTML = `
       ${label ? `<p class="shoot-mode-review-label">${escapeHtml(label)}</p>` : ''}
-      <p class="shoot-mode-review-value">${escapeHtml(value)}</p>
+      <div class="archive-mode-value"><p class="shoot-mode-review-value jb-in">${escapeHtml(value)}</p></div>
     `;
     return div;
   }
@@ -19011,14 +19179,7 @@
   function renderArchiveModeBody(shoot) {
     const body = document.getElementById('archiveModeBody');
     body.innerHTML = '';
-    // The heading bars alternate yellow/navy down the report whichever
-    // sections this shoot actually has — fixed colours per section put two
-    // of the same next to each other whenever one in between was skipped
-    // (a solo shoot's Logistics and Reflection, say). With every section
-    // there it's the same Basic info yellow, Logistics navy, Team yellow
-    // as before.
-    let headingCount = 0;
-    const sectionHeading = (text) => archiveModeSectionHeading(text, headingCount++ % 2 ? 'heading-navy' : 'heading-yellow');
+    const sectionHeading = (text) => archiveModeSectionHeading(text, '');
 
     // Whichever of Title/Talent the header's shootDisplayName actually drew
     // from is skipped below so it isn't said twice — titleDisplayMode picks
@@ -19110,24 +19271,109 @@
     }
     if (isVideoShoot(shoot)) return;
 
-    const finalImagesGrid = document.createElement('div');
-    finalImagesGrid.className = 'moodboard-grid archive-mode-final-images';
     idbGetImages(finalImagesKey(shoot.id)).then(images => {
-      if (!images.length) return;
-      // Always the last heading in the report, so the next colour in turn.
+      if (!images.length || archiveModeShootId !== shoot.id) return;
       if (!reflectionFields.length) body.appendChild(sectionHeading('Reflection'));
-      body.appendChild(finalImagesGrid);
+      // A grid per row of three, so a page can break between rows.
+      let row = null;
       images.forEach((img, idx) => {
+        if (idx % 3 === 0) {
+          row = document.createElement('div');
+          row.className = 'moodboard-grid archive-mode-final-images';
+          body.appendChild(row);
+        }
         const thumb = document.createElement('div');
         thumb.className = 'moodboard-thumb';
         thumb.innerHTML = `<img src="${img.src}" alt="" />`;
         thumb.querySelector('img').addEventListener('click', () => {
           openImageViewer(images, idx, finalImagesKey(shoot.id), null, false);
         });
-        finalImagesGrid.appendChild(thumb);
+        row.appendChild(thumb);
       });
+      breakArchivePages();
     }).catch(() => {});
   }
+
+  // The summary is a page of the notebook: it breaks at the bottom and carries
+  // on over the leaf, the same as a shoot.
+  const archiveModePage = archiveModeOverlay.querySelector('.modal');
+  const archiveModeBody = document.getElementById('archiveModeBody');
+  let archiveFlow = null;
+  let archiveAt = 0;
+
+  // Line by line, like a Journal entry: a long answer carries over the leaf,
+  // under its heading and label again.
+  function archiveAtoms(body) {
+    const atoms = [];
+    let heading = null;
+    [...body.children].forEach((el) => {
+      if (el.matches('.shoot-mode-section-heading')) { heading = el; return; }
+      if (!el.matches('.archive-mode-field')) { atoms.push({ el, heads: heading ? [heading] : [] }); return; }
+      const label = el.querySelector('.shoot-mode-review-label');
+      const value = el.querySelector('.archive-mode-value');
+      const heads = [heading, label].filter(Boolean);
+      const rows = Math.max(1, Math.round(value.offsetHeight / LINE));
+      for (let row = 0; row < rows; row++) atoms.push({ el: value, heads, row, rows });
+    });
+    return atoms;
+  }
+
+  function drawArchivePage() {
+    const count = (archiveFlow && archiveFlow.pages.length) || 1;
+    archiveAt = Math.max(0, Math.min(archiveAt, count - 1));
+    if (archiveFlow) drawFlowPage(archiveFlow, archiveAt);
+    document.getElementById('archiveModeFoot').textContent = `${archiveAt + 1} / ${count}`;
+    document.getElementById('archiveModePrev').disabled = archiveAt <= 0;
+    document.getElementById('archiveModeNext').disabled = archiveAt >= count - 1;
+  }
+
+  function breakArchivePages() {
+    if (archiveModeOverlay.hidden) return;
+    archiveModePage.scrollTop = 0;
+    const limit = archiveModePage.getBoundingClientRect().top + archiveModePage.clientHeight - parseFloat(getComputedStyle(archiveModePage).paddingBottom);
+    archiveFlow = buildFlow(archiveModeBody, archiveAtoms, limit);
+    drawArchivePage();
+  }
+
+  // Its look comes from a class, so the copy can lose the id: a copy in the
+  // shoot's turning sheet comes earlier in the document than the real page.
+  const archivePageCopy = () => pageCopy(archiveModeBody, copy => copy.removeAttribute('id'));
+
+  function stepArchivePage(by) {
+    const to = archiveAt + by;
+    if (!archiveFlow || to < 0 || to >= archiveFlow.pages.length) return;
+    const turning = motionOk();
+    const oldCopy = turning ? archivePageCopy() : null;
+    archiveAt = to;
+    archiveModePage.scrollTop = 0;
+    drawArchivePage();
+    if (!turning) return;
+    const layer = archiveModeOverlay.querySelector('.nb-turn-layer');
+    if (by > 0) playTurn(layer, '', oldCopy);
+    else playTurn(layer, 'back', archivePageCopy(), oldCopy);
+  }
+  document.getElementById('archiveModePrev').addEventListener('click', () => stepArchivePage(-1));
+  document.getElementById('archiveModeNext').addEventListener('click', () => stepArchivePage(1));
+
+  (function setupArchivePageSwipe() {
+    let start = null;
+    archiveModeOverlay.addEventListener('touchstart', (e) => {
+      start = null;
+      if (e.touches.length !== 1 || e.target.closest('.nb-shoot-bar')) return;
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) return;
+      start = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }, { passive: true });
+    archiveModeOverlay.addEventListener('touchcancel', () => { start = null; }, { passive: true });
+    archiveModeOverlay.addEventListener('touchend', (e) => {
+      if (!start) return;
+      const dx = e.changedTouches[0].clientX - start.x;
+      const dy = e.changedTouches[0].clientY - start.y;
+      start = null;
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      stepArchivePage(dx < 0 ? 1 : -1);
+    }, { passive: true });
+  })();
 
   function openArchiveMode(shootId) {
     if (!shootModalOverlay.hidden) closeShootModal();
@@ -19135,18 +19381,20 @@
     if (!shoot) return;
     archiveModeShootId = shootId;
     document.getElementById('archiveModeTitle').textContent = shootDisplayName(shoot);
-    document.getElementById('archiveModeDoneBtn').textContent = pickRandomSaveMessage();
     renderArchiveModeBody(shoot);
     archiveModeOverlay.hidden = false;
+    archiveAt = 0;
+    breakArchivePages();
   }
 
   function exitArchiveMode() {
     archiveModeShootId = null;
+    archiveFlow = null;
+    clearTurn(archiveModeOverlay.querySelector('.nb-turn-layer'));
     archiveModeOverlay.hidden = true;
   }
 
   document.getElementById('archiveModeExitBtn').addEventListener('click', exitArchiveMode);
-  document.getElementById('archiveModeDoneBtn').addEventListener('click', exitArchiveMode);
 
   // "Shoot details" swaps to the full edit view for the same shoot — the
   // mirror image of Archive mode's own button on that page (see
@@ -19154,14 +19402,19 @@
   // forth without ever landing on the main tab underneath.
   document.getElementById('archiveModeShootDetailsBtn').addEventListener('click', () => {
     const shootId = archiveModeShootId;
+    const oldCopy = motionOk() ? archivePageCopy() : null;
     exitArchiveMode();
     if (!shootId) return;
-    document.querySelector('.tab[data-view="archive"]').click();
+    if (currentScreen() !== 'archive') document.querySelector('.tab[data-view="archive"]').click();
     openShootModal(shootId);
+    if (oldCopy) playTurn(shootModalOverlay.querySelector('.nb-turn-layer'), '', oldCopy);
   });
 
   document.getElementById('enterArchiveModeBtn').addEventListener('click', () => {
-    if (currentShootId) openArchiveMode(currentShootId);
+    if (!currentShootId) return;
+    const oldCopy = motionOk() ? shootPageCopy() : null;
+    openArchiveMode(currentShootId);
+    if (oldCopy && !archiveModeOverlay.hidden) playTurn(archiveModeOverlay.querySelector('.nb-turn-layer'), '', oldCopy);
   });
 
   // ---------- "Last time" notes (lessons carried into planning) ----------
@@ -20707,7 +20960,7 @@
 
     function measure() {
       const vw = window.innerWidth;
-      const vh = window.innerHeight;
+      const vh = screenHeightNow();
       const W = Math.min(vw * 0.78, vh * 0.66 * RATIO, 460);
       const H = W / RATIO;
       const k = Math.min(1, (vw - 14) / (2 * W), (vh * 0.82) / H);
@@ -20799,26 +21052,294 @@
     });
     document.getElementById('shutBookBtn').addEventListener('click', () => {
       clearTimeout(timer);
+      // The book shuts from the left-hand page, wherever Overview had got to.
+      clearPan();
+      screenAt.overview = 0;
+      drawScreenPage('overview');
       show('opened zoom-l');
       setMode('closed');
       remember('shut');
     });
-    window.addEventListener('resize', () => { if (!overlay.hidden) { measure(); if (book.classList.contains('closed')) placeTabHits(); } });
 
     document.documentElement.dataset.view = (document.querySelector('.tabbar .tab.active') || { dataset: { view: 'overview' } }).dataset.view;
+    syncPageSide();
     repaginate(currentScreen());
     // The handwriting arrives after the first draw, and it's a different width.
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { repaginate(currentScreen()); breakShootPages(); });
     let pagesWidth = window.innerWidth;
-    window.addEventListener('resize', () => {
-      if (window.innerWidth === pagesWidth) return;
-      pagesWidth = window.innerWidth;
+    function placeBook() {
+      if (overlay.hidden) return;
+      measure();
+      if (book.classList.contains('closed')) placeTabHits();
+    }
+    function breakAllPages() {
       repaginate(currentScreen());
       breakShootPages();
+      breakArchivePages();
+    }
+    window.addEventListener('resize', () => {
+      const gapMoved = measureScreenGap();
+      placeBook();
+      if (window.innerWidth === pagesWidth && !gapMoved) return;
+      pagesWidth = window.innerWidth;
+      breakAllPages();
     });
+    function settleScreenGap() {
+      if (!measureScreenGap()) return;
+      placeBook();
+      breakAllPages();
+    }
+    // A launching app can report its height late, and a reading skipped for
+    // the keyboard is due once it's gone.
+    [300, 1200].forEach(ms => setTimeout(settleScreenGap, ms));
+    document.addEventListener('focusout', () => setTimeout(settleScreenGap, 460));
+    window.addEventListener('pageshow', settleScreenGap);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) settleScreenGap(); });
     let saved = null;
-    try { saved = localStorage.getItem(BOOK_KEY); } catch (err) { /* treated as shut */ }
-    if (saved !== 'open') show('closed');
+    let afterUpdate = false;
+    try {
+      saved = localStorage.getItem(BOOK_KEY);
+      afterUpdate = sessionStorage.getItem('df_update_reload_tab') !== null;
+    } catch (err) { /* treated as shut */ }
+    // A new version swapped in mid-use carries on where it was. Any other
+    // launch starts where the sun menu says.
+    const startShut = afterUpdate ? saved !== 'open' : state.presentation.start !== 'first';
+    if (startShut) show('closed');
+    remember(startShut ? 'shut' : 'open');
+  })();
+
+  // ---------- The sun menu: how the notebook looks ----------
+  (function setupSunMenu() {
+    const overlay = document.getElementById('sunMenuOverlay');
+    const title = document.getElementById('sunMenuTitle');
+    const body = document.getElementById('sunMenuBody');
+    const fileInput = document.getElementById('stickerFileInput');
+    const book = document.getElementById('book');
+    const layer = document.getElementById('bookStickers');
+    const stage = document.getElementById('stickerStage');
+    const MIN_SIZE = 0.12;
+    const MAX_SIZE = 1.4;
+    const photos = new Map(); // sticker id -> photo
+    let pendingShape = null;
+    let placing = null; // the sticker being put down: { sticker, el, src }
+
+    function placeOnCover(el, sticker) {
+      el.style.left = `${sticker.x * 100}%`;
+      el.style.top = `${sticker.y * 100}%`;
+      el.style.width = `${sticker.size * 100}%`;
+    }
+
+    function stickerEl(sticker, src) {
+      const el = document.createElement('div');
+      el.className = `nb-sticker is-${sticker.shape}`;
+      const img = document.createElement('img');
+      img.alt = '';
+      img.draggable = false;
+      img.src = src;
+      el.appendChild(img);
+      placeOnCover(el, sticker);
+      return el;
+    }
+
+    // In the order they went on, so a newer one always lies over an older.
+    function drawStickers() {
+      layer.replaceChildren(...state.presentation.stickers.filter(s => photos.has(s.id)).map(s => stickerEl(s, photos.get(s.id))));
+      if (placing) layer.appendChild(placing.el);
+    }
+
+    refreshStickers = () => {
+      const stickers = state.presentation.stickers;
+      return idbGetManyImages(stickers.map(s => stickerKey(s.id))).then((found) => {
+        photos.clear();
+        stickers.forEach((s) => {
+          const images = found.get(stickerKey(s.id));
+          if (images && images[0]) photos.set(s.id, images[0].src);
+        });
+        drawStickers();
+      }).catch(() => {});
+    };
+
+    const PANES = {
+      main: () => ['Options', `
+        <button type="button" class="options-item" data-pane="colors">App color</button>
+        <button type="button" class="options-item" data-pane="stickers">Stickers</button>
+        <button type="button" class="options-item" data-pane="start">Always start in</button>
+        <button type="button" class="options-item options-cancel" data-close>Go back</button>`],
+      colors: () => ['App color', `
+        <button type="button" class="options-item options-back" data-pane="main">&larr; Back</button>
+        <div class="sun-colors">${APP_COLORS.map(([key, name]) => `
+          <button type="button" class="sun-color" data-color="${key}" aria-pressed="${key === state.presentation.color}">
+            <span class="sun-book" style="background-image:url(art/df-${key}-cover.webp)"></span>
+            <span>${name}</span>
+          </button>`).join('')}</div>`],
+      stickers: () => ['Stickers', `
+        <button type="button" class="options-item options-back" data-pane="main">&larr; Back</button>
+        <button type="button" class="options-item" data-shape="circle">Circle</button>
+        <button type="button" class="options-item" data-shape="square">Square</button>
+        ${state.presentation.stickers.length ? '<button type="button" class="options-item options-delete" data-pane="remove">Remove sticker</button>' : ''}`],
+      remove: () => ['Remove sticker', `
+        <button type="button" class="options-item options-back" data-pane="stickers">&larr; Back</button>
+        <div class="sun-remove-grid">${[...state.presentation.stickers].reverse().map(s => `
+          <button type="button" class="sun-remove" data-remove="${escapeHtml(s.id)}" aria-label="Remove this sticker">
+            <span class="sun-remove-photo is-${s.shape}" style="background-image:url('${photos.get(s.id) || ''}')"></span>
+          </button>`).join('')}</div>`],
+      start: () => ['Always start in', `
+        <button type="button" class="options-item options-back" data-pane="main">&larr; Back</button>
+        <button type="button" class="options-item choice-item${state.presentation.start === 'notebook' ? ' active' : ''}" data-start="notebook">Notebook</button>
+        <button type="button" class="options-item choice-item${state.presentation.start === 'first' ? ' active' : ''}" data-start="first">First page</button>`],
+    };
+
+    function showPane(name) {
+      const [heading, html] = PANES[name]();
+      title.textContent = heading;
+      body.innerHTML = html;
+    }
+
+    function closeMenu() { overlay.hidden = true; }
+
+    document.getElementById('bookSunBtn').addEventListener('click', () => {
+      showPane('main');
+      overlay.hidden = false;
+    });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeMenu(); });
+
+    body.addEventListener('click', (e) => {
+      const hit = e.target.closest('button');
+      if (!hit) return;
+      if (hit.dataset.pane) showPane(hit.dataset.pane);
+      else if ('close' in hit.dataset) closeMenu();
+      else if (hit.dataset.color) {
+        state.presentation.color = hit.dataset.color;
+        saveState();
+        applyAppColor(state.presentation.color);
+        showPane('colors');
+      } else if (hit.dataset.start) {
+        state.presentation.start = hit.dataset.start;
+        saveState();
+        showPane('start');
+      } else if (hit.dataset.shape) {
+        pendingShape = hit.dataset.shape;
+        fileInput.value = '';
+        fileInput.click();
+      } else if (hit.dataset.remove) {
+        const id = hit.dataset.remove;
+        state.presentation.stickers = state.presentation.stickers.filter(s => s.id !== id);
+        saveState();
+        photos.delete(id);
+        idbDeleteImages(stickerKey(id)).catch(() => {});
+        drawStickers();
+        showPane(state.presentation.stickers.length ? 'remove' : 'stickers');
+      }
+    });
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files && fileInput.files[0];
+      const shape = pendingShape;
+      if (!file || !shape) return;
+      resizeImageFile(file, 1000, 0.85).then((src) => {
+        closeMenu();
+        startPlacing(shape, src);
+      }).catch(() => showToast("Couldn't open that photo"));
+    });
+
+    // Putting one down: the book turns to face you so a finger moves the
+    // sticker exactly, and whatever hangs off the cover is cropped by it.
+    function startPlacing(shape, src) {
+      const sticker = { id: uid(), shape, x: 0.5, y: 0.5, size: 0.42 };
+      placing = { sticker, src, el: stickerEl(sticker, src) };
+      layer.appendChild(placing.el);
+      book.classList.add('placing');
+      stage.hidden = false;
+    }
+
+    const fingers = new Map();
+    let grab = null;
+    const bookSize = () => ({
+      w: parseFloat(book.style.getPropertyValue('--W')) || 1,
+      h: parseFloat(book.style.getPropertyValue('--H')) || 1,
+    });
+
+    // Where the fingers are now, as the starting point for what they do next.
+    function takeHold() {
+      if (!placing || !fingers.size) { grab = null; return; }
+      const points = [...fingers.values()].slice(0, 2);
+      grab = {
+        x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+        y: points.reduce((sum, p) => sum + p.y, 0) / points.length,
+        apart: points.length === 2 ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) : 0,
+        stickerX: placing.sticker.x,
+        stickerY: placing.sticker.y,
+        size: placing.sticker.size,
+      };
+    }
+
+    function follow() {
+      if (!placing || !grab) return;
+      const points = [...fingers.values()].slice(0, 2);
+      const { w, h } = bookSize();
+      const x = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+      const y = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+      const sticker = placing.sticker;
+      // At least a corner stays on the cover, so it can always be grabbed again.
+      sticker.x = Math.max(0, Math.min(1, grab.stickerX + (x - grab.x) / w));
+      sticker.y = Math.max(0, Math.min(1, grab.stickerY + (y - grab.y) / h));
+      if (points.length === 2 && grab.apart > 0) {
+        const apart = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+        sticker.size = Math.max(MIN_SIZE, Math.min(MAX_SIZE, grab.size * (apart / grab.apart)));
+      }
+      placeOnCover(placing.el, sticker);
+    }
+
+    stage.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('#stickerOkBtn')) return;
+      try { stage.setPointerCapture(e.pointerId); } catch (err) { /* moves still arrive on the stage */ }
+      fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      takeHold();
+    });
+    stage.addEventListener('pointermove', (e) => {
+      if (!fingers.has(e.pointerId)) return;
+      fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      follow();
+    });
+    const letGo = (e) => {
+      if (!fingers.delete(e.pointerId)) return;
+      takeHold();
+    };
+    stage.addEventListener('pointerup', letGo);
+    stage.addEventListener('pointercancel', letGo);
+    // Safari's own pinch would zoom the page instead.
+    stage.addEventListener('gesturestart', e => e.preventDefault());
+
+    function endPlacing() {
+      placing = null;
+      fingers.clear();
+      grab = null;
+      stage.hidden = true;
+      book.classList.remove('placing');
+      drawStickers();
+    }
+
+    let savingSticker = false;
+    document.getElementById('stickerOkBtn').addEventListener('click', () => {
+      if (!placing || savingSticker) return;
+      savingSticker = true;
+      const { sticker, src } = placing;
+      idbSetImages(stickerKey(sticker.id), [{ src, caption: '' }]).then(() => {
+        savingSticker = false;
+        state.presentation.stickers.push(sticker);
+        saveState();
+        photos.set(sticker.id, src);
+        endPlacing();
+      }, (err) => {
+        savingSticker = false;
+        // Off the stage either way: the backup a full phone needs is in the app.
+        endPlacing();
+        if (isStorageFullError(err)) noteStorageFull(err);
+        else showToast("Couldn't save that sticker");
+      });
+    });
+
+    refreshStickers();
   })();
 
   // ---------- service worker (offline caching) ----------
@@ -20859,7 +21380,8 @@
     function updateCanReloadNow() {
       // The shut notebook isn't work in progress: it never holds an update back.
       const popupUp = popupLayers.some(layer => !layer.hidden && layer.id !== 'bookOverlay');
-      if (popupUp || !document.getElementById('toast').hidden || busyTasks > 0) return false;
+      const placingSticker = !document.getElementById('stickerStage').hidden;
+      if (popupUp || placingSticker || !document.getElementById('toast').hidden || busyTasks > 0) return false;
       if (document.hidden) return true;
       return document.documentElement.classList.contains('booting')
         && getComputedStyle(document.body).visibility === 'hidden';
@@ -21250,14 +21772,15 @@
       const tab = e.target.closest('[data-view]');
       if (tab) turnToView(tab.dataset.view);
     });
-    document.querySelector('.nb-screen-tabs-shoot').addEventListener('click', (e) => {
+    document.querySelectorAll('.nb-screen-tabs-shoot').forEach(tabs => tabs.addEventListener('click', (e) => {
       const tab = e.target.closest('[data-view]');
       if (!tab) return;
-      document.getElementById('nbBarBack').click();
+      if (!archiveModeOverlay.hidden) exitArchiveMode();
+      else document.getElementById('nbBarBack').click();
       // Whatever the shoot was opened from goes too: it belongs to the old section.
       if (activeStatBoxKey) closeStatBoxDetail();
       closeProjectPopup();
       turnToView(tab.dataset.view);
-    });
+    }));
   })();
 })();
