@@ -21119,6 +21119,7 @@
       timer = setTimeout(() => {
         overlay.hidden = true;
         remember('open');
+        settleScreenGap(); // the page has just been let go of
         if (then) then();
       }, ZOOM_MS);
     }
@@ -21184,13 +21185,34 @@
       breakAllPages();
     });
     function settleScreenGap() {
-      if (!measureScreenGap()) return;
+      if (!measureScreenGap()) return false;
       placeBook();
       breakAllPages();
+      return true;
     }
     // A launching app can report its height late, and a reading skipped for
     // the keyboard is due once it's gone.
     [300, 1200].forEach(ms => setTimeout(settleScreenGap, ms));
+    // iOS can also put its own bottom right later with no resize event (once
+    // the shut book lets go of the page, say). A gap kept from before would
+    // then push the navigator off the screen, so the probes are watched. If
+    // it ever goes back and forth, it stops following for a few seconds.
+    if (window.ResizeObserver) {
+      let moves = [];
+      let calmTimer = 0;
+      const follow = new ResizeObserver(() => {
+        const now = performance.now();
+        moves = moves.filter(t => now - t < 4000);
+        if (moves.length >= 4) {
+          clearTimeout(calmTimer);
+          calmTimer = setTimeout(settleScreenGap, 4100);
+          return;
+        }
+        if (settleScreenGap()) moves.push(now);
+      });
+      follow.observe(layoutBoxProbe);
+      follow.observe(smallHeightProbe);
+    }
     document.addEventListener('focusout', () => setTimeout(settleScreenGap, 460));
     window.addEventListener('pageshow', settleScreenGap);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) settleScreenGap(); });
