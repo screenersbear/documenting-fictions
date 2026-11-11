@@ -2943,8 +2943,10 @@
     return pages;
   }
 
-  // `limit` is how far down the screen a page may run.
-  function buildFlow(root, atomsOf, limit) {
+  // `limit` is how far down the screen a page may run. `opts.margins`: the
+  // last thing on a page brings its margin-bottom along (in a page that
+  // scrolls on its own, like Shoot mode's, that margin would scroll it).
+  function buildFlow(root, atomsOf, limit, opts = {}) {
     root.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
     root.querySelectorAll('.jb-in').forEach(el => clearSlice(el.parentElement));
     const atoms = atomsOf(root); // only now is everything drawn to be measured
@@ -2981,7 +2983,9 @@
       flow.pages.forEach((page, at) => {
         if (page.atoms.length < 2) return; // one thing too tall for a page can't be helped
         drawFlowPage(flow, at);
-        over = Math.max(over, atomBottom(page.atoms[page.atoms.length - 1]) - limit);
+        const last = page.atoms[page.atoms.length - 1];
+        const margin = opts.margins ? parseFloat(getComputedStyle(last.also && last.also.length ? last.also[last.also.length - 1] : last.el).marginBottom) || 0 : 0;
+        over = Math.max(over, atomBottom(last) + margin - limit);
       });
       if (over <= 0.5) break;
       room = Math.max(leastRoom, room - Math.ceil(over));
@@ -18880,10 +18884,11 @@
   // ---------- Shoot mode's pages ----------
   // Shoot mode is a page of the notebook as well, with the notebook around it
   // dimmed. Up to three parts, each a flow of its own so each starts on a
-  // fresh page: the shot list, Wild card and the mood board; the mood board
-  // alone, when all of it doesn't fit on the page the list ends on (its
-  // photos then sized to fill that page); then last time's lesson, the quick
-  // review with a look at what's in it, and the shooting notes.
+  // fresh page: the shot list, its lighting setups, Wild card and the mood
+  // board; the mood board alone, when all of it doesn't fit on the page the
+  // list ends on (its photos then sized to fill that page); then last time's
+  // lesson, the quick review (Direction) with a look at what's in it, and
+  // the shooting notes.
   const shootModePage = shootModeOverlay.querySelector('.shoot-mode-modal');
   const shootModeSheet = document.getElementById('shootModeSheet');
   const shootModeMain = document.getElementById('shootModeMain');
@@ -18912,9 +18917,10 @@
           if (part.id === 'shootModeMoodboard') [...part.children].forEach(row => add(row, [head]));
           else add(part, [head]);
         });
-      } else if (child.matches('.shoot-mode-review-peek')) {
+      } else if (child.matches('.shoot-mode-review-peek') && root === shootModeMore) {
         add(child, [[...root.children].find(el => el.matches('h3') && el.textContent.trim() === 'Quick review')]);
-      } else if (child.matches('#shootModeShotsEmpty, #shootModeAddShotBtn')) {
+      } else if (child.matches('#shootModeShotsEmpty, #shootModeAddShotBtn, #shootModeLightingPeekRow')) {
+        // Under the shot list: a page it runs onto keeps the list's heading.
         add(child, [root.querySelector(':scope > h3')]);
       } else if (!child.matches('h3')) {
         add(child, []);
@@ -18969,7 +18975,9 @@
     const box = grid.getBoundingClientRect();
     const cs = getComputedStyle(grid);
     const W = grid.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-    const below = document.getElementById('shootModeAddMoodboardBtn').getBoundingClientRect().bottom - box.bottom;
+    // Down to the foot of "+ Add photos", its margin too (the page would scroll by it).
+    const addBtn = document.getElementById('shootModeAddMoodboardBtn');
+    const below = addBtn.getBoundingClientRect().bottom + (parseFloat(getComputedStyle(addBtn).marginBottom) || 0) - box.bottom;
     const H = Math.floor(limitY - box.top - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - below) - 2;
     const ratios = [...grid.querySelectorAll('img')].map(img => (img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 0)).filter(Boolean).sort((a, b) => a - b);
     const ratio = Math.min(16 / 9, Math.max(9 / 16, ratios.length ? ratios[Math.floor(ratios.length / 2)] : 1));
@@ -19039,24 +19047,24 @@
     shootModeSheet.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
     shootModeSheet.dataset.part = 'main';
     shootModeMain.querySelectorAll('.shot-text').forEach(autoSizeTextarea);
-    let main = buildFlow(shootModeMain, shootModeAtoms, limit());
+    let main = buildFlow(shootModeMain, shootModeAtoms, limit(), { margins: true });
     let board = null;
     if (!shootModeBoardSharesPage(main)) {
       const photos = !!shootModeBoard.querySelector('.moodboard-thumb');
       if (photos) shootModeBoardPart.appendChild(shootModeBoard);
       else shootModeMore.insertBefore(shootModeBoard, shootModeMore.firstElementChild);
-      main = buildFlow(shootModeMain, shootModeAtoms, limit());
+      main = buildFlow(shootModeMain, shootModeAtoms, limit(), { margins: true });
       if (photos) {
         shootModeSheet.dataset.part = 'board';
         shootModeBoard.classList.remove('pg-off', 'pg-first');
         shootModeBoard.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
         fitShootModeBoard(limit());
-        board = buildFlow(shootModeBoardPart, shootModeAtoms, limit());
+        board = buildFlow(shootModeBoardPart, shootModeAtoms, limit(), { margins: true });
       }
     }
     shootModeSheet.dataset.part = 'more';
     autoSizeTextarea(document.getElementById('shootModeShootingNotes'));
-    const more = buildFlow(shootModeMore, shootModeAtoms, limit());
+    const more = buildFlow(shootModeMore, shootModeAtoms, limit(), { margins: true });
     shootModeFlows = { main, board, more };
     const holds = (el) => ({ part, i }) => shootModeFlows[part].pages[i].atoms.some(a => a.el === el || a.el.contains(el));
     if (shootModeWanted !== null) shootModeAt = shootModeWanted;
@@ -19137,9 +19145,9 @@
     });
   })();
 
-  // A look at what the quick review holds, to fill the second page: each
-  // written direction field and each lighting setup, a line or two of each.
-  // A tap opens the review itself, the same as its button.
+  // A look at what each review holds: each written direction field (on the
+  // quick review page) and each lighting setup (under the shot list), a line
+  // or two of each. A tap opens the review itself, the same as its button.
   function renderShootModePeeks(shoot) {
     const line = (label, text) => `<p class="shoot-mode-peek-line"><span class="shoot-mode-peek-label">${escapeHtml(label)}</span> ${escapeHtml(text)}</p>`;
     const direction = SHOOT_MODE_DIRECTION_FIELDS.filter(([key]) => directionFieldApplies(shoot, key) && hasText(shoot[key]));
@@ -19153,13 +19161,16 @@
   }
   document.getElementById('shootModeDirectionPeek').addEventListener('click', () => openShootModeReview('direction'));
   document.getElementById('shootModeLightingPeek').addEventListener('click', () => openShootModeReview('lighting'));
-  // Back from the review (edits write straight to the shoot): the look is redrawn.
+  // Back from the review (edits write straight to the shoot): the look is
+  // redrawn, and the page turns with the row it was opened from if that row
+  // grew onto the next page.
+  let shootModeReviewFrom = null;
   new MutationObserver(() => {
     if (!document.getElementById('shootModeReviewOverlay').hidden || shootModeOverlay.hidden) return;
     const shoot = state.shoots.find(x => x.id === getShootModeShootId());
     if (!shoot) return;
     renderShootModePeeks(shoot);
-    breakShootModePages();
+    breakShootModePages({ follow: shootModeReviewFrom });
   }).observe(document.getElementById('shootModeReviewOverlay'), { attributes: true, attributeFilter: ['hidden'] });
 
   // ---------- Shoot mode clock ----------
@@ -19986,6 +19997,7 @@
     body.innerHTML = '';
     if (!isRefresh) {
       shootModeReviewAddedSetups = new Set();
+      shootModeReviewFrom = document.getElementById(kind === 'lighting' ? 'shootModeLightingPeekRow' : 'shootModeDirectionPeekRow');
       // Same as the Wild card: a field left focused behind this would keep
       // the keyboard up over it (see askConfirm).
       const focused = document.activeElement;
