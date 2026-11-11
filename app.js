@@ -26,6 +26,9 @@
   }
 
   const collapsedSections = loadCollapsedSections();
+  // The list screens don't fold any more: forget what was folded on them.
+  [...collapsedSections].filter(k => /^(overview|shoots|archive|journal):/.test(k)).forEach(k => collapsedSections.delete(k));
+  saveCollapsedSections();
 
   function isSectionCollapsed(key) {
     return collapsedSections.has(key);
@@ -1118,38 +1121,24 @@
     return `${m}.${d}.${y.slice(2)}`;
   }
 
-  // A nested level of collapsing inside an already-collapsible Overview
-  // section: each week-bucket subheading (This week / Next week / Later)
-  // toggles just its own rows, independent of its sibling buckets and of
-  // the outer section — same isSectionCollapsed persistence, one key per
-  // bucket (e.g. "overview:upcoming:this_week"). Takes collapseProjects()
-  // items rather than bare shoots, so a project's box is drawn once and
-  // lands in the bucket of its own date for this list (see listItemDate).
-  function renderBucketedShoots(container, items, buckets, dateField, collapsePrefix, rowOpts) {
+  // Each week's subheading (This week / Next week / Later) over its rows.
+  // Takes collapseProjects() items rather than bare shoots, so a project's
+  // box is drawn once and lands in the bucket of its own date for this list
+  // (see listItemDate).
+  function renderBucketedShoots(container, items, buckets, dateField, rowOpts) {
     buckets.forEach(bucketKey => {
       const bucketItems = items.filter(item => weekBucket(listItemDate(item, dateField)) === bucketKey);
       if (!bucketItems.length) return;
 
-      const collapseKey = `${collapsePrefix}:${bucketKey}`;
-      const collapsed = isSectionCollapsed(collapseKey);
-
       const heading = document.createElement('p');
-      heading.className = `upcoming-subheading${collapsed ? ' collapsed' : ''}`;
-      heading.innerHTML = `${escapeHtml(WEEK_BUCKET_LABELS[bucketKey])}${COLLAPSE_ARROW_SVG}`;
+      heading.className = 'upcoming-subheading';
+      heading.textContent = WEEK_BUCKET_LABELS[bucketKey];
       container.appendChild(heading);
 
       const rowsWrap = document.createElement('div');
       rowsWrap.className = 'upcoming-subheading-rows';
-      rowsWrap.hidden = collapsed;
       bucketItems.forEach(item => renderListItem(rowsWrap, item, rowOpts));
       container.appendChild(rowsWrap);
-
-      heading.addEventListener('click', () => {
-        const nowCollapsed = !rowsWrap.hidden;
-        rowsWrap.hidden = nowCollapsed;
-        heading.classList.toggle('collapsed', nowCollapsed);
-        setSectionCollapsed(collapseKey, nowCollapsed);
-      });
     });
   }
 
@@ -2674,6 +2663,307 @@
     tab.click();
   }
 
+
+  // ---------- Pages ----------
+  // A screen stops at the bottom of its page and carries on over the leaf.
+  // Everything stays in the document: what's on another page just has
+  // .pg-off. A page is worked out from what's actually drawn: `atoms` are
+  // the things that can't be split, in order, each with the headings that
+  // have to come with it on any page it lands on.
+  const LINE = 28; // the Journal's ruled line
+  const screenFlows = {};
+  const screenAt = { overview: 0, shoots: 0, archive: 0, journal: 0, stats: 0 };
+  let statsFlows = [];
+  const currentScreen = () => document.documentElement.dataset.view;
+  const pageProbe = document.createElement('div');
+  // Not the frame's own box: that moves with the iPhone's stuck-bar fix.
+  pageProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;visibility:hidden;pointer-events:none;height:calc(100svh - var(--nb-bar) - var(--nb-rim) - 34px)';
+  document.body.appendChild(pageProbe);
+
+  function atomBottom(a) {
+    const el = a.also && a.also.length ? a.also[a.also.length - 1] : a.el;
+    return el.getBoundingClientRect().bottom;
+  }
+
+  function clearSlice(body) {
+    body.style.height = '';
+    body.style.overflow = '';
+    body.firstElementChild.style.transform = '';
+  }
+
+  function drawFlowPage(flow, at) {
+    flow.root.querySelectorAll('.pg-first').forEach(el => el.classList.remove('pg-first'));
+    flow.parts.forEach(el => el.classList.add('pg-off'));
+    flow.bodies.forEach(clearSlice);
+    const page = flow.pages[at];
+    if (!page) return;
+    const show = (el) => {
+      for (let n = el; n && n !== flow.root && n.classList.contains('pg-off'); n = n.parentElement) n.classList.remove('pg-off');
+    };
+    const spans = new Map();
+    page.atoms.forEach((a) => {
+      show(a.el);
+      (a.also || []).forEach(show);
+      a.heads.forEach(show);
+      if (a.row === undefined) return;
+      const span = spans.get(a.el);
+      if (span) span.count++;
+      else spans.set(a.el, { first: a.row, count: 1, rows: a.rows });
+    });
+    // A long entry shows through a window as tall as its lines on this page.
+    spans.forEach(({ first, count, rows }, body) => {
+      if (count === rows) return;
+      body.style.height = `${count * LINE}px`;
+      body.style.overflow = 'hidden';
+      body.firstElementChild.style.transform = `translateY(${-first * LINE}px)`;
+    });
+    if (at > 0) {
+      // Whatever starts a later page starts at the top of it.
+      const first = page.atoms[0].heads[0] || page.atoms[0].el;
+      for (let n = first; n && n !== flow.root; n = n.parentElement) n.classList.add('pg-first');
+    }
+  }
+
+  function packFlow(atoms, cost, room) {
+    const sizeOf = a => (a.row === undefined ? cost.get(a.el)
+      : a.row < a.rows - 1 ? LINE : cost.get(a.el) - (a.rows - 1) * LINE);
+    const pages = [];
+    let page = null;
+    let used = 0;
+    const open = () => { page = { atoms: [], drawn: new Set() }; pages.push(page); used = 0; };
+    const headRoom = a => a.heads.reduce((sum, h) => sum + (page.drawn.has(h) ? 0 : cost.get(h)), 0);
+    atoms.forEach((a) => {
+      if (!page) open();
+      if (page.atoms.length && used + headRoom(a) + sizeOf(a) > room) open();
+      used += headRoom(a) + sizeOf(a);
+      a.heads.forEach(h => page.drawn.add(h));
+      page.drawn.add(a.el);
+      page.atoms.push(a);
+    });
+    return pages;
+  }
+
+  // `limit` is how far down the screen a page may run.
+  function buildFlow(root, atomsOf, limit) {
+    root.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
+    root.querySelectorAll('.jb-in').forEach(el => clearSlice(el.parentElement));
+    const atoms = atomsOf(root); // only now is everything drawn to be measured
+    const seen = new Set();
+    const order = [];
+    const add = (el) => { if (!seen.has(el)) { seen.add(el); order.push(el); } };
+    atoms.forEach((a) => { a.heads.forEach(add); add(a.el); });
+    const rects = order.map(el => el.getBoundingClientRect());
+    const cost = new Map();
+    // From this one's top to the next one's: margins and gaps come along.
+    order.forEach((el, i) => {
+      const next = rects[i + 1];
+      cost.set(el, next && next.top > rects[i].top ? next.top - rects[i].top : rects[i].height);
+    });
+    const live = atoms.filter(a => cost.get(a.el) > 0);
+    const parts = new Set();
+    const note = (el) => {
+      parts.add(el);
+      for (let n = el.parentElement; n && n !== root && !parts.has(n) && !n.matches('.hero-band'); n = n.parentElement) parts.add(n);
+    };
+    live.forEach((a) => { note(a.el); (a.also || []).forEach(note); a.heads.forEach(note); });
+    const flow = { root, parts, pageEnd: limit + window.scrollY, pages: [], bodies: new Set(live.filter(a => a.row !== undefined).map(a => a.el)) };
+    let room = limit - (rects.length ? rects[0].top : 0);
+    // Then each page is drawn to check it really fits.
+    for (let tries = 0; tries < 3; tries++) {
+      flow.pages = packFlow(live, cost, room);
+      let over = 0;
+      flow.pages.forEach((page, at) => {
+        if (page.atoms.length < 2) return; // one thing too tall for a page can't be helped
+        drawFlowPage(flow, at);
+        over = Math.max(over, atomBottom(page.atoms[page.atoms.length - 1]) - limit);
+      });
+      if (over <= 0.5) break;
+      room -= Math.ceil(over);
+    }
+    return flow;
+  }
+
+  // The headings a row sits under: its group's, and every group above that.
+  function headsAbove(el, root) {
+    const heads = [];
+    for (let n = el; n && n !== root; n = n.parentElement) {
+      if (n.matches('.shoot-status-rows, .upcoming-subheading-rows') && n.previousElementSibling) heads.unshift(n.previousElementSibling);
+      else if (n.matches('.section-block')) heads.unshift(n.querySelector(':scope > h2'));
+    }
+    return heads;
+  }
+  const listAtoms = (root, selector) => [...root.querySelectorAll(selector)]
+    .filter(el => !el.hidden)
+    .map(el => ({ el, heads: headsAbove(el, root) }));
+
+  function journalAtoms(root) {
+    const atoms = [];
+    root.querySelectorAll('.journal-entry-images:not([hidden])').forEach((grid) => {
+      // Photo rows take whole ruled lines, so what follows stays on the rules.
+      const thumb = grid.querySelector('.moodboard-thumb');
+      if (!thumb) return;
+      grid.style.gridAutoRows = `${Math.ceil(thumb.offsetHeight / LINE) * LINE}px`;
+      grid.style.rowGap = '0';
+      grid.style.alignItems = 'start';
+    });
+    root.querySelectorAll('#journalList .log-card').forEach((card) => {
+      const above = headsAbove(card, root);
+      if (card.classList.contains('journal-entry-card')) {
+        const heading = card.querySelector('.journal-entry-heading');
+        const heads = [...above, heading];
+        const before = atoms.length;
+        const body = card.querySelector('.journal-entry-body');
+        const rows = Math.round(body.offsetHeight / LINE);
+        for (let row = 0; row < rows; row++) atoms.push({ el: body, heads, row, rows });
+        const grid = card.querySelector('.journal-entry-images');
+        if (grid && !grid.hidden) {
+          const lines = new Map();
+          [...grid.children].forEach((thumb) => {
+            const top = Math.round(thumb.getBoundingClientRect().top);
+            if (!lines.has(top)) lines.set(top, []);
+            lines.get(top).push(thumb);
+          });
+          lines.forEach(([el, ...also]) => atoms.push({ el, also, heads }));
+        }
+        const tags = card.querySelector('.journal-entry-tags');
+        if (tags && !tags.hidden) atoms.push({ el: tags, heads });
+        if (atoms.length === before) atoms.push({ el: heading, heads: above });
+        return;
+      }
+      const week = card.querySelector(':scope > .log-week-heading');
+      let label = null;
+      [...card.querySelector('.journal-paper').children].forEach((child) => {
+        if (child.matches('.log-section-label')) { label = child; return; }
+        const heads = [...above, week, ...(label ? [label] : [])];
+        if (child.matches('ul')) [...child.children].forEach(el => atoms.push({ el, heads }));
+        else atoms.push({ el: child, heads });
+      });
+    });
+    const empty = document.getElementById('journalEmpty');
+    if (!empty.hidden) atoms.push({ el: empty, heads: [] });
+    return atoms;
+  }
+
+  const SCREEN_ATOMS = {
+    overview: root => listAtoms(root, '#newShootBtn, #statsRow, .section-block:not([hidden]) .shoot-row'),
+    shoots: root => listAtoms(root, '#shootSortToggle, #shootSortOptions, #shootList .shoot-row, #shootEmpty'),
+    archive: root => listAtoms(root, '#archiveSlideshow, #archiveFilterToggle, #archiveFilters, #archiveList .shoot-row, #archiveEmpty'),
+    journal: journalAtoms,
+  };
+
+  function statsAtoms(page) {
+    const title = page.querySelector('.stats-page-title');
+    const heads = title ? [title] : [];
+    const atoms = [];
+    const pie = page.querySelector(':scope > .pie-chart');
+    if (pie) atoms.push({ el: pie, heads });
+    const hint = page.querySelector(':scope > .empty-hint');
+    if (hint) atoms.push({ el: hint, heads });
+    const toolbar = page.querySelector('.world-map-toolbar');
+    const map = page.querySelector('.world-map-scroll');
+    if (toolbar && map) atoms.push({ el: toolbar, also: [map], heads });
+    page.querySelectorAll('.stats-legend > .stats-legend-row').forEach(el => atoms.push({ el, heads }));
+    page.querySelectorAll('.stats-region-group').forEach((group) => {
+      const heading = group.querySelector('.stats-region-heading');
+      const cities = [...group.querySelectorAll('.stats-legend-row-nested')];
+      if (!cities.length) atoms.push({ el: heading, heads });
+      cities.forEach(el => atoms.push({ el, heads: [...heads, heading] }));
+    });
+    return atoms;
+  }
+
+  // Every stat's pages, one after another, for the page number and the swipe.
+  function statsFlat() {
+    return statsFlows.flatMap((flow, stat) => Array.from({ length: flow.pages.length || 1 }, (_, sub) => ({ stat, sub })));
+  }
+
+  function buildStatsFlows(limit) {
+    const was = statsFlat()[screenNow('stats')];
+    const dots = document.getElementById('statsDots');
+    const style = getComputedStyle(dots);
+    const under = dots.offsetHeight + parseFloat(style.marginTop) + parseFloat(style.marginBottom) + 8;
+    statsFlows = [...statsCarousel.querySelectorAll('.stats-page')].map(page => buildFlow(page, statsAtoms, limit - under));
+    const flat = statsFlat();
+    const sub = was ? was.sub : 0;
+    const stay = flat.filter(p => p.stat === statsPageIdx);
+    const landing = stay[Math.min(sub, stay.length - 1)];
+    screenAt.stats = landing ? flat.indexOf(landing) : 0;
+  }
+
+  function screenPageCount(view) {
+    if (view === 'stats') return Math.max(1, statsFlat().length);
+    const flow = screenFlows[view];
+    return (flow && flow.pages.length) || 1;
+  }
+
+  // screenAt is the page asked for; it isn't cut down here, because a pass
+  // drawn before the photos are in can be shorter than the screen really is.
+  const screenNow = view => Math.max(0, Math.min(screenAt[view], screenPageCount(view) - 1));
+
+  function drawScreenPage(view) {
+    const count = screenPageCount(view);
+    const at = screenNow(view);
+    let flow = screenFlows[view];
+    let sub = at;
+    if (view === 'stats') {
+      const spot = statsFlat()[at];
+      if (spot) {
+        statsFlows.forEach((f, stat) => drawFlowPage(f, stat === spot.stat ? spot.sub : 0));
+        statsPageIdx = spot.stat;
+        positionStatsTrack();
+        renderStatsDots();
+        updateStatsCarouselHeight();
+        flow = statsFlows[spot.stat];
+        sub = spot.sub;
+      }
+    } else if (flow) {
+      drawFlowPage(flow, at);
+    }
+    const page = flow && flow.pages[sub];
+    // Only something too tall for any page lets the window scroll.
+    document.documentElement.classList.toggle('pg-tall', !!page && atomBottom(page.atoms[page.atoms.length - 1]) + window.scrollY > flow.pageEnd + 0.5);
+    document.getElementById('nbScreenNum').textContent = `${at + 1} / ${count}`;
+    document.getElementById('nbScreenPrev').disabled = at <= 0;
+    document.getElementById('nbScreenNext').disabled = at >= count - 1;
+  }
+
+  function repaginate(view) {
+    const root = views[view];
+    if (!root || root.hidden || currentScreen() !== view) return;
+    const limit = pageProbe.offsetHeight - window.scrollY;
+    if (view === 'stats') buildStatsFlows(limit);
+    else screenFlows[view] = buildFlow(root, SCREEN_ATOMS[view], limit);
+    drawScreenPage(view);
+  }
+
+  function turnScreenPage(view, to) {
+    const from = screenNow(view);
+    if (to < 0 || to >= screenPageCount(view) || to === from) return;
+    const turning = motionOk();
+    const oldCopy = turning ? pageCopy(views[view]) : null;
+    scrollPageTo(0); // only a page with something too tall on it could be scrolled
+    screenAt[view] = to;
+    drawScreenPage(view);
+    if (!turning) return;
+    const board = document.querySelector('.nb-board');
+    if (to > from) playTurn(board, '', oldCopy);
+    else playTurn(board, 'back', pageCopy(views[view]), oldCopy);
+  }
+  function stepScreenPage(by) {
+    const view = currentScreen();
+    turnScreenPage(view, screenNow(view) + by);
+  }
+  document.getElementById('nbScreenPrev').addEventListener('click', () => stepScreenPage(-1));
+  document.getElementById('nbScreenNext').addEventListener('click', () => stepScreenPage(1));
+
+  // Opening or closing a filter row changes the room on the page, and a new
+  // filter starts from the first page.
+  [['shootSortOptions', 'shoots'], ['archiveFilters', 'archive'], ['journalFilters', 'journal'], ['statsYearFilters', 'stats']].forEach(([id, view]) => {
+    const el = document.getElementById(id);
+    new MutationObserver(() => repaginate(view)).observe(el, { attributes: true, attributeFilter: ['hidden'] });
+    el.addEventListener('click', (e) => { if (e.target.closest('.chip')) screenAt[view] = 0; }, true);
+  });
+
   document.querySelectorAll('.tab').forEach(btn => {
     btn.addEventListener('click', () => {
       const view = btn.dataset.view;
@@ -2689,6 +2979,9 @@
       // waiting on renderArchiveSlideshow's async pass to notice.
       if (view !== 'archive') stopArchiveSlideshow();
       scrollPageTo(0);
+      // Turning to a screen opens it at its first page.
+      screenAt[view] = 0;
+      if (view === 'stats') statsPageIdx = 0;
       renderAll();
       if (turning) {
         const order = [...document.querySelectorAll('.tabbar .tab')].map(tab => tab.dataset.view);
@@ -3242,6 +3535,10 @@
   });
 
   function renderOverview() {
+    drawOverview();
+    repaginate('overview');
+  }
+  function drawOverview() {
     const todayShoots = state.shoots.filter(isToday)
       .sort((a, b) => dateTimeSortKey(a).localeCompare(dateTimeSortKey(b)));
     const upcomingShoots = state.shoots.filter(isUpcoming)
@@ -3292,40 +3589,24 @@
     // one box under Upcoming), so a project day says which project it's from.
     todayShoots.forEach(s => renderShootRow(todayList, s, { showStatus: true, showProjectLine: true }));
 
-    // Always visible, even at zero — same reasoning as Upcoming deadlines
-    // below: a reliable place to glance at what's coming, empty or not.
+    // A section with nothing in it isn't on the page at all.
+    document.getElementById('upcomingSection').hidden = !upcomingItems.length;
     document.getElementById('upcomingCount').textContent = `[${upcomingItems.length}]`;
     const upList = document.getElementById('upcomingShootsList');
     upList.innerHTML = '';
-    if (!upcomingItems.length) {
-      upList.innerHTML = '<p class="empty-hint upcoming-empty-hint">Upcoming shoots go here, brometheus.</p>';
-    } else {
-      renderBucketedShoots(upList, upcomingItems, ['this_week', 'next_week', 'later'], 'date', 'overview:upcoming', { showStatus: true });
-    }
+    if (upcomingItems.length) renderBucketedShoots(upList, upcomingItems, ['this_week', 'next_week', 'later'], 'date', { showStatus: true });
 
-    // Always visible, same reasoning as Upcoming deadlines below — a
-    // reliable place to check, empty or not, rather than something that
-    // pops in and out of the page.
+    document.getElementById('proofsPendingSection').hidden = !proofsPendingItems.length;
     document.getElementById('proofsPendingCount').textContent = `[${proofsPendingItems.length}]`;
     const proofsList = document.getElementById('proofsPendingShootsList');
     proofsList.innerHTML = '';
-    if (!proofsPendingItems.length) {
-      proofsList.innerHTML = '<p class="empty-hint">No shoots waiting on proofs.</p>';
-    } else {
-      proofsPendingItems.forEach(item => renderListItem(proofsList, item, { showBadge: false }));
-    }
+    proofsPendingItems.forEach(item => renderListItem(proofsList, item, { showBadge: false }));
 
-    // Always visible, even at zero — unlike Today/Upcoming, this section
-    // isn't about whether anything's due right now so much as being a
-    // reliable place to glance at what's coming, empty or not.
+    document.getElementById('upcomingDeadlinesSection').hidden = !deadlineItems.length;
     document.getElementById('upcomingDeadlinesCount').textContent = `[${deadlineItems.length}]`;
     const deadlineList = document.getElementById('upcomingDeadlinesShootsList');
     deadlineList.innerHTML = '';
-    if (!deadlineItems.length) {
-      deadlineList.innerHTML = '<p class="empty-hint">No deadlines on the horizon.</p>';
-    } else {
-      renderBucketedShoots(deadlineList, deadlineItems, ['this_week', 'next_week'], 'deadline', 'overview:upcomingDeadlines', { showBadge: false });
-    }
+    if (deadlineItems.length) renderBucketedShoots(deadlineList, deadlineItems, ['this_week', 'next_week'], 'deadline', { showBadge: false });
 
     // Section heading colors alternate dynamically, always starting with
     // yellow — Today drops out of the page entirely when nothing's due
@@ -3341,37 +3622,7 @@
       heading.classList.toggle('heading-navy', !nextIsYellow);
       nextIsYellow = !nextIsYellow;
     });
-
-    applyOverviewCollapseState();
   }
-
-  const OVERVIEW_COLLAPSE_SECTIONS = [
-    ['overview:today', '#todaySection h2', 'todayShootsList'],
-    ['overview:upcoming', '#upcomingSection h2', 'upcomingShootsList'],
-    ['overview:proofsPending', '#proofsPendingSection h2', 'proofsPendingShootsList'],
-    ['overview:upcomingDeadlines', '#upcomingDeadlinesSection h2', 'upcomingDeadlinesShootsList'],
-  ];
-
-  function applyOverviewCollapseState() {
-    OVERVIEW_COLLAPSE_SECTIONS.forEach(([key, headingSelector, listId]) => {
-      const heading = document.querySelector(headingSelector);
-      const list = document.getElementById(listId);
-      const collapsed = isSectionCollapsed(key);
-      list.hidden = collapsed;
-      heading.classList.toggle('collapsed', collapsed);
-    });
-  }
-
-  OVERVIEW_COLLAPSE_SECTIONS.forEach(([key, headingSelector, listId]) => {
-    const heading = document.querySelector(headingSelector);
-    const list = document.getElementById(listId);
-    heading.addEventListener('click', () => {
-      const nowCollapsed = !list.hidden;
-      setSectionCollapsed(key, nowCollapsed);
-      list.hidden = nowCollapsed;
-      heading.classList.toggle('collapsed', nowCollapsed);
-    });
-  });
 
   // ---------- Shoot Log view ----------
   // The Shoots page has three sort modes, each with its own nested-heading
@@ -3478,23 +3729,13 @@
     const groupEl = document.createElement('div');
     groupEl.className = 'shoot-status-group';
 
-    const collapseKey = `shoots:${groupKey}`;
-    const collapsed = isSectionCollapsed(collapseKey);
     const heading = document.createElement('h2');
-    heading.className = `status-group-heading ${visibleIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${collapsed ? ' collapsed' : ''}`;
-    heading.innerHTML = `${escapeHtml(label)}${COLLAPSE_ARROW_SVG}`;
+    heading.className = `status-group-heading ${visibleIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}`;
+    heading.textContent = label;
 
     const rowsWrap = document.createElement('div');
     rowsWrap.className = 'shoot-status-rows';
-    rowsWrap.hidden = collapsed;
     items.forEach(item => renderListItem(rowsWrap, item, { showPending: true }));
-
-    heading.addEventListener('click', () => {
-      const nowHidden = !rowsWrap.hidden;
-      rowsWrap.hidden = nowHidden;
-      heading.classList.toggle('collapsed', nowHidden);
-      setSectionCollapsed(collapseKey, nowHidden);
-    });
 
     groupEl.appendChild(heading);
     groupEl.appendChild(rowsWrap);
@@ -3570,6 +3811,10 @@
   }
 
   function renderShoots() {
+    drawShoots();
+    repaginate('shoots');
+  }
+  function drawShoots() {
     renderShootSortOptions();
     const list = document.getElementById('shootList');
     // Collapsed once for the whole page, so every sort mode files a
@@ -3770,6 +4015,10 @@
   // heading as the Shoots screen's status groups, nested one level for
   // months — collapse state persists per year and per year+month.
   function renderArchive() {
+    drawArchive();
+    repaginate('archive');
+  }
+  function drawArchive() {
     renderArchiveSlideshow();
     renderCategoryFilterChips('archiveFilters', 'archiveFilterToggle', archiveFilter);
     const list = document.getElementById('archiveList');
@@ -3811,15 +4060,12 @@
       const yearGroupEl = document.createElement('div');
       yearGroupEl.className = 'shoot-status-group';
 
-      const yearCollapseKey = `archive:${year}`;
-      const yearCollapsed = isSectionCollapsed(yearCollapseKey);
       const yearHeading = document.createElement('h2');
-      yearHeading.className = `status-group-heading ${visibleYearIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${yearCollapsed ? ' collapsed' : ''}`;
-      yearHeading.innerHTML = `${escapeHtml(year)}${COLLAPSE_ARROW_SVG}`;
+      yearHeading.className = `status-group-heading ${visibleYearIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}`;
+      yearHeading.textContent = year;
 
       const yearRowsWrap = document.createElement('div');
       yearRowsWrap.className = 'shoot-status-rows';
-      yearRowsWrap.hidden = yearCollapsed;
 
       if (year === 'Undated') {
         // Undated only ever has the one '00' month bucket anyway — a
@@ -3834,23 +4080,13 @@
           const monthGroupEl = document.createElement('div');
           monthGroupEl.className = 'archive-month-group';
 
-          const monthCollapseKey = `archive:${year}:${month}`;
-          const monthCollapsed = isSectionCollapsed(monthCollapseKey);
           const monthHeading = document.createElement('h3');
-          monthHeading.className = `status-group-heading archive-month-heading ${visibleMonthIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${monthCollapsed ? ' collapsed' : ''}`;
-          monthHeading.innerHTML = `${escapeHtml(monthLabel(month))}${COLLAPSE_ARROW_SVG}`;
+          monthHeading.className = `status-group-heading archive-month-heading ${visibleMonthIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}`;
+          monthHeading.textContent = monthLabel(month);
 
           const monthRowsWrap = document.createElement('div');
           monthRowsWrap.className = 'shoot-status-rows';
-          monthRowsWrap.hidden = monthCollapsed;
           months.get(month).forEach(item => renderListItem(monthRowsWrap, item, { showBadge: false, openArchiveMode: true }));
-
-          monthHeading.addEventListener('click', () => {
-            const nowHidden = !monthRowsWrap.hidden;
-            monthRowsWrap.hidden = nowHidden;
-            monthHeading.classList.toggle('collapsed', nowHidden);
-            setSectionCollapsed(monthCollapseKey, nowHidden);
-          });
 
           monthGroupEl.appendChild(monthHeading);
           monthGroupEl.appendChild(monthRowsWrap);
@@ -3858,13 +4094,6 @@
           visibleMonthIndex++;
         });
       }
-
-      yearHeading.addEventListener('click', () => {
-        const nowHidden = !yearRowsWrap.hidden;
-        yearRowsWrap.hidden = nowHidden;
-        yearHeading.classList.toggle('collapsed', nowHidden);
-        setSectionCollapsed(yearCollapseKey, nowHidden);
-      });
 
       yearGroupEl.appendChild(yearHeading);
       yearGroupEl.appendChild(yearRowsWrap);
@@ -4395,7 +4624,7 @@
           <span class="journal-entry-title">${escapeHtml(e.title || 'Untitled entry')}</span>
           <span class="journal-entry-date">${prettyDate(e.createdAt)}</span>
         </div>
-        <div class="journal-entry-body">${escapeHtml(e.body || '')}${credit}</div>
+        <div class="journal-entry-body"><div class="jb-in">${escapeHtml(e.body || '')}${credit}</div></div>
         <div class="journal-entry-images moodboard-grid" hidden></div>
         <div class="journal-entry-tags"${tagsHtml ? '' : ' hidden'}>${tagsHtml}</div>
       </div>
@@ -4439,6 +4668,8 @@
   // two same-coloured bars stacked.
   function renderYearMonthGroups(list, items, opts) {
     const { dateOf, keyPrefix, renderItem, onReveal } = opts;
+    // The Journal itself runs on in pages; only its contents list folds.
+    const foldable = keyPrefix !== 'journal';
     // Collects whatever each renderItem call returns (e.g. a journal card's
     // image-loading promise) so a caller that needs to know when everything
     // has actually finished rendering — not just synchronously appended —
@@ -4471,10 +4702,10 @@
       yearGroupEl.className = 'shoot-status-group';
 
       const yearCollapseKey = `${keyPrefix}:${year}`;
-      const yearCollapsed = isSectionCollapsed(yearCollapseKey);
+      const yearCollapsed = foldable && isSectionCollapsed(yearCollapseKey);
       const yearHeading = document.createElement('h2');
       yearHeading.className = `status-group-heading ${visibleYearIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${yearCollapsed ? ' collapsed' : ''}`;
-      yearHeading.innerHTML = `${escapeHtml(year)}${COLLAPSE_ARROW_SVG}`;
+      yearHeading.innerHTML = `${escapeHtml(year)}${foldable ? COLLAPSE_ARROW_SVG : ''}`;
 
       const yearRowsWrap = document.createElement('div');
       yearRowsWrap.className = 'shoot-status-rows';
@@ -4493,17 +4724,17 @@
           monthGroupEl.className = 'archive-month-group';
 
           const monthCollapseKey = `${keyPrefix}:${year}:${month}`;
-          const monthCollapsed = isSectionCollapsed(monthCollapseKey);
+          const monthCollapsed = foldable && isSectionCollapsed(monthCollapseKey);
           const monthHeading = document.createElement('h3');
           monthHeading.className = `status-group-heading archive-month-heading ${visibleMonthIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}${monthCollapsed ? ' collapsed' : ''}`;
-          monthHeading.innerHTML = `${escapeHtml(monthLabel(month))}${COLLAPSE_ARROW_SVG}`;
+          monthHeading.innerHTML = `${escapeHtml(monthLabel(month))}${foldable ? COLLAPSE_ARROW_SVG : ''}`;
 
           const monthRowsWrap = document.createElement('div');
           monthRowsWrap.className = 'shoot-status-rows';
           monthRowsWrap.hidden = monthCollapsed;
           months.get(month).forEach(item => results.push(renderItem(monthRowsWrap, item)));
 
-          monthHeading.addEventListener('click', () => {
+          if (foldable) monthHeading.addEventListener('click', () => {
             const nowHidden = !monthRowsWrap.hidden;
             monthRowsWrap.hidden = nowHidden;
             monthHeading.classList.toggle('collapsed', nowHidden);
@@ -4518,7 +4749,7 @@
         });
       }
 
-      yearHeading.addEventListener('click', () => {
+      if (foldable) yearHeading.addEventListener('click', () => {
         const nowHidden = !yearRowsWrap.hidden;
         yearRowsWrap.hidden = nowHidden;
         yearHeading.classList.toggle('collapsed', nowHidden);
@@ -4614,6 +4845,11 @@
   // it, but scrollToJournalItem needs it so the layout has stopped shifting
   // before it scrolls.
   function renderJournal() {
+    const photos = drawJournal();
+    repaginate('journal');
+    return photos.then((done) => { repaginate('journal'); return done; });
+  }
+  function drawJournal() {
     // Sorted before grouping, because renderYearMonthGroups keeps whatever
     // order it's handed.
     const items = journalFeedItems();
@@ -4681,22 +4917,17 @@
   // list (that list's own 'journal' collapse keys, independent of the TOC's),
   // then scrolls it to the top of the same scrolling space.
   function scrollToJournalItem(item) {
-    const d = item.date;
-    if (d) {
-      setSectionCollapsed(`journal:${d.slice(0, 4)}`, false);
-      setSectionCollapsed(`journal:${d.slice(0, 4)}:${d.slice(5, 7)}`, false);
-    }
     document.getElementById('journalTocOverlay').hidden = true;
     const selector = item.type === 'week'
       ? `.log-card[data-week-key="${item.date}"]`
       : `.journal-entry-card[data-entry-id="${item.entry.id}"]`;
-    // Wait for renderJournal's cover photos to finish loading before
-    // scrolling — otherwise a photo landing above the target after the
-    // scroll already happened grows that card and shoves the target back
-    // down, so it lands short of the top instead of flush with it.
+    // The photos have to be in first: they decide which page it lands on.
     renderJournal().then(() => {
       const card = document.querySelector(selector);
-      if (card) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      const flow = screenFlows.journal;
+      if (!card || !flow) return;
+      const at = flow.pages.findIndex(page => page.atoms.some(a => card.contains(a.el)));
+      if (at >= 0) turnScreenPage('journal', at);
     });
   }
 
@@ -7452,6 +7683,7 @@
   function closeExpandField() {
     document.getElementById('expandFieldOverlay').hidden = true;
     expandFieldOnSave = null;
+    queueShootBreak(250);
   }
 
   document.getElementById('expandFieldTextarea').addEventListener('input', () => {
@@ -7897,6 +8129,131 @@
   })();
   const shootPageMemory = {};
   let shootPageId = 'basicInfoHeading';
+  // A section runs over as many pages as it needs. Inside a shoot the breaks
+  // fall between whole blocks: a list stays in one piece so it can be dragged
+  // and typed in, and one taller than a page scrolls on a page of its own.
+  let shootSub = 0;
+  let shootFlows = null;
+  let shootBreakWatch = null;
+  let shootBreakTimer = null;
+  let shootBreakChanged = []; // what's changed since the pages were last broken
+  let shootWanted = null; // the page a shoot reopens on, held until its photos are in
+  let shootOpening = null; // set while a shoot that's just opened waits for its photos
+  const SHOOT_PAGE_BODIES = {
+    basicInfoHeading: 'basicInfoBody',
+    logisticsHeading: 'logisticsBody',
+    teamHeading: 'teamBody',
+    directionHeading: 'directionBody',
+    visualsHeading: 'visualsBody',
+    shotListHeading: 'shotListBody',
+    postShootHeading: 'postShootBody',
+  };
+  const SHOOT_BLOCKS_INSIDE = '#formSection2, #narrativeFieldsBlock, #videoDeliverablesBlock, #frameworkTagsContainerEarly, #frameworkTagsContainer';
+  const SHOOT_STAYS_WITH_NEXT = '.form-section-label-row, #conceptHelperBtn, #reflectHelperBtn';
+  const SHOOT_STAYS_WITH_LAST = '#multiDayRow, #addShotBtn';
+
+  function typingNow() {
+    const el = document.activeElement;
+    return !!el && (el.isContentEditable || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT'
+      || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'file'].includes(el.type)));
+  }
+
+  function shootFlowAtoms(body) {
+    const atoms = [];
+    let glue = false;
+    const walk = (parent) => [...parent.children].forEach((el) => {
+      if (el.hidden || !el.getBoundingClientRect().height) return;
+      if (el.matches(SHOOT_BLOCKS_INSIDE)) { walk(el); return; }
+      const last = atoms[atoms.length - 1];
+      if (last && (glue || el.matches(SHOOT_STAYS_WITH_LAST))) last.also.push(el);
+      else atoms.push({ el, also: [], heads: [] });
+      glue = el.matches(SHOOT_STAYS_WITH_NEXT);
+    });
+    walk(body);
+    return atoms;
+  }
+
+  function shootFlatPages() {
+    const flat = [];
+    availableShootPages().forEach(({ id }) => {
+      const flow = shootFlows && shootFlows[id];
+      const count = (flow && flow.pages.length) || 1;
+      for (let sub = 0; sub < count; sub++) flat.push({ id, sub });
+    });
+    return flat;
+  }
+
+  function drawShootSub() {
+    if (shootWizardActive || shootWizardPendingId) return;
+    const flow = shootFlows && shootFlows[shootPageId];
+    if (!flow || !flow.pages.length) { shootSub = 0; return; }
+    shootSub = Math.max(0, Math.min(shootSub, flow.pages.length - 1));
+    drawFlowPage(flow, shootSub);
+    if (currentShootId && !shootWanted) shootPageMemory[currentShootId] = { id: shootPageId, sub: shootSub };
+  }
+
+  // All in one go, before anything's painted. Holds off while a field is
+  // being typed in, a row's being dragged or the new-shoot steps are up.
+  function breakShootPages() {
+    if (shootModalOverlay.hidden || shootWizardActive || shootWizardPendingId || typingNow()) return;
+    if (!document.getElementById('expandFieldOverlay').hidden) return;
+    if (shootForm.querySelector('.shot-dragging, .lighting-dragging')) return;
+    const modal = shootModalOverlay.querySelector('.modal');
+    const scrolled = modal.scrollTop;
+    modal.scrollTop = 0;
+    const oldFlow = shootFlows && shootFlows[shootPageId];
+    const oldPage = oldFlow && oldFlow.pages[shootSub];
+    if (shootBreakWatch) noteShootChanges(shootBreakWatch.takeRecords());
+    const atomHolds = (a, node) => [a.el, ...a.also].some(el => el.contains(node));
+    // Stay with the block that just changed on this page: if it has grown
+    // over onto the next one, the page turns with it. Otherwise stay with
+    // what the page started with.
+    const changedHere = oldPage ? shootBreakChanged.filter(node => oldPage.atoms.some(a => atomHolds(a, node))) : [];
+    const follow = changedHere.length ? changedHere[changedHere.length - 1] : oldPage ? oldPage.atoms[0].el : null;
+    shootBreakChanged = [];
+    shootForm.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
+    shootPageEls.forEach(({ el }) => el.classList.remove('nb-off'));
+    SHOOT_MODAL_SECTIONS.forEach(({ id }) => expandShootFormSection(id));
+    autoSizeAllListTextareas();
+    syncAllShootFormFields();
+    const limit = modal.getBoundingClientRect().top + modal.clientHeight - parseFloat(getComputedStyle(modal).paddingBottom);
+    const flows = {};
+    availableShootPages().forEach(({ id }) => {
+      shootPageEls.forEach(({ el, page }) => el.classList.toggle('nb-off', page !== id));
+      const body = document.getElementById(SHOOT_PAGE_BODIES[id]);
+      flows[id] = buildFlow(body, shootFlowAtoms, limit);
+    });
+    shootFlows = flows;
+    shootPageEls.forEach(({ el, page }) => el.classList.toggle('nb-off', page !== shootPageId));
+    const flow = shootFlows[shootPageId];
+    // An edit on this page outranks the remembered page.
+    if (changedHere.length) shootWanted = null;
+    if (shootWanted && shootWanted.id === shootPageId) shootSub = shootWanted.sub;
+    else {
+      const found = follow && flow ? flow.pages.findIndex(p => p.atoms.some(a => atomHolds(a, follow))) : -1;
+      if (found >= 0) shootSub = found;
+    }
+    if (!shootOpening) shootWanted = null; // photos are in: this is the real page count
+    drawShootSub();
+    drawShootPageNumber();
+    // Boxes hidden while the others were measured lost their height.
+    autoSizeAllListTextareas();
+    syncAllShootFormFields();
+    modal.scrollTop = scrolled;
+    if (shootBreakWatch) shootBreakWatch.takeRecords();
+  }
+
+  // A shoot's photos arriving as it opens aren't an edit to follow.
+  function noteShootChanges(records) {
+    records.forEach((r) => {
+      if (!shootOpening || !r.target.closest('#moodboardGrid, #finalImagesGrid')) shootBreakChanged.push(r.target);
+    });
+  }
+
+  function queueShootBreak(ms = 80) {
+    clearTimeout(shootBreakTimer);
+    shootBreakTimer = setTimeout(breakShootPages, ms);
+  }
 
   function availableShootPages() {
     const reflection = !document.getElementById('postShootContent').hidden;
@@ -7904,8 +8261,8 @@
   }
 
   function drawShootPageNumber() {
-    const pages = availableShootPages();
-    const at = pages.findIndex(p => p.id === shootPageId);
+    const pages = shootFlatPages();
+    const at = pages.findIndex(p => p.id === shootPageId && p.sub === shootSub);
     document.getElementById('nbPageFoot').textContent = `${at + 1} / ${pages.length}`;
     document.getElementById('nbPagePrev').disabled = at <= 0;
     document.getElementById('nbPageNext').disabled = at >= pages.length - 1;
@@ -7944,17 +8301,22 @@
       if (!opts.orFirst) return;
       id = pages[0].id;
     }
-    const from = pages.findIndex(p => p.id === shootPageId);
-    const to = pages.findIndex(p => p.id === id);
-    const changed = id !== shootPageId;
+    const subs = (shootFlows && shootFlows[id] && shootFlows[id].pages.length) || 1;
+    const sub = Math.max(0, Math.min(opts.sub || 0, subs - 1));
+    const flat = shootFlatPages();
+    const from = flat.findIndex(p => p.id === shootPageId && p.sub === shootSub);
+    const to = flat.findIndex(p => p.id === id && p.sub === sub);
+    const changed = id !== shootPageId || sub !== shootSub;
     const turning = opts.turn && changed && motionOk();
     const oldCopy = turning ? shootPageCopy() : null;
+    shootWanted = null;
     shootPageId = id;
-    if (currentShootId) shootPageMemory[currentShootId] = id;
+    shootSub = sub;
+    if (currentShootId) shootPageMemory[currentShootId] = { id, sub };
     shootPageEls.forEach(({ el, page }) => el.classList.toggle('nb-off', page !== id));
     // A section folded on the old long page would be a blank page here.
     expandShootFormSection(id);
-    if (id === 'visualsHeading') expandShootFormSection('lightingSetupsHeading');
+    drawShootSub();
     drawShootPageNumber();
     updateShootRunningHead();
     shootModalOverlay.querySelector('.modal').scrollTop = 0;
@@ -7966,15 +8328,16 @@
       if (to > from || from === -1) playTurn(layer, '', oldCopy);
       else playTurn(layer, 'back', shootPageCopy(), oldCopy);
     }
+    if (shootBreakWatch) shootBreakWatch.takeRecords();
   }
 
   function stepShootPage(by) {
     if (shootWizardActive || shootWizardPendingId) return;
-    const pages = availableShootPages();
-    const next = pages[pages.findIndex(p => p.id === shootPageId) + by];
+    const pages = shootFlatPages();
+    const next = pages[pages.findIndex(p => p.id === shootPageId && p.sub === shootSub) + by];
     if (!next) return;
     if (document.activeElement && shootForm.contains(document.activeElement)) document.activeElement.blur();
-    showShootPage(next.id, { turn: true });
+    showShootPage(next.id, { turn: true, sub: next.sub });
   }
   document.getElementById('nbPagePrev').addEventListener('click', () => stepShootPage(-1));
   document.getElementById('nbPageNext').addEventListener('click', () => stepShootPage(1));
@@ -7986,11 +8349,6 @@
     const scrollerEnd = shootModalOverlay.querySelector('.modal');
     const wizard = document.getElementById('shootWizard');
     let start = null;
-    const typing = () => {
-      const el = document.activeElement;
-      return !!el && (el.isContentEditable || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT'
-        || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'file'].includes(el.type)));
-    };
     const scrollsSideways = (el) => {
       for (let node = el; node && node !== scrollerEnd; node = node.parentElement) {
         if (node.scrollWidth > node.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(node).overflowX)) return true;
@@ -7999,7 +8357,7 @@
     };
     shootModalOverlay.addEventListener('touchstart', (e) => {
       start = null;
-      if (e.touches.length !== 1 || !wizard.hidden || typing()) return;
+      if (e.touches.length !== 1 || !wizard.hidden || typingNow()) return;
       const selection = window.getSelection();
       if (selection && !selection.isCollapsed) return;
       if (e.target.closest('[class*="drag-handle"], input[type="range"], .nb-shoot-bar') || scrollsSideways(e.target)) return;
@@ -8017,12 +8375,23 @@
   })();
 
   shootForm.addEventListener('input', (e) => { if (e.target.id === 'shootTitle') updateShootRunningHead(); });
+  // Anything that adds to a page or takes from it breaks the pages again.
+  shootBreakWatch = new MutationObserver((records) => {
+    noteShootChanges(records);
+    queueShootBreak();
+  });
+  shootBreakWatch.observe(shootForm, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden'] });
+  // Only a field that really changed is followed; helpers and the expand popup fire input too.
+  shootForm.addEventListener('input', (e) => {
+    if (shootBreakChanged[shootBreakChanged.length - 1] !== e.target) shootBreakChanged.push(e.target);
+  });
+  shootForm.addEventListener('focusout', () => queueShootBreak(250));
   // Reflection comes and goes with the status: the page count follows, and if its
   // page is the open one when it goes, the book falls back to the first page.
   new MutationObserver(() => {
     if (shootModalOverlay.hidden) return;
     if (document.getElementById('postShootContent').hidden && shootPageId === 'postShootHeading') showShootPage('basicInfoHeading');
-    else drawShootPageNumber();
+    else { queueShootBreak(); drawShootPageNumber(); }
   }).observe(document.getElementById('postShootContent'), { attributes: true, attributeFilter: ['hidden'] });
 
   // The bottom bar stands in for the buttons that used to sit on the page.
@@ -8091,6 +8460,7 @@
     const heading = document.querySelector(headingSelector);
     const body = document.getElementById(bodyId);
     if (!heading || !body) return;
+    if (!body.hidden && !heading.classList.contains('collapsed')) return;
     setSectionCollapsed(key, false);
     body.hidden = false;
     heading.classList.remove('collapsed');
@@ -8395,6 +8765,7 @@
     if (!el || body.contains(el)) return;
     const placeholder = document.createComment('shoot-wizard');
     el.before(placeholder);
+    [el, ...el.querySelectorAll('.pg-off, .pg-first')].forEach(node => node.classList.remove('pg-off', 'pg-first'));
     // A collapsible section body brings its remembered fold along — shown
     // regardless while it's on a slide, given its fold back on the way out.
     const isSectionBody = SHOOT_FORM_COLLAPSE_SECTIONS.some(([, , bodyId]) => bodyId === el.id);
@@ -8511,7 +8882,7 @@
   // opens is a body-level overlay, so none of them is affected.
   function setShootPageInert(on) {
     const modalEl = shootModalOverlay.querySelector('.modal');
-    [...modalEl.children, ...shootForm.children, shootModalOverlay.querySelector('.nb-page-foot'), shootModalOverlay.querySelector('.nb-shoot-bar')].forEach(el => {
+    [...modalEl.children, ...shootForm.children, shootModalOverlay.querySelector('.nb-page-foot'), shootModalOverlay.querySelector('.nb-screen-tabs-shoot'), shootModalOverlay.querySelector('.nb-shoot-bar')].forEach(el => {
       if (el !== shootForm && el.id !== 'shootWizard') el.inert = on;
     });
   }
@@ -8530,6 +8901,8 @@
     // fixed wizard (its containing block is the viewport), and code can
     // still set scrollTop.
     shootModalOverlay.querySelector('.modal').style.overflow = 'hidden';
+    // The steps borrow blocks from the page: none may arrive hidden.
+    shootForm.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
     setShootPageInert(true);
     document.getElementById('shootWizard').hidden = false;
     syncShootWizardViewport();
@@ -8594,6 +8967,7 @@
     // Instant, not smooth: smooth scrolling doesn't run in a background tab.
     modalEl.scrollTop = 0;
     updateShootModalTitleFromScroll();
+    breakShootPages();
   }
 
   document.getElementById('shootWizardBackBtn').addEventListener('click', () => {
@@ -12205,6 +12579,7 @@
   function closeConceptHelper() {
     document.getElementById('conceptHelperOverlay').hidden = true;
     conceptHelper = null;
+    queueShootBreak(250); // it may have just filled in a field
   }
 
   document.getElementById('conceptHelperBtn').addEventListener('click', openConceptHelper);
@@ -13134,6 +13509,7 @@
 
   function closeReflectHelper() {
     document.getElementById('reflectHelperOverlay').hidden = true;
+    queueShootBreak(250); // it may have just filled in a field
     // Whatever was waiting for the helper to close (the reflection prompt's
     // "Walk me through it" holds the deadline prompt back until now).
     const onClose = reflectHelper && reflectHelper.onClose;
@@ -13350,8 +13726,7 @@
     document.getElementById('postShootPromptOverlay').hidden = true;
     updateShootModalJumpMenuVisibility();
 
-    renderMoodboard();
-    renderFinalImages();
+    const shootPhotosIn = Promise.all([renderMoodboard(), renderFinalImages()]);
     // Everything above is populated by now — a saved field should read as
     // written the instant the modal opens, not only after it's touched again.
     syncAllShootFormFields();
@@ -13371,7 +13746,28 @@
     else if (!s) maybeShowStatusSwatchIntro();
 
     // Back to the page this shoot was last open on, at its top.
-    showShootPage(shootPageMemory[currentShootId] || 'basicInfoHeading', { orFirst: true });
+    const remembered = shootPageMemory[currentShootId] || { id: 'basicInfoHeading', sub: 0 };
+    shootFlows = null;
+    shootSub = 0;
+    shootBreakChanged = [];
+    shootForm.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
+    showShootPage(remembered.id, { orFirst: true });
+    // A later page may only exist once the photos have loaded.
+    if (shootPageId === remembered.id && remembered.sub > 0) {
+      shootWanted = { id: remembered.id, sub: remembered.sub };
+      shootSub = remembered.sub;
+      if (currentShootId) shootPageMemory[currentShootId] = remembered;
+    }
+    const opening = {};
+    shootOpening = opening;
+    shootPhotosIn.catch(() => {}).then(() => {
+      if (shootOpening !== opening) return; // another shoot has opened since
+      shootOpening = null;
+      if (shootBreakWatch) shootBreakWatch.takeRecords();
+      if (shootModalOverlay.hidden) shootWanted = null; // closed already: its page stays remembered
+      else breakShootPages();
+    });
+    breakShootPages();
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         // renderShotList() ran further up, while the overlay was still hidden,
@@ -13387,6 +13783,7 @@
         // whole sync here is cheap and catches every field at once rather
         // than needing a bespoke re-measure per field.
         syncAllShootFormFields();
+        breakShootPages();
       });
     });
   }
@@ -13394,7 +13791,7 @@
   function renderMoodboard() {
     const grid = document.getElementById('moodboardGrid');
     grid.innerHTML = '';
-    idbGetImages(currentShootId).then(images => {
+    return idbGetImages(currentShootId).then(images => {
       grid.innerHTML = images.length ? '' : '<p class="empty-hint">No photos yet.</p>';
       images.forEach((img, idx) => {
         const item = document.createElement('div');
@@ -13873,7 +14270,7 @@
   function renderFinalImages() {
     const grid = document.getElementById('finalImagesGrid');
     grid.innerHTML = '';
-    idbGetImages(finalImagesKey(currentShootId)).then(images => {
+    return idbGetImages(finalImagesKey(currentShootId)).then(images => {
       grid.innerHTML = images.length ? '' : '<p class="empty-hint">No final images yet.</p>';
       images.forEach((img, idx) => {
         const thumb = document.createElement('div');
@@ -17615,8 +18012,6 @@
     const { slices } = buildPieSVG(data);
     regionsSliceColors = Object.fromEntries(slices.map(s => [s.key, s.color]));
     const groupsHtml = data.map((d, i) => {
-      const collapseKey = `stats:regions:${d.key}`;
-      const collapsed = isSectionCollapsed(collapseKey);
       const cityRowsHtml = d.cities.map(c => `
         <button type="button" class="stats-legend-row stats-legend-row-nested" data-key="${escapeHtml(c.key)}">
           <span class="legend-swatch legend-swatch-blank"></span>
@@ -17626,13 +18021,12 @@
       `).join('');
       return `
         <div class="stats-region-group">
-          <button type="button" class="stats-legend-row stats-region-heading${collapsed ? ' collapsed' : ''}" data-key="${escapeHtml(d.key)}">
+          <button type="button" class="stats-legend-row stats-region-heading" data-key="${escapeHtml(d.key)}">
             <span class="legend-swatch" style="background:${slices[i].color}"></span>
             <span class="legend-label">${escapeHtml(d.label)}</span>
             <span class="legend-pct">${slices[i].pct}%</span>
-            ${COLLAPSE_ARROW_SVG}
           </button>
-          <div class="stats-region-cities"${collapsed ? ' hidden' : ''}>${cityRowsHtml}</div>
+          <div class="stats-region-cities">${cityRowsHtml}</div>
         </div>
       `;
     }).join('');
@@ -17796,6 +18190,7 @@
         if (!worldMapSvgEl) throw new Error('no svg root');
       }
       mountWorldMap(el);
+      repaginate('stats');
     }).catch(() => {
       const el = document.getElementById('worldMapContainer');
       if (el) el.innerHTML = '<p class="empty-hint">Couldn\'t load the map.</p>';
@@ -17868,14 +18263,7 @@
   function goToStatsPage(idx) {
     const clamped = Math.max(0, Math.min(STATS_PAGES.length - 1, idx));
     if (clamped === statsPageIdx) return;
-    statsPageIdx = clamped;
-    // One page per swipe: further swipes are ignored until this slide has
-    // landed, so a quick series of flicks can't run through several pages.
-    statsSlideLocked = true;
-    setTimeout(() => { statsSlideLocked = false; }, 350);
-    positionStatsTrack();
-    renderStatsDots();
-    updateStatsCarouselHeight();
+    turnScreenPage('stats', statsFlat().findIndex(p => p.stat === clamped));
   }
 
   // A page only changes on a clear, mostly-horizontal swipe, judged when the
@@ -17908,7 +18296,10 @@
       if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
       const dir = dx < 0 ? 1 : -1;
       if (mapEdges && !(dir === 1 ? mapEdges.atRight : mapEdges.atLeft)) return;
-      goToStatsPage(statsPageIdx + dir);
+      // One page per swipe: further swipes wait until this one has landed.
+      statsSlideLocked = true;
+      setTimeout(() => { statsSlideLocked = false; }, 350);
+      stepScreenPage(dir);
     }, { passive: true });
 
     statsCarousel.addEventListener('touchcancel', () => { startX = null; }, { passive: true });
@@ -17954,6 +18345,10 @@
   });
 
   function renderStats() {
+    drawStats();
+    repaginate('stats');
+  }
+  function drawStats() {
     // Nothing here is observable while the tab is hidden, and it's the most
     // expensive render in the app (pie geometry for every page, plus the world
     // map). Switching to Stats always calls renderAll() after un-hiding the
@@ -17975,11 +18370,10 @@
       el.addEventListener('click', () => {
         const pageKey = el.closest('.stats-page').dataset.key;
         if (el.classList.contains('stats-region-heading')) {
-          const citiesWrap = el.parentElement.querySelector('.stats-region-cities');
-          const nowCollapsed = !citiesWrap.hidden;
-          citiesWrap.hidden = nowCollapsed;
-          el.classList.toggle('collapsed', nowCollapsed);
-          setSectionCollapsed(`stats:regions:${el.dataset.key}`, nowCollapsed);
+          // The map may be a page back from this row.
+          if (document.getElementById('worldMapScroll').classList.contains('pg-off')) {
+            turnScreenPage('stats', statsFlat().findIndex(p => p.stat === statsPageIdx));
+          }
           focusRegionOnMap(el.dataset.key);
           return;
         }
@@ -20421,9 +20815,10 @@
   setupTabbarDriftFix();
 
   // ---------- The notebook ----------
-  // The shut book. Tapped, it opens and zooms into Overview. Stays how it was
-  // left: shut until opened, then straight in on later launches until it's
-  // shut again.
+  // The shut book. Tapped, it opens and zooms into Overview; a tab on its
+  // side opens it further in, at that section's title page, and zooms in
+  // there. Stays how it was left: shut until opened, then straight in on
+  // later launches until it's shut again.
   (function setupNotebook() {
     const BOOK_KEY = 'df-book';
     const RATIO = 1000 / 1360; // the cover art's width over its height
@@ -20432,6 +20827,7 @@
     const PERSPECTIVE = 1100;  // matches .nb in style.css
     const TAB_OUT = 0.06;      // how far the side tabs stick out, of the book's width
     const OPEN_MS = 900;       // the cover swinging open, and a moment on the spread
+    const SECTION_MS = 1250;   // the same, and long enough to read a section's title
     const ZOOM_MS = 780;
     const overlay = document.getElementById('bookOverlay');
     const book = document.getElementById('book');
@@ -20439,9 +20835,13 @@
 
     document.getElementById('bookStack').innerHTML =
       Array.from({ length: STACK }, (_, i) => `<i style="--i:${i + 1}"></i>`).join('') + `<b style="--i:${STACK + 1}"></b>`;
-    // One tab per screen of the app, each on a sheet of its own. No words.
-    document.getElementById('bookSideTabs').innerHTML =
-      Array.from({ length: 5 }, (_, i) => `<i class="${i % 2 ? 'n' : 'y'}" style="--t:${i};--i:${3 + i * 3}"></i>`).join('');
+    // One tab per screen of the app, each on a sheet of its own, named. The
+    // buttons are laid over them flat: the tabs themselves are turned in 3D.
+    const SCREENS = [...document.querySelectorAll('.tabbar .tab')].map(tab => ({ view: tab.dataset.view, name: tab.textContent.trim() }));
+    const sideTabs = document.getElementById('bookSideTabs');
+    const tabHits = document.getElementById('bookTabHits');
+    sideTabs.innerHTML = SCREENS.map((s, i) => `<i class="${i % 2 ? 'n' : 'y'}" style="--t:${i};--i:${3 + i * 3}"><span>${s.name}</span></i>`).join('');
+    tabHits.innerHTML = SCREENS.map(s => `<button type="button" class="nb-hit nb-hit-tab" data-view="${s.view}" aria-label="Open at ${s.name}"></button>`).join('');
 
     function remember(state) {
       try { localStorage.setItem(BOOK_KEY, state); } catch (err) { /* storage unavailable: it just opens shut next time */ }
@@ -20473,14 +20873,32 @@
       book.style.setProperty('--zoom-x', `${vw / 2}px`);
       book.style.setProperty('--zoom-y', `${(top + bottom) / 2 - vh / 2}px`);
       book.style.setProperty('--zoom-sx', String((vw - 10) / W));
+      book.style.setProperty('--zoom-rx', String(frame.right / W));
       book.style.setProperty('--zoom-sy', String((bottom - top) / H));
     }
 
     function setMode(mode) { book.className = `nb ${mode}`; }
 
+    // Where the side tabs land on screen with the book shut. Measured in that
+    // pose in one go, before anything paints.
+    function placeTabHits() {
+      const before = book.className;
+      book.className = 'nb no-anim closed';
+      const rects = [...sideTabs.children].map(el => el.getBoundingClientRect());
+      const hits = [...tabHits.children];
+      rects.forEach((r, i) => {
+        const above = i ? (rects[i - 1].bottom + r.top) / 2 : r.top - 4;
+        const below = i < rects.length - 1 ? (r.bottom + rects[i + 1].top) / 2 : r.bottom + 4;
+        hits[i].style.cssText = `left:${r.left - 12}px;right:0;top:${above}px;height:${below - above}px`;
+      });
+      book.className = before;
+      void book.offsetWidth;
+    }
+
     function show(mode) {
       measure();
       overlay.hidden = false;
+      placeTabHits();
       book.className = `nb no-anim ${mode}`;
       void book.offsetWidth;
     }
@@ -20495,13 +20913,31 @@
       }, ZOOM_MS);
     }
 
-    document.getElementById('bookOpenHit').addEventListener('click', () => {
-      setMode('opened');
+    // Further into the book the further down the tab: more sheets to the left.
+    function sheets(count, side) {
+      return Array.from({ length: count }, (_, i) => `${side * (i + 1) * 1.2}px 0 0 ${i % 2 ? '#e4e4e4' : '#fff'}`).join(',');
+    }
+
+    function openBook(view) {
       clearTimeout(timer);
+      const at = SCREENS.findIndex(s => s.view === view);
+      if (at > 0) {
+        document.getElementById('bookDividerTitle').textContent = SCREENS[at].name;
+        document.getElementById('bookDividerFace').style.boxShadow = sheets(2 + at * 3, -1);
+        document.getElementById('bookRightPage').style.boxShadow = sheets(2 + (SCREENS.length - 1 - at) * 3, 1);
+      }
+      setMode(at > 0 ? 'opened at-section' : 'opened');
       timer = setTimeout(() => {
-        document.querySelector('.tabbar .tab[data-view="overview"]').click();
-        leaveTo('opened zoom-l');
-      }, OPEN_MS);
+        document.querySelector(`.tabbar .tab[data-view="${view}"]`).click();
+        measure(); // the frame sits differently on a right-hand page
+        leaveTo(at > 0 ? 'opened at-section zoom-r' : 'opened zoom-l');
+      }, at > 0 ? SECTION_MS : OPEN_MS);
+    }
+
+    document.getElementById('bookOpenHit').addEventListener('click', () => openBook('overview'));
+    tabHits.addEventListener('click', (e) => {
+      const hit = e.target.closest('[data-view]');
+      if (hit) openBook(hit.dataset.view);
     });
     document.getElementById('shutBookBtn').addEventListener('click', () => {
       clearTimeout(timer);
@@ -20509,9 +20945,19 @@
       setMode('closed');
       remember('shut');
     });
-    window.addEventListener('resize', () => { if (!overlay.hidden) measure(); });
+    window.addEventListener('resize', () => { if (!overlay.hidden) { measure(); if (book.classList.contains('closed')) placeTabHits(); } });
 
     document.documentElement.dataset.view = (document.querySelector('.tabbar .tab.active') || { dataset: { view: 'overview' } }).dataset.view;
+    repaginate(currentScreen());
+    // The handwriting arrives after the first draw, and it's a different width.
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { repaginate(currentScreen()); breakShootPages(); });
+    let pagesWidth = window.innerWidth;
+    window.addEventListener('resize', () => {
+      if (window.innerWidth === pagesWidth) return;
+      pagesWidth = window.innerWidth;
+      repaginate(currentScreen());
+      breakShootPages();
+    });
     let saved = null;
     try { saved = localStorage.getItem(BOOK_KEY); } catch (err) { /* treated as shut */ }
     if (saved !== 'open') show('closed');
@@ -20589,6 +21035,7 @@
             archiveFilter,
             journalFilter,
             statsYearFilter,
+            pages: screenAt,
           }));
         } catch (e) { /* ignore */ }
         // At launch, this page stays hidden until the new one replaces it.
@@ -20673,6 +21120,16 @@
     const tabAfterUpdateBtn = tabAfterUpdate && document.querySelector(`.tabbar .tab[data-view="${tabAfterUpdate}"]`);
     if (tabAfterUpdateBtn && !tabAfterUpdateBtn.classList.contains('active')) tabAfterUpdateBtn.click();
     else if (viewAfterUpdate) renderAll();
+    // Back to the same page, once the photos and the map are in and the
+    // screen has all its pages.
+    if (viewAfterUpdate && viewAfterUpdate.pages) {
+      Promise.all([launchShown, Promise.resolve(worldMapFetchPromise).catch(() => {})]).then(() => {
+        Object.keys(screenAt).forEach((key) => {
+          if (Number.isInteger(viewAfterUpdate.pages[key])) screenAt[key] = viewAfterUpdate.pages[key];
+        });
+        drawScreenPage(currentScreen());
+      });
+    }
     // The scroll waits for the launch to show the page: the photos are in by
     // then, so the list is at its full height. It runs straight after the
     // reveal, before anything's drawn, so the top of the page never shows
@@ -20708,7 +21165,8 @@
     }
 
     document.addEventListener('touchstart', (e) => {
-      if (refreshing || window.scrollY > 0 || anyModalOpen() || e.touches.length !== 1) {
+      // Pages don't scroll, so only a pull from the top of one refreshes.
+      if (refreshing || window.scrollY > 0 || anyModalOpen() || e.touches.length !== 1 || e.touches[0].clientY > 170) {
         active = false;
         return;
       }
@@ -20784,10 +21242,7 @@
 
   // ---------- swipe between tabs ----------
   (function setupTabSwipe() {
-    // Read off the tab bar itself, so a swipe always lands on the tab next
-    // door on screen (a hand-kept list here had drifted: Archive and Journal
-    // were swapped).
-    const TAB_ORDER = [...document.querySelectorAll('.tabbar .tab')].map(tab => tab.dataset.view);
+    // A swipe on the page turns a page of this screen; the navigator changes screens.
     let startX = null;
     let startY = null;
     let tracking = false;
@@ -20820,14 +21275,7 @@
       startY = null;
       if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
 
-      const activeTab = document.querySelector('.tab.active');
-      if (!activeTab) return;
-
-      const currentIndex = TAB_ORDER.indexOf(activeTab.dataset.view);
-      if (currentIndex === -1) return;
-      const nextIndex = currentIndex + (dx < 0 ? 1 : -1);
-      if (nextIndex < 0 || nextIndex >= TAB_ORDER.length) return;
-      turnToView(TAB_ORDER[nextIndex]);
+      stepScreenPage(dx < 0 ? 1 : -1);
     }, { passive: true });
   })();
 
@@ -20838,7 +21286,7 @@
   // notebook turns to that screen's tab. The tab buttons stay (hidden): they
   // still do the switching.
   (function setupNavigator() {
-    const STEP = 46; // px from one icon to the next on the strip
+    const STEP = 36; // px from one icon to the next on the strip
     const triangle = '<svg viewBox="0 0 10 12" aria-hidden="true"><path d="M2.3 1.5Q5.6 3.8 8.7 6.1 5.5 8.3 2.2 10.5 2.5 6 2.3 1.5Z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
     const bar = document.querySelector('.tabbar');
     const tabs = [...bar.querySelectorAll('.tab')].map(el => ({
@@ -20885,8 +21333,8 @@
     }
     prev.addEventListener('click', () => go(-1));
     next.addEventListener('click', () => go(1));
-    // A tap on the icon goes to the top of its screen, the way its tab did.
-    now.addEventListener('click', () => tabs[idx].el.click());
+    // A tap on the icon goes back to its screen's first page.
+    now.addEventListener('click', () => turnScreenPage(tabs[idx].view, 0));
 
     // A finger the width of a third of the screen moves one icon over.
     const span = () => (window.innerWidth || 1) / 3;
@@ -20938,10 +21386,20 @@
     new MutationObserver(() => sync(true)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-view'] });
     sync(false);
 
-    // The tabs poking out of the page's edge, one for each screen.
+    // The tabs poking out of the page's edge, one for each screen. From
+    // inside a shoot, a tab closes it first (saving, the same as Back).
     document.querySelector('.nb-screen-tabs:not(.nb-screen-tabs-shoot)').addEventListener('click', (e) => {
       const tab = e.target.closest('[data-view]');
       if (tab) turnToView(tab.dataset.view);
+    });
+    document.querySelector('.nb-screen-tabs-shoot').addEventListener('click', (e) => {
+      const tab = e.target.closest('[data-view]');
+      if (!tab) return;
+      document.getElementById('nbBarBack').click();
+      // Whatever the shoot was opened from goes too: it belongs to the old section.
+      if (activeStatBoxKey) closeStatBoxDetail();
+      closeProjectPopup();
+      turnToView(tab.dataset.view);
     });
   })();
 })();

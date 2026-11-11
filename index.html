@@ -48,22 +48,22 @@
     <div class="stats-row" id="statsRow"></div>
 
     <div class="section-block" id="todaySection" hidden>
-      <h2>Today <span id="todayCount"></span><svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h2>
+      <h2>Today <span id="todayCount"></span></h2>
       <div id="todayShootsList" class="mini-list"></div>
     </div>
 
     <div class="section-block" id="upcomingSection">
-      <h2>Upcoming shoots <span id="upcomingCount"></span><svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h2>
+      <h2>Upcoming shoots <span id="upcomingCount"></span></h2>
       <div id="upcomingShootsList" class="mini-list"></div>
     </div>
 
     <div class="section-block" id="proofsPendingSection">
-      <h2>Proofs pending <span id="proofsPendingCount"></span><svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h2>
+      <h2>Proofs pending <span id="proofsPendingCount"></span></h2>
       <div id="proofsPendingShootsList" class="mini-list"></div>
     </div>
 
     <div class="section-block" id="upcomingDeadlinesSection">
-      <h2>Upcoming deadlines <span id="upcomingDeadlinesCount"></span><svg class="collapse-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></h2>
+      <h2>Upcoming deadlines <span id="upcomingDeadlinesCount"></span></h2>
       <div id="upcomingDeadlinesShootsList" class="mini-list"></div>
     </div>
   </section>
@@ -161,8 +161,8 @@
 
   <!-- The page's card edge. Fixed over the scrolling view: the hole in the
        middle is the page, so the window itself still does the scrolling. -->
-  <div class="nb-board" aria-hidden="true"><div class="nb-board-page"></div></div>
-  <nav class="nb-screen-tabs" aria-label="Sections of the notebook"><button type="button" class="y" data-view="overview" aria-label="Overview"></button><button type="button" class="n" data-view="shoots" aria-label="Shoots"></button><button type="button" class="y" data-view="journal" aria-label="Journal"></button><button type="button" class="n" data-view="archive" aria-label="Archive"></button><button type="button" class="y" data-view="stats" aria-label="Stats"></button></nav>
+  <div class="nb-board"><div class="nb-board-page" aria-hidden="true"></div><div class="nb-screen-foot"><button type="button" class="nb-page-step" id="nbScreenPrev" aria-label="Previous page"></button><span id="nbScreenNum"></span><button type="button" class="nb-page-step" id="nbScreenNext" aria-label="Next page"></button></div></div>
+  <nav class="nb-screen-tabs" aria-label="Sections of the notebook"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Journal</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></nav>
 </div>
 
 <!-- ============ THE NOTEBOOK ============ -->
@@ -180,9 +180,14 @@
           <div class="nb-front"></div>
           <div class="nb-inside"><div class="nb-words"><span class="nb-word">Overview</span></div></div>
         </div>
+        <div class="nb-right-page" id="bookRightPage"></div>
+        <div class="nb-divider">
+          <div class="nb-divider-face" id="bookDividerFace"><div class="nb-words"><span class="nb-word" id="bookDividerTitle"></span></div></div>
+        </div>
       </div>
     </div>
     <button type="button" class="nb-hit nb-hit-book" id="bookOpenHit" aria-label="Open the notebook"></button>
+    <div id="bookTabHits"></div>
   </div>
 </div>
 
@@ -488,7 +493,7 @@
     <span id="nbPageFoot"></span>
     <button type="button" class="nb-page-step" id="nbPageNext" aria-label="Next page"></button>
   </div>
-  <div class="nb-screen-tabs nb-screen-tabs-shoot" aria-hidden="true"><i class="y" data-view="overview"></i><i class="n" data-view="shoots"></i><i class="y" data-view="journal"></i><i class="n" data-view="archive"></i><i class="y" data-view="stats"></i></div>
+  <div class="nb-screen-tabs nb-screen-tabs-shoot"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Journal</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></div>
   <nav class="nb-shoot-bar" aria-label="This shoot">
     <button type="button" class="nb-tool" id="nbBarBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span>Back</span></button>
     <button type="button" class="nb-tool" id="nbBarShootMode" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Shoot mode</span></button>

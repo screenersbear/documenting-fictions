@@ -6603,3 +6603,71 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 
 .scroll-top-btn { right: calc(var(--nb-edge) + 20px); }
 #projectDetailTitle { font-family: var(--font-hand); font-weight: 400; }
+
+/* One font: the handwriting, told apart by weight and colour. */
+:root { --font-head: var(--font-hand); }
+
+/* A thinner frame, closer to the navigator, with room for named tabs. */
+:root {
+  --nb-rim: 6px;
+  --nb-bar: calc(38px + env(safe-area-inset-bottom));
+  --nb-edge: max(22px, calc(50% - 270px));
+}
+.nb-board, .nb-chapter-board { border-radius: 0 14px 14px 0; }
+:root[data-view="overview"] .nb-board { border-radius: 14px 0 0 14px; }
+.nb-board-page, .nb-turn, .nb-turn-under { top: var(--nb-rim); right: var(--nb-rim); bottom: var(--nb-rim); border-radius: 0 9px 9px 0; }
+:root[data-view="overview"] .nb-board-page, :root[data-view="overview"] .nb-board > .nb-turn, :root[data-view="overview"] .nb-board > .nb-turn-under { left: var(--nb-rim); right: 0; border-radius: 9px 0 0 9px; }
+#shootModalOverlay > .modal { top: calc(var(--nb-top) + var(--nb-rim)); right: calc(var(--nb-edge) + var(--nb-rim)); height: calc(100svh - var(--nb-top) - var(--nb-bar) - var(--nb-rim) * 2); border-radius: 0 9px 9px 0; }
+.nb-page-foot { right: calc(var(--nb-edge) + var(--nb-rim)); top: calc(100svh - var(--nb-bar) - var(--nb-rim) - 32px); }
+
+/* Named tabs: the tab fills the gap at the page's edge, its touch area runs over the rim. */
+.nb-screen-tabs { right: 2px; width: calc(var(--nb-edge) + var(--nb-rim) - 2px); gap: 5px; }
+.nb-screen-tabs > * { flex: 0 0 min(72px, 10svh); }
+.nb-screen-tabs > *::before { display: none; }
+.nb-screen-tabs > * > span { position: absolute; top: 0; left: var(--nb-rim); bottom: 0; width: min(calc(100% - var(--nb-rim)), 40px); display: flex; align-items: center; justify-content: center; border-radius: 0 6px 6px 0; writing-mode: vertical-rl; white-space: nowrap; font-size: 12px; line-height: 1; font-weight: 400; letter-spacing: 0; }
+.nb-screen-tabs > .y > span { background: var(--accent); color: var(--text); }
+.nb-screen-tabs > .n > span { background: var(--text); color: #fff; }
+.nb-screen-tabs-shoot > * { pointer-events: auto; }
+
+/* The navigator: the triangles right beside the icon, the page close above it. */
+.tabbar { padding: 1px 0 calc(1px + env(safe-area-inset-bottom)); }
+.slider { gap: 0; height: 36px; }
+.slide-arrow { height: 36px; }
+.slide-arrow.is-prev { justify-items: end; }
+.slide-arrow.is-next { justify-items: start; }
+.slide-now { width: 36px; height: 36px; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%); }
+.slide-icon { flex: 0 0 36px; height: 36px; }
+
+/* The cover's tabs carry the names too, and open the book at that section. */
+.nb-side-tabs i { top: calc(16% + var(--t) * 14.6%); height: 13.6%; display: flex; align-items: center; justify-content: flex-end; width: 10%; }
+.nb-side-tabs i span { width: 72%; text-align: center; writing-mode: vertical-rl; white-space: nowrap; font-size: calc(var(--W) * 0.036); line-height: 1; }
+.nb-side-tabs i.y span { color: var(--text); }
+.nb-side-tabs i.n span { color: #fff; }
+.nb.closed .nb-hit-tab { display: block; z-index: 6; position: fixed; }
+.nb.opened.zoom-r .nb-book { transform: rotateY(0deg) translate(calc(var(--zoom-x) * -1), var(--zoom-y)) scale(var(--zoom-rx), var(--zoom-sy)); }
+.nb.zoom-r .nb-words { opacity: 0; }
+.nb-right-page { position: absolute; inset: 1.4% 1.6% 1.4% 0; border-radius: 0 calc(var(--W) * 0.03) calc(var(--W) * 0.03) 0; background: #fff; visibility: hidden; transform: translateZ(0.2px); }
+.nb.at-section .nb-right-page { visibility: visible; }
+.nb-divider { position: absolute; inset: 1.4% 1.6% 1.4% 0; transform: rotateY(0deg) translateZ(0.5px); transform-origin: 0 50%; transform-style: preserve-3d; visibility: hidden; }
+.nb.at-section .nb-divider { visibility: visible; transform: rotateY(-180deg) translateZ(-1px); transition: transform 0.82s cubic-bezier(0.45, 0.05, 0.25, 1) 0.14s; }
+.nb-divider-face { position: absolute; inset: 0; transform: rotateY(180deg); backface-visibility: hidden; -webkit-backface-visibility: hidden; background: var(--text); border-radius: calc(var(--W) * 0.03) 0 0 calc(var(--W) * 0.03); }
+.nb-divider-face .nb-words { color: #fff; }
+
+/* Pages: what doesn't fit is waiting on the next one, and nothing scrolls. */
+.pg-off:not(#shootWizard .pg-off) { display: none !important; }
+.pg-first { margin-top: 0 !important; }
+#app { padding-bottom: var(--nb-bar); }
+:root.pg-tall #app { padding-bottom: calc(var(--nb-bar) + 34px); }
+.nb-screen-foot { position: absolute; z-index: 7; left: var(--nb-rim); right: var(--nb-rim); bottom: var(--nb-rim); height: 32px; display: flex; align-items: center; justify-content: center; line-height: 32px; font-size: 14px; color: var(--dim); pointer-events: none; }
+:root[data-view="overview"] .nb-screen-foot { right: 0; }
+#shootForm #frameworkTagsContainer[hidden] { display: none; }
+#view-overview .section-block h2, #view-overview .upcoming-subheading, #view-shoots .status-group-heading, #view-archive .status-group-heading, #view-journal .status-group-heading { cursor: default; }
+#view-journal { padding-bottom: 0; }
+#journalList { padding-bottom: 0; }
+#journalList .shoot-status-rows { gap: 0; }
+#journalList .status-group-heading.archive-month-heading { display: flex; }
+#journalList .journal-entry-body .log-takeaway-source { line-height: 0; }
+.stats-track, .stats-carousel { transition: none; }
+:root[data-view="overview"] .nb-board > .nb-turn.back { animation-name: nb-leaf-verso-back; }
+@keyframes nb-leaf-verso-back { 0% { transform: rotateY(100deg); } 100% { transform: rotateY(0deg); } }
+:root[data-view="journal"] #nbScreenNum { background: #fffdf7; padding: 0 8px; line-height: 24px; }
