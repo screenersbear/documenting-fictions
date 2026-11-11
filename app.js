@@ -2615,9 +2615,73 @@
     stats: document.getElementById('view-stats'),
   };
 
+  // ---------- Turning a page ----------
+  // A sheet swings over on its hinge, carrying a copy of a page. The copy
+  // only looks like the page: it can't be touched and goes on a timer, not on
+  // the animation's end, so it can never be left covering anything.
+  const turnTimers = new WeakMap();
+  const motionOk = () => !matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function pageCopy(source, tidy) {
+    const rect = source.getBoundingClientRect();
+    const copy = source.cloneNode(true);
+    // A select's choice isn't part of what cloning carries over.
+    const selects = copy.querySelectorAll('select');
+    source.querySelectorAll('select').forEach((el, i) => { if (selects[i]) selects[i].selectedIndex = el.selectedIndex; });
+    if (tidy) tidy(copy);
+    copy.hidden = false;
+    copy.inert = true;
+    copy.style.margin = '0'; // the holder already sits where the page's box does
+    const holder = document.createElement('div');
+    holder.className = 'nb-turn-copy';
+    holder.style.width = `${rect.width}px`;
+    holder.appendChild(copy);
+    return { holder, left: rect.left, top: rect.top };
+  }
+
+  function clearTurn(layer) {
+    clearTimeout(turnTimers.get(layer));
+    layer.querySelectorAll('.nb-turn, .nb-turn-under').forEach(el => el.remove());
+  }
+
+  function playTurn(layer, kind, leafCopy, underCopy) {
+    clearTurn(layer);
+    const base = layer.getBoundingClientRect();
+    const add = (className, copy) => {
+      const sheet = document.createElement('div');
+      sheet.className = className;
+      layer.appendChild(sheet);
+      if (copy) {
+        // offsetLeft/Top ignore the sheet's own swing.
+        copy.holder.style.left = `${copy.left - base.left - sheet.offsetLeft}px`;
+        copy.holder.style.top = `${copy.top - base.top - sheet.offsetTop}px`;
+        sheet.appendChild(copy.holder);
+      }
+    };
+    if (underCopy) add('nb-turn-under', underCopy);
+    add(`nb-turn${kind ? ` ${kind}` : ''}`, leafCopy);
+    turnTimers.set(layer, setTimeout(() => clearTurn(layer), 640));
+  }
+
+  // Set just before a tab's click that should turn the page: the navigator,
+  // the side tabs and a swipe. The app's own jumps between screens don't.
+  let turnNextTab = false;
+
+  function turnToView(view) {
+    const tab = document.querySelector(`.tabbar .tab[data-view="${view}"]`);
+    if (!tab || tab.classList.contains('active')) return;
+    turnNextTab = motionOk();
+    tab.click();
+  }
+
   document.querySelectorAll('.tab').forEach(btn => {
     btn.addEventListener('click', () => {
       const view = btn.dataset.view;
+      const activeBefore = document.querySelector('.tab.active');
+      const previous = activeBefore ? activeBefore.dataset.view : view;
+      const turning = turnNextTab && previous !== view;
+      turnNextTab = false;
+      const oldCopy = turning ? pageCopy(views[previous]) : null;
       document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
       document.documentElement.dataset.view = view;
       Object.entries(views).forEach(([key, el]) => { el.hidden = key !== view; });
@@ -2626,6 +2690,14 @@
       if (view !== 'archive') stopArchiveSlideshow();
       scrollPageTo(0);
       renderAll();
+      if (turning) {
+        const order = [...document.querySelectorAll('.tabbar .tab')].map(tab => tab.dataset.view);
+        const board = document.querySelector('.nb-board');
+        // Going on, or back to the left-hand page: the old page swings away.
+        // Back through the right-hand pages: the page before swings in over it.
+        if (order.indexOf(view) > order.indexOf(previous) || view === 'overview') playTurn(board, '', oldCopy);
+        else playTurn(board, 'back', pageCopy(views[view]), oldCopy);
+      }
       // Journal's intro was rewritten when the Log and Reflections notebooks
       // merged into one page, under a new key so anyone who dismissed the old
       // wording sees the new one once.
@@ -7553,7 +7625,7 @@
       showPostShootContentExpanded();
       updateShootModalJumpMenuVisibility();
     }
-    document.getElementById('postShootPromptText').textContent = "the post-shoot reflection questions will be on the Reflection tab of this shoot whenever you're ready.";
+    document.getElementById('postShootPromptText').textContent = "the post-shoot reflection questions will be on the Reflection page of this shoot whenever you're ready.";
     document.getElementById('postShootPromptActions').hidden = true;
     document.getElementById('postShootPromptWalkBtn').hidden = true;
     document.getElementById('postShootPromptDismissBtn').hidden = false;
@@ -7749,7 +7821,7 @@
   let shootWizardViewportMaxH = 0;    // tallest visible height seen this run — the keyboard yardstick
 
   // The one canonical list of top-level sections in the form, in on-page
-  // order: the notebook's pages and side tabs, and the guided tour.
+  // order: the notebook's pages and the guided tour.
   const SHOOT_MODAL_SECTIONS = [
     { id: 'basicInfoHeading', label: 'Basic Info' },
     { id: 'logisticsHeading', label: 'Logistics' },
@@ -7808,8 +7880,8 @@
   });
 
   // ---------- A shoot as a chapter ----------
-  // Each section of the form is one page of the notebook, picked from the
-  // tabs down the page's edge. The form itself is unchanged: the pages only
+  // Each section of the form is one page of the notebook, swiped through
+  // like one. The form itself is unchanged: the pages only
   // hide the sections that aren't open (direct children of the form only, so
   // a section body borrowed onto a wizard slide is never hidden).
   const shootPageEls = (() => {
@@ -7823,26 +7895,20 @@
     });
     return els;
   })();
-  const shootPageTabs = document.getElementById('nbSectionTabs');
   const shootPageMemory = {};
   let shootPageId = 'basicInfoHeading';
-  let shootTurnTimer = 0;
 
   function availableShootPages() {
     const reflection = !document.getElementById('postShootContent').hidden;
     return SHOOT_MODAL_SECTIONS.filter(sec => sec.id !== 'postShootHeading' || reflection);
   }
 
-  function drawShootPageTabs() {
+  function drawShootPageNumber() {
     const pages = availableShootPages();
-    shootPageTabs.querySelectorAll('[data-page]').forEach(btn => {
-      btn.hidden = !pages.some(p => p.id === btn.dataset.page);
-      const on = btn.dataset.page === shootPageId;
-      btn.classList.toggle('on', on);
-      if (on) btn.setAttribute('aria-current', 'page');
-      else btn.removeAttribute('aria-current');
-    });
-    document.getElementById('nbPageFoot').textContent = `${pages.findIndex(p => p.id === shootPageId) + 1} / ${pages.length}`;
+    const at = pages.findIndex(p => p.id === shootPageId);
+    document.getElementById('nbPageFoot').textContent = `${at + 1} / ${pages.length}`;
+    document.getElementById('nbPagePrev').disabled = at <= 0;
+    document.getElementById('nbPageNext').disabled = at >= pages.length - 1;
   }
 
   // The running head: the shoot's name, written at the top of each page.
@@ -7853,17 +7919,23 @@
     });
   }
 
-  // A sheet swings over on its hinge. Taken away on a timer, not on its
-  // animation's end, so it can never be left covering the page.
-  function turnShootPage(forward) {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const board = shootModalOverlay.querySelector('.nb-turn-layer');
-    board.querySelectorAll('.nb-turn').forEach(el => el.remove());
-    clearTimeout(shootTurnTimer);
-    const leaf = document.createElement('div');
-    leaf.className = `nb-turn${forward ? '' : ' back'}`;
-    board.appendChild(leaf);
-    shootTurnTimer = setTimeout(() => leaf.remove(), 640);
+  // What's on this page, for the sheet that turns. The lists that are read
+  // back when the shoot saves are found by id across the whole document, so
+  // the copy's lose theirs (keeping how they're laid out) and can't be
+  // mistaken for the real ones. Other ids stay: they carry the page's look,
+  // and the real form comes first in the document.
+  const SHOOT_READ_BACK_IDS = [...FRAMEWORK_TAG_CONTAINER_IDS, 'shootAspectRatios', 'shotListItems', 'lightingSetupsItems'];
+  function shootPageCopy() {
+    return pageCopy(shootForm, (copy) => {
+      copy.querySelectorAll(':scope > .nb-off, :scope > #shootWizard, :scope > #deleteShootBtn, :scope > .modal-actions').forEach(el => el.remove());
+      SHOOT_READ_BACK_IDS.forEach(id => {
+        const el = copy.querySelector(`#${id}`);
+        if (!el) return;
+        const { display, flexDirection, flexWrap, gap } = getComputedStyle(document.getElementById(id));
+        Object.assign(el.style, { display, flexDirection, flexWrap, gap });
+        el.removeAttribute('id');
+      });
+    });
   }
 
   function showShootPage(id, opts = {}) {
@@ -7875,34 +7947,82 @@
     const from = pages.findIndex(p => p.id === shootPageId);
     const to = pages.findIndex(p => p.id === id);
     const changed = id !== shootPageId;
+    const turning = opts.turn && changed && motionOk();
+    const oldCopy = turning ? shootPageCopy() : null;
     shootPageId = id;
     if (currentShootId) shootPageMemory[currentShootId] = id;
     shootPageEls.forEach(({ el, page }) => el.classList.toggle('nb-off', page !== id));
     // A section folded on the old long page would be a blank page here.
     expandShootFormSection(id);
     if (id === 'visualsHeading') expandShootFormSection('lightingSetupsHeading');
-    drawShootPageTabs();
+    drawShootPageNumber();
     updateShootRunningHead();
     shootModalOverlay.querySelector('.modal').scrollTop = 0;
     // Boxes on a page that was hidden measured zero height.
     autoSizeAllListTextareas();
     syncAllShootFormFields();
-    if (opts.turn && changed) turnShootPage(to > from || from === -1);
+    if (turning) {
+      const layer = shootModalOverlay.querySelector('.nb-turn-layer');
+      if (to > from || from === -1) playTurn(layer, '', oldCopy);
+      else playTurn(layer, 'back', shootPageCopy(), oldCopy);
+    }
   }
 
-  shootPageTabs.addEventListener('click', (e) => {
-    const tab = e.target.closest('[data-page]');
-    if (!tab) return;
+  function stepShootPage(by) {
+    if (shootWizardActive || shootWizardPendingId) return;
+    const pages = availableShootPages();
+    const next = pages[pages.findIndex(p => p.id === shootPageId) + by];
+    if (!next) return;
     if (document.activeElement && shootForm.contains(document.activeElement)) document.activeElement.blur();
-    showShootPage(tab.dataset.page, { turn: true });
-  });
+    showShootPage(next.id, { turn: true });
+  }
+  document.getElementById('nbPagePrev').addEventListener('click', () => stepShootPage(-1));
+  document.getElementById('nbPageNext').addEventListener('click', () => stepShootPage(1));
+
+  // Swiped sideways like a notebook. Not while typing, over something that
+  // takes the finger itself (a drag handle, a sideways scroller, a slider),
+  // or under the new-shoot steps.
+  (function setupShootPageSwipe() {
+    const scrollerEnd = shootModalOverlay.querySelector('.modal');
+    const wizard = document.getElementById('shootWizard');
+    let start = null;
+    const typing = () => {
+      const el = document.activeElement;
+      return !!el && (el.isContentEditable || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT'
+        || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'file'].includes(el.type)));
+    };
+    const scrollsSideways = (el) => {
+      for (let node = el; node && node !== scrollerEnd; node = node.parentElement) {
+        if (node.scrollWidth > node.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(node).overflowX)) return true;
+      }
+      return false;
+    };
+    shootModalOverlay.addEventListener('touchstart', (e) => {
+      start = null;
+      if (e.touches.length !== 1 || !wizard.hidden || typing()) return;
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) return;
+      if (e.target.closest('[class*="drag-handle"], input[type="range"], .nb-shoot-bar') || scrollsSideways(e.target)) return;
+      start = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }, { passive: true });
+    shootModalOverlay.addEventListener('touchcancel', () => { start = null; }, { passive: true });
+    shootModalOverlay.addEventListener('touchend', (e) => {
+      if (!start) return;
+      const dx = e.changedTouches[0].clientX - start.x;
+      const dy = e.changedTouches[0].clientY - start.y;
+      start = null;
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      stepShootPage(dx < 0 ? 1 : -1);
+    }, { passive: true });
+  })();
+
   shootForm.addEventListener('input', (e) => { if (e.target.id === 'shootTitle') updateShootRunningHead(); });
-  // Reflection comes and goes with the status: its tab follows, and if its
+  // Reflection comes and goes with the status: the page count follows, and if its
   // page is the open one when it goes, the book falls back to the first page.
   new MutationObserver(() => {
     if (shootModalOverlay.hidden) return;
     if (document.getElementById('postShootContent').hidden && shootPageId === 'postShootHeading') showShootPage('basicInfoHeading');
-    else drawShootPageTabs();
+    else drawShootPageNumber();
   }).observe(document.getElementById('postShootContent'), { attributes: true, attributeFilter: ['hidden'] });
 
   // The bottom bar stands in for the buttons that used to sit on the page.
@@ -8391,7 +8511,7 @@
   // opens is a body-level overlay, so none of them is affected.
   function setShootPageInert(on) {
     const modalEl = shootModalOverlay.querySelector('.modal');
-    [...modalEl.children, ...shootForm.children, shootPageTabs, shootModalOverlay.querySelector('.nb-shoot-bar')].forEach(el => {
+    [...modalEl.children, ...shootForm.children, shootModalOverlay.querySelector('.nb-page-foot'), shootModalOverlay.querySelector('.nb-shoot-bar')].forEach(el => {
       if (el !== shootForm && el.id !== 'shootWizard') el.inert = on;
     });
   }
@@ -13126,6 +13246,7 @@
     document.getElementById('saveShootBtn').hidden = isArchived;
     document.getElementById('saveShootBtn').textContent = pickRandomSaveMessage();
     document.getElementById('unarchiveShootBtn').hidden = !isArchived;
+    shootModalOverlay.dataset.section = isArchived ? 'archive' : 'shoots';
     document.getElementById('completeShootBtn').hidden = !s || isArchived || s.status !== 'delivered';
 
     document.getElementById('shootTitle').value = s ? (s.title || '') : '';
@@ -20300,9 +20421,9 @@
   setupTabbarDriftFix();
 
   // ---------- The notebook ----------
-  // The shut book, and the first spread it opens to: Overview on the left,
-  // New shoot on the right. Stays how it was left: shut until opened, then
-  // straight in on later launches until it's shut again.
+  // The shut book. Tapped, it opens and zooms into Overview. Stays how it was
+  // left: shut until opened, then straight in on later launches until it's
+  // shut again.
   (function setupNotebook() {
     const BOOK_KEY = 'df-book';
     const RATIO = 1000 / 1360; // the cover art's width over its height
@@ -20310,6 +20431,7 @@
     const TURNED = (20 * Math.PI) / 180; // the shut book's turn; matches style.css
     const PERSPECTIVE = 1100;  // matches .nb in style.css
     const TAB_OUT = 0.06;      // how far the side tabs stick out, of the book's width
+    const OPEN_MS = 900;       // the cover swinging open, and a moment on the spread
     const ZOOM_MS = 780;
     const overlay = document.getElementById('bookOverlay');
     const book = document.getElementById('book');
@@ -20317,9 +20439,9 @@
 
     document.getElementById('bookStack').innerHTML =
       Array.from({ length: STACK }, (_, i) => `<i style="--i:${i + 1}"></i>`).join('') + `<b style="--i:${STACK + 1}"></b>`;
-    // One tab per section of a shoot, each on a sheet of its own. No words.
+    // One tab per screen of the app, each on a sheet of its own. No words.
     document.getElementById('bookSideTabs').innerHTML =
-      Array.from({ length: 7 }, (_, i) => `<i class="${i % 2 ? 'n' : 'y'}" style="--t:${i};--i:${3 + i * 2}"></i>`).join('');
+      Array.from({ length: 5 }, (_, i) => `<i class="${i % 2 ? 'n' : 'y'}" style="--t:${i};--i:${3 + i * 3}"></i>`).join('');
 
     function remember(state) {
       try { localStorage.setItem(BOOK_KEY, state); } catch (err) { /* storage unavailable: it just opens shut next time */ }
@@ -20373,16 +20495,14 @@
       }, ZOOM_MS);
     }
 
-    document.getElementById('bookOpenHit').addEventListener('click', () => setMode('opened'));
-    document.getElementById('bookShutHit').addEventListener('click', () => setMode('closed'));
-    document.getElementById('bookOverviewHit').addEventListener('click', () => {
-      document.querySelector('.tabbar .tab[data-view="overview"]').click();
-      leaveTo('opened zoom-l');
+    document.getElementById('bookOpenHit').addEventListener('click', () => {
+      setMode('opened');
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        document.querySelector('.tabbar .tab[data-view="overview"]').click();
+        leaveTo('opened zoom-l');
+      }, OPEN_MS);
     });
-    document.getElementById('bookNewHit').addEventListener('click', () => {
-      leaveTo('opened zoom-r', () => document.getElementById('newShootBtn').click());
-    });
-    document.getElementById('bookSunBtn').addEventListener('click', () => document.getElementById('appMenuBtn').click());
     document.getElementById('shutBookBtn').addEventListener('click', () => {
       clearTimeout(timer);
       show('opened zoom-l');
@@ -20682,7 +20802,7 @@
       if (e.touches.length !== 1 || anyModalOpen()) { tracking = false; return; }
       // The stats carousel and the image viewer already own horizontal
       // swipes for their own paging — don't hijack those.
-      if (e.target.closest('#statsCarousel') || e.target.closest('.image-viewer-stage')) {
+      if (e.target.closest('#statsCarousel') || e.target.closest('.image-viewer-stage') || e.target.closest('.tabbar')) {
         tracking = false;
         return;
       }
@@ -20707,8 +20827,121 @@
       if (currentIndex === -1) return;
       const nextIndex = currentIndex + (dx < 0 ? 1 : -1);
       if (nextIndex < 0 || nextIndex >= TAB_ORDER.length) return;
-      const nextTabBtn = document.querySelector(`.tab[data-view="${TAB_ORDER[nextIndex]}"]`);
-      if (nextTabBtn) nextTabBtn.click();
+      turnToView(TAB_ORDER[nextIndex]);
     }, { passive: true });
+  })();
+
+  // ---------- the navigator ----------
+  // One button that slides through the screens, as in Callback: the screen
+  // you're on sits in the middle as its icon, with a little triangle on each
+  // side that has another screen. Swipe along it, or tap a triangle, and the
+  // notebook turns to that screen's tab. The tab buttons stay (hidden): they
+  // still do the switching.
+  (function setupNavigator() {
+    const STEP = 46; // px from one icon to the next on the strip
+    const triangle = '<svg viewBox="0 0 10 12" aria-hidden="true"><path d="M2.3 1.5Q5.6 3.8 8.7 6.1 5.5 8.3 2.2 10.5 2.5 6 2.3 1.5Z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+    const bar = document.querySelector('.tabbar');
+    const tabs = [...bar.querySelectorAll('.tab')].map(el => ({
+      el,
+      view: el.dataset.view,
+      name: el.textContent.trim(),
+      icon: el.querySelector('.tab-icon').innerHTML,
+    }));
+    const slider = document.createElement('div');
+    slider.className = 'slider';
+    slider.innerHTML = `<button type="button" class="slide-arrow is-prev">${triangle}</button>`
+      + `<button type="button" class="slide-now"><span class="slide-strip" aria-hidden="true">${tabs.map(t => `<span class="slide-icon">${t.icon}</span>`).join('')}</span></button>`
+      + `<button type="button" class="slide-arrow is-next">${triangle}</button>`;
+    bar.appendChild(slider);
+    const strip = slider.querySelector('.slide-strip');
+    const now = slider.querySelector('.slide-now');
+    const prev = slider.querySelector('.is-prev');
+    const next = slider.querySelector('.is-next');
+    let idx = 0;
+    let drag = null;
+    let draggedAt = 0;
+
+    function stripTo(i, x = 0, moving = false) {
+      strip.classList.toggle('is-moving', moving);
+      strip.style.transform = `translateX(${(-i * STEP + x).toFixed(1)}px)`;
+    }
+    function sync(moving) {
+      const found = tabs.findIndex(t => t.el.classList.contains('active'));
+      if (found >= 0) idx = found;
+      const before = tabs[idx - 1];
+      const after = tabs[idx + 1];
+      now.setAttribute('aria-label', tabs[idx].name);
+      prev.classList.toggle('is-off', !before);
+      next.classList.toggle('is-off', !after);
+      prev.disabled = !before;
+      next.disabled = !after;
+      prev.setAttribute('aria-label', before ? `Previous: ${before.name}` : 'Nothing before this');
+      next.setAttribute('aria-label', after ? `Next: ${after.name}` : 'Nothing after this');
+      if (!drag) stripTo(idx, 0, moving);
+    }
+    function go(by) {
+      const t = tabs[idx + by];
+      if (t) turnToView(t.view);
+    }
+    prev.addEventListener('click', () => go(-1));
+    next.addEventListener('click', () => go(1));
+    // A tap on the icon goes to the top of its screen, the way its tab did.
+    now.addEventListener('click', () => tabs[idx].el.click());
+
+    // A finger the width of a third of the screen moves one icon over.
+    const span = () => (window.innerWidth || 1) / 3;
+    function follow(dx) {
+      const has = tabs[idx + (dx < 0 ? 1 : -1)];
+      const x = Math.max(-STEP, Math.min(STEP, (dx / span()) * STEP));
+      stripTo(idx, has ? x : x * 0.25);
+    }
+    bar.addEventListener('pointerdown', (e) => {
+      if (e.button || !e.isPrimary) return;
+      drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, dx: 0, v: 0, t: performance.now(), lx: e.clientX };
+    });
+    bar.addEventListener('pointermove', (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dx = e.clientX - drag.x0;
+      const dy = e.clientY - drag.y0;
+      if (!drag.moved) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        if (Math.abs(dy) > Math.abs(dx)) { drag = null; return; }
+        drag.moved = true;
+        try { bar.setPointerCapture(e.pointerId); } catch (err) { /* capture is a nice-to-have */ }
+      }
+      const t = performance.now();
+      drag.v = (e.clientX - drag.lx) / Math.max(1, t - drag.t);
+      drag.lx = e.clientX;
+      drag.t = t;
+      drag.dx = dx;
+      follow(dx);
+    });
+    const end = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const { moved, dx, v } = drag;
+      drag = null;
+      if (!moved) return;
+      draggedAt = performance.now();
+      const by = dx < 0 ? 1 : -1;
+      const flick = Math.abs(v) > 0.45 && Math.sign(v) === Math.sign(dx) && Math.abs(dx) > 24;
+      if (e.type === 'pointerup' && tabs[idx + by] && (Math.abs(dx) > Math.min(span() * 0.6, 120) || flick)) go(by);
+      else stripTo(idx, 0, true);
+    };
+    bar.addEventListener('pointerup', end);
+    bar.addEventListener('pointercancel', end);
+    // A swipe that ends on a button isn't a tap on it. On the slider only:
+    // the hidden tab buttons are clicked by the app itself straight after.
+    slider.addEventListener('click', (e) => {
+      if (performance.now() - draggedAt < 350) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+
+    new MutationObserver(() => sync(true)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-view'] });
+    sync(false);
+
+    // The tabs poking out of the page's edge, one for each screen.
+    document.querySelector('.nb-screen-tabs:not(.nb-screen-tabs-shoot)').addEventListener('click', (e) => {
+      const tab = e.target.closest('[data-view]');
+      if (tab) turnToView(tab.dataset.view);
+    });
   })();
 })();

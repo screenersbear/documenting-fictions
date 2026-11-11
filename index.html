@@ -162,6 +162,7 @@
   <!-- The page's card edge. Fixed over the scrolling view: the hole in the
        middle is the page, so the window itself still does the scrolling. -->
   <div class="nb-board" aria-hidden="true"><div class="nb-board-page"></div></div>
+  <nav class="nb-screen-tabs" aria-label="Sections of the notebook"><button type="button" class="y" data-view="overview" aria-label="Overview"></button><button type="button" class="n" data-view="shoots" aria-label="Shoots"></button><button type="button" class="y" data-view="journal" aria-label="Journal"></button><button type="button" class="n" data-view="archive" aria-label="Archive"></button><button type="button" class="y" data-view="stats" aria-label="Stats"></button></nav>
 </div>
 
 <!-- ============ THE NOTEBOOK ============ -->
@@ -175,21 +176,13 @@
         <div class="nb-stack" id="bookStack"></div>
         <div class="nb-side-tabs" id="bookSideTabs"></div>
         <div class="nb-block"></div>
-        <div class="nb-words nb-new">
-          <span class="nb-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-          <span class="nb-word">New shoot</span>
-        </div>
         <div class="nb-leaf">
           <div class="nb-front"></div>
           <div class="nb-inside"><div class="nb-words"><span class="nb-word">Overview</span></div></div>
         </div>
       </div>
     </div>
-    <button type="button" class="nb-hit nb-hit-all" id="bookShutHit" aria-label="Shut the notebook"></button>
     <button type="button" class="nb-hit nb-hit-book" id="bookOpenHit" aria-label="Open the notebook"></button>
-    <button type="button" class="nb-hit nb-hit-l" id="bookOverviewHit" aria-label="Overview"></button>
-    <button type="button" class="nb-hit nb-hit-r" id="bookNewHit" aria-label="New shoot"></button>
-    <button type="button" class="nb-sun" id="bookSunBtn" aria-label="App options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg></button>
   </div>
 </div>
 
@@ -490,16 +483,12 @@
     </form>
   </div>
   <div class="nb-turn-layer" aria-hidden="true"></div>
-  <p class="nb-page-foot" id="nbPageFoot" aria-hidden="true"></p>
-  <nav class="nb-section-tabs" id="nbSectionTabs" aria-label="Sections of this shoot">
-    <button type="button" class="nb-section-tab y" data-page="basicInfoHeading">Basic Info</button>
-    <button type="button" class="nb-section-tab n" data-page="logisticsHeading">Logistics</button>
-    <button type="button" class="nb-section-tab y" data-page="teamHeading">Team</button>
-    <button type="button" class="nb-section-tab n" data-page="directionHeading">Direction</button>
-    <button type="button" class="nb-section-tab y" data-page="visualsHeading">Visuals</button>
-    <button type="button" class="nb-section-tab n" data-page="shotListHeading">Shot list</button>
-    <button type="button" class="nb-section-tab y" data-page="postShootHeading">Reflection</button>
-  </nav>
+  <div class="nb-page-foot">
+    <button type="button" class="nb-page-step" id="nbPagePrev" aria-label="Previous page"></button>
+    <span id="nbPageFoot"></span>
+    <button type="button" class="nb-page-step" id="nbPageNext" aria-label="Next page"></button>
+  </div>
+  <div class="nb-screen-tabs nb-screen-tabs-shoot" aria-hidden="true"><i class="y" data-view="overview"></i><i class="n" data-view="shoots"></i><i class="y" data-view="journal"></i><i class="n" data-view="archive"></i><i class="y" data-view="stats"></i></div>
   <nav class="nb-shoot-bar" aria-label="This shoot">
     <button type="button" class="nb-tool" id="nbBarBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span>Back</span></button>
     <button type="button" class="nb-tool" id="nbBarShootMode" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Shoot mode</span></button>

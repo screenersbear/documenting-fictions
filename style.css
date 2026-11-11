@@ -126,7 +126,7 @@ button:active,
 }
 
 h1, h2, h3 {
-  font-family: var(--font-title);
+  font-family: var(--font-head);
   font-weight: 700;
 }
 
@@ -5473,7 +5473,7 @@ h2.status-group-heading.heading-navy {
 #shootModeReviewTitle,
 #mondayBriefTitle {
   margin: 0;
-  font-family: var(--font-title);
+  font-family: var(--font-head);
   font-size: 22px;
   font-weight: 700;
   color: var(--accent);
@@ -6237,7 +6237,6 @@ body, button, a { text-shadow: 0 0 0.6px; }
 .nb.closed .nb-book { transform: rotateY(-20deg) translate(calc(var(--W) / -2 + var(--shut-x, 0px)), 0) scale(1); }
 .nb.opened .nb-book { transform: rotateY(0deg) translate(0, 0) scale(var(--k)); }
 .nb.opened.zoom-l .nb-book { transform: rotateY(0deg) translate(var(--zoom-x), var(--zoom-y)) scale(var(--zoom-sx), var(--zoom-sy)); }
-.nb.opened.zoom-r .nb-book { transform: rotateY(0deg) translate(calc(var(--zoom-x) * -1), var(--zoom-y)) scale(var(--zoom-sx), var(--zoom-sy)); }
 .nb-block, .nb-leaf, .nb-front, .nb-inside { position: absolute; inset: 0; }
 .nb-block { background: url(art/df-mango-block.webp) center / 100% 100% no-repeat; border-radius: 0 calc(var(--W) * 0.044) calc(var(--W) * 0.044) 0; transition: box-shadow 0.3s; }
 .nb.opened .nb-block { box-shadow: var(--book-shadow); }
@@ -6269,36 +6268,16 @@ body, button, a { text-shadow: 0 0 0.6px; }
 .nb-side-tabs i.n { background: var(--text); }
 .nb.opened .nb-side-tabs { opacity: 0; visibility: hidden; }
 .nb-words { position: absolute; z-index: 1; inset: 8% 10%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--text); transition: opacity 0.3s; }
-.nb.zoom-l .nb-words, .nb.zoom-r .nb-words { opacity: 0; }
-.nb-new { transform: translateZ(0.5px); }
-.nb-word { font-family: var(--font-title); font-size: calc(var(--W) * 0.088); line-height: 1.15; }
+.nb.zoom-l .nb-words { opacity: 0; }
+.nb-word { font-family: var(--font-head); font-size: calc(var(--W) * 0.088); line-height: 1.15; }
 .nb-plus svg { width: calc(var(--W) * 0.09); height: calc(var(--W) * 0.09); display: block; }
 .nb-hit { position: absolute; display: none; z-index: 5; border: none; padding: 0; background: none; }
 .nb.closed .nb-hit-book { display: block; left: calc(50% - var(--W) / 2); top: calc(50% - var(--H) / 2); width: var(--W); height: var(--H); }
-.nb.opened:not(.zoom-l):not(.zoom-r) .nb-hit-all { display: block; inset: 0; width: 100%; height: 100%; }
-.nb.opened:not(.zoom-l):not(.zoom-r) .nb-hit-l { display: block; right: 50%; width: calc(var(--W) * var(--k)); top: calc(50% - var(--H) * var(--k) / 2); height: calc(var(--H) * var(--k)); }
-.nb.opened:not(.zoom-l):not(.zoom-r) .nb-hit-r { display: block; left: 50%; width: calc(var(--W) * var(--k)); top: calc(50% - var(--H) * var(--k) / 2); height: calc(var(--H) * var(--k)); }
-.nb-sun {
-  position: absolute;
-  z-index: 6;
-  left: 50%;
-  bottom: max(14px, calc(env(safe-area-inset-bottom) - 6px));
-  width: 48px;
-  height: 48px;
-  margin-left: -24px;
-  padding: 10px;
-  border: none;
-  background: none;
-  color: var(--text);
-  transition: opacity 0.25s;
-}
-.nb-sun svg { width: 28px; height: 28px; display: block; }
-.nb:not(.closed) .nb-sun { opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) {
   .nb.closed .nb-float, .nb-ground::before { animation: none; }
 }
 
-/* ---- A shoot: one section to a page, tabs down the edge ---- */
+/* ---- A shoot: one section to a page, swiped through ---- */
 #shootModalOverlay { background: #fff; }
 #shootModalOverlay:not([hidden]) { display: block; }
 .nb-chapter-board {
@@ -6340,7 +6319,7 @@ body, button, a { text-shadow: 0 0 0.6px; }
 .nb-turn.back { animation-name: nb-leaf-back; }
 .nb-turn::after { content: ''; position: absolute; inset: 0; background: #000; border-radius: inherit; animation: nb-leaf-shade 0.56s ease-in 0.04s both; }
 @keyframes nb-leaf { 0% { transform: rotateY(0deg); visibility: visible; } 99% { transform: rotateY(-100deg); visibility: visible; } 100% { transform: rotateY(-100deg); visibility: hidden; } }
-@keyframes nb-leaf-back { 0% { transform: rotateY(-100deg); visibility: visible; } 99% { transform: rotateY(0deg); visibility: visible; } 100% { transform: rotateY(0deg); visibility: hidden; } }
+@keyframes nb-leaf-back { 0% { transform: rotateY(-100deg); } 100% { transform: rotateY(0deg); } }
 @keyframes nb-leaf-shade { 0% { opacity: 0; } 100% { opacity: 0.3; } }
 .nb-turn { z-index: 6; }
 #shootModalOverlay .nb-chapter-board { z-index: 0; }
@@ -6356,7 +6335,7 @@ body, button, a { text-shadow: 0 0 0.6px; }
   display: block;
   background: none;
   color: var(--text);
-  font-family: var(--font-title);
+  font-family: var(--font-head);
   font-weight: 400;
   font-size: 26px;
   line-height: 1.2;
@@ -6373,29 +6352,6 @@ body, button, a { text-shadow: 0 0 0.6px; }
 #shootForm .shoot-section-heading .collapse-arrow { display: none; }
 #postShootContent { scroll-margin-top: 44px; }
 .nb-page-foot { position: absolute; z-index: 2; left: 0; right: 46px; top: calc(100svh - var(--nb-bar) - 54px); height: 32px; margin: 0; line-height: 32px; text-align: center; font-size: 12.5px; color: var(--dim); background: linear-gradient(to top, #fff 60%, rgba(255,255,255,0)); pointer-events: none; }
-.nb-section-tabs { position: absolute; z-index: 1; right: 2px; top: calc(var(--nb-top) + 150px); width: 44px; display: flex; flex-direction: column; gap: 5px; }
-.nb-section-tab {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 60px;
-  padding: 0;
-  border: none;
-  writing-mode: vertical-rl;
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-  white-space: nowrap;
-  border-radius: 0 6px 6px 0;
-  color: var(--text);
-}
-.nb-section-tab[hidden] { display: none; }
-.nb-section-tab.y { background: var(--accent); }
-.nb-section-tab.n { background: var(--text); color: #fff; }
-.nb-section-tab.on { background: #fff; color: var(--text); width: 48px; margin-left: -4px; font-weight: 700; box-shadow: 1px 1px 4px rgba(60, 40, 20, 0.3); }
 .nb-shoot-bar { position: absolute; z-index: 1; left: 0; right: 0; top: calc(100svh - var(--nb-bar)); height: var(--nb-bar); padding: 0 0 env(safe-area-inset-bottom); display: flex; background: #fff; }
 .nb-tool { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; border: none; background: none; color: var(--text); font-family: var(--font-body); font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none; }
 .nb-tool[hidden] { display: none; }
@@ -6414,7 +6370,7 @@ body, button, a { text-shadow: 0 0 0.6px; }
 .hero-band .topbar { padding: 0 0 9px; }
 .brand-row { position: relative; justify-content: center; min-height: 32px; }
 .brand-logo-wrap { display: none; }
-.brand-title, .topbar h1 { font-family: var(--font-title); font-weight: 400; font-size: 26px; line-height: 1.2; text-align: center; text-transform: none; letter-spacing: 0; color: var(--text); }
+.brand-title, .topbar h1 { font-family: var(--font-head); font-weight: 400; font-size: 26px; line-height: 1.2; text-align: center; text-transform: none; letter-spacing: 0; color: var(--text); }
 .app-menu-btn { position: absolute; top: -6px; width: 44px; height: 44px; margin: 0; color: var(--text); }
 .app-menu-btn svg { width: 20px; height: 20px; }
 #shutBookBtn { left: -12px; }
@@ -6431,7 +6387,7 @@ body, button, a { text-shadow: 0 0 0.6px; }
 .section-block { margin-bottom: 0; }
 .section-block h2, .section-block h2.heading-yellow, .section-block h2.heading-navy {
   background: none; color: var(--text); border: none; border-bottom: 1px solid var(--line); border-radius: 0;
-  font-family: var(--font-title); font-weight: 400; font-size: 19px; text-transform: none; letter-spacing: 0;
+  font-family: var(--font-head); font-weight: 400; font-size: 19px; text-transform: none; letter-spacing: 0;
   padding: 16px 0 5px; margin: 0;
 }
 .section-block h2 span { font-family: var(--font-body); font-size: 13px; color: var(--dim); }
@@ -6482,7 +6438,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 #shootForm .subsection-heading { background: none; color: var(--text); border: none; border-radius: 0; font-family: var(--font-title); font-size: 19px; font-weight: 400; text-transform: none; letter-spacing: 0; padding: 18px 0 0; margin: 0; }
 
 /* Shoot mode's body type */
-.shoot-mode-section-heading, .shoot-mode-section-heading.heading-yellow, .shoot-mode-section-heading.heading-navy, .shoot-mode-body .shoot-mode-section-heading { background: none; color: var(--text); font-family: var(--font-title); font-size: 19px; font-weight: 400; text-transform: none; letter-spacing: 0; padding: 16px 20px 0; border: none; }
+.shoot-mode-section-heading, .shoot-mode-section-heading.heading-yellow, .shoot-mode-section-heading.heading-navy, .shoot-mode-body .shoot-mode-section-heading { background: none; color: var(--text); font-family: var(--font-head); font-size: 19px; font-weight: 400; text-transform: none; letter-spacing: 0; padding: 16px 20px 0; border: none; }
 
 /* ---- Small labels inside a page ---- */
 #shootForm .shoot-section-heading { align-self: stretch; width: 100%; }
@@ -6526,19 +6482,17 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 
 /* ---- Stats and Archive ---- */
 .stats-fun-fact { background: none; color: var(--text); font-family: var(--font-title); font-size: 16px; text-align: center; padding: 11px 6px 0; border: none; }
-.stats-page-title { font-family: var(--font-title); font-weight: 400; font-size: 19px; text-transform: none; letter-spacing: 0; }
+.stats-page-title { font-family: var(--font-head); font-weight: 400; font-size: 19px; text-transform: none; letter-spacing: 0; }
 .stats-legend-row { background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; font-family: var(--font-body); font-size: 14px; font-weight: 400; letter-spacing: 0; min-height: 40px; padding: 8px 0; text-transform: none; }
 .archive-slideshow { border: none; border-radius: 2px; }
 
 /* ---- Popups ---- */
 .modal-overlay h2 { text-transform: none; letter-spacing: 0; font-weight: 400; }
-#appMenuOverlay .app-menu-header { font-family: var(--font-title); font-weight: 400; color: var(--text); background: none; text-transform: none; letter-spacing: 0; }
+#appMenuOverlay .app-menu-header { font-family: var(--font-head); font-weight: 400; color: var(--text); background: none; text-transform: none; letter-spacing: 0; }
 .options-item { font-family: var(--font-body); letter-spacing: 0; text-transform: none; }
 
 /* Archive mode shares Shoot mode's header, so its title goes navy on the mango too. */
 #archiveModeTitle { color: var(--text); font-family: var(--font-hand); font-weight: 400; font-size: 28px; line-height: 1.1; }
-.nb-section-tab { height: min(60px, calc((100svh - var(--nb-top) - var(--nb-bar) - 120px) / 7 - 5px)); }
-.nb-section-tabs { top: calc(var(--nb-top) + min(150px, 12svh)); }
 
 /* Shoot mode and Archive mode: one flat sheet, no book and no floating card. */
 .shoot-mode-overlay { padding: 0; background: #fff; align-items: stretch; }
@@ -6553,7 +6507,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 /* The turning sheet swings over the page, under the tabs, and over nothing a
    wizard shows (the wizard sits at 10). */
 .nb-turn-layer { position: absolute; z-index: 3; top: var(--nb-top); left: 0; right: 34px; height: calc(100svh - var(--nb-top) - var(--nb-bar) - 12px); perspective: 1400px; pointer-events: none; }
-.nb-section-tabs, .nb-shoot-bar { z-index: 4; }
+.nb-shoot-bar { z-index: 4; }
 
 /* Popups that sit above the page frame and the row of app screens, and still
    under anything that opens from them. */
@@ -6582,3 +6536,70 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 /* iOS can leave the whole view slid down; these move with it (setupTabbarDriftFix). */
 #shootModalOverlay, #bookOverlay { top: var(--layer-shift, 0px); bottom: calc(0px - var(--layer-shift, 0px)); }
 .nb-board { top: calc(var(--nb-top) + var(--layer-shift, 0px)); }
+
+/* Two fonts: the serif for the app's formal headlines, the handwriting for
+   everything else, told apart by weight and colour. */
+:root {
+  --font-head: "Iowan Old Style", Georgia, serif;
+  --font-title: var(--font-hand);
+  --font-body: var(--font-hand);
+}
+
+/* Every page is the same size, and its frame comes down close to the navigator. */
+:root {
+  --nb-bar: calc(48px + env(safe-area-inset-bottom));
+  --nb-edge: max(14px, calc(50% - 270px));
+}
+.nb-board { right: var(--nb-edge); perspective: 1400px; }
+:root[data-view="overview"] .nb-board { right: max(-20px, calc(50% - 280px)); }
+#app { padding-right: 38px; }
+.nb-chapter-board, .nb-turn-layer { left: max(-20px, calc(50% - 280px)); right: var(--nb-edge); height: calc(100svh - var(--nb-top) - var(--nb-bar)); }
+#shootModalOverlay > .modal { left: max(0px, calc(50% - 280px)); right: calc(var(--nb-edge) + 12px); height: calc(100svh - var(--nb-top) - var(--nb-bar) - 20px); max-width: none; margin: 0; padding: 12px 12px 56px 20px; }
+.nb-page-foot { left: max(0px, calc(50% - 280px)); right: calc(var(--nb-edge) + 12px); top: calc(100svh - var(--nb-bar) - 42px); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.nb-page-step { flex: none; width: 64px; height: 32px; min-height: 0; padding: 0; border: none; border-radius: 0; background: none; pointer-events: auto; }
+.nb-page-step:disabled { visibility: hidden; }
+
+/* The turning sheet carries a copy of the page. */
+.nb-turn { overflow: hidden; }
+.nb-turn.back::after { animation-direction: reverse; }
+.nb-turn-under { position: absolute; z-index: 5; top: 10px; right: 12px; bottom: 10px; left: 0; overflow: hidden; border-radius: 0 12px 12px 0; background: #fff; pointer-events: none; }
+.nb-turn-copy { position: absolute; pointer-events: none; }
+.nb-turn-copy, .nb-turn-copy * { animation: none !important; transition: none !important; }
+:root[data-view="overview"] .nb-board > .nb-turn, :root[data-view="overview"] .nb-board > .nb-turn-under { left: 12px; right: 0; border-radius: 12px 0 0 12px; }
+:root[data-view="overview"] .nb-board > .nb-turn { transform-origin: 100% 50%; animation-name: nb-leaf-verso; }
+@keyframes nb-leaf-verso { 0% { transform: rotateY(0deg); visibility: visible; } 99% { transform: rotateY(100deg); visibility: visible; } 100% { transform: rotateY(100deg); visibility: hidden; } }
+
+/* The tabs poking out of a right-hand page, one for each screen; the screen
+   you're on has none showing. Each is wider than it looks, for the thumb. */
+.nb-screen-tabs { position: fixed; z-index: 9; top: calc(var(--nb-top) + var(--layer-shift, 0px)); bottom: calc(var(--nb-bar) - var(--bar-drift, 0px)); right: calc(var(--nb-edge) - 10px); width: 24px; display: flex; flex-direction: column; justify-content: center; gap: 6px; pointer-events: none; }
+.nb-screen-tabs > * { position: relative; display: block; flex: 0 0 min(64px, 9svh); width: 100%; min-height: 0; padding: 0; border: none; border-radius: 0; background: none; pointer-events: auto; }
+.nb-screen-tabs > *::before { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 10px; border-radius: 0 5px 5px 0; }
+.nb-screen-tabs > .y::before { background: var(--accent); }
+.nb-screen-tabs > .n::before { background: var(--text); }
+:root[data-view="overview"] .nb-screen-tabs:not(.nb-screen-tabs-shoot) { display: none; }
+:root[data-view="shoots"] .nb-screen-tabs:not(.nb-screen-tabs-shoot) > [data-view="shoots"],
+:root[data-view="journal"] .nb-screen-tabs:not(.nb-screen-tabs-shoot) > [data-view="journal"],
+:root[data-view="archive"] .nb-screen-tabs:not(.nb-screen-tabs-shoot) > [data-view="archive"],
+:root[data-view="stats"] .nb-screen-tabs:not(.nb-screen-tabs-shoot) > [data-view="stats"],
+#shootModalOverlay[data-section="shoots"] .nb-screen-tabs-shoot > [data-view="shoots"],
+#shootModalOverlay[data-section="archive"] .nb-screen-tabs-shoot > [data-view="archive"] { visibility: hidden; }
+.nb-screen-tabs-shoot { position: absolute; z-index: 4; top: var(--nb-top); bottom: auto; height: calc(100svh - var(--nb-top) - var(--nb-bar)); }
+.nb-screen-tabs-shoot > * { pointer-events: none; }
+
+/* The navigator, as in Callback: one icon, a triangle each side there's another. */
+.tabbar { justify-content: center; padding: 2px 0 calc(2px + env(safe-area-inset-bottom)); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.tabbar .tab { display: none; }
+.slider { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 44px; }
+.slide-arrow { appearance: none; -webkit-appearance: none; display: grid; place-items: center; width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; color: var(--text); }
+.slide-arrow:active { opacity: 0.5; }
+.slide-arrow.is-off { visibility: hidden; }
+.slide-arrow svg { display: block; width: 9px; height: 11px; }
+.slide-arrow.is-prev svg { transform: scaleX(-1); }
+.slide-now { appearance: none; -webkit-appearance: none; display: block; flex: none; width: 46px; height: 40px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; overflow: hidden; color: var(--text); -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18%, #000 82%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 18%, #000 82%, transparent 100%); }
+.slide-strip { display: flex; }
+.slide-strip.is-moving { transition: transform 0.2s cubic-bezier(0.3, 0.6, 0.3, 1); }
+.slide-icon { flex: 0 0 46px; height: 40px; display: grid; place-items: center; }
+.slide-icon svg { display: block; width: 27px; height: 27px; stroke-width: 1.8; }
+
+.scroll-top-btn { right: calc(var(--nb-edge) + 20px); }
+#projectDetailTitle { font-family: var(--font-hand); font-weight: 400; }
