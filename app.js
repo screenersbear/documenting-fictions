@@ -730,7 +730,6 @@
     ];
   }
 
-  const THEME_KEYS = ['default', 'pink', 'purple', 'red', 'blue', 'green'];
   const APP_COLORS = [['mango', 'Mango'], ['orange', 'Orange'], ['berry', 'Berry'], ['fern', 'Fern'], ['ocean', 'Ocean'], ['ink', 'Black']];
   const APP_COLOR_KEY = 'df-app-color'; // also read in index.html, before the first paint
 
@@ -750,7 +749,7 @@
   }
   const stickerKey = id => `${id}__sticker`;
 
-  // Up here with THEME_KEYS for the same reason: normalizeProjects (run by
+  // Up here for the same reason as APP_COLORS: normalizeProjects (run by
   // loadState) uses it, and a const declared any further down would throw
   // there and start the app empty.
   const UNTITLED_PROJECT_NAME = 'Untitled project';
@@ -762,7 +761,6 @@
       frameworks: seedFrameworks(),
       journalEntries: [],
       titleDisplayMode: 'talent',
-      colorTheme: 'default',
       presentation: normalizePresentation(),
       defaultCountry: '',
       dismissedLocationKeys: [],
@@ -1054,7 +1052,6 @@
         frameworks,
         journalEntries,
         titleDisplayMode: parsed.titleDisplayMode === 'title' ? 'title' : 'talent',
-        colorTheme: THEME_KEYS.includes(parsed.colorTheme) ? parsed.colorTheme : 'default',
         presentation: normalizePresentation(parsed.presentation),
         defaultCountry: typeof parsed.defaultCountry === 'string' ? parsed.defaultCountry : '',
         dismissedLocationKeys: Array.isArray(parsed.dismissedLocationKeys) ? parsed.dismissedLocationKeys : [],
@@ -1133,7 +1130,6 @@
   let refreshStickers = () => {}; // set up with the sun menu
   let relayStickers = () => {}; // the same: the folds are worked out in pixels
   let state = loadState();
-  applyColorTheme(state.colorTheme);
   applyAppColor(state.presentation.color);
 
   // ---------- helpers ----------
@@ -2926,9 +2922,11 @@
     }
   }
 
-  function packFlow(atoms, cost, room) {
+  function packFlow(atoms, cost, room, tail) {
     const sizeOf = a => (a.row === undefined ? cost.get(a.el)
       : a.row < a.rows - 1 ? LINE : cost.get(a.el) - (a.rows - 1) * LINE);
+    // An atom marked hang may leave the gap after it off the foot of a page.
+    const hangOf = a => (a.hang && tail && (a.row === undefined || a.row === a.rows - 1) ? tail.get(a.el) || 0 : 0);
     const pages = [];
     let page = null;
     let used = 0;
@@ -2936,7 +2934,7 @@
     const headRoom = a => a.heads.reduce((sum, h) => sum + (page.drawn.has(h) ? 0 : cost.get(h)), 0);
     atoms.forEach((a) => {
       if (!page) open();
-      if (page.atoms.length && used + headRoom(a) + sizeOf(a) > room) open();
+      if (page.atoms.length && used + headRoom(a) + sizeOf(a) - hangOf(a) > room) open();
       used += headRoom(a) + sizeOf(a);
       a.heads.forEach(h => page.drawn.add(h));
       page.drawn.add(a.el);
@@ -2962,6 +2960,8 @@
       cost.set(el, next && next.top > rects[i].top ? next.top - rects[i].top : rects[i].height);
     });
     // The last one has nothing after it to measure to.
+    const tail = new Map();
+    order.forEach((el, i) => tail.set(el, Math.max(0, cost.get(el) - rects[i].height)));
     const lastAtom = atoms[atoms.length - 1];
     if (lastAtom && lastAtom.also && lastAtom.also.length) cost.set(lastAtom.el, atomBottom(lastAtom) - lastAtom.el.getBoundingClientRect().top);
     const live = atoms.filter(a => cost.get(a.el) > 0);
@@ -2976,7 +2976,7 @@
     const leastRoom = room / 2;
     // Then each page is drawn to check it really fits.
     for (let tries = 0; tries < 3; tries++) {
-      flow.pages = packFlow(live, cost, room);
+      flow.pages = packFlow(live, cost, room, tail);
       let over = 0;
       flow.pages.forEach((page, at) => {
         if (page.atoms.length < 2) return; // one thing too tall for a page can't be helped
@@ -3012,15 +3012,22 @@
       grid.style.rowGap = '0';
       grid.style.alignItems = 'start';
     });
+    // Like a real notebook, nothing is written twice: a heading goes with the
+    // first line under it (so it's never left alone at the foot of a page), and
+    // a card that runs over just carries on at the top of the next page.
+    const claimed = new Set();
     root.querySelectorAll('#journalList .log-card').forEach((card) => {
-      const above = headsAbove(card, root);
+      const above = headsAbove(card, root).filter(h => !claimed.has(h));
+      above.forEach(h => claimed.add(h));
+      let pending = null;
+      const lead = () => { const h = pending || []; pending = null; return h; };
       if (card.classList.contains('journal-entry-card')) {
         const heading = card.querySelector('.journal-entry-heading');
-        const heads = [...above, heading];
+        pending = [...above, heading];
         const before = atoms.length;
         const body = card.querySelector('.journal-entry-body');
         const rows = Math.round(body.offsetHeight / LINE);
-        for (let row = 0; row < rows; row++) atoms.push({ el: body, heads, row, rows });
+        for (let row = 0; row < rows; row++) atoms.push({ el: body, heads: lead(), row, rows });
         const grid = card.querySelector('.journal-entry-images');
         if (grid && !grid.hidden) {
           const lines = new Map();
@@ -3029,21 +3036,22 @@
             if (!lines.has(top)) lines.set(top, []);
             lines.get(top).push(thumb);
           });
-          lines.forEach(([el, ...also]) => atoms.push({ el, also, heads }));
+          lines.forEach(([el, ...also]) => atoms.push({ el, also, heads: lead() }));
         }
         const tags = card.querySelector('.journal-entry-tags');
-        if (tags && !tags.hidden) atoms.push({ el: tags, heads });
+        if (tags && !tags.hidden) atoms.push({ el: tags, heads: lead() });
         if (atoms.length === before) atoms.push({ el: heading, heads: above });
+        atoms[atoms.length - 1].hang = true;
         return;
       }
       const week = card.querySelector(':scope > .log-week-heading');
-      let label = null;
+      pending = [...above, week];
       [...card.querySelector('.journal-paper').children].forEach((child) => {
-        if (child.matches('.log-section-label')) { label = child; return; }
-        const heads = [...above, week, ...(label ? [label] : [])];
-        if (child.matches('ul')) [...child.children].forEach(el => atoms.push({ el, heads }));
-        else atoms.push({ el: child, heads });
+        if (child.matches('.log-section-label')) { pending = [...(pending || []), child]; return; }
+        if (child.matches('ul')) [...child.children].forEach(el => atoms.push({ el, heads: lead() }));
+        else atoms.push({ el: child, heads: lead() });
       });
+      if (atoms.length) atoms[atoms.length - 1].hang = true;
     });
     const empty = document.getElementById('journalEmpty');
     if (!empty.hidden) atoms.push({ el: empty, heads: [] });
@@ -5102,8 +5110,9 @@
     document.getElementById('journalFilters').innerHTML = JOURNAL_FILTERS
       .map(f => `<button type="button" class="chip ${f.key === journalFilter ? 'active' : ''}" data-filter="${f.key}">${f.label}</button>`)
       .join('');
-    document.getElementById('journalFilterToggle').textContent =
-      `Filter: ${JOURNAL_FILTERS.find(f => f.key === journalFilter).label}`;
+    // "Filter: " is dropped where the band is too narrow for all three (style.css).
+    document.getElementById('journalFilterToggle').innerHTML =
+      `<span class="jt-word">Filter: </span>${escapeHtml(JOURNAL_FILTERS.find(f => f.key === journalFilter).label)}`;
   }
 
   document.getElementById('journalFilterToggle').addEventListener('click', () => {
@@ -7883,6 +7892,8 @@
     } else {
       config = fieldIdOrConfig;
     }
+    // A shoot page's own field: written out at the page's (bigger) size.
+    document.getElementById('expandFieldOverlay').classList.toggle('from-page', typeof fieldIdOrConfig === 'string');
     expandFieldOnSave = config.onSave;
     document.getElementById('expandFieldTitle').textContent = config.title;
     const textarea = document.getElementById('expandFieldTextarea');
@@ -17460,7 +17471,6 @@
   }
 
   document.getElementById('appMenuBtn').addEventListener('click', () => {
-    updateThemeChoiceHighlight();
     updateDisplayChoiceHighlight();
     updateNewShootGuideChoice();
     appMenuOverlay.hidden = false;
@@ -17521,40 +17531,11 @@
     updateNewShootGuideChoice();
   });
 
-  // ---------- Color theme (restyles background/border/fill chrome only —
-  // actual text color never changes, see --ink vs --text in style.css) ----------
+  // ---------- App color (the sun menu's: sets :root[data-book] and df-app-color) ----------
   function applyAppColor(color) {
     document.documentElement.dataset.book = color;
     try { localStorage.setItem(APP_COLOR_KEY, color); } catch (err) { /* it just paints mango first next launch */ }
   }
-
-  function applyColorTheme(theme) {
-    if (theme && theme !== 'default') {
-      document.documentElement.setAttribute('data-theme', theme);
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-    }
-  }
-
-  function updateThemeChoiceHighlight() {
-    THEME_KEYS.forEach(key => {
-      const btn = document.getElementById(`theme${key[0].toUpperCase()}${key.slice(1)}Btn`);
-      if (btn) {
-        btn.classList.toggle('active', state.colorTheme === key);
-        btn.setAttribute('aria-pressed', String(state.colorTheme === key));
-      }
-    });
-  }
-
-  // A theme is saved and shows the moment it's tapped; the sheet stays up.
-  document.querySelectorAll('#appMenuOverlay .opt-theme[data-theme]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      state.colorTheme = btn.dataset.theme;
-      saveState();
-      applyColorTheme(state.colorTheme);
-      updateThemeChoiceHighlight();
-    });
-  });
 
   // "Delete all shoot data" keeps the Journal, so this can't simply clear
   // the store: it walks it and deletes every row except Journal photos
@@ -17871,7 +17852,6 @@
         frameworks: (Array.isArray(payload.state.frameworks) && payload.state.frameworks.length) ? payload.state.frameworks : seedFrameworks(),
         journalEntries: Array.isArray(payload.state.journalEntries) ? payload.state.journalEntries : [],
         titleDisplayMode: payload.state.titleDisplayMode === 'title' ? 'title' : 'talent',
-        colorTheme: THEME_KEYS.includes(payload.state.colorTheme) ? payload.state.colorTheme : 'default',
         // A backup from before the sun menu leaves the notebook as it is.
         presentation: normalizePresentation(payload.state.presentation || state.presentation),
         defaultCountry: typeof payload.state.defaultCountry === 'string' ? payload.state.defaultCountry : '',
@@ -17882,7 +17862,6 @@
         photographer: normalizePhotographer(payload.state.photographer),
       };
       saveState();
-      applyColorTheme(state.colorTheme);
       applyAppColor(state.presentation.color);
       refreshStickers();
       renderAll();
@@ -18805,22 +18784,27 @@
     });
   }
 
+  let shootModeBoardDraw = 0; // the latest drawing of the mood board wins
   function renderShootModeMoodboard(shoot) {
     const term = moodboardTerm(shoot.category);
     document.getElementById('shootModeMoodboardHeading').textContent = term;
     document.getElementById('shootModeMoodEmpty').textContent = `No ${term.toLowerCase()} images for this shoot.`;
     const grid = document.getElementById('shootModeMoodboard');
-    grid.innerHTML = '';
+    // Another shoot's photos go at once; this one's stay up until the new
+    // set is ready, then the two swap in one go (no in-between layout).
+    if (grid.dataset.shoot !== shoot.id) grid.innerHTML = '';
+    grid.dataset.shoot = shoot.id;
+    const draw = ++shootModeBoardDraw;
     shootModeBoardIn = false;
     return idbGetImages(shoot.id).then(images => {
-      document.getElementById('shootModeMoodEmpty').hidden = images.length !== 0;
       // A grid per row of three, so a page can break between rows.
+      const rows = [];
       let row = null;
       images.forEach((img, idx) => {
         if (idx % 3 === 0) {
           row = document.createElement('div');
           row.className = 'moodboard-grid shoot-mode-moodboard-row';
-          grid.appendChild(row);
+          rows.push(row);
         }
         const thumb = document.createElement('div');
         thumb.className = 'moodboard-thumb';
@@ -18830,10 +18814,24 @@
         });
         row.appendChild(thumb);
       });
+      // Their shapes are wanted to size them, if they get a page of their own.
+      const imgs = rows.flatMap(r => [...r.querySelectorAll('img')]);
+      return Promise.all(imgs.map(img => (img.decode ? img.decode().catch(() => {}) : null))).then(() => {
+        if (draw !== shootModeBoardDraw) return;
+        document.getElementById('shootModeMoodEmpty').hidden = images.length !== 0;
+        grid.replaceChildren(...rows);
+        shootModeBoardIn = true;
+        breakShootModePages();
+        shootModeWanted = null;
+      });
+    }).catch(() => {
+      if (draw !== shootModeBoardDraw) return;
+      grid.innerHTML = '';
+      document.getElementById('shootModeMoodEmpty').hidden = false;
       shootModeBoardIn = true;
       breakShootModePages();
       shootModeWanted = null;
-    }).catch(() => { document.getElementById('shootModeMoodEmpty').hidden = false; shootModeBoardIn = true; breakShootModePages(); shootModeWanted = null; });
+    });
   }
 
   function openShootMode(shootId) {
@@ -18881,17 +18879,17 @@
 
   // ---------- Shoot mode's pages ----------
   // Shoot mode is a page of the notebook as well, with the notebook around it
-  // dimmed. Two parts, each a flow of its own so the second always starts on
-  // a fresh page: the shot list, Wild card and the mood board, then last
-  // time's lesson, the quick review with a look at what's in it, and the
-  // shooting notes. When the first part runs past one page the mood board
-  // moves over to the second, after the quick review.
+  // dimmed. Up to three parts, each a flow of its own so each starts on a
+  // fresh page: the shot list, Wild card and the mood board; the mood board
+  // alone, when all of it doesn't fit on the page the list ends on (its
+  // photos then sized to fill that page); then last time's lesson, the quick
+  // review with a look at what's in it, and the shooting notes.
   const shootModePage = shootModeOverlay.querySelector('.shoot-mode-modal');
   const shootModeSheet = document.getElementById('shootModeSheet');
   const shootModeMain = document.getElementById('shootModeMain');
   const shootModeMore = document.getElementById('shootModeMore');
   const shootModeBoard = document.getElementById('shootModeMoodboardBlock');
-  const shootModeNotes = shootModeMore.querySelector('.shoot-mode-shooting-notes-label');
+  const shootModeBoardPart = document.getElementById('shootModeBoardPage');
   let shootModeFlows = null;
   let shootModeAt = 0;
   let shootModeBreakDue = false;
@@ -18925,10 +18923,78 @@
     return atoms;
   }
 
-  const shootModePages = () => (shootModeFlows ? [
-    ...shootModeFlows.main.pages.map((page, i) => ({ part: 'main', i })),
-    ...shootModeFlows.more.pages.map((page, i) => ({ part: 'more', i })),
-  ] : []);
+  const shootModePages = () => (shootModeFlows
+    ? ['main', 'board', 'more'].flatMap(part => (shootModeFlows[part] ? shootModeFlows[part].pages.map((page, i) => ({ part, i })) : []))
+    : []);
+
+  // Every bit of the mood board on the page the shot list ends on.
+  function shootModeBoardSharesPage(flow) {
+    const inBoard = a => shootModeBoard.contains(a.el);
+    let boardAt = -1;
+    let restAt = -1;
+    let split = false;
+    flow.pages.forEach((page, i) => {
+      if (page.atoms.some(inBoard)) { if (boardAt >= 0 && boardAt !== i) split = true; boardAt = i; }
+      if (page.atoms.some(a => !inBoard(a))) restAt = i;
+    });
+    return boardAt < 0 || (!split && boardAt === restAt);
+  }
+
+  // The mood board's photos in rows of `cols` (a page breaks between rows).
+  function groupShootModeBoard(cols) {
+    const grid = document.getElementById('shootModeMoodboard');
+    const thumbs = [...grid.querySelectorAll('.moodboard-thumb')];
+    const rows = [...grid.querySelectorAll('.shoot-mode-moodboard-row')];
+    const need = Math.ceil(thumbs.length / cols);
+    while (rows.length < need) {
+      const row = document.createElement('div');
+      row.className = 'moodboard-grid shoot-mode-moodboard-row';
+      grid.appendChild(row);
+      rows.push(row);
+    }
+    thumbs.forEach((thumb, i) => rows[Math.floor(i / cols)].appendChild(thumb));
+    rows.slice(need).forEach(row => row.remove());
+  }
+
+  const BOARD_GAP_X = 8;
+  const BOARD_GAP_Y = 6;
+  const BOARD_MIN = 64;
+  const BOARD_GIVE = 1.25;
+  function fitShootModeBoard(limitY) {
+    const grid = document.getElementById('shootModeMoodboard');
+    const n = grid.querySelectorAll('.moodboard-thumb').length;
+    grid.classList.remove('is-fitted');
+    ['--mb-cols', '--mb-w', '--mb-h'].forEach(v => grid.style.removeProperty(v));
+    if (limitY === null || !n) { groupShootModeBoard(3); return; }
+    const box = grid.getBoundingClientRect();
+    const cs = getComputedStyle(grid);
+    const W = grid.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const below = document.getElementById('shootModeAddMoodboardBtn').getBoundingClientRect().bottom - box.bottom;
+    const H = Math.floor(limitY - box.top - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - below) - 2;
+    const ratios = [...grid.querySelectorAll('img')].map(img => (img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 0)).filter(Boolean).sort((a, b) => a - b);
+    const ratio = Math.min(16 / 9, Math.max(9 / 16, ratios.length ? ratios[Math.floor(ratios.length / 2)] : 1));
+    let best = null;
+    for (let c = 1; c <= n; c++) {
+      const r = Math.ceil(n / c);
+      let w = (W - (c - 1) * BOARD_GAP_X) / c;
+      let h = (H - r * BOARD_GAP_Y) / r;
+      h = Math.min(h, (w / ratio) * BOARD_GIVE);
+      w = Math.min(w, h * ratio * BOARD_GIVE);
+      if (w > 0 && h > 0 && (!best || w * h > best.w * best.h)) best = { c, w, h };
+    }
+    if (!best || Math.min(best.w, best.h) < BOARD_MIN) {
+      // Too many to fit one page: cells both ways at least BOARD_MIN, over more pages.
+      const c = Math.max(1, Math.floor((W + BOARD_GAP_X) / (BOARD_MIN * Math.max(1, ratio) + BOARD_GAP_X)));
+      const w = (W - (c - 1) * BOARD_GAP_X) / c;
+      const fallback = { c, w, h: w / ratio };
+      if (!best || Math.min(fallback.w, fallback.h) > Math.min(best.w, best.h)) best = fallback;
+    }
+    groupShootModeBoard(best.c);
+    grid.style.setProperty('--mb-cols', String(best.c));
+    grid.style.setProperty('--mb-w', `${Math.floor(best.w)}px`);
+    grid.style.setProperty('--mb-h', `${Math.floor(best.h)}px`);
+    grid.classList.add('is-fitted');
+  }
 
   function drawShootModePage() {
     const pages = shootModePages();
@@ -18961,24 +19027,37 @@
     const pages = shootModePages();
     const was = pages[shootModeAt];
     // Whatever was at the top of the page showing stays on the page showing.
-    const anchor = show || (was && shootModeFlows[was.part].pages[was.i] && shootModeFlows[was.part].pages[was.i].atoms[0] && shootModeFlows[was.part].pages[was.i].atoms[0].el);
+    let anchor = show || (was && shootModeFlows[was.part].pages[was.i] && shootModeFlows[was.part].pages[was.i].atoms[0] && shootModeFlows[was.part].pages[was.i].atoms[0].el);
+    // A row of photos can be taken apart below: hold on to its first photo.
+    if (anchor && anchor.matches && anchor.matches('.shoot-mode-moodboard-row')) anchor = anchor.querySelector('.moodboard-thumb') || anchor;
     shootModePage.scrollTop = 0;
     const limit = () => shootModePage.getBoundingClientRect().top + shootModePage.clientHeight - parseFloat(getComputedStyle(shootModePage).paddingBottom);
     // Each part is measured while it's the one showing, its writing sized to
     // fit first (a hidden one would measure nothing and lose its height).
     shootModeMain.appendChild(shootModeBoard);
+    fitShootModeBoard(null);
     shootModeSheet.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
     shootModeSheet.dataset.part = 'main';
     shootModeMain.querySelectorAll('.shot-text').forEach(autoSizeTextarea);
     let main = buildFlow(shootModeMain, shootModeAtoms, limit());
-    if (main.pages.length > 1) {
-      shootModeMore.insertBefore(shootModeBoard, shootModeNotes);
+    let board = null;
+    if (!shootModeBoardSharesPage(main)) {
+      const photos = !!shootModeBoard.querySelector('.moodboard-thumb');
+      if (photos) shootModeBoardPart.appendChild(shootModeBoard);
+      else shootModeMore.insertBefore(shootModeBoard, shootModeMore.firstElementChild);
       main = buildFlow(shootModeMain, shootModeAtoms, limit());
+      if (photos) {
+        shootModeSheet.dataset.part = 'board';
+        shootModeBoard.classList.remove('pg-off', 'pg-first');
+        shootModeBoard.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
+        fitShootModeBoard(limit());
+        board = buildFlow(shootModeBoardPart, shootModeAtoms, limit());
+      }
     }
     shootModeSheet.dataset.part = 'more';
     autoSizeTextarea(document.getElementById('shootModeShootingNotes'));
     const more = buildFlow(shootModeMore, shootModeAtoms, limit());
-    shootModeFlows = { main, more };
+    shootModeFlows = { main, board, more };
     const holds = (el) => ({ part, i }) => shootModeFlows[part].pages[i].atoms.some(a => a.el === el || a.el.contains(el));
     if (shootModeWanted !== null) shootModeAt = shootModeWanted;
     else if (Number.isInteger(opts.at)) shootModeAt = opts.at;
@@ -19053,7 +19132,7 @@
     }, { passive: true });
     // Typing grows a row or the notes: the pages are cut again once it's done.
     shootModeOverlay.addEventListener('focusout', (e) => {
-      const written = e.target.closest && e.target.closest('.shoot-mode-shot-row, #shootModeMain > *, #shootModeMore > *');
+      const written = e.target.closest && e.target.closest('.shoot-mode-shot-row, #shootModeMain > *, #shootModeBoardPage > *, #shootModeMore > *');
       setTimeout(() => { if (shootModeBreakDue || !typingNow()) breakShootModePages({ follow: written }); }, 0);
     });
   })();
@@ -19426,7 +19505,7 @@
         if (!shoot || getShootModeShootId() !== uploadShootId) return;
         renderShootModeMoodboard(shoot).then(() => {
           const thumbs = document.querySelectorAll('#shootModeMoodboard .moodboard-thumb');
-          if (thumbs.length) breakShootModePages({ show: thumbs[thumbs.length - 1].parentElement });
+          if (thumbs.length) breakShootModePages({ show: thumbs[thumbs.length - 1] });
         });
       })
       .catch(noteStorageFull);

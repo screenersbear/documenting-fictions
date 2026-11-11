@@ -138,12 +138,12 @@
   <section id="view-journal" class="view" hidden>
     <header class="topbar">
       <h1 id="journalTitle">Journal</h1>
-      <button class="icon-btn" id="addJournalBtn" aria-label="Add entry">+</button>
     </header>
 
     <div class="journal-toolbar">
       <button type="button" class="filter-toggle" id="journalTocBtn">Table of contents</button>
       <button type="button" class="filter-toggle" id="journalFilterToggle">Filter: All</button>
+      <button class="icon-btn" id="addJournalBtn" aria-label="Add entry">+</button>
     </div>
     <div class="filters" id="journalFilters" hidden></div>
     <div id="journalList" class="card-list"></div>
@@ -548,11 +548,11 @@
   </div>
   <div class="nb-screen-tabs nb-screen-tabs-shoot"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Journal</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></div>
   <nav class="nb-shoot-bar" aria-label="This shoot">
-    <button type="button" class="nb-tool" id="nbBarBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span>Back</span></button>
+    <button type="button" class="nb-tool" id="nbBarBack" aria-label="Back"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <button type="button" class="nb-tool" id="nbBarShootMode" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Shoot mode</span></button>
     <button type="button" class="nb-tool" id="nbBarComplete" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Complete</span></button>
     <button type="button" class="nb-tool" id="nbBarUnarchive" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span>Unarchive</span></button>
-    <button type="button" class="nb-tool" id="nbBarMore"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg><span>More</span></button>
+    <button type="button" class="nb-tool" id="nbBarMore" aria-label="More"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
   </nav>
 </div>
 
@@ -1243,16 +1243,7 @@
       <button type="button" class="icon-btn close-btn opt-close" id="appMenuCancelBtn" aria-label="Close"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </header>
     <div class="opt-sheet-body">
-      <span class="opt-label">Change theme</span>
-      <div class="opt-themes">
-        <button type="button" class="opt-theme" id="themeBlueBtn" data-theme="blue"><span class="opt-swatch" style="background:#50a2ff"></span><span>Blue</span></button>
-        <button type="button" class="opt-theme" id="themeDefaultBtn" data-theme="default"><span class="opt-swatch" style="background:#313d45"></span><span>Default</span></button>
-        <button type="button" class="opt-theme" id="themeGreenBtn" data-theme="green"><span class="opt-swatch" style="background:#40b23d"></span><span>Green</span></button>
-        <button type="button" class="opt-theme" id="themePinkBtn" data-theme="pink"><span class="opt-swatch" style="background:#f3a6e6"></span><span>Pink</span></button>
-        <button type="button" class="opt-theme" id="themePurpleBtn" data-theme="purple"><span class="opt-swatch" style="background:#9779dc"></span><span>Purple</span></button>
-        <button type="button" class="opt-theme" id="themeRedBtn" data-theme="red"><span class="opt-swatch" style="background:#ff5356"></span><span>Red</span></button>
-      </div>
-      <span class="opt-label opt-gap">Shoot display options</span>
+      <span class="opt-label">Shoot display options</span>
       <div class="opt-seg">
         <button type="button" id="displayModeTalentBtn">Talent name</button>
         <button type="button" id="displayModeTitleBtn">Shoot title</button>
@@ -1528,11 +1519,11 @@
 <!-- Shoot mode: a stripped-back, full-screen working view for the day of -->
 <div id="shootModeOverlay" class="modal-overlay shoot-mode-overlay" hidden>
   <!-- A page of the notebook, like Archive mode's, with the notebook around it
-       dimmed so it reads as a page of its own. Two pages (see
-       breakShootModePages in app.js): first the shot list, Wild card and the
-       mood board (the mood board moves over when the list is long), then
-       last time's lesson, the quick review with a look at what's in it, and
-       the shooting notes. -->
+       dimmed so it reads as a page of its own (see breakShootModePages in
+       app.js): first the shot list, Wild card and the mood board; when the
+       board doesn't fit under the list it takes the very next page, its
+       photos sized to fill it; then last time's lesson, the quick review
+       with a look at what's in it, and the shooting notes. -->
   <div class="nb-chapter-board" aria-hidden="true"></div>
   <div class="modal shoot-mode-modal">
     <div class="shoot-mode-sheet" id="shootModeSheet" data-part="main">
@@ -1577,6 +1568,7 @@
       <input type="file" id="shootModeMoodboardFileInput" accept="image/*" multiple hidden />
       </div>
     </div>
+    <div class="shoot-mode-body shoot-mode-page-board" id="shootModeBoardPage"></div>
     <div class="shoot-mode-body shoot-mode-page-more" id="shootModeMore">
       <!-- What last time's shoot of this kind taught (see
            showShootModeLastTime in app.js), the same "Last time" line the
@@ -1686,7 +1678,7 @@
   </div>
   <div class="nb-screen-tabs nb-screen-tabs-shoot"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Journal</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></div>
   <nav class="nb-shoot-bar" aria-label="This shoot">
-    <button type="button" class="nb-tool" id="archiveModeExitBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span>Back</span></button>
+    <button type="button" class="nb-tool" id="archiveModeExitBtn" aria-label="Back"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
   </nav>
 </div>
 
