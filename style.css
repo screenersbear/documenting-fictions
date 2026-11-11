@@ -6728,6 +6728,10 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
 .nb-sun { position: absolute; z-index: 7; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 16px); width: 48px; height: 48px; min-height: 0; margin-left: -24px; padding: 10px; border: none; background: none; color: var(--text); transition: opacity 0.25s; }
 .nb-sun svg { width: 28px; height: 28px; display: block; }
 .nb:not(.closed) .nb-sun, .nb.placing .nb-sun { opacity: 0; pointer-events: none; }
+/* Right where the navigator's icon is once the book opens: the same middle,
+   held the same way as the navigator (by its top on the installed app). */
+.nb-sun { bottom: calc(var(--nb-foot) - 5px); }
+:root.nb-installed .nb-sun { top: calc(var(--nb-h) - var(--nb-bar) - 5px); bottom: auto; }
 .sun-menu-body { display: flex; flex-direction: column; gap: 8px; }
 .sun-colors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px; padding: 4px 0 8px; }
 .sun-color { display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 0; padding: 8px 0; border: none; background: none; color: var(--text); font-family: var(--font-body); font-size: 13px; letter-spacing: 0; text-transform: none; }
