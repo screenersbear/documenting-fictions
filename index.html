@@ -1520,11 +1520,10 @@
 <div id="shootModeOverlay" class="modal-overlay shoot-mode-overlay" hidden>
   <!-- A page of the notebook, like Archive mode's, with the notebook around it
        dimmed so it reads as a page of its own (see breakShootModePages in
-       app.js): first the shot list, its lighting setups, Wild card and the
-       mood board; when the board doesn't fit under the list it takes the
-       very next page, its photos sized to fill it; then last time's lesson,
-       the quick review (Direction) with a look at what's in it, and the
-       shooting notes. -->
+       app.js), in three parts that each start a fresh page: last time's
+       lesson, the quick review buttons and the shot list (running on over
+       as many pages as it takes); the mood board, its photos sized to fill
+       its page; then the shooting notes. -->
   <div class="nb-chapter-board" aria-hidden="true"></div>
   <div class="modal shoot-mode-modal">
     <div class="shoot-mode-sheet" id="shootModeSheet" data-part="main">
@@ -1551,39 +1550,36 @@
       <button type="button" class="icon-btn close-btn" id="shootModeExitBtn" aria-label="Exit shoot mode"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div class="shoot-mode-body shoot-mode-page-main" id="shootModeMain">
-      <h3 class="shoot-mode-section-heading heading-navy">Shot list</h3>
-      <div id="shootModeShotList" class="shoot-mode-shots"></div>
-      <p class="shoot-mode-empty" id="shootModeShotsEmpty" hidden>No shots on the list for this shoot.</p>
-      <button type="button" id="shootModeAddShotBtn" class="primary small-btn shoot-mode-add-shot-btn">+ Add shot</button>
-      <div class="shoot-mode-review-peek" id="shootModeLightingPeekRow">
-        <button type="button" class="shoot-mode-quick-review-btn" id="shootModeReviewLightingBtn">Lighting setups</button>
-        <div class="shoot-mode-peek" id="shootModeLightingPeek"></div>
-      </div>
-      <div class="shoot-mode-wild-card-row">
-        <!-- A random "try this" card (see Wild card in app.js). -->
-        <button type="button" class="shoot-mode-quick-review-btn" id="shootModeWildCardBtn">Wild card</button>
-      </div>
-      <div class="shoot-mode-moodboard-block" id="shootModeMoodboardBlock">
-      <h3 class="shoot-mode-section-heading heading-yellow" id="shootModeMoodboardHeading">Mood board</h3>
-      <div id="shootModeMoodboard" class="moodboard-grid"></div>
-      <p class="shoot-mode-empty" id="shootModeMoodEmpty" hidden>No mood board images for this shoot.</p>
-      <!-- Same as the shoot page's own "+ Add photos", and the same look as
-           "+ Add shot" above (see the Shoot mode code in app.js). -->
-      <button type="button" id="shootModeAddMoodboardBtn" class="primary small-btn shoot-mode-add-shot-btn">+ Add photos</button>
-      <input type="file" id="shootModeMoodboardFileInput" accept="image/*" multiple hidden />
-      </div>
-    </div>
-    <div class="shoot-mode-body shoot-mode-page-board" id="shootModeBoardPage"></div>
-    <div class="shoot-mode-body shoot-mode-page-more" id="shootModeMore">
       <!-- What last time's shoot of this kind taught (see
            showShootModeLastTime in app.js), the same "Last time" line the
            shoot page's guide shows. -->
       <p class="field-hint shoot-mode-last-time" id="shootModeLastTime" hidden></p>
       <h3 class="shoot-mode-section-heading heading-yellow">Quick review</h3>
-      <div class="shoot-mode-review-peek" id="shootModeDirectionPeekRow">
+      <div class="shoot-mode-quick-review">
         <button type="button" class="shoot-mode-quick-review-btn" id="shootModeReviewDirectionBtn">Direction</button>
-        <div class="shoot-mode-peek" id="shootModeDirectionPeek"></div>
+        <button type="button" class="shoot-mode-quick-review-btn" id="shootModeReviewLightingBtn">Lighting setups</button>
+        <!-- Not a review like the two beside it: a random "try this" card
+             (see Wild card in app.js). Same pill, so the row reads as one
+             set of quick taps. -->
+        <button type="button" class="shoot-mode-quick-review-btn" id="shootModeWildCardBtn">Wild card</button>
       </div>
+      <h3 class="shoot-mode-section-heading heading-navy" id="shootModeShotListHeading">Shot list</h3>
+      <div id="shootModeShotList" class="shoot-mode-shots"></div>
+      <p class="shoot-mode-empty" id="shootModeShotsEmpty" hidden>No shots on the list for this shoot.</p>
+      <button type="button" id="shootModeAddShotBtn" class="primary small-btn shoot-mode-add-shot-btn">+ Add shot</button>
+    </div>
+    <div class="shoot-mode-body shoot-mode-page-board" id="shootModeBoardPage">
+      <div class="shoot-mode-moodboard-block" id="shootModeMoodboardBlock">
+      <h3 class="shoot-mode-section-heading heading-yellow" id="shootModeMoodboardHeading">Mood board</h3>
+      <div id="shootModeMoodboard" class="moodboard-grid"></div>
+      <p class="shoot-mode-empty" id="shootModeMoodEmpty" hidden>No mood board images for this shoot.</p>
+      <!-- Same as the shoot page's own "+ Add photos", and the same look as
+           "+ Add shot" (see the Shoot mode code in app.js). -->
+      <button type="button" id="shootModeAddMoodboardBtn" class="primary small-btn shoot-mode-add-shot-btn">+ Add photos</button>
+      <input type="file" id="shootModeMoodboardFileInput" accept="image/*" multiple hidden />
+      </div>
+    </div>
+    <div class="shoot-mode-body shoot-mode-page-more" id="shootModeMore">
       <label class="shoot-mode-shooting-notes-label">Shooting notes
         <textarea id="shootModeShootingNotes" rows="1" maxlength="6000" placeholder="Anything to remember on the day — settings, timings, things to try"></textarea>
       </label>
@@ -1604,8 +1600,7 @@
     </div>
 </div>
 
-<!-- Editable popup shared by the Direction (Quick review) and Lighting
-     setups (under the shot list) buttons — same rounded,
+<!-- Editable popup shared by both Quick review buttons — same rounded,
      ink-outlined treatment as Shoot mode itself, since it's reached from
      there. Every field is tap-to-edit (see openExpandField's config-object
      form), writing straight to the shoot, same as everything else in
