@@ -2713,6 +2713,8 @@
   statusBarProbe.id = 'nbStatusBarProbe';
   statusBarProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top);visibility:hidden;pointer-events:none';
   document.body.append(layoutBoxProbe, smallHeightProbe, statusBarProbe);
+  // Installed, the navigator hangs from the top at the screen's real bottom (see style.css).
+  if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('nb-installed');
   let screenGap = 0;
   let screenFullHeight = 0;
   let screenGapUpright = null;
