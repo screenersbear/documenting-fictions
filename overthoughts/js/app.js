@@ -70,7 +70,7 @@ function measure() {
   set('--zoom-y', '0px');
   set('--zoom-sx', String(sx));
   set('--zoom-sy', String(sy));
-  set('--title-fs', `${32 / sx}px`);
+  set('--title-fs', `${24 / sx}px`);
   set('--title-top', `${(f.top + 12 - (vh - ph) / 2) / sy}px`);
   set('--title-sq', String(sx / sy));
   const c = (f.left + f.right) / 2;
