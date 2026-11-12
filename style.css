@@ -6005,8 +6005,8 @@ h2.status-group-heading.heading-navy {
 /* Documenting Fictions as a notebook: a mango card book with white pages,
    plain serif titles, clean sans labels, shoot names handwritten. */
 @font-face {
-  font-family: "Mansalva";
-  src: url("fonts/mansalva-latin.woff2") format("woff2");
+  font-family: "Klee One";
+  src: url("fonts/klee-one-latin.woff") format("woff"); /* Klee One, resized inside the file to Mansalva's width and line height (Safari has no ascent-override), so no layout moved */
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -6014,7 +6014,7 @@ h2.status-group-heading.heading-navy {
 :root {
   --font-title: "Iowan Old Style", Georgia, serif;
   --font-body: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-hand: "Mansalva", "Bradley Hand", "Noteworthy", cursive;
+  --font-hand: "Klee One", "Bradley Hand", "Noteworthy", cursive;
   --radius-xs: 2px;
   --radius-sm: 3px;
   --radius-md: 5px;
