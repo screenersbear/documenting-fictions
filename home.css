@@ -21,7 +21,7 @@ button { font: inherit; color: inherit; }
 }
 .stage.measuring, .stage.measuring * { transition: none !important; }
 .stage.zooming { transition: transform var(--zoom-ms, 760ms) cubic-bezier(.5, 0, .2, 1); }
-.slot { position: absolute; left: 50%; top: 47%; width: 0; height: 0; transform-style: preserve-3d; }
+.slot { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; }
 .slot.turning { transition: transform 420ms cubic-bezier(.4, 0, .2, 1); }
 .float { position: absolute; transform-style: preserve-3d; animation: nbFloat 5.2s ease-in-out infinite; }
 @keyframes nbFloat { 0%, 100% { transform: translateY(-7px) rotateZ(-0.7deg) rotateY(-2deg); } 50% { transform: translateY(7px) rotateZ(0.7deg) rotateY(2deg); } }

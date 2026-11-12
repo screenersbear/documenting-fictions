@@ -42,6 +42,10 @@
   // 0.22) so the books have room between them.
   const SIZE = 0.43, MAX_W = 240;
   const RING_X = 1.1, RING_Z = 2.9, LIFT = 0.34;
+  // The camera looks down on the ring a little (degrees), so you see over the
+  // front book to the ones behind it. A book turned to face you (opening or
+  // shutting) stands up straight again, so its page still fills the screen.
+  const TILT = 10;
   const STEP = 360 / N;
   const OPEN_MS = 900, ZOOM_MS = 760, TURN_MS = 420;
   const OVER = 12; // how far the page's white goes past every edge of the screen once it has grown
@@ -109,7 +113,8 @@
     const x = W * RING_X * Math.sin(r), y = -LIFT * W * back, z = W * RING_Z * (Math.cos(r) - 1);
     const yaw = facing === i ? 0 : -20 * (0.25 + 0.75 * (1 + Math.cos(r)) / 2) - 10 * Math.sin(r);
     const s = slots[i];
-    s.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px) rotateY(${yaw.toFixed(2)}deg)`;
+    const upright = facing === i ? TILT : 0;
+    s.style.transform = `rotateX(${-TILT}deg) translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px) rotateX(${upright}deg) rotateY(${yaw.toFixed(2)}deg)`;
     s.style.zIndex = String(Math.round(100 + Math.cos(r) * 100));
     s.querySelector('.fog').style.opacity = (0.2 * back).toFixed(3);
   }
