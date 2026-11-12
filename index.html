@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>Documenting Fictions</title>
+
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#ffffff" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<!-- Kept as it was: changing it on the installed app means installing it again, which loses its data. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Documenting Fictions" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<link rel="icon" href="icon-512.png" />
+
+<script>
+/* Launched while a notebook was open, the app goes straight back into it,
+   before the shelf draws. Coming back from a notebook (?from) or with the
+   browser's back button, the shelf stays. */
+(function () {
+  try {
+    var inside = localStorage.getItem('df-suite-in');
+    var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+    var back = nav && nav.type === 'back_forward';
+    if (inside && !back && !/[?&]from=/.test(location.search) && /^(ref|the-eye|contact-sheet|overthoughts)$/.test(inside)) {
+      document.documentElement.style.visibility = 'hidden';
+      location.replace(inside + '/');
+    }
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="home.css" />
+</head>
+<body>
+<main class="shelf" id="shelf" aria-label="Your notebooks">
+  <div class="stage" id="stage"></div>
+  <div class="dots" id="dots" aria-hidden="true"></div>
+  <button type="button" class="logo-btn" id="logoBtn"></button>
+</main>
+<script src="home.js"></script>
+</body>
+</html>

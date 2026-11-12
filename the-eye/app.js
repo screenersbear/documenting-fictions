@@ -21426,6 +21426,9 @@
       if (hit) openBook(hit.dataset.view);
     });
     document.getElementById('shutBookBtn').addEventListener('click', () => {
+      // Inside Documenting Fictions the shelf is the shut book: back to it,
+      // and it shrinks the page back into this notebook there.
+      if (window.DF_SUITE) { window.DF_SUITE.home(); return; }
       clearTimeout(timer);
       // The book shuts from the left-hand page, wherever Overview had got to.
       clearPan();
@@ -21514,12 +21517,20 @@
     // (before there's a record of that, the book as it was left).
     const place = readLastPlace();
     const resuming = !afterUpdate && state.presentation.start === 'last';
-    const startShut = afterUpdate ? saved !== 'open'
+    // Inside Documenting Fictions the notebook comes from the shelf already
+    // open (shut only to show its Options, from the shelf's button), at the
+    // tab picked there or else where the sun menu says.
+    const suite = window.DF_SUITE;
+    const suiteAt = suite && SCREENS.some(sc => sc.view === suite.at) ? suite.at : null;
+    const startShut = suite ? suite.options
+      : afterUpdate ? saved !== 'open'
       : resuming ? (place && (place.book === 'shut' || place.book === 'open') ? place.book === 'shut' : saved !== 'open')
       : state.presentation.start !== 'first';
-    resumePlace = resuming && !startShut && place ? place : null;
+    resumePlace = resuming && !startShut && !suiteAt && place ? place : null;
     if (startShut) show('closed');
+    if (suiteAt) document.querySelector(`.tabbar .tab[data-view="${suiteAt}"]`).click();
     remember(startShut ? 'shut' : 'open');
+    if (suite && suite.options) setTimeout(() => document.getElementById('bookSunBtn').click(), 60);
   })();
 
   // ---------- The sun menu: how the notebook looks ----------
@@ -21845,7 +21856,12 @@
       closeBtn.setAttribute('aria-label', BACK_TO[name] ? 'Back' : 'Close');
     }
 
-    function closeMenu() { overlay.hidden = true; }
+    function closeMenu() {
+      overlay.hidden = true;
+      // Opened from the shelf's button: done with Options, back to the shelf,
+      // unless a sticker is being put on the cover.
+      if (window.DF_SUITE && window.DF_SUITE.options && stage.hidden && document.getElementById('stickerCrop').hidden && !pendingShape) window.DF_SUITE.home(true);
+    }
     // The X and a tap on the dim: one step back, or shut on Options.
     function stepBack() {
       if (BACK_TO[paneNow]) showPane(BACK_TO[paneNow]);

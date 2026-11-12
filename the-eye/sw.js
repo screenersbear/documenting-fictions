@@ -1,4 +1,10 @@
-const CACHE_NAME = 'starky-v146';
+const CACHE_NAME = 'the-eye-v147';
+// The same notebook can live twice on one website (inside the Documenting
+// Fictions suite and as its own app), and both workers see every cache there:
+// each name carries the folder this copy lives in, and each copy only ever
+// clears its own.
+const HERE = new URL(self.registration.scope).pathname;
+const CACHE = `${CACHE_NAME} ${HERE}`;
 const ASSETS = [
   './',
   './index.html',
@@ -34,7 +40,7 @@ const ASSETS = [
 // fetching them all over again, and a later launch can tell that a version
 // newer than the saved one has already run on this phone. Cleared with the
 // other old caches whenever a new version takes over.
-const STAGING_CACHE = 'starky-staging';
+const STAGING_CACHE = `the-eye-staging ${HERE}`;
 
 // How long a launch waits on the network before opening from the saved copy
 // instead. With one bar of signal a request can hang for many seconds before
@@ -65,7 +71,7 @@ self.addEventListener('install', (event) => {
   // CACHE_NAME), still in use, and its files have to change all together or
   // not at all, so that case keeps the old all-at-once addAll.
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) =>
+    caches.open(CACHE).then((cache) =>
       Promise.all(ASSETS.map((url) => cache.match(url, { ignoreSearch: true, ignoreVary: true }))).then((found) => {
         if (found.every(Boolean)) return cache.addAll(ASSETS.map((url) => new Request(url, { cache: 'no-store' })));
         return Promise.all(ASSETS.map((url) => installFile(cache, url)));
@@ -133,7 +139,7 @@ self.addEventListener('activate', (event) => {
   // (now saved in full) or a later one, whose own install fetches it again.
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k !== CACHE && k.endsWith(` ${HERE}`)).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
@@ -176,7 +182,7 @@ function fromNetwork(request) {
 // The live cache only. STAGING_CACHE and a new version's unfinished install
 // sit beside it, and neither may be mixed into a launch.
 function fromCache(request, options) {
-  return caches.match(request, Object.assign({}, options, { cacheName: CACHE_NAME })).catch(() => undefined);
+  return caches.match(request, Object.assign({}, options, { cacheName: CACHE })).catch(() => undefined);
 }
 
 function fromStaging(request) {
@@ -186,7 +192,7 @@ function fromStaging(request) {
 function putInCache(request, response) {
   if (!response || response.status !== 200) return Promise.resolve();
   const copy = response.clone();
-  return caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+  return caches.open(CACHE).then((cache) => cache.put(request, copy));
 }
 
 // Kept aside for the new version's install (see STAGING_CACHE). The copy is
