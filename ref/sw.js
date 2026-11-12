@@ -9,7 +9,7 @@ const CACHE = `${CACHE_NAME} ${HERE}`;
 const PREFIX = 'ref-notebook-v';
 const mine = (k) => k !== CACHE && (k.endsWith(` ${HERE}`) || (k.startsWith(PREFIX) && !k.includes(' ')));
 const ASSETS = [
-  './', './index.html', './style.css', './manifest.json',
+  './', './index.html', './style.css', './manifest.json', './df-data.js',
   './js/app.js', './js/db.js', './js/editor.js', './js/filing.js', './js/icons.js', './js/library.js',
   './js/navbar.js', './js/newboard.js', './js/options.js', './js/stickers.js', './js/spread.js', './js/textsize.js', './js/showboard.js', './js/intro.js', './js/pages.js', './js/pdf.js', './js/photos.js', './js/screens.js',
   './js/tagger.js', './js/tagger-worker.js', './js/templates.js', './js/ui.js', './js/undo.js', './js/util.js', './js/viewer.js',

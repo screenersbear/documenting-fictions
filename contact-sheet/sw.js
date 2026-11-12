@@ -14,6 +14,7 @@ const ASSETS = [
   './style.css',
   './manifest.json',
   './js/app.js',
+  './df-data.js',
   './js/book.js',
   './js/db.js',
   './js/editor.js',
