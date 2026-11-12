@@ -1283,9 +1283,9 @@
       <button type="button" class="opt-wide" id="photographerInfoBtn">Photographer information</button>
       <span class="opt-label opt-gap">Backups</span>
       <!-- "Last backup: …" is kept current by renderLastBackupHint in app.js. -->
-      <button type="button" class="opt-wide" id="exportDataBtn">Back up all data</button>
+      <button type="button" class="opt-wide" id="exportDataBtn">Save a backup</button>
       <span class="field-hint opt-hint" id="lastBackupHint">Last backup: never</span>
-      <button type="button" class="opt-wide" id="importDataBtn">Restore from backup</button>
+      <button type="button" class="opt-wide" id="importDataBtn">Restore a backup</button>
       <span class="opt-label opt-gap">Export</span>
       <button type="button" class="opt-wide" id="exportPreviousShootsBtn">Export previous shoots</button>
       <span class="opt-label opt-gap">Storage</span>
@@ -1296,7 +1296,6 @@
       <span class="opt-label opt-gap">Shoot data</span>
       <button type="button" class="opt-wide opt-danger" id="deleteAllShootDataBtn">Delete all shoot data</button>
     </div>
-    <input type="file" id="importFileInput" accept="application/json" hidden />
   </div>
 </div>
 
@@ -1806,7 +1805,7 @@
      and leaves this popup open, so Restore is still one tap away after. -->
 <div id="importConfirmOverlay" class="modal-overlay intro-overlay" hidden>
   <div class="modal intro-modal">
-    <h2>Restore from backup?</h2>
+    <h2>Restore a backup?</h2>
     <p>Restoring replaces everything in the app (every shoot, journal entry, framework and photo) with what's in the backup file. Anything that isn't in the backup is lost, and this can't be undone.</p>
     <div class="modal-actions">
       <button type="button" class="secondary" id="cancelImportBtn">Cancel</button>
@@ -1920,6 +1919,18 @@
     <div class="modal-actions fit-pair" id="appConfirmActions">
       <button type="button" class="secondary" id="appConfirmCancelBtn">Cancel</button>
       <button type="button" class="primary" id="appConfirmOkBtn">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Save a backup: "Putting it together", then the file (or files) to save, a tap each. -->
+<div id="backupOverlay" class="modal-overlay intro-overlay app-confirm-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2>Save a backup</h2>
+    <p id="backupText"></p>
+    <div class="modal-actions fit-pair" id="backupActions">
+      <button type="button" class="secondary" id="backupCancelBtn">Cancel</button>
+      <button type="button" class="primary" id="backupSaveBtn" hidden>Save the backup</button>
     </div>
   </div>
 </div>

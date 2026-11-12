@@ -4560,7 +4560,7 @@ h2.status-group-heading.heading-navy {
 }
 
 /* A small .field-hint line under an option's label, inside the same button
-   ("Last backup: 3 days ago" under App options' Back up all data). */
+   ("Last backup: 3 days ago" under App options' Save a backup). */
 .options-item .options-item-hint {
   display: block;
   margin-top: 2px;

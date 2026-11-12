@@ -14062,20 +14062,9 @@
     refBoardLinks({ toId: shootId }).then(links => links.length && refApi.dropLinks(links.map(l => l.id)))
       .then(() => loadRefBoardShoots()).catch(() => {});
   }
-  // The Eye's own backup carries its boards, pictures as data URLs. A
-  // backup from before boards (no refBoards) leaves the boards as they are.
-  function refBoardsForBackup() {
-    if (!refApi) return Promise.resolve(undefined);
-    const asUrl = pic => (pic && pic.bytes ? new Promise((ok, no) => {
-      const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => no(r.error);
-      r.readAsDataURL(new Blob([pic.bytes], { type: pic.type || 'image/jpeg' }));
-    }) : Promise.resolve(null));
-    return refBoardLinks({}).then(links => Promise.all(links.filter(l => !l.pending).map(l =>
-      refApi.linkPictures(l.id).then(p => (p ? Promise.all([asUrl(p.cover), Promise.all((p.pages || []).map(asUrl))])
-        .then(([cover, pages]) => ({ link: l, cover, pages: pages.filter(Boolean) })) : null)))))
-      .then(list => list.filter(Boolean))
-      .catch(() => undefined);
-  }
+  // An old .json backup carries its boards, pictures as data URLs (the zip
+  // backups carry df-links whole). One from before boards (no refBoards)
+  // leaves the boards as they are.
   function restoreRefBoards(list) {
     if (!refApi || !Array.isArray(list)) return Promise.resolve();
     const picture = u => fetch(u).then(r => r.blob()).then(b => b.arrayBuffer().then(bytes => ({ type: b.type || 'image/jpeg', bytes })));
@@ -17867,104 +17856,75 @@
     showToast('Backup saved');
   }
 
-  // The whole state plus every photo row it points at, as one file — the
-  // same payload Restore reads.
-  function buildBackupFile() {
-    const keys = [];
-    state.shoots.forEach(s => {
-      keys.push(s.id);
-      keys.push(finalImagesKey(s.id));
-      // Cover and talent photos are IDB rows like any other image collection,
-      // so they ride out in the same images map.
-      shootPhotoKeys(s).forEach(k => keys.push(k));
-    });
-    state.journalEntries.forEach(e => {
-      if (!e.sourceShootId) keys.push(journalImagesKey(e.id));
-    });
-    state.presentation.stickers.forEach(s => keys.push(stickerKey(s.id)));
-    // One read for the lot, so the share sheet opens as soon after the tap
-    // as it can.
-    return Promise.all([idbGetManyImages(keys), refBoardsForBackup()]).then(([found, refBoards]) => {
-      const payload = {
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        state,
-        images: Object.fromEntries(found),
-        refBoards, // the boards from Ref on its shoots (left out where there's no df-data.js)
-      };
-      return new File([JSON.stringify(payload)], `starky-backup-${todayStr()}.json`, { type: 'application/json' });
-    });
-  }
-
-  // The plain download, for where files can't be shared. Revoked a few
-  // seconds later rather than straight away, same as the PDF's fallback —
-  // revoking in the same tick can cancel the download before it starts.
-  function downloadBackupFile(file) {
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-  }
-
-  // "Back up all data": hands the file to the share sheet, whose Save to
-  // Files is the one dependable way out of a home-screen app (an
-  // <a download> there can do nothing and say nothing), and says how it
-  // went. Only a backup that's known to have gone somewhere is remembered
-  // as the last one — a cancelled share isn't, and a plain download (no way
-  // to see whether it landed) only once the user says it saved.
-  let backupInProgress = false;
+  // Save a backup: the notebooks' shared zip (df-data.js's zipBackup), the
+  // same as Ref's, Contact Sheet's and Overthoughts': the shoots (as they're
+  // kept, in localStorage), every photo row, and df-links, the Ref boards on
+  // the shoots (the only links there are). It's put together from the stored
+  // photos, so the phone never holds them all in memory; on a phone a big
+  // one is handed over as a few files, a tap each (backupSteps). Only a
+  // backup that's gone somewhere counts as the last one: a cancelled share
+  // doesn't.
+  const BACKUP_DBS = ['starky-moodboards', 'df-links'];
+  const backupOverlay = document.getElementById('backupOverlay');
+  const backupText = document.getElementById('backupText');
+  const backupSaveBtn = document.getElementById('backupSaveBtn');
+  let closeBackupCard = null;
 
   async function exportAllData() {
-    if (backupInProgress) return;
-    backupInProgress = true;
-    busyTasks++;
-    try {
-      const file = await buildBackupFile();
-      const canShareFile = !!(navigator.canShare && navigator.share && navigator.canShare({ files: [file] }));
-      if (!canShareFile) {
-        downloadBackupFile(file);
-        const saved = await askConfirm({
-          title: 'Did the backup save?',
-          text: `Look for ${file.name} in your downloads.`,
-          cancelLabel: 'Not saved',
-          confirmLabel: 'It saved',
-        });
-        if (saved) rememberBackup();
-        else showToast('Backup not saved');
-        return;
-      }
-      try {
-        await navigator.share({ files: [file] });
-      } catch (err) {
-        // A big library can take long enough to gather that the tap no
-        // longer counts for opening the share sheet — offer a fresh one.
-        if (!err || err.name !== 'NotAllowedError') throw err;
-        const again = await askConfirm({
-          title: 'Your backup is ready',
-          text: 'Choose Save to Files to keep it somewhere safe.',
-          cancelLabel: 'Not now',
-          confirmLabel: 'Save backup',
-        });
-        if (!again) { showToast('Backup not saved'); return; }
-        await navigator.share({ files: [file] });
-      }
-      rememberBackup();
-    } catch (err) {
-      if (err && err.name === 'AbortError') {
-        showToast('Backup not saved');
-      } else {
-        console.error('Backup failed', err);
-        showToast("Couldn't back up");
-      }
-    } finally {
-      backupInProgress = false;
+    if (closeBackupCard) return;
+    const D = window.DFData;
+    let open = true;
+    let made = null;
+    let steps = null;
+    busyTasks++; // an update now would lose the files still to be saved
+    closeBackupCard = () => {
+      open = false;
+      closeBackupCard = null;
+      backupOverlay.hidden = true;
+      backupSaveBtn.onclick = null;
+      if (made) made.done();
       busyTasks--;
+    };
+    backupText.textContent = 'Putting it together';
+    backupSaveBtn.hidden = true;
+    backupOverlay.hidden = false;
+    try {
+      saveState(); // what's on screen is what goes in
+      const m = await D.zipBackup({
+        app: 'the-eye',
+        databases: BACKUP_DBS,
+        local: [STORAGE_KEY],
+        filename: `the-eye-backup-${todayStr()}.zip`,
+        onProgress: (f) => { if (open) backupText.textContent = `Putting it together, ${Math.floor(f * 100)}%`; },
+      });
+      made = m;
+      if (!open) { if (m) m.done(); return; }
+      if (!m) { backupText.textContent = 'There is nothing to back up yet.'; return; }
+      steps = D.backupSteps(m); // one file, or a few on a phone: a tap each
+      backupText.textContent = steps.note;
+      backupSaveBtn.textContent = steps.label;
+      backupSaveBtn.hidden = false;
+      fitButtonPair(document.getElementById('backupActions'));
+      backupSaveBtn.onclick = async () => {
+        try {
+          if (!(await steps.tap())) {
+            backupSaveBtn.textContent = steps.label;
+            fitButtonPair(document.getElementById('backupActions'));
+            return;
+          }
+          if (closeBackupCard) closeBackupCard();
+          rememberBackup();
+        } catch (err) {
+          console.error('Backup failed', err);
+          showToast(err.message || "The backup wasn't saved.");
+        }
+      };
+    } catch (err) {
+      console.error('Backup failed', err);
+      if (open) backupText.textContent = err.message || "The backup couldn't be made.";
     }
   }
+  document.getElementById('backupCancelBtn').addEventListener('click', () => { if (closeBackupCard) closeBackupCard(); });
 
   document.getElementById('exportDataBtn').addEventListener('click', () => {
     closeAppMenu();
@@ -18001,33 +17961,39 @@
       .catch(() => {});
   }
 
+  // Restore a backup: the zip (or all the files it was saved as, picked
+  // together), a backup of all four from the shelf (The Eye's part of it),
+  // or an old .json.
+  const NOT_A_BACKUP = "That file isn't a backup from this app. Nothing was changed.";
   document.getElementById('importDataBtn').addEventListener('click', () => {
     closeAppMenu();
-    document.getElementById('importFileInput').click();
+    // Straight from the tap, or iOS won't open the picker.
+    window.DFData.pickFiles('.zip,application/zip,.json,application/json').then(async (files) => {
+      if (!files.length) return;
+      if (await window.DFData.isZipFile(files[0])) {
+        pendingImportFiles = files;
+        importConfirmOverlay.hidden = false;
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const payload = JSON.parse(reader.result);
+          if (!payload || !payload.state || !Array.isArray(payload.state.shoots)) throw new Error('bad shape');
+          pendingImportPayload = payload;
+          importConfirmOverlay.hidden = false;
+        } catch (err) {
+          showToast(NOT_A_BACKUP);
+        }
+      };
+      reader.onerror = () => showToast(NOT_A_BACKUP);
+      reader.readAsText(files[0]);
+    }).catch(() => showToast(NOT_A_BACKUP));
   });
 
   let pendingImportPayload = null;
+  let pendingImportFiles = null;
   const importConfirmOverlay = document.getElementById('importConfirmOverlay');
-
-  document.getElementById('importFileInput').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    const notABackup = () => showToast("That file isn't a backup from this app. Nothing was changed.");
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const payload = JSON.parse(reader.result);
-        if (!payload || !payload.state || !Array.isArray(payload.state.shoots)) throw new Error('bad shape');
-        pendingImportPayload = payload;
-        importConfirmOverlay.hidden = false;
-      } catch (err) {
-        notABackup();
-      }
-    };
-    reader.onerror = notABackup;
-    reader.readAsText(file);
-  });
 
   // Runs the backup with the restore popup left open behind it, so Restore
   // is right there once it's done.
@@ -18035,13 +18001,58 @@
 
   document.getElementById('cancelImportBtn').addEventListener('click', () => {
     pendingImportPayload = null;
+    pendingImportFiles = null;
     importConfirmOverlay.hidden = true;
   });
 
+  // The shoots, journal and the rest from a backup, in place of what's here.
+  function adoptBackupState(saved) {
+    const importedShoots = Array.isArray(saved.shoots) ? saved.shoots : [];
+    // Import bypasses loadState's migrations, so the status-level fixes run
+    // here too. Otherwise an old backup's video shoot in "Editing" (or a
+    // retired idea_phase) sits in a status its category doesn't offer until
+    // the next reload.
+    migrateIdeaPhaseStatus(importedShoots);
+    normalizeShootStatuses(importedShoots);
+    // Same project clean-up as loadState. A backup from before projects
+    // existed has neither records nor projectIds, so this is just [].
+    const importedProjects = normalizeProjects(saved.projects, importedShoots);
+    state = {
+      shoots: importedShoots,
+      projects: importedProjects,
+      frameworks: (Array.isArray(saved.frameworks) && saved.frameworks.length) ? saved.frameworks : seedFrameworks(),
+      journalEntries: Array.isArray(saved.journalEntries) ? saved.journalEntries : [],
+      titleDisplayMode: saved.titleDisplayMode === 'title' ? 'title' : 'talent',
+      // A backup from before the sun menu leaves the notebook as it is.
+      presentation: normalizePresentation(saved.presentation || state.presentation),
+      defaultCountry: typeof saved.defaultCountry === 'string' ? saved.defaultCountry : '',
+      dismissedLocationKeys: Array.isArray(saved.dismissedLocationKeys) ? saved.dismissedLocationKeys : [],
+      dismissedTeamMemberKeys: Array.isArray(saved.dismissedTeamMemberKeys) ? saved.dismissedTeamMemberKeys : [],
+      dismissedTalentKeys: Array.isArray(saved.dismissedTalentKeys) ? saved.dismissedTalentKeys : [],
+      dismissedLightingSetupKeys: Array.isArray(saved.dismissedLightingSetupKeys) ? saved.dismissedLightingSetupKeys : [],
+      photographer: normalizePhotographer(saved.photographer),
+    };
+    saveState();
+    applyAppColor(state.presentation.color);
+    refreshStickers();
+    renderAll();
+    showToast('Backup restored');
+    // Backups made before photos moved to IDB still carry them inline on the
+    // shoots, so run the same migration boot does; then pull every photo back
+    // onto the in-memory state so thumbnails appear without a reload.
+    migrateInlinePhotos()
+      .then(hydratePhotos)
+      .then(() => renderAll())
+      .catch(() => {});
+  }
+
   document.getElementById('confirmImportBtn').addEventListener('click', () => {
     const payload = pendingImportPayload;
+    const files = pendingImportFiles;
     importConfirmOverlay.hidden = true;
     pendingImportPayload = null;
+    pendingImportFiles = null;
+    if (files) { restoreZipBackup(files); return; }
     if (!payload) return;
     const imageWrites = Object.entries(payload.images || {}).map(([key, imgs]) => idbSetImages(key, imgs));
     imageWrites.push(restoreRefBoards(payload.refBoards).catch(() => {}));
@@ -18049,43 +18060,7 @@
     // between the photos going in and the rest (see busyTasks).
     busyTasks++;
     Promise.all(imageWrites).then(() => {
-      const importedShoots = Array.isArray(payload.state.shoots) ? payload.state.shoots : [];
-      // Import bypasses loadState's migrations, so the status-level fixes run
-      // here too. Otherwise an old backup's video shoot in "Editing" (or a
-      // retired idea_phase) sits in a status its category doesn't offer until
-      // the next reload.
-      migrateIdeaPhaseStatus(importedShoots);
-      normalizeShootStatuses(importedShoots);
-      // Same project clean-up as loadState. A backup from before projects
-      // existed has neither records nor projectIds, so this is just [].
-      const importedProjects = normalizeProjects(payload.state.projects, importedShoots);
-      state = {
-        shoots: importedShoots,
-        projects: importedProjects,
-        frameworks: (Array.isArray(payload.state.frameworks) && payload.state.frameworks.length) ? payload.state.frameworks : seedFrameworks(),
-        journalEntries: Array.isArray(payload.state.journalEntries) ? payload.state.journalEntries : [],
-        titleDisplayMode: payload.state.titleDisplayMode === 'title' ? 'title' : 'talent',
-        // A backup from before the sun menu leaves the notebook as it is.
-        presentation: normalizePresentation(payload.state.presentation || state.presentation),
-        defaultCountry: typeof payload.state.defaultCountry === 'string' ? payload.state.defaultCountry : '',
-        dismissedLocationKeys: Array.isArray(payload.state.dismissedLocationKeys) ? payload.state.dismissedLocationKeys : [],
-        dismissedTeamMemberKeys: Array.isArray(payload.state.dismissedTeamMemberKeys) ? payload.state.dismissedTeamMemberKeys : [],
-        dismissedTalentKeys: Array.isArray(payload.state.dismissedTalentKeys) ? payload.state.dismissedTalentKeys : [],
-        dismissedLightingSetupKeys: Array.isArray(payload.state.dismissedLightingSetupKeys) ? payload.state.dismissedLightingSetupKeys : [],
-        photographer: normalizePhotographer(payload.state.photographer),
-      };
-      saveState();
-      applyAppColor(state.presentation.color);
-      refreshStickers();
-      renderAll();
-      showToast('Backup restored');
-      // Backups made before photos moved to IDB still carry them inline on the
-      // shoots, so run the same migration boot does; then pull every photo back
-      // onto the in-memory state so thumbnails appear without a reload.
-      migrateInlinePhotos()
-        .then(hydratePhotos)
-        .then(() => renderAll())
-        .catch(() => {});
+      adoptBackupState(payload.state);
     }, err => {
       // The photos go in first and everything else only once they all
       // have, so when a photo write fails the app's shoots and journal are
@@ -18095,6 +18070,27 @@
       else showToast("Couldn't restore that backup");
     }).finally(() => { busyTasks--; });
   });
+
+  // A zip backup: checked before anything changes (the shoots have to be in
+  // it), then the photos and boards go in, then the shoots.
+  function restoreZipBackup(files) {
+    let saved = null;
+    busyTasks++;
+    showToast('Restoring the backup', 600000);
+    window.DFData.restoreZip(files, {
+      databases: BACKUP_DBS,
+      check: async (local) => {
+        try { saved = JSON.parse(await local(STORAGE_KEY)); } catch (e) { saved = null; }
+        if (!saved || !Array.isArray(saved.shoots)) throw new Error(NOT_A_BACKUP);
+      },
+    }).then(() => (refApi ? loadRefBoardShoots().catch(() => {}) : null))
+      .then(() => adoptBackupState(saved))
+      .catch((err) => {
+        console.error('Restore failed', err);
+        showToast(err.message || "Couldn't restore that backup");
+      })
+      .finally(() => { busyTasks--; });
+  }
 
   // ---------- Stats tab ----------
   function polarToCartesian(cx, cy, r, angleDeg) {
