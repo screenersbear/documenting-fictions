@@ -7,6 +7,8 @@
 
 <!-- Inside Documenting Fictions this says so (the suite's own file); copied out on its own the notebook has no ../suite.js and is an app of its own. -->
 <script src="../suite.js"></script>
+<!-- What the notebooks share (copied in from the suite's shared/df-data.js). -->
+<script src="df-data.js"></script>
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#ffffff" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -488,15 +490,17 @@
         <div id="postShootBody">
           <!-- The reflection helper (see REFLECTION_FLOWS in app.js). -->
           <button type="button" class="primary small-btn" id="reflectHelperBtn">Need help reflecting?</button>
-          <label>What went right
+          <label class="refl-full">What went right
             <textarea id="shootWentRight" rows="3" maxlength="4000" readonly></textarea>
           </label>
-          <label>What could've gone better
+          <label class="refl-full">What could've gone better
             <textarea id="shootCouldBeBetter" rows="3" maxlength="4000" readonly></textarea>
           </label>
           <label>Lessons for next time
             <textarea id="shootLessonsLearned" rows="3" maxlength="4000" readonly></textarea>
           </label>
+          <!-- Inside Documenting Fictions: the lessons here, the whole reflection in Overthoughts. -->
+          <p class="refl-more"><button type="button" class="refl-more-link" id="reflectionMoreBtn">Read the whole reflection in Overthoughts</button></p>
 
           <div class="moodboard-section" id="finalImagesSection">
             <span class="moodboard-label">Final images</span>
@@ -1265,6 +1269,7 @@
       <button type="button" class="opt-wide" id="importDataBtn">Restore from backup</button>
       <span class="opt-label opt-gap">Export</span>
       <button type="button" class="opt-wide" id="exportPreviousShootsBtn">Export previous shoots</button>
+      <button type="button" class="opt-wide" id="exportReflectionsBtn" hidden>Save reflections for Overthoughts</button>
       <span class="opt-label opt-gap">Storage</span>
       <button type="button" class="opt-wide" id="storageUsageBtn">Storage usage</button>
       <!-- The one that can't be undone stays last, away from the rest. -->

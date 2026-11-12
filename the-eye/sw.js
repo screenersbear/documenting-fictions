@@ -10,6 +10,7 @@ const ASSETS = [
   './index.html',
   './style.css',
   './app.js',
+  './df-data.js',
   './lib/jspdf.umd.min.js',
   './lib/pdf.min.js',
   './lib/pdf.worker.min.js',
