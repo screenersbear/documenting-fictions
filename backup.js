@@ -15,8 +15,7 @@
 (function () {
   'use strict';
   const D = window.DFData;
-  const btn = document.getElementById('backupBtn');
-  if (!D || !btn) return;
+  if (!D) return;
 
   const DBS = [
     { id: 'ref', db: 'ref-notebook', app: 'ref', book: 'ref-notebook-book' },
@@ -30,7 +29,6 @@
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } },
   };
-  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 8.5h15v11h-15zM3.5 4.5h17v4h-17zM12 11v6M9.5 14.5 12 17l2.5-2.5"/></svg>';
 
   // Which databases are there already. Opening one that isn't would make an
   // empty one, which its notebook would then trip over.
@@ -151,7 +149,8 @@
   }
   const say = (s, text) => { const p = s.el.querySelector('.sheet-note'); p.textContent = text; p.hidden = !text; };
 
-  btn.addEventListener('click', () => {
+  // Opened from the film roll's panel on the shelf (home.js).
+  window.DFBackup = { open() {
     const s = sheet(`
       <h2>Back up all four</h2>
       <p>One file with Ref, The Eye, Contact Sheet and Overthoughts, photos and all. Keep it somewhere safe, like Files or iCloud Drive.</p>
@@ -203,5 +202,5 @@
         });
       }
     });
-  });
+  } };
 })();
