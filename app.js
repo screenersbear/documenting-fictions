@@ -2922,7 +2922,7 @@
     }
   }
 
-  function packFlow(atoms, cost, room, tail) {
+  function packFlow(atoms, cost, room, tail, laterRoom = room) {
     const sizeOf = a => (a.row === undefined ? cost.get(a.el)
       : a.row < a.rows - 1 ? LINE : cost.get(a.el) - (a.rows - 1) * LINE);
     // An atom marked hang may leave the gap after it off the foot of a page.
@@ -2934,7 +2934,7 @@
     const headRoom = a => a.heads.reduce((sum, h) => sum + (page.drawn.has(h) ? 0 : cost.get(h)), 0);
     atoms.forEach((a) => {
       if (!page) open();
-      if (page.atoms.length && used + headRoom(a) + sizeOf(a) - hangOf(a) > room) open();
+      if (page.atoms.length && used + headRoom(a) + sizeOf(a) - hangOf(a) > (pages.length > 1 ? laterRoom : room)) open();
       used += headRoom(a) + sizeOf(a);
       a.heads.forEach(h => page.drawn.add(h));
       page.drawn.add(a.el);
@@ -2946,6 +2946,8 @@
   // `limit` is how far down the screen a page may run. `opts.margins`: the
   // last thing on a page brings its margin-bottom along (in a page that
   // scrolls on its own, like Shoot mode's, that margin would scroll it).
+  // `opts.later`: a page after the first starts right at the top (.pg-first
+  // takes the margin off its first thing), so it's given that much more room.
   function buildFlow(root, atomsOf, limit, opts = {}) {
     root.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
     root.querySelectorAll('.jb-in').forEach(el => clearSlice(el.parentElement));
@@ -2975,10 +2977,19 @@
     live.forEach((a) => { note(a.el); (a.also || []).forEach(note); a.heads.forEach(note); });
     const flow = { root, parts, pageEnd: limit + window.scrollY, pages: [], bodies: new Set(live.filter(a => a.row !== undefined).map(a => a.el)) };
     let room = limit - (rects.length ? rects[0].top : 0);
+    let laterRoom = room;
+    if (opts.later && order.length) {
+      const lifted = [];
+      for (let n = order[0]; n && n !== root; n = n.parentElement) {
+        if (!n.classList.contains('pg-first')) { n.classList.add('pg-first'); lifted.push(n); }
+      }
+      laterRoom = Math.max(room, limit - order[0].getBoundingClientRect().top);
+      lifted.forEach(n => n.classList.remove('pg-first'));
+    }
     const leastRoom = room / 2;
     // Then each page is drawn to check it really fits.
     for (let tries = 0; tries < 3; tries++) {
-      flow.pages = packFlow(live, cost, room, tail);
+      flow.pages = packFlow(live, cost, room, tail, laterRoom);
       let over = 0;
       flow.pages.forEach((page, at) => {
         if (page.atoms.length < 2) return; // one thing too tall for a page can't be helped
@@ -2989,6 +3000,7 @@
       });
       if (over <= 0.5) break;
       room = Math.max(leastRoom, room - Math.ceil(over));
+      laterRoom = Math.max(leastRoom, laterRoom - Math.ceil(over));
     }
     return flow;
   }
@@ -18818,7 +18830,7 @@
         });
         row.appendChild(thumb);
       });
-      // Their shapes are wanted to size them, if they get a page of their own.
+      // Their shapes are wanted to size them to fill the board's page.
       const imgs = rows.flatMap(r => [...r.querySelectorAll('img')]);
       return Promise.all(imgs.map(img => (img.decode ? img.decode().catch(() => {}) : null))).then(() => {
         if (draw !== shootModeBoardDraw) return;
@@ -18916,6 +18928,10 @@
         });
       } else if (child.matches('.shoot-mode-quick-review')) {
         add(child, [child.previousElementSibling]);
+      } else if (child.id === 'shootModeAddShotBtn' && shown(child) && atoms.length && atoms[atoms.length - 1].heads.includes(listHead)) {
+        // "+ Add shot" goes with the last shot (or the empty hint), never
+        // onto a page of its own under the list's heading.
+        atoms[atoms.length - 1].also = [child];
       } else if (child.matches('#shootModeShotsEmpty, #shootModeAddShotBtn')) {
         // Under the shot list: a page it runs onto keeps the list's heading.
         add(child, [listHead]);
@@ -18955,7 +18971,7 @@
     const n = grid.querySelectorAll('.moodboard-thumb').length;
     grid.classList.remove('is-fitted');
     ['--mb-cols', '--mb-w', '--mb-h'].forEach(v => grid.style.removeProperty(v));
-    if (limitY === null || !n) { groupShootModeBoard(3); return; }
+    if (!n) { groupShootModeBoard(3); return; }
     const box = grid.getBoundingClientRect();
     const cs = getComputedStyle(grid);
     const W = grid.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
@@ -18979,7 +18995,14 @@
       const c = Math.max(1, Math.floor((W + BOARD_GAP_X) / (BOARD_MIN * Math.max(1, ratio) + BOARD_GAP_X)));
       const w = (W - (c - 1) * BOARD_GAP_X) / c;
       const fallback = { c, w, h: w / ratio };
-      if (!best || Math.min(fallback.w, fallback.h) > Math.min(best.w, best.h)) best = fallback;
+      if (!best || Math.min(fallback.w, fallback.h) > Math.min(best.w, best.h)) {
+        // As many whole rows as a page takes, stretched (a little, as above)
+        // to fill it rather than leave a strip at the foot of each page.
+        const room = limitY - box.top - parseFloat(cs.paddingTop) - 2;
+        const perPage = Math.max(1, Math.floor(room / (fallback.h + BOARD_GAP_Y)));
+        if (Math.ceil(n / c) > perPage) fallback.h = Math.min(room / perPage - BOARD_GAP_Y, fallback.h * BOARD_GIVE);
+        best = fallback;
+      }
     }
     groupShootModeBoard(best.c);
     grid.style.setProperty('--mb-cols', String(best.c));
@@ -19029,13 +19052,13 @@
     shootModeSheet.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
     shootModeSheet.dataset.part = 'main';
     shootModeMain.querySelectorAll('.shot-text').forEach(autoSizeTextarea);
-    const main = buildFlow(shootModeMain, shootModeAtoms, limit(), { margins: true });
+    const main = buildFlow(shootModeMain, shootModeAtoms, limit(), { margins: true, later: true });
     shootModeSheet.dataset.part = 'board';
     fitShootModeBoard(limit());
-    const board = buildFlow(shootModeBoardPart, shootModeAtoms, limit(), { margins: true });
+    const board = buildFlow(shootModeBoardPart, shootModeAtoms, limit(), { margins: true, later: true });
     shootModeSheet.dataset.part = 'more';
     autoSizeTextarea(document.getElementById('shootModeShootingNotes'));
-    const more = buildFlow(shootModeMore, shootModeAtoms, limit(), { margins: true });
+    const more = buildFlow(shootModeMore, shootModeAtoms, limit(), { margins: true, later: true });
     shootModeFlows = { main, board, more };
     const holds = (el) => ({ part, i }) => shootModeFlows[part].pages[i].atoms.some(a => a.el === el || a.el.contains(el));
     if (shootModeWanted !== null) shootModeAt = shootModeWanted;

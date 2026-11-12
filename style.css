@@ -5565,10 +5565,11 @@ h2.status-group-heading.heading-navy {
   padding: 4px 20px 0;
 }
 
-/* Same row shape as the edit form's shot list (.shot-list-row/.shot-drag-
-   handle/.shot-text/.delete-shot are all reused as-is) plus a checkbox for
-   ticking a shot off during the actual shoot — the one thing the planning-
-   only list on the edit page doesn't need. */
+/* The edit form's shot-list parts (.shot-drag-handle, .shot-text, the star
+   and .delete-shot) plus a checkbox for ticking a shot off during the
+   actual shoot — the one thing the planning-only list on the edit page
+   doesn't need. Drawn smaller in Shoot mode: see `#shootModeOverlay
+   .shoot-mode-shot-row` near the end of the file. */
 .shoot-mode-shot-row {
   display: flex;
   align-items: center;
@@ -5750,19 +5751,8 @@ h2.status-group-heading.heading-navy {
 }
 
 /* ---------- Shoot mode: Done button, Quick review ---------- */
-
-.shoot-mode-quick-review {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  /* The visible gap below these buttons isn't just this padding-bottom —
-     the "Shot list" heading right after adds its own 14px margin-top on
-     top of it (see .shoot-mode-body .shoot-mode-section-heading), for a
-     real total of 24px before that banner starts. Matching padding-top to
-     that same 24px, instead of to the bare 10px bottom padding, is what
-     actually centers the buttons in the white space between both banners. */
-  padding: 24px 20px 10px;
-}
+/* The Quick review row itself is laid out near the end of the file
+   (`#shootModeOverlay .shoot-mode-quick-review`). */
 
 .shoot-mode-quick-review-btn {
   padding: 13px 8px;
@@ -5775,7 +5765,7 @@ h2.status-group-heading.heading-navy {
   font-size: 14px;
   letter-spacing: 0.5px;
   cursor: pointer;
-  /* Grid stretches all three buttons to match the tallest two-line label
+  /* The row stretches all three buttons to match the tallest two-line label
      ("Lighting setups"); without flex centering a shorter one-line label
      just sits at the top of that extra height instead of centering in it. */
   display: flex;
@@ -5786,18 +5776,6 @@ h2.status-group-heading.heading-navy {
 
 .shoot-mode-quick-review-btn:active {
   background: var(--accent);
-}
-
-/* Three across only fits from about 340px wide (the longest words set
-   the floor); narrower, Wild card takes its own row under the other two. */
-@media (max-width: 340px) {
-  .shoot-mode-quick-review {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  #shootModeWildCardBtn {
-    grid-column: 1 / -1;
-  }
 }
 
 /* Wild card popup: the Quick review card, but sized to its one card —
@@ -6851,12 +6829,13 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 #shootModeOverlay .shoot-mode-body { flex: none; overflow: visible; padding: 0; }
 #shootModeOverlay .shoot-mode-body .shoot-mode-section-heading { padding: 14px 0 0; }
 /* The quick review's three buttons on one row: on a narrower phone
-   "Lighting setups" takes two lines first; only under 340px does Wild card
-   go under the other two. */
+   "Lighting setups" takes two lines first, then under 341px Wild card does
+   too; only under 307px does Wild card go under the other two. */
 #shootModeOverlay .shoot-mode-quick-review { flex-wrap: nowrap; gap: 6px; padding: 10px 20px 4px; }
 #shootModeOverlay .shoot-mode-quick-review .shoot-mode-quick-review-btn { flex: 0 0 auto; padding: 6px 8px; white-space: nowrap; }
 #shootModeOverlay .shoot-mode-quick-review #shootModeReviewLightingBtn { flex-shrink: 1; white-space: normal; }
-@media (max-width: 340px) { #shootModeOverlay .shoot-mode-quick-review { flex-wrap: wrap; } }
+@media (max-width: 340px) { #shootModeOverlay .shoot-mode-quick-review #shootModeWildCardBtn { flex-shrink: 1; white-space: normal; } }
+@media (max-width: 306px) { #shootModeOverlay .shoot-mode-quick-review { flex-wrap: wrap; } }
 #shootModeMoodboard { display: block; }
 #shootModeMoodboard .shoot-mode-moodboard-row { margin-bottom: 6px; }
 #shootModeOverlay .shoot-mode-quick-review-btn { font-size: 15px; line-height: 20px; }
@@ -7083,4 +7062,11 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 #shootModeOverlay .shoot-mode-shot-row { gap: 8px; padding: 4px 0; }
 #shootModeOverlay .shoot-mode-shot-row .shot-text { padding: 1px 2px 2px; min-height: 23px; }
 #shootModeOverlay .shoot-mode-shot-row .shoot-mode-shot-check { width: 20px; height: 20px; margin: 2px 2px 2px 3px; }
-#shootModeOverlay .shoot-mode-shot-row :is(.shot-drag-handle, .star-shot, .delete-shot) { width: 24px; height: 24px; }
+#shootModeOverlay .shoot-mode-shot-row :is(.shot-drag-handle, .star-shot, .delete-shot) { width: 24px; height: 24px; padding: 0; }
+
+/* The 4px under the mood board's last row of photos moves onto "+ Add
+   photos" (the same gap; flow-root keeps the last row's own 6px inside
+   the board): a page of photos that ends mid-board then ends on a row, and
+   its fit can't run 4px past the foot of the page. */
+#shootModeOverlay #shootModeMoodboard:not(:empty) { display: flow-root; padding-bottom: 0; }
+#shootModeOverlay #shootModeMoodboard:not(:empty) ~ #shootModeAddMoodboardBtn { margin-top: 14px; }
