@@ -1,6 +1,6 @@
 {
-  "name": "Documenting Fictions",
-  "short_name": "Documenting Fictions",
+  "name": "The Eye",
+  "short_name": "The Eye",
   "description": "Daily practice and business growth tracker for Starky Photography.",
   "start_url": "./index.html",
   "display": "standalone",
@@ -8,7 +8,15 @@
   "theme_color": "#ffffff",
   "orientation": "portrait",
   "icons": [
-    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ]
 }

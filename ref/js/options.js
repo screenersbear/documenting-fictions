@@ -31,11 +31,11 @@ export function openOptions() {
       </div>
       <span class="field-label opt-gap">Stickers</span>
       <button type="button" class="btn secondary opt-wide" data-stickers>Stickers</button>
-      <span class="field-label opt-gap">Always start</span>
+      ${window.DF_SUITE ? '' : `<span class="field-label opt-gap">Always start</span>
       <div class="seg opt-seg">
         <button type="button" data-start="shut"${startsOpen() ? '' : ' class="on"'}>In the notebook</button>
         <button type="button" data-start="open"${startsOpen() ? ' class="on"' : ''}>On the first page</button>
-      </div>
+      </div>`}
       <button type="button" class="btn secondary opt-wide opt-gap" data-intro>How it works</button>`,
   });
   s.body.addEventListener('click', (e) => {

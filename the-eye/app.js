@@ -581,7 +581,7 @@
     const addressLine = [loc.street, loc.city, cityStateZip].filter(hasText).join(', ');
     if (addressLine) parts.push(addressLine);
     if (loc.country) parts.push(REGION_LABELS[loc.country] || loc.country);
-    return parts.join(' — ');
+    return parts.join(', ');
   }
 
   // The same line without the country. The shared PDF goes to talent and crew
@@ -1086,7 +1086,7 @@
   // since one full store tends to fail a whole burst of writes at once.
   // Declared up here, ahead of the first saveState(), so it's ready before
   // anything can save.
-  const STORAGE_FULL_MESSAGE = "Couldn't save — your phone's storage for the app may be full. Back up and free some space.";
+  const STORAGE_FULL_MESSAGE = "Couldn't save. Your phone's storage for the app may be full. Back up and free some space.";
   let storageFullNoticeAt = 0;
 
   // Older engines report a full store by code rather than name (22 in
@@ -3275,7 +3275,7 @@
     },
     'report:bell': {
       title: 'Find this again',
-      text: "that was your daily report — it turns up once a day with anything that needs attention. You can pull it back up whenever you like: tap the bell at the top of the Overview screen.",
+      text: "that was your daily report. It turns up once a day with anything that needs attention. You can pull it back up whenever you like: tap the bell at the top of the Overview screen.",
     },
   };
 
@@ -3320,7 +3320,7 @@
     document.getElementById('photographerPhoneInput').value = p.phone;
     document.getElementById('photographerIntroText').hidden = !isFirstRun;
     document.getElementById('photographerModalTitle').textContent =
-      isFirstRun ? 'Welcome — a bit about you' : 'Photographer information';
+      isFirstRun ? 'Welcome! A bit about you' : 'Photographer information';
     document.getElementById('photographerModalOverlay').hidden = false;
   }
 
@@ -4361,12 +4361,12 @@
     'When you look back at your earliest portraits, what technical habit do you notice yourself repeating that you no longer do?',
     'Where in your process do you still hesitate, and what would it take to move through that hesitation?',
     'What is a compositional choice you used to avoid that you now reach for instinctively?',
-    'Describe an image where you let a mistake stay in the frame — what did it end up giving you?',
+    'Describe an image where you let a mistake stay in the frame. What did it end up giving you?',
     'Which of your recent edits pulled you further from what your camera actually captured, and why did that feel right?',
     'What have you been quietly practicing behind the scenes that hasn\'t shown up in your published work yet?',
     'When did you last change your mind mid-shoot about how a story should be told, and what shifted?',
     'What\'s a piece of gear or software you\'ve been avoiding learning, and what is that avoidance protecting you from?',
-    'Think of a portrait you underexposed on purpose — what were you trying to make the viewer feel?',
+    'Think of a portrait you underexposed on purpose. What were you trying to make the viewer feel?',
     'What do your color grades keep telling on you about your current mood or mindset?',
     'Which subject\'s face have you photographed enough times that you\'re starting to see new things in familiar light?',
     'What is the difference between the photographer you were a year ago and the one editing tonight?',
@@ -4374,7 +4374,7 @@
     'What\'s an editing decision you keep un-doing and re-doing on the same image, and what does that back-and-forth reveal?',
     'Which of your recent images relied on someone else\'s trust more than your own technical skill?',
     'What is a lighting setup you\'ve stopped using, and what replaced it in your instincts?',
-    'When did a technical limitation — bad light, wrong lens, no time — accidentally push your storytelling somewhere better?',
+    'When did a technical limitation (bad light, wrong lens, no time) accidentally push your storytelling somewhere better?',
     'What\'s the difference between a photo you took to prove something and one you took because you needed to see it?',
     'Which recurring pose or gesture do you now steer subjects away from, and when did that change?',
     'What have you started noticing in other photographers\' work that you didn\'t have language for a year ago?',
@@ -4390,35 +4390,35 @@
     'What\'s the boldest editing choice you\'ve made this year that a client or viewer never noticed?',
     'Which image took the most technical risk, and what would you have lost by playing it safe?',
     'What do you keep photographing that you haven\'t figured out how to talk about yet?',
-    'When does your work feel most like you, technically speaking — in the shooting or in the editing?',
+    'When does your work feel most like you, technically speaking: in the shooting or in the editing?',
     'What\'s a piece of feedback about your style that stung because it was accurate?',
     'Which shadow, reflection, or blur have you been chasing across several shoots without naming why?',
     'What story are you telling with your sequencing choices lately, separate from any single image?',
-    'Where has your relationship with sharpness and focus shifted — what used to feel essential that no longer does?',
+    'Where has your relationship with sharpness and focus shifted? What used to feel essential that no longer does?',
     'What\'s an editing preset or look you built for yourself, and what does it protect you from deciding each time?',
-    'Which recent portrait required you to abandon your plan entirely — what did you learn from following the moment instead?',
+    'Which recent portrait required you to abandon your plan entirely? What did you learn from following the moment instead?',
     'What technical constraint are you currently working within on purpose, as a way of forcing growth?',
     'Which of your images do you return to not because it\'s good, but because it\'s unresolved?',
     'What have you stopped explaining to clients because you trust your instincts on it now?',
-    'Where does your work get quieter — less composed, less controlled — and what happens there?',
+    'Where does your work get quieter, less composed, less controlled, and what happens there?',
     'What\'s a color, texture, or type of light you avoid because it\'s difficult, not because it\'s wrong for the story?',
     'Which recent choice in the edit surprised you, as if someone else made it?',
     'What does the gap between how you shoot and how you were taught to shoot look like right now?',
     'When did you last let a subject\'s discomfort into the frame instead of directing it away?',
-    'What\'s a narrative device — silence, distance, repetition — you\'ve started borrowing from outside photography?',
+    'What\'s a narrative device (silence, distance, repetition) you\'ve started borrowing from outside photography?',
     'Which of your technical strengths has quietly become a crutch?',
     'What would your work look like if you removed the safety net you always fall back on?',
     'Where do you sense your next stylistic shift coming from, even if you can\'t see it clearly yet?',
     'What\'s an image you keep revisiting in your edits months later, and what does it still ask of you?',
     'Which lighting decision do you make almost without thinking now that used to take real deliberation?',
-    'What have you learned about restraint — pulling back rather than adding — in your recent editing?',
+    'What have you learned about restraint, pulling back rather than adding, in your recent editing?',
     'Where in your body do you feel it when a frame is right, before you can explain why?',
     'What\'s a technical rule you broke recently on purpose, and what did it cost or earn you?',
     'Which of your images tells a story you didn\'t consciously intend to tell?',
-    'What do you notice yourself avoiding in post-production — a tone, a correction, a truth?',
+    'What do you notice yourself avoiding in post-production: a tone, a correction, a truth?',
     'When did your understanding of composition move from rules to something more like intuition?',
     'What\'s a risk you took with a client\'s portrait that you wouldn\'t have taken a year ago?',
-    'Which piece of your process have you handed over to trust — in your gear, your instinct, or your subject — that you used to control?',
+    'Which piece of your process have you handed over to trust (in your gear, your instinct, or your subject) that you used to control?',
     'What does your unedited, unfiltered first look at a shoot tell you that the final selects don\'t?',
     'Where do you find yourself softening an image\'s harder truths, and is that instinct serving the story?',
     'What\'s a technique you admire in someone else\'s work that you\'ve tried and deliberately abandoned?',
@@ -4569,7 +4569,7 @@
     'What part of running this business no longer feels sustainable the way you\'re currently doing it?',
     'If you kept working at this exact pace for five more years, what would you gain, and what would you lose?',
     'What shift in the photography industry over the past few years has most changed how you work?',
-    'When you think about how AI is reshaping image-making, what feeling rises first — curiosity, dread, or something harder to name?',
+    'When you think about how AI is reshaping image-making, what feeling rises first: curiosity, dread, or something harder to name?',
     'Which industry norm you once accepted without question now strikes you as worth questioning?',
     'How has the way clients discover and hire photographers changed since you started, and what do you make of it?',
     'What part of the business side of photography still catches you off guard, even now?',
@@ -4581,7 +4581,7 @@
     'Describe a moment when another photographer\'s generosity changed the course of your work.',
     'What does genuine community among photographers look like to you, versus its performance online?',
     'When was the last time you felt truly seen by a peer in this field, and what made that possible?',
-    'What role do you play in your photography community — the one who organizes, the one who listens, the one who disappears?',
+    'What role do you play in your photography community: the one who organizes, the one who listens, the one who disappears?',
     'How has collaborating with another photographer, rather than competing, opened something up for you?',
     'What would you want to build for the next generation of photographers coming into this community?',
     'Which relationships in this industry have outlasted the projects that started them?',
@@ -4593,7 +4593,7 @@
     'What\'s a belief about "the right way" to shoot that you\'ve quietly abandoned?',
     'Where do you draw the line between craft and commerce in your own work?',
     'What tradition within photography do you feel responsible for carrying forward?',
-    'How has your relationship to the tools of your craft — camera, light, film, software — changed as the culture around them has changed?',
+    'How has your relationship to the tools of your craft (camera, light, film, software) changed as the culture around them has changed?',
     'What reliably pulls you out of a creative rut when the industry noise gets too loud?',
     'When did you last feel pure wonder about making an image, and what brought it on?',
     'What keeps your love for this work intact on the days the business of it wears you down?',
@@ -4639,23 +4639,23 @@
     'What do you notice yourself borrowing, consciously or not, from photographers you admire?',
     'Whose restraint in their work teaches you something your own instincts resist?',
     'What does it feel like in your body the moment a subject stops performing and starts simply being themselves in front of your lens?',
-    'Think of a client who arrived guarded—what did you do, or not do, that let them soften?',
+    'Think of a client who arrived guarded. What did you do, or not do, that let them soften?',
     'How do you know, in the middle of a shoot, that you\'ve earned someone\'s trust rather than just their compliance?',
-    'Recall a moment when you had to choose between the shot you wanted and the comfort of the person you were photographing—what did you choose, and how do you feel about it now?',
-    'What\'s a piece of direction you give often that you\'ve never really examined—where did it come from?',
+    'Recall a moment when you had to choose between the shot you wanted and the comfort of the person you were photographing. What did you choose, and how do you feel about it now?',
+    'What\'s a piece of direction you give often that you\'ve never really examined. Where did it come from?',
     'Describe the last time a subject cried in front of your camera, and what you did in that instant.',
     'When has silence on set told you more than anything either of you said?',
-    'Who is the collaborator—stylist, assistant, agent, makeup artist—who reads a room better than you do, and what have you learned from watching them work?',
+    'Who is the collaborator (stylist, assistant, agent, makeup artist) who reads a room better than you do, and what have you learned from watching them work?',
     'What do you do differently when you sense someone has been hurt by a photographer before?',
-    'Think about a shoot where the client\'s vision and your instinct pulled in opposite directions—how did you find the middle, or did you?',
-    'What does trust sound like, specifically — what words or tone do you reach for in the first five minutes with someone new?',
+    'Think about a shoot where the client\'s vision and your instinct pulled in opposite directions. How did you find the middle, or did you?',
+    'What does trust sound like, specifically? What words or tone do you reach for in the first five minutes with someone new?',
     'When was the last time you were wrong about someone before the camera even came out, and what taught you that?',
     'Describe a subject who taught you something about your own way of seeing.',
-    'What\'s the difference between a client who directs you and a client who lets you lead — and which unsettles you more?',
-    'Recall a shoot that felt like a genuine conversation rather than a job — what made it that way?',
+    'What\'s the difference between a client who directs you and a client who lets you lead, and which unsettles you more?',
+    'Recall a shoot that felt like a genuine conversation rather than a job. What made it that way?',
     'How do you handle the moment a client\'s expectations and the person actually standing in front of you don\'t match?',
     'What have you learned about consent and comfort that no one taught you in school?',
-    'Think of the collaborator you\'ve worked with the longest — how has your shorthand with them changed over the years?',
+    'Think of the collaborator you\'ve worked with the longest. How has your shorthand with them changed over the years?',
     'When has a subject surprised you by trusting you with something vulnerable, on or off camera?',
   ];
 
@@ -5105,10 +5105,10 @@
     empty.hidden = items.length !== 0;
     if (!empty.hidden) {
       empty.textContent = journalFilter === 'log'
-        ? "No weekly log yet — it fills in on its own once a shoot is marked captured."
+        ? "No weekly log yet. It fills in on its own once a shoot is marked captured."
         : journalFilter === 'entries'
-          ? "No entries of your own yet — tap + to write one. Anything on your mind?"
-          : "Nothing here yet — the weekly log fills in on its own once a shoot is marked captured, and + adds an entry of your own. Anything on your mind?";
+          ? "No entries of your own yet. Tap + to write one. Anything on your mind?"
+          : "Nothing here yet. The weekly log fills in on its own once a shoot is marked captured, and + adds an entry of your own. Anything on your mind?";
     }
 
     const imagePromises = renderYearMonthGroups(list, items, {
@@ -8550,13 +8550,13 @@
   // Steps through the same sections as the title jump-menu, one at a time,
   // scrolling to each and explaining what it's for.
   const SHOOT_TOUR_STEPS = [
-    { id: 'basicInfoHeading', title: 'Basic Info', text: "Title, talent, status, and category — the foundation of the shoot." },
-    { id: 'logisticsHeading', title: 'Logistics', text: 'Shoot date, deadline, time, and location — the when and where.' },
+    { id: 'basicInfoHeading', title: 'Basic Info', text: "Title, talent, status, and category: the foundation of the shoot." },
+    { id: 'logisticsHeading', title: 'Logistics', text: 'Shoot date, deadline, time, and location: the when and where.' },
     { id: 'teamHeading', title: 'Team', text: "Who's on the shoot and how to reach them." },
-    { id: 'directionHeading', title: 'Direction', text: "Concept, character, and creative direction — the story you're telling." },
-    { id: 'visualsHeading', title: 'Visuals', text: () => `${moodboardTerm(document.getElementById('shootCategory').value)}, references, and frameworks — the visual language for the shoot.` },
-    { id: 'shotListHeading', title: 'Shot list', text: "Every shot you want to come away with — tap a line to write, Enter to start the next one, and tick them off as you go — plus notes for the day and what you'll be asking of the talent and the team." },
-    { id: 'postShootHeading', title: 'Reflection', text: 'What went right, what could be better, and lessons for next time — filled in after the shoot.' },
+    { id: 'directionHeading', title: 'Direction', text: "Concept, character, and creative direction: the story you're telling." },
+    { id: 'visualsHeading', title: 'Visuals', text: () => `${moodboardTerm(document.getElementById('shootCategory').value)}, references, and frameworks: the visual language for the shoot.` },
+    { id: 'shotListHeading', title: 'Shot list', text: "Every shot you want to come away with. Tap a line to write, Enter to start the next one, and tick them off as you go. Plus notes for the day and what you'll be asking of the talent and the team." },
+    { id: 'postShootHeading', title: 'Reflection', text: 'What went right, what could be better, and lessons for next time, filled in after the shoot.' },
   ];
   let shootTourStepIndex = 0;
   const shootTourSteps = () => SHOOT_TOUR_STEPS.filter(step => availableShootPages().some(page => page.id === step.id));
@@ -12452,7 +12452,7 @@
       const max = conceptHelperMax(out);
       const count = document.getElementById(out.countId);
       const outOver = len > max;
-      count.textContent = outOver ? `${len}/${max} — trim a little to fit the ${out.label} box` : `${len}/${max}`;
+      count.textContent = outOver ? `${len}/${max}: trim a little to fit the ${out.label} box` : `${len}/${max}`;
       count.classList.toggle('over', outOver);
       over = over || outOver;
       any = any || len > 0;
@@ -14834,7 +14834,7 @@
     if (!shootPageOpenOn(shootId) || !isOffScheduleShoot({ status }) || !date || date === currentOffScheduleDate) return;
     const label = STATUS_LABELS[status].toLowerCase();
     const backOn = await askConfirm({
-      title: 'New date — is it back on?',
+      title: 'New date. Is it back on?',
       text: `This shoot is ${label}. Put it back on the schedule for ${prettyDate(date)}, or keep it ${label} for now?`,
       cancelLabel: `Keep ${label}`,
       confirmLabel: 'Back on the schedule',
@@ -14868,7 +14868,7 @@
     multiDayPromptDates = dates;
     const term = moodboardTerm(document.getElementById('shootCategory').value).toLowerCase();
     document.getElementById('multiDayPromptText').textContent =
-      `This makes a separate shoot for each day — ${multiDayDatesText(dates)}. Everything on Day 1 (talent, team, location, concept, notes, ${term} and lighting setups) is mirrored to the other days, including any changes you make to Day 1 later. Each day keeps its own date, times, status, shot list and reflection. Note: if you change anything on another day yourself, that day keeps its own version and won't pick up later changes to Day 1.`;
+      `This makes a separate shoot for each day: ${multiDayDatesText(dates)}. Everything on Day 1 (talent, team, location, concept, notes, ${term} and lighting setups) is mirrored to the other days, including any changes you make to Day 1 later. Each day keeps its own date, times, status, shot list and reflection. Note: if you change anything on another day yourself, that day keeps its own version and won't pick up later changes to Day 1.`;
     // Read off the form rather than saved state — a brand-new draft has
     // nothing saved yet, and an existing shoot may have unsaved edits.
     const talent = currentTalents.find(t => hasText(t.name));
@@ -15843,7 +15843,7 @@
         const who = hasText(photographer.name) ? photographer.name : (photographer.businessName || 'Photographer');
         const business = hasText(photographer.name) && hasText(photographer.businessName) ? ` (${photographer.businessName})` : '';
         ensureSpace(15);
-        doc.text(`• ${who}${business} — Photographer`, margin, y);
+        doc.text(`• ${who}${business}, Photographer`, margin, y);
         y += 15;
         if (hasText(photographer.socialHandle)) {
           const entry = SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === photographer.socialPlatform);
@@ -15861,7 +15861,7 @@
         ensureSpace(hasText(tm.socialHandle) ? 30 : 15);
         const roleEntry = TEAM_ROLE_OPTIONS.find(([val]) => val === tm.role);
         const roleLabel = roleEntry ? roleEntry[1] : 'Other';
-        doc.text(`• ${tm.name ? tm.name : 'Unnamed'} — ${roleLabel}`, margin, y);
+        doc.text(`• ${tm.name ? tm.name : 'Unnamed'}, ${roleLabel}`, margin, y);
         y += 15;
         if (hasText(tm.socialHandle)) {
           const platformEntry = SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === tm.socialPlatform);
@@ -16020,7 +16020,7 @@
         const doc = await buildShootPdf(s, chosenSections);
         const dateLabel = formatDateDots(s.date);
         const nameOrTalent = s.title || primaryTalentName(s) || 'Shoot';
-        const title = dateLabel ? `${dateLabel} — ${nameOrTalent} call sheet` : `${nameOrTalent} call sheet`;
+        const title = dateLabel ? `${dateLabel} · ${nameOrTalent} call sheet` : `${nameOrTalent} call sheet`;
         // Filename allows dots (the date format needs them) but swaps the em
         // dash for a plain hyphen rather than dropping it, since the sanitizer
         // strips anything that isn't word/hyphen/space/dot.
@@ -16207,7 +16207,7 @@
     } catch (err) {
       if (token !== pdfViewer.token) return;
       console.error('Failed to display PDF preview', err);
-      pdfStatusEl.textContent = "Couldn't show the preview here — you can still Share the PDF.";
+      pdfStatusEl.textContent = "Couldn't show the preview here. You can still Share the PDF.";
     }
   }
 
@@ -16445,8 +16445,8 @@
       pdfPreviewBlob = doc.output('blob');
       const dateLabel = prettyDate(entry.createdAt);
       const titleOrUntitled = entry.title || 'Untitled entry';
-      const entryName = dateLabel ? `${dateLabel} — ${titleOrUntitled}` : titleOrUntitled;
-      const safeName = entryName.replace(/—/g, '-').replace(/[^\w\- .]+/g, '').trim() || 'journal entry';
+      const entryName = dateLabel ? `${dateLabel} · ${titleOrUntitled}` : titleOrUntitled;
+      const safeName = entryName.replace(/[—·]/g, '-').replace(/[^\w\- .]+/g, '').trim() || 'journal entry';
       pdfPreviewFilename = `${safeName}.pdf`;
       if (canWebShare) {
         const file = new File([pdfPreviewBlob], pdfPreviewFilename, { type: 'application/pdf' });
@@ -16455,7 +16455,7 @@
       }
       if (previewWindow) previewWindow.location.href = URL.createObjectURL(pdfPreviewBlob);
       showPdfPreview(pdfPreviewBlob);
-      if (previewWindow) showToast('Opened for viewing — use Share below to send it with the right filename');
+      if (previewWindow) showToast('Opened for viewing. Use Share below to send it with the right filename');
     } catch (err) {
       if (previewWindow) previewWindow.close();
       if (err && err.name === 'AbortError') return;
@@ -16932,7 +16932,7 @@
         team.forEach(tm => {
           ensureSpace(14);
           const roleEntry = TEAM_ROLE_OPTIONS.find(([val]) => val === tm.role);
-          doc.text(`• ${tm.name ? tm.name : 'Unnamed'} — ${roleEntry ? roleEntry[1] : 'Other'}`, margin, y);
+          doc.text(`• ${tm.name ? tm.name : 'Unnamed'}, ${roleEntry ? roleEntry[1] : 'Other'}`, margin, y);
           y += 14;
           if (hasText(tm.socialHandle)) {
             const platformEntry = SOCIAL_PLATFORM_OPTIONS.find(([val]) => val === tm.socialPlatform);
@@ -17033,7 +17033,7 @@
         // under a still-open tab.
         if (previewWindow) previewWindow.location.href = URL.createObjectURL(pdfPreviewBlob);
         showPdfPreview(pdfPreviewBlob);
-        if (previewWindow) showToast('Opened for viewing — use Share below to send it with the right filename');
+        if (previewWindow) showToast('Opened for viewing. Use Share below to send it with the right filename');
         // Whether it then gets saved from the preview or the new tab can't
         // be seen from here, so nothing is offered for deletion until the
         // preview is closed and "Did it save?" is answered (closePdfPreview).
@@ -17098,7 +17098,7 @@
     const n = exportPendingDeleteShoots.length;
     exportDeleteConfirmModal.classList.add('danger-state');
     exportDeleteConfirmTitle.textContent = 'Delete these shoots for good?';
-    exportDeleteConfirmText.textContent = `This permanently removes ${n} shoot${n === 1 ? '' : 's'} and every photo attached to ${n === 1 ? 'it' : 'them'} — cover photos, talent photos, mood boards, and final images. They're in the PDF you just exported, but this app copy of them can't be recovered once deleted.`;
+    exportDeleteConfirmText.textContent = `This permanently removes ${n} shoot${n === 1 ? '' : 's'} and every photo attached to ${n === 1 ? 'it' : 'them'}: cover photos, talent photos, mood boards, and final images. They're in the PDF you just exported, but this app copy of them can't be recovered once deleted.`;
     exportDeleteConfirmActions.hidden = false;
     exportDeleteConfirmOkBtn.hidden = true;
     document.getElementById('exportDeleteConfirmOverlay').hidden = false;
@@ -17115,7 +17115,7 @@
     renderAll();
     exportDeleteConfirmModal.classList.remove('danger-state');
     exportDeleteConfirmTitle.textContent = 'Shoots deleted.';
-    exportDeleteConfirmText.textContent = 'Your archive PDF still has everything — good luck out there!';
+    exportDeleteConfirmText.textContent = 'Your archive PDF still has everything. Good luck out there!';
     exportDeleteConfirmActions.hidden = true;
     exportDeleteConfirmOkBtn.hidden = false;
     exportPendingDeleteShoots = [];
@@ -17470,7 +17470,7 @@
   const deleteAllConfirmActions = document.getElementById('deleteAllConfirmActions');
   const deleteAllConfirmOkBtn = document.getElementById('deleteAllConfirmOkBtn');
   // Same words as the popup's default text in index.html.
-  const DELETE_ALL_WARNING = 'This permanently removes every shoot and its photos — mood boards, final images, cover and talent photos. Your Journal entries and their photos are kept. This can\'t be undone.';
+  const DELETE_ALL_WARNING = 'This permanently removes every shoot and its photos: mood boards, final images, cover and talent photos. Your Journal entries and their photos are kept. This can\'t be undone.';
 
   // Straight to the app's own "are you SURE sure" popup — the browser
   // confirm() that used to come first only asked the same thing twice.
@@ -17668,10 +17668,10 @@
     const days = daysSinceLastBackup();
     if (days === null) {
       if (!state.shoots.length && !state.journalEntries.length) return null;
-      return { action: 'backup', text: 'No backup yet — tap to back up your shoots, journal and photos.' };
+      return { action: 'backup', text: 'No backup yet. Tap to back up your shoots, journal and photos.' };
     }
     if (days <= BACKUP_REMINDER_DAYS) return null;
-    return { action: 'backup', text: `Your last backup was ${days} days ago — tap to back up now.` };
+    return { action: 'backup', text: `Your last backup was ${days} days ago. Tap to back up now.` };
   }
 
   function withBackupReminder(content) {
@@ -17700,7 +17700,7 @@
     const file = e.target.files[0];
     e.target.value = '';
     if (!file) return;
-    const notABackup = () => showToast("That file isn't a backup from this app — nothing was changed.");
+    const notABackup = () => showToast("That file isn't a backup from this app. Nothing was changed.");
     const reader = new FileReader();
     reader.onload = () => {
       try {
@@ -20274,7 +20274,7 @@
     const pending = shootPendingLabels(s);
     if (daysUntil < 0 || daysUntil > 7 || !pending.length) return null;
     const when = daysUntil === 0 ? 'today' : `in ${daysUntil} day${daysUntil === 1 ? '' : 's'}`;
-    return `${shootDisplayName(s)}'s shoot is ${when} — pending: ${pending.join(', ')}`;
+    return `${shootDisplayName(s)}'s shoot is ${when}. Still to do: ${pending.join(', ')}`;
   }
 
   function computeDailyReportItems() {
@@ -20368,7 +20368,7 @@
     const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const lastMonthCount = count(s => s.date && POST_CAPTURE_STATUSES.includes(s.status) && parseShootDate(s.date).getFullYear() === lastMonthDate.getFullYear() && parseShootDate(s.date).getMonth() === lastMonthDate.getMonth());
     if (thisMonthCount > lastMonthCount && lastMonthCount > 0) facts.push(`You've shot ${thisMonthCount - lastMonthCount} more time${(thisMonthCount - lastMonthCount) === 1 ? '' : 's'} this month than last.`);
-    if (lastMonthCount > thisMonthCount && lastMonthCount > 0) facts.push(`Last month you had ${lastMonthCount} shoot${lastMonthCount === 1 ? '' : 's'} — busier than this month so far.`);
+    if (lastMonthCount > thisMonthCount && lastMonthCount > 0) facts.push(`Last month you had ${lastMonthCount} shoot${lastMonthCount === 1 ? '' : 's'}, busier than this month so far.`);
 
     const deliveredCount = count(s => s.status === 'delivered');
     if (deliveredCount > 0) facts.push(`You've delivered ${deliveredCount} shoot${deliveredCount === 1 ? '' : 's'}.`);
@@ -20417,7 +20417,7 @@
     catEntries.forEach(([catA, nA]) => {
       catEntries.forEach(([catB, nB]) => {
         if (catA !== catB && nA > nB) {
-          facts.push(`You've shot more ${CATEGORY_PLURAL_LABELS[catA]} than ${CATEGORY_PLURAL_LABELS[catB]} — ${nA} vs ${nB}.`);
+          facts.push(`You've shot more ${CATEGORY_PLURAL_LABELS[catA]} than ${CATEGORY_PLURAL_LABELS[catB]}: ${nA} vs ${nB}.`);
         }
       });
     });
@@ -21816,7 +21816,8 @@
     // Laid out like ref's Options sheet: the book's color, Stickers (its own
     // part, as ref's own sheet), and where the app starts. On Stickers and
     // Remove sticker the X goes one step back, as closing ref's sheet on top.
-    const START_CHOICES = [['last', 'Where I left off'], ['notebook', 'Notebook'], ['first', 'First page']];
+    // Inside Documenting Fictions the shelf is the shut notebook, so there's no starting on it.
+    const START_CHOICES = [['last', 'Where I left off'], ['notebook', 'Notebook'], ['first', 'First page']].filter(([key]) => !window.DF_SUITE || key !== 'notebook');
     const BACK_TO = { main: null, stickers: 'main', remove: 'stickers' };
     let paneNow = 'main';
     const PANES = {

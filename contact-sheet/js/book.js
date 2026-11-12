@@ -85,11 +85,11 @@ function openOptions(stickers) {
       </div>
       <span class="field-label opt-gap">Stickers</span>
       <button type="button" class="btn secondary opt-wide" data-stickers>Stickers</button>
-      <span class="field-label opt-gap">Always start</span>
+      ${window.DF_SUITE ? '' : `<span class="field-label opt-gap">Always start</span>
       <div class="opt-seg" role="group" aria-label="Always start">
         <button type="button" data-start="notebook" aria-pressed="${!first}">In the notebook</button>
         <button type="button" data-start="first" aria-pressed="${first}">On the first page</button>
-      </div>
+      </div>`}
       <span class="field-label opt-gap">Export</span>
       <button type="button" class="btn secondary opt-wide" data-pdf>Whole notebook as PDF</button>`,
   });
