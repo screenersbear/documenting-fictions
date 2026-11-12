@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" data-book="ocean">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ref, do something</title>
+<meta name="description" content="A reference notebook for your phone: tagged photos and mood boards made from them." />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#ffffff" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="ref" />
+<link rel="apple-touch-icon" href="icons/icon-180.png" />
+<link rel="preload" href="fonts/kaisei-decol-500-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="icon" type="image/png" href="icons/icon-192.png" />
+<script>try { var book = localStorage.getItem('ref-notebook-book'); if (book) document.documentElement.dataset.book = book; } catch (e) {}</script>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="frame" class="frame" data-side="right">
+  <div class="paper"><main id="view" tabindex="-1"></main></div>
+</div>
+<div class="pull" id="pull" aria-hidden="true" hidden></div>
+<nav class="nav-bar" id="navbar" aria-label="Sections" hidden></nav>
+<div class="nb closed no-anim" id="book">
+  <div class="nb-ground"></div>
+  <div class="nb-float"><div class="nb-turn">
+    <div class="nb-book">
+      <div class="nb-stack" id="bookStack"></div>
+      <div class="nb-side-tabs" id="bookSideTabs"><i class="y" style="--t:0;--i:3"><span>Mood boards</span></i><i class="n" style="--t:1;--i:7"><span>Tags</span></i></div>
+      <div class="nb-spine3d"></div>
+      <div class="sticker-flap" id="stickerFlap"></div>
+      <div class="nb-block"><span class="nb-title" id="titleR"></span></div>
+      <div class="nb-leaf">
+        <div class="nb-front"></div>
+        <div class="nb-inside"><span class="nb-title" id="titleL"></span></div>
+      </div>
+    </div>
+  </div></div>
+  <button type="button" class="nb-hit" id="bookHit" aria-label="Open the notebook"></button>
+  <button type="button" class="nb-sun" id="bookSun" aria-label="App options"></button>
+  <div id="bookTabHits">
+    <button type="button" class="nb-hit-tab" data-go="#/boards" aria-label="Open at Mood boards"></button>
+    <button type="button" class="nb-hit-tab" data-go="#/folders" aria-label="Open at Tags"></button>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<noscript><p>This app needs JavaScript turned on.</p></noscript>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
