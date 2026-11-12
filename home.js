@@ -160,20 +160,27 @@
     return [W * RING_X * Math.sin(r), -LIFT * W * back, W * RING_Z * (Math.cos(r) - 1),
       -20 * (0.25 + 0.75 * (1 + Math.cos(r)) / 2) - 10 * Math.sin(r), 100 + Math.cos(r) * 100, 0.2 * back];
   }
+  // What each book was last given, so only what changed is written: the
+  // shelf lagged as it moved (user, 11-12).
+  const fogs = slots.map((s) => s.querySelector('.fog'));
+  const was = slots.map(() => ({ z: '', f: '' }));
+  const stack = (i, z) => { if (was[i].z !== z) { slots[i].style.zIndex = z; was[i].z = z; } };
+  const fogTo = (i, f) => { if (was[i].f !== f) { fogs[i].style.opacity = f; was[i].f = f; } };
+  // Places book i; gives back how far forward it stands (render() stacks them by it).
   function place(i) {
     const s = slots[i];
     if (near === i) { // up close, for its options (the film roll)
       s.style.transform = `translate3d(0px, ${nearAt.y.toFixed(1)}px, 0px) scale3d(${nearAt.k.toFixed(3)}, ${nearAt.k.toFixed(3)}, ${nearAt.k.toFixed(3)})`;
-      s.style.zIndex = '400';
-      s.querySelector('.fog').style.opacity = '0';
-      return;
+      stack(i, '400');
+      fogTo(i, '0');
+      return Infinity;
     }
     const [x, y, z, yaw, order, fog] = spot(i);
     const tilt = layout === 'row' ? 0 : TILT; // the row looks at you straight on
     const upright = facing === i ? tilt : 0;
     s.style.transform = `rotateX(${-tilt}deg) translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px) rotateX(${upright}deg) rotateY(${(facing === i ? 0 : yaw).toFixed(2)}deg)`;
-    s.style.zIndex = String(Math.round(order));
-    s.querySelector('.fog').style.opacity = fog.toFixed(3);
+    fogTo(i, fog.toFixed(3));
+    return order;
   }
   // How many books along book i is from the front, the way it should come round.
   function stepsTo(i) {
@@ -195,8 +202,14 @@
     store.set(FRONT_KEY, String(pos));
   }
   function render() {
-    for (let i = 0; i < N; i++) place(i);
+    const order = slots.map((s, i) => place(i));
+    // Which book is in front of which, 1 to 4: that only changes as two of
+    // them pass, so the shelf is restacked then and not on every frame of a turn.
+    order.map((o, i) => i).sort((a, b) => order[a] - order[b]).forEach((i, r) => { if (near !== i) stack(i, String(r + 1)); });
   }
+  // A finger moving the books: drawn once a frame, however often it reports.
+  let soon = 0;
+  const renderSoon = () => { if (!soon) soon = requestAnimationFrame(() => { soon = 0; render(); }); };
 
   let anim = 0;
   function go(target) {
@@ -244,7 +257,7 @@
     d.v = 0.7 * d.v + 0.3 * ((e.clientX - d.lastX) / dt);
     d.lastX = e.clientX; d.lastT = e.timeStamp;
     pos = d.pos - dx / (W * DRAG[layout]);
-    render();
+    renderSoon();
   });
   function letGo(e) {
     const d = drag;
@@ -359,7 +372,7 @@
       const mine = St.list(b.id);
       if (!mine.length) { drawMain(); return; }
       sheet.innerHTML = `
-        <span class="opt-label">Tap one to take it off</span>
+        <span class="opt-label opt-hint">Tap one to take it off</span>
         <div class="sticker-list">${[...mine].reverse().map((s) => `<button type="button" class="sticker-pick ${s.shape}" style="--r:${St.ratioOf(s)}" data-id="${s.id}" aria-label="Remove this sticker"><img src="${St.thumb(s)}" alt="" /></button>`).join('')}</div>
         <div class="opt-foot one"><button type="button" class="sheet-btn primary" data-back>Done</button></div>`;
     };

@@ -52,6 +52,10 @@ button { font: inherit; color: inherit; }
 .inside { background: #fff; border-radius: calc(var(--W) * .035) 0 0 calc(var(--W) * .035); transform: rotateY(180deg) translateZ(.5px); backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: inset 0 0 0 calc(var(--W) * .012) var(--c); }
 .fog { background: #fff; transform: translateZ(.6px); pointer-events: none; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .lip { top: calc(var(--W) * .035); height: calc(var(--H) - var(--W) * .07); width: calc(var(--W) * .012); left: calc(var(--W) * .994); transform: translateZ(calc(var(--W) * -.006)) rotateY(90deg); background: var(--c); filter: brightness(.82); }
+/* The same colour as brightness(.82) gives, without a filter to run on every frame (the shelf lagged as it moved, 11-12). */
+@supports (background: color-mix(in srgb, red 50%, #000)) { .lip { background: color-mix(in srgb, var(--c) 82%, #000); filter: none; } }
+/* The first page is only seen once the cover opens: under the shut cover it isn't drawn at all. */
+.slot:not(.opening):not(.open) .page { visibility: hidden; }
 
 .ground { position: absolute; left: calc(var(--W) * -0.55); top: calc(var(--H) / 2 + var(--W) * .02); width: calc(var(--W) * 1.1); height: calc(var(--W) * .5); transform-origin: 50% 0; transform: rotateX(90deg); background: radial-gradient(closest-side, rgba(40, 42, 48, .34), rgba(40, 42, 48, .14) 55%, rgba(40, 42, 48, 0)); animation: nbGround 5.2s ease-in-out infinite; }
 @keyframes nbGround { 0%, 100% { opacity: .78; transform: rotateX(90deg) scale(1.06); } 50% { opacity: 1; transform: rotateX(90deg) scale(.96); } }
@@ -142,3 +146,11 @@ button { font: inherit; color: inherit; }
 .sheet-btn:disabled { opacity: .6; }
 
 @media (prefers-reduced-motion: reduce) { .float, .ground { animation: none; } }
+
+/* ===== The shelf's sheets in the notebooks' new type (user, 11-12): Inter, with titles in Archivo Black capitals and labels in Inter semibold capitals. The books' tabs stay in Klee One. ===== */
+@font-face { font-family: "Inter"; src: url("ref/fonts/inter-latin.woff2") format("woff2"); font-weight: 100 900; font-display: swap; size-adjust: 91%; }
+@font-face { font-family: "Archivo Black"; src: url("ref/fonts/archivo-black-latin.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+.sheet-dim, .toast, .crop-layer, .place-layer { font-family: "Inter", "Helvetica Neue", Arial, sans-serif; }
+.sheet h2 { font: 400 18px/1.3 "Archivo Black", "Arial Black", "Helvetica Neue", Arial, sans-serif; text-transform: uppercase; letter-spacing: .02em; }
+.opt-label { font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+.opt-label.opt-hint { font-weight: 400; text-transform: none; letter-spacing: 0; }
