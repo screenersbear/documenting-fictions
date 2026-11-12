@@ -15,6 +15,9 @@
     id: id,
     options: options,
     at: at,
+    // Anything else on the link, for one notebook opening another at a
+    // particular thing: ?entry=<id> in Overthoughts, ?shoot=<id> in The Eye.
+    get: function (k) { return q.get(k); },
     // Shut: back to the shelf, which shrinks the page back into this book.
     home: function (quiet) {
       store('df-suite-in', null);
