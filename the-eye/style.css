@@ -6832,15 +6832,16 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 
 /* The navigator held down (user, 11-11): every section in a row above it,
    swelling under the finger like the Mac's Dock, with the name of the one
-   under the finger over it. A dot under the one you're on. */
+   under the finger over it. A dot under the one you're on. No card around
+   the row or the name (user, 11-12): only a soft white haze, as in Ref. */
 .tabbar { -webkit-touch-callout: none; }
-.nav-dock { position: absolute; bottom: calc(100% + 10px); left: 0; z-index: 3; box-sizing: border-box; display: flex; align-items: flex-end; padding: 8px; border: 2px solid var(--text); border-radius: 20px; background: #fff; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18); pointer-events: none; opacity: 0; visibility: hidden; transform: translateY(8px) scale(0.9); transition: opacity 0.14s ease, transform 0.16s ease, visibility 0s linear 0.16s; }
+.nav-dock { position: absolute; bottom: calc(100% + 10px); left: 0; z-index: 3; box-sizing: border-box; display: flex; align-items: flex-end; padding: 8px; border-radius: 26px; background: #fff; box-shadow: 0 0 14px 10px #fff; pointer-events: none; opacity: 0; visibility: hidden; transform: translateY(8px) scale(0.9); transition: opacity 0.14s ease, transform 0.16s ease, visibility 0s linear 0.16s; }
 .nav-dock.is-open { opacity: 1; visibility: visible; transform: none; transition: opacity 0.14s ease, transform 0.16s ease, visibility 0s; }
 .nav-dock-slot { position: relative; flex: 0 0 46px; height: 44px; display: flex; align-items: flex-end; justify-content: center; }
 .nav-dock-icon { display: grid; place-items: center; width: 30px; height: 30px; color: var(--text); transform-origin: 50% 100%; transition: transform 0.09s ease-out; }
 .nav-dock-icon svg { display: block; width: 27px; height: 27px; stroke-width: 1.8; }
 .nav-dock-slot.is-here::after { content: ''; position: absolute; left: 50%; bottom: -6px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--text); }
-.nav-dock-label { position: absolute; left: 0; bottom: calc(100% + 8px); transform: translateX(-50%); white-space: nowrap; padding: 2px 10px; border: 1.5px solid var(--text); border-radius: 10px; background: #fff; color: var(--text); font-family: var(--font-head); font-size: 16px; line-height: 22px; }
+.nav-dock-label { position: absolute; left: 0; bottom: calc(100% + 8px); transform: translateX(-50%); white-space: nowrap; padding: 0 6px; border-radius: 10px; background: #fff; box-shadow: 0 0 8px 6px #fff; color: var(--text); font-family: var(--font-head); font-size: 16px; line-height: 22px; }
 
 /* A page number held down (user, 11-11): a card over it with the number
    big and a tick for every page; sliding flips the pages. The numbers take
