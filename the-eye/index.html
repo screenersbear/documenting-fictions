@@ -73,7 +73,8 @@
             <img src="logo.png" alt="" class="brand-logo" />
           </div>
           <button type="button" class="app-menu-btn" id="shutBookBtn" aria-label="Shut the notebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1"/><line x1="9" y1="3" x2="9" y2="21"/></svg></button>
-          <h1 class="brand-title">Overview</h1>
+          <!-- The eye hangs left of the word (style.css .brand-eye), which stays centred like every section's title. -->
+          <h1 class="brand-title"><svg class="brand-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12s3.8-7.5 10.5-7.5S22.5 12 22.5 12s-3.8 7.5-10.5 7.5S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3.2"/></svg>Overview</h1>
           <button type="button" class="app-menu-btn" id="notificationBellBtn" aria-label="Notifications">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           </button>
@@ -285,6 +286,8 @@
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="basicInfoHeading">Basic Info</h3>
       <div id="basicInfoBody">
         <div class="status-swatch-wrap">
+          <!-- In the new-shoot guide only (style.css): a "Status" heading over the select itself, like Title and Category. -->
+          <span class="status-swatch-label" aria-hidden="true">Status</span>
           <span class="status-swatch-display shine-sweep" id="statusSwatchDisplay" aria-hidden="true">Status: Prospect</span>
           <select id="shootStatus" class="status-swatch-select" aria-label="Status">
             <option value="prospect">Prospect</option>
@@ -422,7 +425,7 @@
           </label>
 
           <div id="narrativeFieldsBlock">
-            <label>Character/Personality
+            <label>Character/<wbr>Personality
               <textarea id="shootCharacter" rows="6" maxlength="1000" placeholder="Who the talent is being, even loosely" readonly></textarea>
             </label>
 
@@ -1473,21 +1476,6 @@
   </div>
 </div>
 
-<!-- ============ SHOOT PAGE GUIDED TOUR ============ -->
-<div id="shootTourOverlay" class="modal-overlay intro-overlay" hidden>
-  <div class="modal intro-modal" id="shootTourModal">
-    <p class="mi-sub" id="shootTourStep"></p>
-    <h2 id="shootTourTitle"></h2>
-    <p id="shootTourText"></p>
-    <div class="modal-actions">
-      <button type="button" class="secondary" id="shootTourBackBtn">Back</button>
-      <button type="button" class="primary" id="shootTourNextBtn">Next</button>
-    </div>
-    <div class="shoot-tour-skip-row">
-      <button type="button" class="secondary journal-block-btn" id="shootTourSkipBtn">Skip tour</button>
-    </div>
-  </div>
-</div>
 
 <!-- ============ STATS DETAIL PANEL ============ -->
 <div id="statsDetailOverlay" class="stats-detail-overlay" hidden>

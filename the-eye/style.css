@@ -3821,13 +3821,6 @@ h2.status-group-heading.heading-navy {
   padding: 24px;
 }
 
-/* Anchored toward the bottom instead of centered — the tour is pointing at
-   a section scrolled into view above it, so the popup itself shouldn't
-   cover the middle of the screen where that section sits. */
-#shootTourOverlay {
-  align-items: flex-end;
-  padding-bottom: calc(var(--sa-bottom) + 24px);
-}
 
 .shoot-tour-skip-row {
   margin-top: 14px;
@@ -3958,15 +3951,6 @@ h2.status-group-heading.heading-navy {
   margin-top: 0;
 }
 
-/* No folding in the wizard (see setShootWizardFrameworkGroupsOpen): the
-   Visual language groups' headings stay as plain labels, without the arrow. */
-#shootWizardBody .framework-heading {
-  cursor: default;
-}
-
-#shootWizardBody .framework-heading .collapse-arrow {
-  display: none;
-}
 
 /* Same for each lighting setup card: always open there (see
    renderLightingSetups), so no fold toggle in its bar. Its spot holds the
@@ -6949,41 +6933,42 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 
 /* Bigger text on a shoot's pages (user, 11-11): now a section runs over as
    many pages as it needs, the room went to the type. Pages are packed from
-   what's drawn, so this only means a little more turning. Not the new-shoot
-   steps, which borrow these same blocks into their card (:where keeps each
-   rule as heavy as the one it follows). No #shotListItems-style ids: the
-   page-turn copy drops them, and the turning sheet would jump in size. */
+   what's drawn, so this only means a little more turning. The new-shoot
+   guide borrows these same blocks into its card and has the same sizes since
+   11-12 (user: bigger fonts there too); its own extras are at the end of
+   this file. No #shotListItems-style ids: the page-turn copy drops them, and
+   the turning sheet would jump in size. */
 #shootForm .shoot-section-heading,
 #shootForm #postShootContent > .shoot-section-heading { font-size: 31px; }
 #shootModalOverlay > .modal > .nb-run { font-size: 18px; }
-#shootForm label:not(:where(#shootWizard *)) { font-size: 18px; }
-#shootForm input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.lighting-setup-name):not(:where(#shootWizard *)),
-#shootForm select:not(:where(#shootWizard *)),
-#shootForm textarea:not(:where(#shootWizard *)) { font-size: 20px; line-height: 28px; }
-#shootForm #shootTitle:not(:where(#shootWizard *)) { font-size: 24px !important; }
+#shootForm label { font-size: 18px; }
+#shootForm input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.lighting-setup-name),
+#shootForm select,
+#shootForm textarea { font-size: 20px; line-height: 28px; }
+#shootForm #shootTitle { font-size: 24px !important; }
 /* Their hints are long: a size that still fits a 375-wide page (320 for the destinations). */
-#shootForm #shootTitle:not(:where(#shootWizard *))::placeholder { font-size: 20px; }
-#shootForm #shootDeliverableDestinations:not(:where(#shootWizard *))::placeholder { font-size: 17px; }
-#shootForm .location-field-btn:not(:where(#shootWizard *)) { font-size: 20px; line-height: 28px; }
-#shootForm .shot-text:not(:where(#shootWizard *)) { font-size: 19px; line-height: 26px; min-height: 34px; }
-#shootForm #lightingSetupsBody .lighting-setup-characteristics:not(:where(#shootWizard *)),
-#shootForm #lightingSetupsBody .lighting-setup-description:not(:where(#shootWizard *)) { font-size: 18px; line-height: 26px; }
-#shootForm .lighting-setup-card-bar .lighting-setup-name:not(:where(#shootWizard *)) { font-size: 18px; }
-#shootForm .team-question:not(:where(#shootWizard *)),
-#shootForm .moodboard-label:not(:where(#shootWizard *)),
-#shootForm .subsection-heading:not(:where(#shootWizard *)),
-#shootForm .references-block .beats-label:not(:where(#shootWizard *)) { font-size: 23px; }
-#shootForm .talents-section > .team-question:not(:where(#shootWizard *)),
-#shootForm .aspect-ratio-field-label:not(:where(#shootWizard *)) { font-size: 18px; }
-#shootForm .field-hint:not(:where(#shootWizard *)) { font-size: 17px; }
-#shootForm .status-swatch-display:not(:where(#shootWizard *)) { font-size: 16px; line-height: 22px; }
-#shootForm .chip:not(:where(#shootWizard *)) { font-size: 18px; line-height: 24px; }
-#shootForm .tag-check:not(:where(#shootWizard *)) { font-size: 17px !important; }
-#shootForm .checkbox-row:not(:where(#shootWizard *)) { font-size: 18px !important; }
-#shootForm .primary.small-btn:not(:where(#shootWizard *)) { font-size: 18px !important; }
-#shootForm .inline-manage-link:not(:where(#shootWizard *)) { font-size: 16px; }
-#shootForm .talent-summary-name:not(:where(#shootWizard *)) { font-size: 18px; }
-#shootForm .talent-summary-handles:not(:where(#shootWizard *)) { font-size: 15px; }
+#shootForm #shootTitle::placeholder { font-size: 20px; }
+#shootForm #shootDeliverableDestinations::placeholder { font-size: 17px; }
+#shootForm .location-field-btn { font-size: 20px; line-height: 28px; }
+#shootForm .shot-text { font-size: 19px; line-height: 26px; min-height: 34px; }
+#shootForm #lightingSetupsBody .lighting-setup-characteristics,
+#shootForm #lightingSetupsBody .lighting-setup-description { font-size: 18px; line-height: 26px; }
+#shootForm .lighting-setup-card-bar .lighting-setup-name { font-size: 18px; }
+#shootForm .team-question,
+#shootForm .moodboard-label,
+#shootForm .subsection-heading,
+#shootForm .references-block .beats-label { font-size: 23px; }
+#shootForm .talents-section > .team-question,
+#shootForm .aspect-ratio-field-label { font-size: 18px; }
+#shootForm .field-hint { font-size: 17px; }
+#shootForm .status-swatch-display { font-size: 16px; line-height: 22px; }
+#shootForm .chip { font-size: 18px; line-height: 24px; }
+#shootForm .tag-check { font-size: 17px !important; }
+#shootForm .checkbox-row { font-size: 18px !important; }
+#shootForm .primary.small-btn { font-size: 18px !important; }
+#shootForm .inline-manage-link { font-size: 16px; }
+#shootForm .talent-summary-name { font-size: 18px; }
+#shootForm .talent-summary-handles { font-size: 15px; }
 #shootModalOverlay > .nb-page-foot { font-size: 17px; }
 /* Where a page's field is typed out: the same size as on the page. */
 #expandFieldOverlay.from-page #expandFieldTextarea { font-size: 20px; line-height: 28px; }
@@ -7168,3 +7153,40 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 .eye-cards-dots[hidden] { display: none; }
 .eye-cards-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(49, 61, 69, .2); }
 .eye-cards-dots i.on { background: var(--text); }
+
+/* An eye left of OVERVIEW (user, 11-12): it hangs off the word, so the word
+   stays centred where every section's title sits. */
+#view-overview .brand-title { position: relative; }
+.brand-eye { position: absolute; right: calc(100% + 10px); top: 50%; width: 30px; height: 30px; margin-top: -14px; color: var(--text); pointer-events: none; }
+
+/* ---- The new-shoot guide's own type (user, 11-12: bigger fonts, and bold
+   or bigger titles, since it "just looks like text") ----
+   Its fields are the shoot page's own, at the page's sizes (see "Bigger text
+   on a shoot's pages"). Here each field's name is a heading, in the header
+   capitals, and the guide's own words are a size up. The team's questions
+   stay in handwriting, being questions. */
+.shoot-wizard-head h2 { font-size: 26px; }
+.shoot-wizard-head p { font-size: 17px; }
+#shootForm #shootWizardBody label:not(.checkbox-row, .tag-check),
+#shootForm #shootWizardBody :is(.status-swatch-label, .talents-section > .team-question, .aspect-ratio-field-label) {
+  font-family: var(--head); font-size: 20px; line-height: 28px; text-transform: uppercase; letter-spacing: .06em; color: var(--text); text-shadow: none;
+}
+/* Side by side, a name that wraps (START TIME on a small phone) mustn't push
+   its box below its neighbour's: the pairs line up at the bottom. */
+#shootForm #shootWizardBody .time-range-row { align-items: flex-end; }
+/* The Mood board and References slides' titles already name them. */
+#shootWizardBody :is(.moodboard-section > .moodboard-label, .references-block > .beats-label) { display: none; }
+/* Status: the same heading and select as Title and Category, rather than the
+   page's yellow button, which read as a heading and got missed (user, 11-12). */
+.status-swatch-label { display: none; }
+#shootForm #shootWizardBody .status-swatch-wrap { display: flex; flex-direction: column; width: 100%; margin: 0; text-align: left; }
+#shootForm #shootWizardBody .status-swatch-label { display: block; }
+#shootWizardBody .status-swatch-display { display: none; }
+#shootForm #shootWizardBody .status-swatch-select { position: static; width: 100%; height: auto; opacity: 1; }
+/* "Need to think it through?" is a button here, like the guide's others,
+   not a line that reads as one more label. */
+#shootForm #shootWizardBody #conceptHelperBtn { min-height: 0; padding: 12px 14px !important; border: 1px solid var(--border); border-radius: 6px; background: #fff; text-align: center; }
+
+/* Short on an iPhone (see measureScreenGap), iOS is made to measure again
+   (app.js nudgeShortScreen): for a moment the page is taller than the screen. */
+:root.nb-nudge body { min-height: calc(100vh + 160px); }

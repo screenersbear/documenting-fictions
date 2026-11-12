@@ -3442,6 +3442,7 @@
   // closed again.
   let bodyScrollLockY = 0;
   let bodyScrollLockCount = 0;
+  let onPageLetGo = null; // the notebook's nudge (nudgeShortScreen), for once no popup holds the page
   function lockBodyScroll() {
     if (bodyScrollLockCount === 0) {
       bodyScrollLockY = window.scrollY;
@@ -3460,6 +3461,7 @@
       document.body.style.left = '';
       document.body.style.right = '';
       window.scrollTo(0, bodyScrollLockY);
+      if (onPageLetGo) setTimeout(onPageLetGo, 80);
     }
   }
 
@@ -8268,6 +8270,7 @@
   // saves a brand-new draft mid-wizard, which flips that to the shoot's id.
   let shootWizardActive = false;
   let shootWizardStepKey = null;
+  let shootWizardAgain = false;       // opened from the ⋯ menu's "Guide me through this shoot"
   let shootWizardMoved = [];          // { el, placeholder, unlocked, wasInert } per borrowed block
   let shootWizardPendingId = null;    // shoot a queued wizard is waiting to open over
   let shootWizardStartTimer = null;
@@ -8623,61 +8626,15 @@
     });
   })();
 
-  // ---------- Guided tour of the shoot page ----------
-  // Steps through the same sections as the title jump-menu, one at a time,
-  // scrolling to each and explaining what it's for.
-  const SHOOT_TOUR_STEPS = [
-    { id: 'basicInfoHeading', title: 'Basic Info', text: "Title, talent, status, and category: the foundation of the shoot." },
-    { id: 'logisticsHeading', title: 'Logistics', text: 'Shoot date, deadline, time, and location: the when and where.' },
-    { id: 'teamHeading', title: 'Team', text: "Who's on the shoot and how to reach them." },
-    { id: 'directionHeading', title: 'Direction', text: "Concept, character, and creative direction: the story you're telling." },
-    { id: 'visualsHeading', title: 'Visuals', text: () => `${moodboardTerm(document.getElementById('shootCategory').value)}, references, and frameworks: the visual language for the shoot.` },
-    { id: 'shotListHeading', title: 'Shot list', text: "Every shot you want to come away with. Tap a line to write, Enter to start the next one, and tick them off as you go. Plus notes for the day and what you'll be asking of the talent and the team." },
-    { id: 'postShootHeading', title: 'Reflection', text: 'What went right, what could be better, and lessons for next time, filled in after the shoot.' },
-  ];
-  let shootTourStepIndex = 0;
-  const shootTourSteps = () => SHOOT_TOUR_STEPS.filter(step => availableShootPages().some(page => page.id === step.id));
-
-  function renderShootTourStep() {
-    const steps = shootTourSteps();
-    const step = steps[shootTourStepIndex];
-    document.getElementById('shootTourStep').textContent = `Step ${shootTourStepIndex + 1} of ${steps.length}`;
-    document.getElementById('shootTourTitle').textContent = step.title;
-    document.getElementById('shootTourText').textContent = typeof step.text === 'function' ? step.text() : step.text;
-    document.getElementById('shootTourBackBtn').hidden = shootTourStepIndex === 0;
-    document.getElementById('shootTourNextBtn').textContent = shootTourStepIndex === steps.length - 1 ? 'Done' : 'Next';
-    showShootPage(step.id, { turn: true });
-    const target = document.getElementById(step.id);
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  function closeShootTour() {
-    document.getElementById('shootTourOverlay').hidden = true;
-  }
-
+  // ---------- "Guide me through this shoot" ----------
+  // In the shoot's ⋯ menu (setupShootMoreMenu): opens the new-shoot guide
+  // again on the shoot that's open (user, 11-12), for when it was closed
+  // early. The same steps from the first one, over what's already filled in.
   document.getElementById('shootTourBtn').addEventListener('click', () => {
-    // Covered by the new-shoot wizard's backdrop, but still reachable by
-    // keyboard focus — and the tour would scroll the page behind the wizard.
-    if (shootWizardActive) return;
+    if (shootWizardActive || shootModalOverlay.hidden) return;
     closeShootModalJumpMenu();
-    shootTourStepIndex = 0;
-    document.getElementById('shootTourOverlay').hidden = false;
-    renderShootTourStep();
+    startShootWizard({ again: true });
   });
-
-  document.getElementById('shootTourBackBtn').addEventListener('click', () => {
-    if (shootTourStepIndex === 0) return;
-    shootTourStepIndex--;
-    renderShootTourStep();
-  });
-
-  document.getElementById('shootTourNextBtn').addEventListener('click', () => {
-    if (shootTourStepIndex === shootTourSteps().length - 1) { closeShootTour(); return; }
-    shootTourStepIndex++;
-    renderShootTourStep();
-  });
-
-  document.getElementById('shootTourSkipBtn').addEventListener('click', closeShootTour);
 
   // ---------- New-shoot planning wizard ----------
   // A brand-new shoot opens with a step-by-step popup over the dimmed page —
@@ -8688,8 +8645,9 @@
   // or the wizard closes. Whatever's typed therefore lands in the real form:
   // autosave, the talent/location/team popups, the mood board, Multi-day and
   // every category-driven show/hide work untouched, and the page is already
-  // filled in when the wizard's done. Only openShootModal(null) starts it —
-  // existing shoots, "+ Add a day" copies and the rest never do.
+  // filled in when the wizard's done. Only openShootModal(null) starts it on
+  // its own — existing shoots, "+ Add a day" copies and the rest never do —
+  // and the ⋯ menu's "Guide me through this shoot" opens it again on any.
   //
   // The markup sits inside #shootForm on purpose (the form-level input/
   // change/focusout listeners and the #shootForm field styles keep applying
@@ -8801,27 +8759,8 @@
       // narrative too.
       when: () => !document.getElementById('narrativeFieldsBlock').hidden,
     },
-    {
-      key: 'visualLanguage',
-      title: 'Visual language',
-      hint: "Tick whatever describes the look you're after.",
-      // The Manage link stays on the page: editing a framework re-renders the
-      // tags from the SAVED shoot, which would clear ticks on a new draft.
-      blocks: () => [
-        document.getElementById('frameworkTagsContainerEarly').children.length ? shootWizardBlock('frameworkTagsContainerEarly') : null,
-        // Holds custom frameworks only, and is flagged hidden when there are
-        // none — but no CSS rule actually hides it, so it'd arrive as an
-        // empty box. Left on the page in that case.
-        document.getElementById('frameworkTagsContainer').hidden ? null : shootWizardBlock('frameworkTagsContainer'),
-      ],
-      when: () => (state.frameworks || []).some(fw => (fw.tags || []).length > 0),
-    },
-    {
-      key: 'references',
-      title: 'References',
-      hint: "Anything you're drawing inspiration from. Add as many links as you like.",
-      blocks: () => [shootWizardBlock('referencesList', '.references-block')],
-    },
+    // Visual language isn't asked here (user, 11-12): its tags stay on the
+    // shoot page. The mood board comes before References (user, 11-12).
     {
       key: 'moodboard',
       // Mood board or Storyboard, by category — same wording as the section.
@@ -8834,6 +8773,12 @@
       },
       // Anchored on the grid: Final images shares the .moodboard-section class.
       blocks: () => [shootWizardBlock('moodboardGrid', '.moodboard-section')],
+    },
+    {
+      key: 'references',
+      title: 'References',
+      hint: "Anything you're drawing inspiration from. Add as many links as you like.",
+      blocks: () => [shootWizardBlock('referencesList', '.references-block')],
     },
     {
       key: 'lighting',
@@ -8958,8 +8903,9 @@
     // No Back on the first slide, nor on the last: that one is just the
     // confirm button (see below).
     document.getElementById('shootWizardBackBtn').hidden = isLast || !adjacentShootWizardStep(-1);
-    // Small "Don't show again" link, on the first slide only.
-    document.getElementById('shootWizardDontShowBtn').hidden = inPlay.indexOf(step) !== 0;
+    // Small "Don't show again" link, on the first slide only, and not when
+    // the guide was asked for from the ⋯ menu.
+    document.getElementById('shootWizardDontShowBtn').hidden = inPlay.indexOf(step) !== 0 || shootWizardAgain;
     // Forward is always possible, filled in or not. On the last slide the
     // forward button is the shoot page's own Save — same varying text as the
     // page's button (picked when the shoot opened) — and the separate "Skip
@@ -9036,10 +8982,11 @@
     });
   }
 
-  function startShootWizard() {
+  function startShootWizard(opts) {
     const first = SHOOT_WIZARD_STEPS.find(step => !step.when || step.when());
     if (!first) return;
     shootWizardActive = true;
+    shootWizardAgain = !!(opts && opts.again);
     shootWizardStepKey = null;
     shootWizardViewportMaxH = 0;
     // Slide 1 explains the status button itself, so the one-time intro that
@@ -9096,6 +9043,7 @@
     blurShootWizardFocus();
     restoreShootWizardBlocks();
     shootWizardActive = false;
+    shootWizardAgain = false;
     shootWizardStepKey = null;
     const wizard = document.getElementById('shootWizard');
     wizard.hidden = true;
@@ -21822,22 +21770,71 @@
       breakArchivePages();
       breakShootModePages();
     }
+    // A nudge is under way (nudgeShortScreen): what iOS says in the middle of
+    // one isn't kept, only what it says once it's done.
+    let nudging = false;
     window.addEventListener('resize', () => {
-      const gapMoved = measureScreenGap();
+      const gapMoved = !nudging && measureScreenGap();
       placeBook();
       if (window.innerWidth === pagesWidth && !gapMoved) return;
       pagesWidth = window.innerWidth;
       breakAllPages();
     });
     function settleScreenGap() {
-      if (!measureScreenGap()) return false;
+      if (nudging || !measureScreenGap()) return false;
       placeBook();
       breakAllPages();
       return true;
     }
+    // Short, iOS draws nothing pinned below its bottom edge (white included),
+    // so the navigator sits above it, but the page's own list still scrolls
+    // through the strip under it (user, 11-12). As in Callback, Contact Sheet
+    // and Ref, iOS is made to measure again: for a moment the page is taller
+    // than the screen and scrolled a pixel and back, up to three times while
+    // it's short. On launch, coming back, a popup letting go of the page, and
+    // a touch now and then. Never while typing or while a popup holds the
+    // page, and it waits out a swipe or a jump to a saved place.
+    let nudgeRestUntil = 0; // after a round that didn't take, touches leave it be this long
+    let nudgeWaitTimer = 0;
+    function nudgeShortScreen(tries = 3) {
+      if (nudging || !tries || !screenShortHeight) return;
+      const field = document.activeElement;
+      if (field && field.matches('input, textarea, select, [contenteditable]')) return;
+      if (document.body.style.position === 'fixed') return; // the popup's unlock calls back (onPageLetGo)
+      // Timers, not animation frames: those stop while the app is put away.
+      clearTimeout(nudgeWaitTimer);
+      if (performance.now() - lastScrollAt < 250) {
+        nudgeWaitTimer = setTimeout(() => nudgeShortScreen(tries), 300);
+        return;
+      }
+      nudging = true;
+      const root = document.documentElement;
+      root.classList.add('nb-nudge');
+      setTimeout(() => {
+        const y = window.scrollY;
+        // Toward the side with room: at the foot of a long page there's none below.
+        const to = y > 0 ? y - 1 : y + 1;
+        window.scrollTo(0, to);
+        setTimeout(() => {
+          // Back, unless something else has moved the page since.
+          if (Math.abs(window.scrollY - to) < 1.5) window.scrollTo(0, y);
+          setTimeout(() => {
+            root.classList.remove('nb-nudge');
+            setTimeout(() => {
+              nudging = false;
+              settleScreenGap();
+              if (tries > 1) nudgeShortScreen(tries - 1);
+              else if (screenShortHeight) nudgeRestUntil = performance.now() + 5000;
+            }, 200);
+          }, 120);
+        }, 40);
+      }, 30);
+    }
+    const settleAndNudge = () => { settleScreenGap(); nudgeShortScreen(); };
+    onPageLetGo = settleAndNudge;
     // A launching app can report its height late, and a reading skipped for
     // the keyboard is due once it's gone.
-    [300, 1200].forEach(ms => setTimeout(settleScreenGap, ms));
+    [300, 1200].forEach(ms => setTimeout(settleAndNudge, ms));
     // iOS can also put its own bottom right later with no resize event (once
     // the shut book lets go of the page, say). A gap kept from before would
     // then push the navigator off the screen, so the probes are watched. If
@@ -21859,8 +21856,8 @@
       follow.observe(smallHeightProbe);
     }
     document.addEventListener('focusout', () => setTimeout(settleScreenGap, 460));
-    window.addEventListener('pageshow', settleScreenGap);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) settleScreenGap(); });
+    window.addEventListener('pageshow', settleAndNudge);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) settleAndNudge(); });
     // More chances to notice iOS putting its layout right unannounced: the
     // end of a zoom, and now and then as you use it (three reads of hidden
     // probes, nothing at all when they haven't changed).
@@ -21870,7 +21867,10 @@
       const now = performance.now();
       if (now - lastTouchCheck < 1000) return;
       lastTouchCheck = now;
-      setTimeout(settleScreenGap, 60);
+      setTimeout(() => {
+        settleScreenGap();
+        if (performance.now() > nudgeRestUntil) nudgeShortScreen();
+      }, 60);
     }, { passive: true });
     let saved = null;
     let afterUpdate = false;
