@@ -752,12 +752,18 @@
   const APP_COLORS = [['mango', 'Mango'], ['orange', 'Orange'], ['berry', 'Berry'], ['fern', 'Fern'], ['ocean', 'Ocean'], ['ink', 'Black']];
   const APP_COLOR_KEY = 'df-app-color'; // also read in index.html, before the first paint
 
+  function firstAppColor() {
+    let c = null;
+    try { c = localStorage.getItem(APP_COLOR_KEY); } catch (e) { /* storage unavailable */ }
+    return APP_COLORS.some(([key]) => key === c) ? c : 'mango';
+  }
   // How the notebook looks: its color, where the app starts, and the stickers
   // on its cover (their photos are in IndexedDB, see stickerKey).
   function normalizePresentation(saved) {
     const p = saved && typeof saved === 'object' ? saved : {};
     return {
-      color: APP_COLORS.some(([key]) => key === p.color) ? p.color : 'mango',
+      // None yet (a first launch): the one picked on the shelf, if any.
+      color: APP_COLORS.some(([key]) => key === p.color) ? p.color : firstAppColor(),
       // Where it opens: where you left off unless you picked otherwise since
       // that became the default (11-11), so an old 'notebook' carries over.
       start: p.startPicked && (p.start === 'first' || p.start === 'notebook') ? p.start : 'last',
