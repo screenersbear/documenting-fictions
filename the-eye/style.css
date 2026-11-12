@@ -7145,3 +7145,15 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 
 /* The Weekly tab (the Journal before) is the weekly log: entries of your own are written in Overthoughts. */
 #addJournalBtn { display: none !important; }
+
+/* Boards from Ref on the shoot page (Send to shoot, or + Import board) */
+.ref-boards { display: flex; flex-direction: column; gap: 10px; }
+.ref-board { display: flex; gap: 12px; align-items: flex-start; }
+.ref-board-cover { flex: 0 0 auto; width: 88px; aspect-ratio: 1; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: none; cursor: pointer; }
+.ref-board-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ref-board-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
+.ref-board-name { font-size: 18px; color: var(--text); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: none; border: none; padding: 0; text-align: left; font-family: inherit; cursor: pointer; }
+.ref-board-meta { font-size: 14px; color: var(--text-dim); }
+.ref-board-actions { display: flex; gap: 16px; }
+.ref-board-actions .manage-link { margin-top: 4px; }
+.has-ref-boards #moodboardGrid .empty-hint { display: none; }

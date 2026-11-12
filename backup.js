@@ -8,7 +8,8 @@
 // own notebook if ever needed.
 //
 //   { app: 'documenting-fictions', kind: 'suite-backup', version: 1, exportedAt,
-//     notebooks: { ref, 'the-eye', 'contact-sheet', overthoughts } }   (a part is null if that notebook has nothing yet)
+//     notebooks: { ref, 'the-eye', 'contact-sheet', overthoughts, links } }   (a part is null if that notebook has nothing yet;
+//     links = df-links, the boards sent from Ref to The Eye's shoots)
 //
 // Built in pieces (Blobs), so a big library never has to be one string.
 (function () {
@@ -21,6 +22,7 @@
     { id: 'ref', db: 'ref-notebook', app: 'ref', book: 'ref-notebook-book' },
     { id: 'contact-sheet', db: 'contact-sheet', app: 'contact-sheet', book: 'contact-sheet-book' },
     { id: 'overthoughts', db: 'overthoughts', app: 'overthoughts', book: 'overthoughts-book' },
+    { id: 'links', db: 'df-links', app: 'documenting-fictions', book: null }, // boards sent from Ref to The Eye's shoots
   ];
   const EYE_STATE = 'dailies_state_v1';
   const EYE_LAST_BACKUP = 'dailies_last_backup_v1'; // The Eye's "Last backup", so its monthly reminder counts this one
@@ -43,7 +45,7 @@
     const counts = [];
     for (const [i, n] of DBS.entries()) {
       let file = null;
-      if (!have || have.has(n.db)) file = await D.exportDb(n.db, { app: n.app, extra: { book: ls.get(n.book) || '' } });
+      if (!have || have.has(n.db)) file = await D.exportDb(n.db, { app: n.app, extra: { book: (n.book && ls.get(n.book)) || '' } });
       parts.push(`${i ? ',' : ''}${JSON.stringify(n.id)}:`, file || 'null');
       if (file) counts.push(n.id);
     }
@@ -85,7 +87,7 @@
       await new Promise((ok, no) => { tx.oncomplete = ok; tx.onabort = tx.onerror = () => no(tx.error || new Error("That wasn't restored.")); });
     }
     db.close();
-    if (data.extra && data.extra.book) ls.set(n.book, data.extra.book);
+    if (n.book && data.extra && data.extra.book) ls.set(n.book, data.extra.book);
   }
 
   // df-data.js keeps its unpacking to itself; this is the same thing.

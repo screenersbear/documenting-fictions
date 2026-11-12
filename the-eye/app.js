@@ -99,6 +99,13 @@
 
   const STORAGE_KEY = 'dailies_state_v1';
   const IDB_NAME = 'starky-moodboards';
+  // Boards from Ref (see "Boards from Ref" further down). Up here, since a
+  // save or a render at startup can ask about them before that part has run.
+  const refApi = window.DFData && window.DFData.linksWhere ? window.DFData : null;
+  let refBoardShootIds = new Set(); // shoots with a board on them: no "needs a mood board" for those
+  let refFreezeTimer = 0;
+  let refBoardsReady = Promise.resolve(); // once it's known which shoots have one (the daily report waits for it)
+
   const IDB_STORE = 'images';
   const COLLAPSED_SECTIONS_KEY = 'dailies_collapsed_sections_v1';
 
@@ -1137,6 +1144,7 @@
       if (!isStorageFullError(err)) throw err;
       noteStorageFull(err);
     }
+    freezeShotBoardsSoon(); // a shoot just shot: its boards from Ref stop changing
   }
 
   let refreshStickers = () => {}; // set up with the sun menu
@@ -1336,7 +1344,7 @@
   // nothing left to prep. Scoped to exactly these two statuses rather than
   // "not yet post-capture", which used to let prospects slip through too.
   function moodboardPending(s) {
-    return (s.status === 'planning' || s.status === 'waiting_to_shoot') && !s.moodboardComplete;
+    return (s.status === 'planning' || s.status === 'waiting_to_shoot') && !s.moodboardComplete && !refBoardShootIds.has(s.id);
   }
 
   // Same cut-off for an unfinalized team: once a shoot is past "shoot ready"
@@ -13864,7 +13872,7 @@
     document.getElementById('postShootPromptOverlay').hidden = true;
     updateShootModalJumpMenuVisibility();
 
-    const shootPhotosIn = Promise.all([renderMoodboard(), renderFinalImages()]);
+    const shootPhotosIn = Promise.all([renderMoodboard(), renderFinalImages(), renderRefBoards()]);
     // Everything above is populated by now — a saved field should read as
     // written the instant the modal opens, not only after it's touched again.
     syncAllShootFormFields();
@@ -13962,6 +13970,193 @@
         });
       });
     }).catch(() => { grid.innerHTML = ''; });
+  }
+
+  // ---------- Boards from Ref (its Send to shoot, or + Import board) ----------
+  // Kept apart from this notebook's own data, in df-links (df-data.js): each
+  // a link to a shoot plus the board's pages as pictures. One sent from Ref
+  // inside Documenting Fictions stays live (Ref draws its pages again when it
+  // changes) until the shoot is shot: then it's frozen, "Board as of" that
+  // day. One imported from a file is fixed from the start.
+  let refBoardUrls = [];
+  const refBoardDay = iso => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+
+  function refBoardLinks(match) {
+    if (!refApi) return Promise.resolve([]);
+    return refApi.linksWhere({ toApp: 'the-eye', type: 'moodboard', ...match }).catch(() => []);
+  }
+  function loadRefBoardShoots() {
+    return refBoardLinks({}).then(links => {
+      refBoardShootIds = new Set(links.filter(l => l.toId && !l.pending).map(l => l.toId));
+      return links;
+    });
+  }
+  // A board with its pictures, ready to show: { link, cover, pages } as object URLs.
+  // Its URLs go in `urls`, for whoever shows them to let go of later.
+  function refBoardsFor(shootId, urls) {
+    return refBoardLinks({ toId: shootId }).then(links => Promise.all(links.map(l =>
+      refApi.linkPictures(l.id).catch(() => null).then(p => {
+        const url = pic => { const u = refApi.pictureUrl(pic); if (u) urls.push(u); return u; };
+        const pages = p && Array.isArray(p.pages) ? p.pages.map(url).filter(Boolean) : [];
+        return { link: l, cover: p && p.cover ? url(p.cover) : (pages[0] || ''), pages };
+      }))));
+  }
+  const refBoardState = l => l.importedAt ? `Imported ${refBoardDay(l.importedAt)}`
+    : l.frozenAt ? `Board as of ${refBoardDay(l.frozenAt)}`
+    : 'Live from Ref';
+  const canOpenInRef = l => !!(refApi && refApi.inSuite() && l.fromId && !l.importedAt);
+  const showRefBoardPages = b => { if (b.pages.length) openImageViewer(b.pages.map(src => ({ src, caption: '' })), 0, null, null, false); };
+
+  function renderRefBoards() {
+    const box = document.getElementById('refBoards');
+    document.getElementById('importRefBoardBtn').hidden = !refApi;
+    if (!refApi) { box.hidden = true; return Promise.resolve(); }
+    const shootId = currentShootId;
+    const urls = [];
+    return refBoardsFor(shootId, urls).then(boards => {
+      if (shootId !== currentShootId) { urls.forEach(u => URL.revokeObjectURL(u)); return; }
+      refBoardUrls.forEach(u => URL.revokeObjectURL(u));
+      refBoardUrls = urls;
+      box.innerHTML = '';
+      box.hidden = !boards.length;
+      box.closest('.moodboard-section').classList.toggle('has-ref-boards', boards.length > 0); // no "No photos yet." under a board
+      boards.forEach(b => {
+        const l = b.link;
+        const n = l.photoCount || 0;
+        const row = document.createElement('div');
+        row.className = 'ref-board';
+        row.innerHTML = `
+          <button type="button" class="ref-board-cover" aria-label="See ${escapeHtml(l.name || 'the board')}">${b.cover ? `<img src="${b.cover}" alt="" />` : ''}</button>
+          <div class="ref-board-text">
+            <button type="button" class="ref-board-name">${escapeHtml(l.name || 'Mood board')}</button>
+            <span class="ref-board-meta">${n} ${n === 1 ? 'image' : 'images'} · ${escapeHtml(refBoardState(l))}</span>
+            <div class="ref-board-actions">
+              ${canOpenInRef(l) ? '<button type="button" class="manage-link inline-manage-link" data-ref-open>Open in Ref</button>' : ''}
+              <button type="button" class="manage-link inline-manage-link" data-ref-detach>Detach</button>
+            </div>
+          </div>`;
+        row.querySelector('.ref-board-cover').addEventListener('click', () => showRefBoardPages(b));
+        row.querySelector('.ref-board-name').addEventListener('click', () => showRefBoardPages(b));
+        const openBtn = row.querySelector('[data-ref-open]');
+        if (openBtn) openBtn.addEventListener('click', () => {
+          saveShootNow();
+          location.href = refApi.notebookUrl('ref', { board: l.fromId });
+        });
+        row.querySelector('[data-ref-detach]').addEventListener('click', async () => {
+          const yes = await askConfirm({
+            title: 'Detach this board?',
+            text: l.importedAt ? 'It comes off this shoot.' : 'It comes off this shoot. The board stays in Ref.',
+            confirmLabel: 'Detach', cancelLabel: 'Keep it', danger: true,
+          });
+          if (!yes) return;
+          await refApi.dropLinks([l.id]).catch(() => {});
+          await loadRefBoardShoots();
+          renderRefBoards();
+        });
+        box.appendChild(row);
+      });
+    });
+  }
+
+  // + Import board: a board file from a Ref installed on its own.
+  document.getElementById('importRefBoardBtn').addEventListener('click', () => {
+    if (!refApi) return;
+    const shootId = currentShootId;
+    refApi.pickFile('application/json,.json') // straight from the tap, or iOS won't open the picker
+      .then(file => file && refApi.readBoardFile(file))
+      .then(got => {
+        if (!got || shootId !== currentShootId || shootModalOverlay.hidden) return null;
+        // A shoot not saved yet is saved now, so the board has a shoot to be on.
+        if (!state.shoots.some(x => x.id === shootId)) autosaveShoot(true);
+        const now = new Date().toISOString();
+        return refApi.saveLink({
+          fromApp: 'ref', fromId: got.board.id, toApp: 'the-eye', toId: shootId, type: 'moodboard',
+          name: got.board.name, pageCount: got.board.pageCount, photoCount: got.board.photoCount,
+          drawnAt: now, frozenAt: null, importedAt: now, pending: false,
+        }, got.pictures);
+      })
+      .then(saved => {
+        if (!saved) return null;
+        showToast(`${saved.name} is on this shoot`);
+        return loadRefBoardShoots().then(renderRefBoards);
+      })
+      .catch(err => showToast((err && err.message) || "That board couldn't be imported."));
+  });
+
+  // Once a shoot is shot (Captured onward) or put away, its boards stop changing.
+  function freezeShotBoardsSoon() {
+    if (!refApi || !refBoardShootIds.size) return;
+    clearTimeout(refFreezeTimer);
+    refFreezeTimer = setTimeout(freezeShotBoards, 400);
+  }
+  function freezeShotBoards() {
+    return refBoardLinks({}).then(links => {
+      const shot = links.filter(l => {
+        if (l.frozenAt || l.importedAt || l.pending || !l.toId) return false;
+        const s = state.shoots.find(x => x.id === l.toId);
+        return !!s && (!!s.archived || POST_CAPTURE_STATUSES.includes(s.status));
+      });
+      const now = new Date().toISOString();
+      return Promise.all(shot.map(l => refApi.saveLink({ ...l, frozenAt: now })));
+    }).then(done => {
+      if (done.length && !shootModalOverlay.hidden) renderRefBoards();
+    }).catch(() => {});
+  }
+  // A shoot deleted, or a new one left blank: its boards go with it (not from Ref).
+  function dropRefBoardsFor(shootId) {
+    if (!refApi) return;
+    refBoardLinks({ toId: shootId }).then(links => links.length && refApi.dropLinks(links.map(l => l.id)))
+      .then(() => loadRefBoardShoots()).catch(() => {});
+  }
+  // The Eye's own backup carries its boards, pictures as data URLs. A
+  // backup from before boards (no refBoards) leaves the boards as they are.
+  function refBoardsForBackup() {
+    if (!refApi) return Promise.resolve(undefined);
+    const asUrl = pic => (pic && pic.bytes ? new Promise((ok, no) => {
+      const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => no(r.error);
+      r.readAsDataURL(new Blob([pic.bytes], { type: pic.type || 'image/jpeg' }));
+    }) : Promise.resolve(null));
+    return refBoardLinks({}).then(links => Promise.all(links.filter(l => !l.pending).map(l =>
+      refApi.linkPictures(l.id).then(p => (p ? Promise.all([asUrl(p.cover), Promise.all((p.pages || []).map(asUrl))])
+        .then(([cover, pages]) => ({ link: l, cover, pages: pages.filter(Boolean) })) : null)))))
+      .then(list => list.filter(Boolean))
+      .catch(() => undefined);
+  }
+  function restoreRefBoards(list) {
+    if (!refApi || !Array.isArray(list)) return Promise.resolve();
+    const picture = u => fetch(u).then(r => r.blob()).then(b => b.arrayBuffer().then(bytes => ({ type: b.type || 'image/jpeg', bytes })));
+    return refBoardLinks({})
+      .then(old => old.length && refApi.dropLinks(old.map(l => l.id)))
+      .then(() => Promise.all(list.filter(b => b && b.link && b.link.id).map(b =>
+        Promise.all([b.cover ? picture(b.cover) : null, Promise.all((b.pages || []).map(picture))])
+          .then(([cover, pages]) => refApi.saveLink(b.link, { cover, pages })))))
+      .then(loadRefBoardShoots);
+  }
+
+  // Ref's + New shoot from this board: a new shoot, named for the board, with it on.
+  function openShootFromBoard(linkId) {
+    if (!refApi) return;
+    refApi.getLink(linkId).then(l => {
+      if (!l || !l.pending) return null;
+      openShootModal(null);
+      const title = document.getElementById('shootTitle');
+      title.value = l.name || '';
+      syncFieldFilledState(title);
+      updateShootRunningHead();
+      autosaveShoot(true);
+      return refApi.saveLink({ ...l, toId: currentShootId, pending: false })
+        .then(loadRefBoardShoots)
+        .then(renderRefBoards);
+    }).catch(() => {});
+  }
+  // On the way in: which shoots have boards, any shot since frozen, and a
+  // new shoot from a board that never got made (left over a day) dropped.
+  if (refApi) {
+    refBoardsReady = loadRefBoardShoots().then(links => {
+      const stale = links.filter(l => l.pending && Date.now() - Date.parse(l.createdAt) > 86400000).map(l => l.id);
+      if (stale.length) refApi.dropLinks(stale).catch(() => {});
+      if (refBoardShootIds.size) { renderAll(); freezeShotBoards(); }
+    });
   }
 
   document.getElementById('addMoodboardPhotos').addEventListener('click', () => {
@@ -15039,6 +15234,7 @@
     clearTimeout(shootSaveTimer);
     autosaveShoot();
     if (!state.shoots.some(x => x.id === currentShootId)) {
+      dropRefBoardsFor(currentShootId);
       idbDeleteImages(currentShootId).catch(() => {});
       idbDeleteImages(finalImagesKey(currentShootId)).catch(() => {});
       // Abandoned blank shoot — drop any photo rows it managed to create too.
@@ -15064,6 +15260,7 @@
     pruneEmptyProjects();
     idbDeleteImages(id).catch(() => {});
     idbDeleteImages(finalImagesKey(id)).catch(() => {});
+    dropRefBoardsFor(id);
     // Cover + per-talent photos live under their own keys, so they need
     // explicit cleanup or they'd linger as orphaned rows.
     if (doomed) shootPhotoKeys(doomed).forEach(k => idbDeleteImages(k).catch(() => {}));
@@ -17670,12 +17867,13 @@
     state.presentation.stickers.forEach(s => keys.push(stickerKey(s.id)));
     // One read for the lot, so the share sheet opens as soon after the tap
     // as it can.
-    return idbGetManyImages(keys).then(found => {
+    return Promise.all([idbGetManyImages(keys), refBoardsForBackup()]).then(([found, refBoards]) => {
       const payload = {
         version: 1,
         exportedAt: new Date().toISOString(),
         state,
         images: Object.fromEntries(found),
+        refBoards, // the boards from Ref on its shoots (left out where there's no df-data.js)
       };
       return new File([JSON.stringify(payload)], `starky-backup-${todayStr()}.json`, { type: 'application/json' });
     });
@@ -17829,6 +18027,7 @@
     pendingImportPayload = null;
     if (!payload) return;
     const imageWrites = Object.entries(payload.images || {}).map(([key, imgs]) => idbSetImages(key, imgs));
+    imageWrites.push(restoreRefBoards(payload.refBoards).catch(() => {}));
     // Busy until the restored shoots are saved too, so an update can't land
     // between the photos going in and the rest (see busyTasks).
     busyTasks++;
@@ -18787,6 +18986,7 @@
   }
 
   let shootModeBoardDraw = 0; // the latest drawing of the mood board wins
+  let shootModeBoardUrls = []; // its Ref board pages, let go of when it's drawn again
   function renderShootModeMoodboard(shoot) {
     const term = moodboardTerm(shoot.category);
     document.getElementById('shootModeMoodboardHeading').textContent = term;
@@ -18798,11 +18998,16 @@
     grid.dataset.shoot = shoot.id;
     const draw = ++shootModeBoardDraw;
     shootModeBoardIn = false;
-    return idbGetImages(shoot.id).then(images => {
+    const urls = [];
+    return Promise.all([idbGetImages(shoot.id), refApi ? refBoardsFor(shoot.id, urls).catch(() => []) : []]).then(([images, boards]) => {
+      // The shoot's own photos, then the pages of any boards from Ref (each
+      // opening its own board's pages, read only).
+      const tiles = images.map((img, idx) => ({ src: img.src, open: () => openImageViewer(images, idx, shoot.id, () => renderShootModeMoodboard(shoot), false) }));
+      boards.forEach(b => b.pages.forEach((src, i) => tiles.push({ src, open: () => openImageViewer(b.pages.map(u => ({ src: u, caption: '' })), i, null, null, false) })));
       // A grid per row of three, so a page can break between rows.
       const rows = [];
       let row = null;
-      images.forEach((img, idx) => {
+      tiles.forEach((tile, idx) => {
         if (idx % 3 === 0) {
           row = document.createElement('div');
           row.className = 'moodboard-grid shoot-mode-moodboard-row';
@@ -18810,17 +19015,17 @@
         }
         const thumb = document.createElement('div');
         thumb.className = 'moodboard-thumb';
-        thumb.innerHTML = `<img src="${img.src}" alt="" />`;
-        thumb.querySelector('img').addEventListener('click', () => {
-          openImageViewer(images, idx, shoot.id, () => renderShootModeMoodboard(shoot), false);
-        });
+        thumb.innerHTML = `<img src="${tile.src}" alt="" />`;
+        thumb.querySelector('img').addEventListener('click', tile.open);
         row.appendChild(thumb);
       });
       // Their shapes are wanted to size them to fill the board's page.
       const imgs = rows.flatMap(r => [...r.querySelectorAll('img')]);
       return Promise.all(imgs.map(img => (img.decode ? img.decode().catch(() => {}) : null))).then(() => {
-        if (draw !== shootModeBoardDraw) return;
-        document.getElementById('shootModeMoodEmpty').hidden = images.length !== 0;
+        if (draw !== shootModeBoardDraw) { urls.forEach(u => URL.revokeObjectURL(u)); return; }
+        shootModeBoardUrls.forEach(u => URL.revokeObjectURL(u));
+        shootModeBoardUrls = urls;
+        document.getElementById('shootModeMoodEmpty').hidden = tiles.length !== 0;
         grid.replaceChildren(...rows);
         shootModeBoardIn = true;
         breakShootModePages();
@@ -20770,8 +20975,11 @@
   // The backup reminder joins after caching, so it's never stored with the
   // day's content (see withBackupReminder).
   function getTodaysDailyReportContent() {
-    const cached = loadCachedDailyReportContent();
-    return (cached ? refreshCachedDailyReportContent(cached) : buildTodaysDailyReportContent()).then(withBackupReminder);
+    // After the boards from Ref are known: a shoot with one doesn't need a mood board.
+    return refBoardsReady.catch(() => {}).then(() => {
+      const cached = loadCachedDailyReportContent();
+      return cached ? refreshCachedDailyReportContent(cached) : buildTodaysDailyReportContent();
+    }).then(withBackupReminder);
   }
 
   function renderDailyReportOverlay(content) {
@@ -21618,10 +21826,13 @@
       : state.presentation.start !== 'first';
     // A link to one shoot (?shoot=<id>, from an Overthoughts entry about it) opens it.
     const atShoot = suite && suite.get ? state.shoots.find(x => x.id === suite.get('shoot')) : null;
-    resumePlace = resuming && !startShut && !suiteAt && !atShoot && place ? place : null;
+    // Ref's + New shoot from this board (?newShootFromBoard=<link id>).
+    const fromBoard = suite && suite.get ? suite.get('newShootFromBoard') : null;
+    resumePlace = resuming && !startShut && !suiteAt && !atShoot && !fromBoard && place ? place : null;
     if (startShut) show('closed');
     if (suiteAt) document.querySelector(`.tabbar .tab[data-view="${suiteAt}"]`).click();
     if (atShoot) setTimeout(() => { if (atShoot.archived) openArchiveMode(atShoot.id); else openShootModal(atShoot.id); }, 120);
+    else if (fromBoard) setTimeout(() => openShootFromBoard(fromBoard), 120);
     remember(startShut ? 'shut' : 'open');
     if (suite && suite.options) setTimeout(() => document.getElementById('bookSunBtn').click(), 60);
   })();
