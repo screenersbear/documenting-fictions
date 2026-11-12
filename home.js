@@ -12,25 +12,25 @@
   // Tabs as they sit on each notebook's fore-edge: [label, top %, height %, width (of W), depth (of T), light?, where it opens]
   const BOOKS = [
     {
-      id: 'ref', name: 'ref, do something', short: 'Ref', icon: 'ref/icons/icon-180.png', key: 'ref-notebook-book', color: 'ocean', light: '#ffd103',
+      id: 'ref', name: 'ref, do something', short: 'Ref', icon: 'ref/icons/icon-180.png', key: 'ref-notebook-book', color: 'ocean', colors: [['orange', 'Orange'], ['mango', 'Mango'], ['berry', 'Berry'], ['fern', 'Fern'], ['ocean', 'Ocean'], ['ink', 'Black']], light: '#ffd103',
       cover: (c) => `ref/art/${c}-cover.webp`, block: (c) => `ref/art/${c}-block.webp`,
       tabs: [['Mood boards', 15, 33.5, .11, .2, true, 'boards'], ['Tags', 50, 33.8, .115, -.2, false, 'tags']],
       logo: svg('<path d="M7.5 20.5v-17h5.2a4.4 4.4 0 0 1 0 8.8H7.5M12.4 12.3l5 8.2"/>'),
     },
     {
-      id: 'the-eye', name: 'The Eye', short: 'The Eye', icon: 'the-eye/icon-180.png', key: 'df-app-color', color: 'mango', light: '#fff0ae', italic: true,
+      id: 'the-eye', name: 'The Eye', short: 'The Eye', icon: 'the-eye/icon-180.png', key: 'df-app-color', color: 'mango', colors: [['mango', 'Mango'], ['orange', 'Orange'], ['berry', 'Berry'], ['fern', 'Fern'], ['ocean', 'Ocean'], ['ink', 'Black']], light: '#fff0ae', italic: true,
       cover: (c) => `the-eye/art/df-${c}-cover.webp`, block: (c) => `the-eye/art/df-${c}-block.webp`,
       tabs: [['Overview', 16, 13.6, .1, .3, true, 'overview'], ['Shoots', 30.6, 13.6, .105, .15, false, 'shoots'], ['Weekly', 45.2, 13.6, .11, 0, true, 'journal'], ['Archive', 59.8, 13.6, .115, -.15, false, 'archive'], ['Stats', 74.4, 13.6, .12, -.3, true, 'stats']],
       logo: svg('<path d="M18 3.5H9.2a3 3 0 0 0-3 3v4.6M6 20.5h8.8a3 3 0 0 0 3-3v-4.6M8.7 6.6l6.6 10.8"/>'),
     },
     {
-      id: 'contact-sheet', name: 'Contact Sheet', short: 'Contact Sheet', icon: 'contact-sheet/icons/icon-180.png', key: 'contact-sheet-book', color: 'orange', light: '#fee2d5',
+      id: 'contact-sheet', name: 'Contact Sheet', short: 'Contact Sheet', icon: 'contact-sheet/icons/icon-180.png', key: 'contact-sheet-book', color: 'orange', colors: [['orange', 'Orange'], ['mango', 'Mango'], ['berry', 'Berry'], ['fern', 'Fern'], ['ocean', 'Ocean'], ['ink', 'Black']], light: '#fee2d5',
       cover: (c) => `contact-sheet/art/${c}-cover.webp`, block: (c) => `contact-sheet/art/${c}-block.webp`,
       tabs: [['Table of contents', 21.7, 26.7, .085, .2, false, 'contents'], ['New chapter', 49.6, 25.9, .09, -.2, true, 'new']],
       logo: svg('<rect x="2.3" y="7.2" width="5.6" height="9.6" rx=".7"/><rect x="9.2" y="7.2" width="5.6" height="9.6" rx=".7"/><rect x="16.1" y="7.2" width="5.6" height="9.6" rx=".7"/><path d="M2.3 15.2l3.4-3 2.2 1.6M9.2 12.6l5.6-3.1M16.1 15.4l2.4-1.9 3.2 1.9"/><circle cx="19.3" cy="10.2" r=".8"/>'),
     },
     {
-      id: 'overthoughts', name: 'Overthoughts', short: 'Overthoughts', icon: 'overthoughts/icons/icon-180.png', key: 'overthoughts-book', color: 'leaf', light: '#d4ecdb',
+      id: 'overthoughts', name: 'Overthoughts', short: 'Overthoughts', icon: 'overthoughts/icons/icon-180.png', key: 'overthoughts-book', color: 'leaf', colors: [['leaf', 'Leaf'], ['orange', 'Orange'], ['mango', 'Mango'], ['berry', 'Berry'], ['fern', 'Fern'], ['ocean', 'Ocean'], ['ink', 'Black']], light: '#d4ecdb',
       cover: (c) => `overthoughts/art/${c}-cover.webp`, block: (c) => `overthoughts/art/${c}-block.webp`,
       tabs: [['Entries', 15, 33.5, .11, .2, true, 'entries'], ['Reviews', 50, 33.8, .115, -.2, false, 'reviews']],
       logo: svg('<path d="M8.2 15.8a3.4 3.4 0 0 1-.5-6.8 4.5 4.5 0 0 1 8.6-1.5 3.5 3.5 0 0 1 2 8.3z"/><circle cx="6.6" cy="19" r="1.2"/><circle cx="4" cy="21.3" r=".6"/>'),
@@ -87,7 +87,7 @@
     slot.innerHTML = `<div class="ground"></div><div class="float"><div class="book">
       <div class="face back"></div><div class="spine"></div><div class="top"></div><div class="edge"></div>
       <div class="face page"></div>${tabs}
-      <div class="leaf"><div class="face front" role="img" aria-label="${b.name}"></div><div class="face inside"></div><div class="face fog"></div><div class="lip"></div></div>
+      <div class="leaf"><div class="face front" role="img" aria-label="${b.name}"><div class="stickers"></div></div><div class="face inside"></div><div class="face fog"></div><div class="lip"></div><div class="sticker-flap"></div></div>
     </div></div>`;
     slot.querySelector('.float').style.animationDelay = `${-1.7 * i}s`;
     slot.querySelector('.ground').style.animationDelay = `${-1.7 * i}s`;
@@ -128,6 +128,8 @@
   const fromAt = BOOKS.findIndex((b) => b.id === from);
   if (fromAt >= 0) pos = fromAt;
   let facing = null; // a book turned to face you straight on (opening or shutting)
+  let near = null; // the book brought up close for its options (the film roll)
+  let nearAt = { y: 0, k: 1 }; // where it is then: how far up, how much bigger
   let layout = LAYOUTS.includes(store.get(LAYOUT_KEY)) ? store.get(LAYOUT_KEY) : 'ring';
 
   // Where book i stands, wherever the turning has got to: [x, y, z, yaw, depth
@@ -159,8 +161,14 @@
       -20 * (0.25 + 0.75 * (1 + Math.cos(r)) / 2) - 10 * Math.sin(r), 100 + Math.cos(r) * 100, 0.2 * back];
   }
   function place(i) {
-    const [x, y, z, yaw, order, fog] = spot(i);
     const s = slots[i];
+    if (near === i) { // up close, for its options (the film roll)
+      s.style.transform = `translate3d(0px, ${nearAt.y.toFixed(1)}px, 0px) scale3d(${nearAt.k.toFixed(3)}, ${nearAt.k.toFixed(3)}, ${nearAt.k.toFixed(3)})`;
+      s.style.zIndex = '400';
+      s.querySelector('.fog').style.opacity = '0';
+      return;
+    }
+    const [x, y, z, yaw, order, fog] = spot(i);
     const tilt = layout === 'row' ? 0 : TILT; // the row looks at you straight on
     const upright = facing === i ? tilt : 0;
     s.style.transform = `rotateX(${-tilt}deg) translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px) rotateX(${upright}deg) rotateY(${(facing === i ? 0 : yaw).toFixed(2)}deg)`;
@@ -271,50 +279,192 @@
     else if (e.key === 'ArrowLeft') go(Math.round(pos) - 1);
     else if (e.key === 'Enter' && document.activeElement === document.body) openBook(mod(Math.round(pos)));
   });
-  // The film roll (user, 11-12): the four notebooks as their home screen
-  // icons, to open one straight away, and Back up all four under them. The
-  // books themselves are turned by swiping them.
-  logoBtn.setAttribute('aria-label', 'Notebooks and backup');
-  logoBtn.addEventListener('click', () => {
-    if (busy || document.querySelector('.sheet-dim')) return;
+  // The film roll (user, 11-12): the notebook in front comes up close, on its
+  // own, the way each notebook floated when it was its own app, with its
+  // options under it: its colour (the book changes as you pick) and stickers
+  // for its cover. Back up all four is there too.
+  logoBtn.setAttribute('aria-label', 'Options for the notebook in front');
+  const NEAR_MS = 560;
+  const nearSlot = () => slots[near];
+  // As big as fits above `bottom` (px down the screen), in the middle of the
+  // room there, no wider than the notebooks were on their own.
+  function nearFit(bottom) {
+    const vw = window.innerWidth;
+    const top = (parseFloat(getComputedStyle(shelf).paddingTop) || 0) + 20;
+    const H = W * 1.36;
+    const k = Math.max(0.6, Math.min(Math.min(vw * 0.62, 300) / W, (bottom - top - 30) / (H * 1.12)));
+    const y0 = parseFloat(stage.style.getPropertyValue('--y')) || window.innerHeight * 0.6;
+    nearAt = { y: top + (bottom - top) / 2 - y0, k };
+  }
+  function nearMove() {
+    const s = nearSlot();
+    s.classList.add('nearing');
+    place(near);
+    clearTimeout(nearMove.t);
+    nearMove.t = setTimeout(() => s.classList.remove('nearing'), NEAR_MS + 40);
+  }
+  function openNear() {
+    if (busy || near !== null || document.querySelector('.sheet-dim')) return;
+    cancelAnimationFrame(anim);
+    clearTimeout(go.t);
+    pos = mod(Math.round(pos));
+    render();
+    busy = true;
+    near = pos;
+    nearSlot().classList.add('near');
+    stage.classList.add('near');
+    shelf.classList.add('away');
+    showOptions();
+  }
+  function leaveNear() {
+    const s = nearSlot();
+    near = null;
+    s.classList.add('nearing');
+    stage.classList.add('unnear');
+    stage.classList.remove('near');
+    shelf.classList.remove('away');
+    render();
+    setTimeout(() => { s.classList.remove('nearing', 'near', 'still'); stage.classList.remove('unnear'); busy = false; }, NEAR_MS + 40);
+  }
+  function paintStickers(i) {
+    if (window.DFStickers) window.DFStickers.paint(slots[i].querySelector('.front'), slots[i].querySelector('.sticker-flap'), BOOKS[i].id);
+  }
+
+  function showOptions(view) {
+    const i = near, b = BOOKS[i];
+    const St = window.DFStickers;
     const dim = document.createElement('div');
-    dim.className = 'sheet-dim';
-    dim.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Notebooks">
-      <div class="nb-picks">${BOOKS.map((b, i) => `<button type="button" class="nb-pick" data-i="${i}"><img src="${b.icon}" alt="" width="60" height="60" /><span>${b.short}</span></button>`).join('')}</div>
-      <button type="button" class="sheet-btn" data-backup>Back up all four</button>
-      <button type="button" class="sheet-btn plain" data-close>Close</button>
-    </div>`;
+    dim.className = 'sheet-dim near';
+    dim.innerHTML = `<div class="sheet opts" role="dialog" aria-modal="true" aria-label="${b.short} options"></div>`;
+    const sheet = dim.firstElementChild;
+    let shown = 'main';
+    const drawMain = () => {
+      shown = 'main';
+      const now = colorOf(b);
+      const mine = St ? St.list(b.id) : [];
+      sheet.innerHTML = `
+        <span class="opt-label">App color</span>
+        <div class="opt-colors" style="--n:${b.colors.length}">${b.colors.map(([k, name]) => `<button type="button" class="opt-color" data-color="${k}" aria-pressed="${k === now}"><span class="opt-book" style="background-image:url('${b.cover(k)}')"></span><span>${name}</span></button>`).join('')}</div>
+        ${St ? `<span class="opt-label">Stickers</span>
+        <div class="sticker-kinds">
+          <button type="button" class="sticker-kind" data-shape="circle"><span class="shape circle"></span><span>Circle</span></button>
+          <button type="button" class="sticker-kind" data-shape="square"><span class="shape square"></span><span>Square</span></button>
+          <button type="button" class="sticker-kind" data-shape="rect"><span class="shape rect"></span><span>Rectangle</span></button>
+        </div>
+        ${mine.length ? '<button type="button" class="sheet-btn" data-remove>Remove a sticker</button>' : ''}` : ''}
+        <div class="opt-foot"><button type="button" class="sheet-btn" data-backup>Back up all four</button><button type="button" class="sheet-btn primary" data-close>Done</button></div>`;
+    };
+    const drawRemove = () => {
+      shown = 'remove';
+      const mine = St.list(b.id);
+      if (!mine.length) { drawMain(); return; }
+      sheet.innerHTML = `
+        <span class="opt-label">Tap one to take it off</span>
+        <div class="sticker-list">${[...mine].reverse().map((s) => `<button type="button" class="sticker-pick ${s.shape}" style="--r:${St.ratioOf(s)}" data-id="${s.id}" aria-label="Remove this sticker"><img src="${St.thumb(s)}" alt="" /></button>`).join('')}</div>
+        <div class="opt-foot one"><button type="button" class="sheet-btn primary" data-back>Done</button></div>`;
+    };
+    (view === 'remove' ? drawRemove : drawMain)();
     document.body.appendChild(dim);
+    // The book comes up into the room over the sheet.
+    nearFit(sheet.offsetTop);
+    nearMove();
     requestAnimationFrame(() => dim.classList.add('in'));
-    const close = () => { dim.classList.remove('in'); setTimeout(() => dim.remove(), 220); };
+    const hide = () => new Promise((done) => { dim.classList.remove('in'); setTimeout(() => { dim.remove(); done(); }, 220); });
+    const close = () => { hide(); leaveNear(); };
     dim.addEventListener('click', async (e) => {
       if (e.target === dim || e.target.closest('[data-close]')) { close(); return; }
       if (e.target.closest('[data-backup]')) {
-        close();
+        await hide();
+        leaveNear();
         if (window.DFBackup) window.DFBackup.open();
         return;
       }
-      const pick = e.target.closest('.nb-pick');
-      if (!pick || busy) return;
-      const i = Number(pick.dataset.i);
-      close();
-      cancelAnimationFrame(anim);
-      clearTimeout(go.t);
-      pos = mod(Math.round(pos));
-      if (i !== pos) {
-        // Brought round to the front first, as a tap on it would.
-        busy = true;
-        go(pos + stepsTo(i));
-        await wait(still() ? 0 : 600);
-        cancelAnimationFrame(anim);
-        clearTimeout(go.t);
-        busy = false;
-        pos = i;
+      const c = e.target.closest('[data-color]');
+      if (c) {
+        setColor(i, c.dataset.color);
+        sheet.querySelectorAll('[data-color]').forEach((x) => x.setAttribute('aria-pressed', String(x === c)));
+        return;
       }
-      render();
-      openBook(i);
+      if (e.target.closest('[data-remove]')) { drawRemove(); nearFit(sheet.offsetTop); nearMove(); return; }
+      if (e.target.closest('[data-back]')) { drawMain(); nearFit(sheet.offsetTop); nearMove(); return; }
+      const gone = e.target.closest('.sticker-pick');
+      if (gone) {
+        const s = St.list(b.id).find((x) => x.id === gone.dataset.id);
+        if (!s) return;
+        try { await St.remove(s); } catch (err) { console.error(err); return; }
+        paintStickers(i);
+        drawRemove();
+        nearFit(sheet.offsetTop);
+        nearMove();
+        toast('Sticker removed', 'Undo', async () => {
+          await St.putBack(s);
+          paintStickers(i);
+          if (dim.isConnected) { (shown === 'remove' ? drawRemove : drawMain)(); nearFit(sheet.offsetTop); nearMove(); }
+        });
+        return;
+      }
+      const k = e.target.closest('[data-shape]');
+      if (k && St) {
+        const file = await St.pick(); // straight from the tap, or iOS won't open the picker
+        if (!file) return;
+        await hide();
+        let bytes = null;
+        try { bytes = await St.crop(file, k.dataset.shape); } catch (err) { console.error(err); toast('Could not read that photo'); }
+        if (bytes) {
+          const s = nearSlot();
+          s.classList.add('still');
+          const saved = await St.place(b.id, k.dataset.shape, bytes, s.querySelector('.front'), s.querySelector('.sticker-flap'), (footTop) => { nearFit(footTop); nearMove(); });
+          s.classList.remove('still');
+          if (saved) paintStickers(i);
+        }
+        showOptions();
+      }
     });
-  });
+  }
+  logoBtn.addEventListener('click', openNear);
+
+  // A word at the foot of the screen, with one thing to do about it.
+  function toast(text, label, run) {
+    document.querySelectorAll('.toast').forEach((t) => t.remove());
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = `<span></span>${label ? '<button type="button"></button>' : ''}`;
+    t.firstChild.textContent = text;
+    if (label) {
+      const btn = t.querySelector('button');
+      btn.textContent = label;
+      btn.addEventListener('click', () => { t.remove(); run(); });
+    }
+    document.body.append(t);
+    requestAnimationFrame(() => t.classList.add('in'));
+    setTimeout(() => { t.classList.remove('in'); setTimeout(() => t.remove(), 250); }, 4000);
+  }
+
+  // A notebook's colour, picked on the shelf: kept where that notebook reads
+  // it, and its book here repainted. The Eye keeps its colour with the rest of
+  // its things (df-app-color is only its copy for the first paint), so it's
+  // changed there too; on its very first launch it takes df-app-color.
+  function setColor(i, c) {
+    const b = BOOKS[i];
+    store.set(b.key, c);
+    if (b.id === 'the-eye') {
+      try {
+        const raw = localStorage.getItem('dailies_state_v1');
+        const st = raw && JSON.parse(raw);
+        if (st && typeof st === 'object') {
+          st.presentation = Object.assign({}, st.presentation, { color: c });
+          localStorage.setItem('dailies_state_v1', JSON.stringify(st));
+        }
+      } catch (e) { /* it keeps its own colour */ }
+    }
+    paint(i);
+  }
+  function paint(i) {
+    const b = BOOKS[i], c = colorOf(b);
+    slots[i].style.setProperty('--c', COLORS[c]);
+    slots[i].style.setProperty('--cover', `url("${b.cover(c)}")`);
+    slots[i].style.setProperty('--block', `url("${b.block(c)}")`);
+  }
 
   // ---------- Opening and shutting ----------
   const still = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -413,7 +563,12 @@
   function whenArtIn(ms) {
     const urls = [...new Set(BOOKS.flatMap((b) => { const c = colorOf(b); return [b.cover(c), b.block(c)]; }))];
     const one = (u) => new Promise((done) => { const im = new Image(); im.onload = im.onerror = done; im.src = u; });
-    return Promise.race([Promise.all(urls.map(one)), wait(ms)]);
+    // The stickers too, on the covers before the books show.
+    const stickers = window.DFStickers ? window.DFStickers.ready.then(() => {
+      BOOKS.forEach((b, i) => paintStickers(i));
+      return Promise.all([...stage.querySelectorAll('.stickers img')].map((im) => (im.decode ? im.decode().catch(() => {}) : null)));
+    }) : null;
+    return Promise.race([Promise.all([...urls.map(one), stickers]), wait(ms)]);
   }
 
   // ---------- Start ----------
@@ -437,12 +592,7 @@
   window.addEventListener('pageshow', (e) => {
     if (!e.persisted) return;
     store.set('df-suite-in', null);
-    BOOKS.forEach((b, i) => {
-      const c = colorOf(b);
-      slots[i].style.setProperty('--c', COLORS[c]);
-      slots[i].style.setProperty('--cover', `url("${b.cover(c)}")`);
-      slots[i].style.setProperty('--block', `url("${b.block(c)}")`);
-    });
+    BOOKS.forEach((b, i) => paint(i));
     reset();
   });
 

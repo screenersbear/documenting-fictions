@@ -8,8 +8,9 @@
 // own notebook if ever needed.
 //
 //   { app: 'documenting-fictions', kind: 'suite-backup', version: 1, exportedAt,
-//     notebooks: { ref, 'the-eye', 'contact-sheet', overthoughts, links } }   (a part is null if that notebook has nothing yet;
-//     links = df-links, the boards sent from Ref to The Eye's shoots)
+//     notebooks: { ref, 'the-eye', 'contact-sheet', overthoughts, links, stickers } }   (a part is null if that notebook has nothing yet;
+//     links = df-links, the boards sent from Ref to The Eye's shoots; stickers = df-stickers, the covers' stickers;
+//     a backup from before the stickers has no stickers part, and restoring it leaves them as they are)
 //
 // Built in pieces (Blobs), so a big library never has to be one string.
 (function () {
@@ -22,6 +23,7 @@
     { id: 'contact-sheet', db: 'contact-sheet', app: 'contact-sheet', book: 'contact-sheet-book' },
     { id: 'overthoughts', db: 'overthoughts', app: 'overthoughts', book: 'overthoughts-book' },
     { id: 'links', db: 'df-links', app: 'documenting-fictions', book: null }, // boards sent from Ref to The Eye's shoots
+    { id: 'stickers', db: 'df-stickers', app: 'documenting-fictions', book: null }, // the stickers on the four covers (stickers.js)
   ];
   const EYE_STATE = 'dailies_state_v1';
   const EYE_LAST_BACKUP = 'dailies_last_backup_v1'; // The Eye's "Last backup", so its monthly reminder counts this one

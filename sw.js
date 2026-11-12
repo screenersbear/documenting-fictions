@@ -2,16 +2,14 @@
 // worker for its own folder (registered from the shelf, see home.js); this one
 // answers for the shelf itself and the covers it shows.
 // Bump CACHE_NAME with every deploy so installed copies pick up new files.
-const CACHE_NAME = 'df-suite-v8';
+const CACHE_NAME = 'df-suite-v9';
 const ASSETS = [
-  './', './index.html', './home.css', './home.js', './backup.js', './shared/df-data.js', './suite.js', './manifest.json', './icon-180.png', './icon-512.png',
+  './', './index.html', './home.css', './home.js', './stickers.js', './backup.js', './shared/df-data.js', './suite.js', './manifest.json', './icon-180.png', './icon-512.png',
   './ref/fonts/klee-one-latin.woff',
   './ref/art/ocean-cover.webp', './ref/art/ocean-block.webp',
   './the-eye/art/df-mango-cover.webp', './the-eye/art/df-mango-block.webp',
   './contact-sheet/art/orange-cover.webp', './contact-sheet/art/orange-block.webp',
   './overthoughts/art/leaf-cover.webp', './overthoughts/art/leaf-block.webp',
-  // The film roll's panel shows the four notebooks' home screen icons.
-  './ref/icons/icon-180.png', './the-eye/icon-180.png', './contact-sheet/icons/icon-180.png', './overthoughts/icons/icon-180.png',
 ];
 const NOTEBOOKS = ['ref', 'the-eye', 'contact-sheet', 'overthoughts'];
 const base = new URL('./', self.location).pathname;
