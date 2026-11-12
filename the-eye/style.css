@@ -7191,3 +7191,69 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 /* Short on an iPhone (see measureScreenGap), iOS is made to measure again
    (app.js nudgeShortScreen): for a moment the page is taller than the screen. */
 :root.nb-nudge body { min-height: calc(100vh + 160px); }
+
+/* ======================================================================
+   Archivo Black capitals over Inter, under a band of colour (user, 11-12)
+   ----------------------------------------------------------------------
+   The old Documenting Fictions title type (Archivo Black, the free match
+   for Arial Black) for the headers, Inter for everything else, and the top
+   of each section in a band: The Eye's berry blade black with its title in
+   mango. Every header in capitals; how heavy depends on where it sits:
+     1  a section's title, in the band            Archivo Black 24px
+     2  headings on the page, and sheets' titles  Archivo Black 18px
+     3  labels and sub-headings                   Inter semibold, spaced
+   Names you wrote (a shoot's, a setup's) stay as you wrote them.
+   ====================================================================== */
+@font-face { font-family: "Inter"; src: url("fonts/inter-latin.woff2") format("woff2"); font-weight: 100 900; font-display: swap; size-adjust: 91%; } /* sized to take Klee One's width, so every line still fits where it did */
+@font-face { font-family: "Archivo Black"; src: url("fonts/archivo-black-latin.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+:root {
+  --ui: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --display: "Archivo Black", "Arial Black", "Helvetica Neue", Arial, sans-serif;
+  --font-hand: var(--ui); --font-body: var(--ui); --font-title: var(--ui);
+  --head: var(--display); --font-head: var(--display);
+  --band: var(--text); /* berry blade black */
+  --band-ink: #ffd100; /* mango yellow */
+}
+body { font-family: var(--ui); }
+
+/* 1: the band, from the top of the screen to under the title. */
+.topbar {
+  margin: calc(-1 * (var(--nb-top) + 12px)) calc(-1 * var(--page-side)) 14px;
+  padding: calc(var(--nb-top) + 14px) var(--page-side) 14px;
+  border-bottom: none; background: var(--band); color: var(--band-ink);
+}
+.hero-band .topbar { padding: calc(var(--nb-top) + 14px) var(--page-side) 14px; }
+/* (:not(#df-x):not(#df-y) only lifts these over the headers rule above, which has an id in it) */
+:is(.brand-title, .topbar h1):not(#df-x):not(#df-y) { font-family: var(--display) !important; font-weight: 400; font-size: 24px; line-height: 32px; letter-spacing: .02em !important; color: var(--band-ink); }
+.topbar :is(.app-menu-btn, .icon-btn), .brand-eye { color: var(--band-ink); }
+.topbar > .icon-btn { top: calc(var(--nb-top) + 8px); right: calc(var(--page-side) - 8px); } /* level with the title, as before the band */
+/* Weekly gets its title back, in its band like every other section's. */
+#view-journal .topbar { position: relative; top: auto; right: auto; height: auto; z-index: auto; margin: calc(-1 * (var(--nb-top) + 12px)) calc(-1 * var(--page-side)) 4px; padding: calc(var(--nb-top) + 14px) var(--page-side) 14px; border: none; }
+#view-journal .topbar h1 { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+
+/* 2: headings on the page, and the titles of sheets. */
+:is(.section-block h2, .shoot-section-heading, .status-group-heading, .log-week-heading, .stats-page-title, .modal h2, .app-menu-header, .shoot-wizard-head h2, .shoot-mode-review h2):not(#df-x):not(#df-y), :is(#shootModeReviewTitle, #mondayBriefTitle):not(#df-x) {
+  font-family: var(--display) !important; font-weight: 400 !important; font-size: 18px; line-height: 1.25; letter-spacing: .02em !important;
+}
+.shoot-wizard-head h2:not(#df-x):not(#df-y) { font-size: 22px; }
+/* Counts after a heading: in the body type, quieter. */
+.section-block h2 > span, .status-group-heading > span { font-family: var(--ui); font-weight: 500; font-size: 15px; letter-spacing: 0; color: var(--dim); }
+
+/* 3: labels and sub-headings, in Inter's capitals, spaced. */
+:is(.upcoming-subheading, .subsection-heading, .moodboard-label, .log-section-label, .stats-region-heading, .shoot-mode-section-heading, h4, h5, h6, .nb-word, .modal h3, .opt-label):not(#df-x):not(#df-y) {
+  text-transform: uppercase !important;
+  font-family: var(--ui) !important; font-weight: 600 !important; font-size: 15px; line-height: 1.3; letter-spacing: .08em !important;
+}
+.upcoming-subheading, .opt-label { color: var(--dim); }
+/* A month, under its year (Archive, Weekly), and a week under its month. */
+:is(.archive-month-heading, .status-group-heading.archive-month-heading).archive-month-heading:not(#df-x):not(#df-y) { font-family: var(--ui) !important; font-weight: 600 !important; font-size: 15px; letter-spacing: .08em !important; color: var(--dim); }
+.log-week-heading.log-week-heading:not(#df-x):not(#df-y) { font-size: 16px; }
+#shootForm #shootWizardBody label:not(.checkbox-row, .tag-check),
+#shootForm #shootWizardBody :is(.status-swatch-label, .talents-section > .team-question, .aspect-ratio-field-label) {
+  font-family: var(--display); font-size: 16px; line-height: 24px; letter-spacing: .02em;
+}
+
+/* What you wrote: a shoot's name in its rows. */
+.shoot-row-title { font-family: var(--ui); font-weight: 600; font-size: 19px; line-height: 1.25; }
+.stat-num { font-family: var(--display); font-size: 27px; }
+.new-shoot-cta { font-family: var(--display); font-weight: 400; font-size: 17px; letter-spacing: .06em; text-transform: uppercase; }

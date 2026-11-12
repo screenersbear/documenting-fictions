@@ -1,4 +1,4 @@
-const CACHE_NAME = 'the-eye-v154';
+const CACHE_NAME = 'the-eye-v155';
 // The same notebook can live twice on one website (inside the Documenting
 // Fictions suite and as its own app), and both workers see every cache there:
 // each name carries the folder this copy lives in, and each copy only ever
@@ -33,6 +33,8 @@ const ASSETS = [
   './art/df-ink-block.webp',
   './fonts/klee-one-latin.woff',
   './fonts/kaisei-decol-500-latin.woff2',
+  './fonts/inter-latin.woff2',
+  './fonts/archivo-black-latin.woff2',
 ];
 
 // A version that came in from the network (a 'network' page load, below) is
