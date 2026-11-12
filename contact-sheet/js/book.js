@@ -11,6 +11,7 @@ import { mountStickers, openStickers } from './stickers.js';
 import { makeTurnable } from './turn.js';
 import { navHtml, mountNav } from './navicon.js';
 import { openIntro } from './intro.js';
+import { makeBackup, isZipBackup, restoreBackup as restoreZip } from './backup.js';
 
 const TIP_KEY = 'contact-sheet-home-tip';
 const RATIO = 1000 / 1360; // the notebook art's width over its height
@@ -128,26 +129,53 @@ function openOptions(stickers) {
   });
 }
 
-// Everything in the notebook as one file, and back (df-data.js, shared by
-// the notebooks of Documenting Fictions).
-async function saveBackup() {
+// Everything in the notebook as one file, and back (backup.js: a zip the
+// phone never has to hold in memory). Made first, then saved from a tap of
+// its own, as an iPhone only shares a file straight from a tap.
+const sizeText = (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : n >= 1e6 ? `${Math.max(1, Math.round(n / 1e6))} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
+function saveBackup() {
   const D = window.DFData;
-  try {
-    const file = await D.exportDb('contact-sheet', { app: 'contact-sheet', filename: `contact-sheet-backup-${D.todayStr()}.json`, extra: { book: document.documentElement.dataset.book || '' } });
-    const how = await D.saveFile(file);
-    if (how !== 'cancelled') toast('Backup saved');
-  } catch (err) {
+  let open = true;
+  const s = openSheet({
+    title: 'Save a backup',
+    className: 'sheet-small sheet-options',
+    body: '<p class="sheet-message" data-msg>Putting it together</p>',
+    onClose: () => (open = false),
+  });
+  const msg = s.body.querySelector('[data-msg]');
+  makeBackup({
+    extra: { book: document.documentElement.dataset.book || '' },
+    onProgress: (f) => { if (open) msg.textContent = `Putting it together, ${Math.floor(f * 100)}%`; },
+  }).then((file) => {
+    if (!open) return;
+    msg.textContent = `Ready: ${sizeText(file.size)}.`;
+    msg.insertAdjacentHTML('afterend', '<button type="button" class="btn secondary opt-wide" data-save>Save the backup</button>');
+    s.body.querySelector('[data-save]').addEventListener('click', async () => {
+      try {
+        const how = await D.saveFile(file);
+        if (how === 'cancelled') return;
+        s.close();
+        toast('Backup saved');
+      } catch (err) {
+        console.error(err);
+        toast(err.message || 'The backup wasn\'t saved.');
+      }
+    });
+  }).catch((err) => {
     console.error(err);
-    toast(err.message || 'The backup wasn\'t saved.');
-  }
+    if (open) msg.textContent = err.message || 'The backup couldn\'t be made.';
+  });
 }
 async function restoreBackup(close) {
   const D = window.DFData;
-  const file = await D.pickFile(); // straight from the tap, or iOS won't open the picker
+  const file = await D.pickFile('.zip,application/zip,.json,application/json'); // straight from the tap, or iOS won't open the picker
   if (!file) return;
   if (!(await confirmSheet({ title: 'Restore backup', message: 'Everything in Contact Sheet now is swapped for what\'s in the file.', confirmLabel: 'Restore', danger: true }))) return;
+  toast('Restoring the backup', { ms: 600000 });
   try {
-    const { extra } = await D.importDb(file, 'contact-sheet', { app: 'contact-sheet', replace: true });
+    const { extra } = (await isZipBackup(file))
+      ? await restoreZip(file)
+      : await D.importDb(file, 'contact-sheet', { app: 'contact-sheet', replace: true });
     if (extra && extra.book) { try { localStorage.setItem('contact-sheet-book', extra.book); } catch {} }
     close();
     toast('Backup restored');
