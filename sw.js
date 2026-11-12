@@ -1,4 +1,4 @@
-const CACHE_NAME = 'starky-v145';
+const CACHE_NAME = 'starky-v146';
 const ASSETS = [
   './',
   './index.html',
@@ -25,6 +25,7 @@ const ASSETS = [
   './art/df-ink-cover.webp',
   './art/df-ink-block.webp',
   './fonts/klee-one-latin.woff',
+  './fonts/kaisei-decol-500-latin.woff2',
 ];
 
 // A version that came in from the network (a 'network' page load, below) is

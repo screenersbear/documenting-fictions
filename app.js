@@ -2768,11 +2768,11 @@
 
 
   // ---------- Pages ----------
-  // A screen stops at the bottom of its page and carries on over the leaf.
-  // Everything stays in the document: what's on another page just has
-  // .pg-off. A page is worked out from what's actually drawn: `atoms` are
-  // the things that can't be split, in order, each with the headings that
-  // have to come with it on any page it lands on.
+  // Open, the notebook is plain pages the size of the screen (user, 11-12):
+  // each section is one page that scrolls, and only going from one section
+  // to the next turns a page. The page machinery stays, with one page to a
+  // flow: `atoms` are still what's drawn, in order, each with its headings,
+  // for whatever asks which page something is on.
   const LINE = 28; // the Journal's ruled line
   const screenFlows = {};
   const screenAt = { overview: 0, shoots: 0, archive: 0, journal: 0, stats: 0 };
@@ -2873,11 +2873,6 @@
   }
   measureScreenGap();
 
-  const pageProbe = document.createElement('div');
-  // Not the frame's own box: that moves with the iPhone's stuck-bar fix.
-  pageProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;visibility:hidden;pointer-events:none;height:calc(var(--nb-h) - var(--nb-bar) - var(--nb-rim) - 34px)';
-  document.body.appendChild(pageProbe);
-
   function atomBottom(a) {
     const el = a.also && a.also.length ? a.also[a.also.length - 1] : a.el;
     return el.getBoundingClientRect().bottom;
@@ -2922,87 +2917,12 @@
     }
   }
 
-  function packFlow(atoms, cost, room, tail, laterRoom = room) {
-    const sizeOf = a => (a.row === undefined ? cost.get(a.el)
-      : a.row < a.rows - 1 ? LINE : cost.get(a.el) - (a.rows - 1) * LINE);
-    // An atom marked hang may leave the gap after it off the foot of a page.
-    const hangOf = a => (a.hang && tail && (a.row === undefined || a.row === a.rows - 1) ? tail.get(a.el) || 0 : 0);
-    const pages = [];
-    let page = null;
-    let used = 0;
-    const open = () => { page = { atoms: [], drawn: new Set() }; pages.push(page); used = 0; };
-    const headRoom = a => a.heads.reduce((sum, h) => sum + (page.drawn.has(h) ? 0 : cost.get(h)), 0);
-    atoms.forEach((a) => {
-      if (!page) open();
-      if (page.atoms.length && used + headRoom(a) + sizeOf(a) - hangOf(a) > (pages.length > 1 ? laterRoom : room)) open();
-      used += headRoom(a) + sizeOf(a);
-      a.heads.forEach(h => page.drawn.add(h));
-      page.drawn.add(a.el);
-      page.atoms.push(a);
-    });
-    return pages;
-  }
-
-  // `limit` is how far down the screen a page may run. `opts.margins`: the
-  // last thing on a page brings its margin-bottom along (in a page that
-  // scrolls on its own, like Shoot mode's, that margin would scroll it).
-  // `opts.later`: a page after the first starts right at the top (.pg-first
-  // takes the margin off its first thing), so it's given that much more room.
-  function buildFlow(root, atomsOf, limit, opts = {}) {
+  // A flow is one page holding everything; nothing is cut off or hidden.
+  function buildFlow(root, atomsOf) {
     root.querySelectorAll('.pg-off, .pg-first').forEach(el => el.classList.remove('pg-off', 'pg-first'));
     root.querySelectorAll('.jb-in').forEach(el => clearSlice(el.parentElement));
-    const atoms = atomsOf(root); // only now is everything drawn to be measured
-    const seen = new Set();
-    const order = [];
-    const add = (el) => { if (!seen.has(el)) { seen.add(el); order.push(el); } };
-    atoms.forEach((a) => { a.heads.forEach(add); add(a.el); });
-    const rects = order.map(el => el.getBoundingClientRect());
-    const cost = new Map();
-    // From this one's top to the next one's: margins and gaps come along.
-    order.forEach((el, i) => {
-      const next = rects[i + 1];
-      cost.set(el, next && next.top > rects[i].top ? next.top - rects[i].top : rects[i].height);
-    });
-    // The last one has nothing after it to measure to.
-    const tail = new Map();
-    order.forEach((el, i) => tail.set(el, Math.max(0, cost.get(el) - rects[i].height)));
-    const lastAtom = atoms[atoms.length - 1];
-    if (lastAtom && lastAtom.also && lastAtom.also.length) cost.set(lastAtom.el, atomBottom(lastAtom) - lastAtom.el.getBoundingClientRect().top);
-    const live = atoms.filter(a => cost.get(a.el) > 0);
-    const parts = new Set();
-    const note = (el) => {
-      parts.add(el);
-      for (let n = el.parentElement; n && n !== root && !parts.has(n) && !n.matches('.hero-band'); n = n.parentElement) parts.add(n);
-    };
-    live.forEach((a) => { note(a.el); (a.also || []).forEach(note); a.heads.forEach(note); });
-    const flow = { root, parts, pageEnd: limit + window.scrollY, pages: [], bodies: new Set(live.filter(a => a.row !== undefined).map(a => a.el)) };
-    let room = limit - (rects.length ? rects[0].top : 0);
-    let laterRoom = room;
-    if (opts.later && order.length) {
-      const lifted = [];
-      for (let n = order[0]; n && n !== root; n = n.parentElement) {
-        if (!n.classList.contains('pg-first')) { n.classList.add('pg-first'); lifted.push(n); }
-      }
-      laterRoom = Math.max(room, limit - order[0].getBoundingClientRect().top);
-      lifted.forEach(n => n.classList.remove('pg-first'));
-    }
-    const leastRoom = room / 2;
-    // Then each page is drawn to check it really fits.
-    for (let tries = 0; tries < 3; tries++) {
-      flow.pages = packFlow(live, cost, room, tail, laterRoom);
-      let over = 0;
-      flow.pages.forEach((page, at) => {
-        if (page.atoms.length < 2) return; // one thing too tall for a page can't be helped
-        drawFlowPage(flow, at);
-        const last = page.atoms[page.atoms.length - 1];
-        const margin = opts.margins ? parseFloat(getComputedStyle(last.also && last.also.length ? last.also[last.also.length - 1] : last.el).marginBottom) || 0 : 0;
-        over = Math.max(over, atomBottom(last) + margin - limit);
-      });
-      if (over <= 0.5) break;
-      room = Math.max(leastRoom, room - Math.ceil(over));
-      laterRoom = Math.max(leastRoom, laterRoom - Math.ceil(over));
-    }
-    return flow;
+    const atoms = atomsOf(root);
+    return { root, parts: new Set(), pageEnd: Infinity, pages: atoms.length ? [{ atoms, drawn: new Set() }] : [], bodies: new Set() };
   }
 
   // The headings a row sits under: its group's, and every group above that.
@@ -3102,17 +3022,14 @@
     return atoms;
   }
 
-  // Every stat's pages, one after another, for the page number and the swipe.
+  // Every breakdown is on the one page, one under another.
   function statsFlat() {
-    return statsFlows.flatMap((flow, stat) => Array.from({ length: flow.pages.length || 1 }, (_, sub) => ({ stat, sub })));
+    return statsFlows.length ? [{ stat: 0, sub: 0 }] : [];
   }
 
-  function buildStatsFlows(limit) {
+  function buildStatsFlows() {
     const was = statsFlat()[screenNow('stats')];
-    const dots = document.getElementById('statsDots');
-    const style = getComputedStyle(dots);
-    const under = dots.offsetHeight + parseFloat(style.marginTop) + parseFloat(style.marginBottom) + 8;
-    statsFlows = [...statsCarousel.querySelectorAll('.stats-page')].map(page => buildFlow(page, statsAtoms, limit - under));
+    statsFlows = [...statsCarousel.querySelectorAll('.stats-page')].map(page => buildFlow(page, statsAtoms));
     const flat = statsFlat();
     const sub = was ? was.sub : 0;
     const stay = flat.filter(p => p.stat === statsPageIdx);
@@ -3130,11 +3047,9 @@
   // drawn before the photos are in can be shorter than the screen really is.
   const screenNow = view => Math.max(0, Math.min(screenAt[view], screenPageCount(view) - 1));
 
-  // Overview's first page is the left-hand page of the spread; everything
-  // after it is on the right.
+  // There are no left- and right-hand pages any more: every page is the screen.
   function syncPageSide() {
-    const view = currentScreen();
-    document.documentElement.dataset.side = view === 'overview' && screenNow('overview') === 0 ? 'verso' : 'recto';
+    document.documentElement.dataset.side = 'recto';
   }
 
   function drawScreenPage(view) {
@@ -3169,9 +3084,8 @@
   function repaginate(view) {
     const root = views[view];
     if (!root || root.hidden || currentScreen() !== view) return;
-    const limit = pageProbe.offsetHeight - window.scrollY;
-    if (view === 'stats') buildStatsFlows(limit);
-    else screenFlows[view] = buildFlow(root, SCREEN_ATOMS[view], limit);
+    if (view === 'stats') buildStatsFlows();
+    else screenFlows[view] = buildFlow(root, SCREEN_ATOMS[view]);
     drawScreenPage(view);
   }
 
@@ -3315,9 +3229,9 @@
       if (turning) {
         const order = [...document.querySelectorAll('.tabbar .tab')].map(tab => tab.dataset.view);
         const board = document.querySelector('.nb-board');
-        // Going on, or back to the left-hand page: the old page swings away.
-        // Back through the right-hand pages: the page before swings in over it.
-        if (order.indexOf(view) > order.indexOf(previous) || view === 'overview') playTurn(board, '', oldCopy);
+        // Going on, the old page swings away; going back, the page before
+        // swings in over it.
+        if (order.indexOf(view) > order.indexOf(previous)) playTurn(board, '', oldCopy);
         else playTurn(board, 'back', pageCopy(views[view]), oldCopy);
       }
       // Journal's intro was rewritten when the Log and Reflections notebooks
@@ -5251,13 +5165,12 @@
     const selector = item.type === 'week'
       ? `.log-card[data-week-key="${item.date}"]`
       : `.journal-entry-card[data-entry-id="${item.entry.id}"]`;
-    // The photos have to be in first: they decide which page it lands on.
+    // The photos have to be in first: they decide where it ends up.
     renderJournal().then(() => {
       const card = document.querySelector(selector);
-      const flow = screenFlows.journal;
-      if (!card || !flow) return;
-      const at = flow.pages.findIndex(page => page.atoms.some(a => card.contains(a.el)));
-      if (at >= 0) turnScreenPage('journal', at);
+      if (!card) return;
+      const top = card.getBoundingClientRect().top + window.scrollY - parseFloat(getComputedStyle(document.getElementById('app')).paddingTop);
+      window.scrollTo({ top: Math.max(0, top), behavior: motionOk() ? 'smooth' : 'auto' });
     });
   }
 
@@ -8343,10 +8256,9 @@
   });
 
   // ---------- A shoot as a chapter ----------
-  // Each section of the form is one page of the notebook, swiped through
-  // like one. The form itself is unchanged: the pages only
-  // hide the sections that aren't open (direct children of the form only, so
-  // a section body borrowed onto a wizard slide is never hidden).
+  // A shoot is one page that scrolls, its sections one under another. Which
+  // section is at the top of the page is kept (shootPageId) for coming back
+  // to it. The form's direct children are listed by section (shootPageEls).
   const shootPageEls = (() => {
     const ids = SHOOT_MODAL_SECTIONS.map(sec => sec.id);
     const els = [];
@@ -8446,15 +8358,11 @@
     shootPageEls.forEach(({ el }) => el.classList.remove('nb-off'));
     autoSizeAllListTextareas();
     syncAllShootFormFields();
-    const limit = modal.getBoundingClientRect().top + modal.clientHeight - parseFloat(getComputedStyle(modal).paddingBottom);
     const flows = {};
     availableShootPages().forEach(({ id }) => {
-      shootPageEls.forEach(({ el, page }) => el.classList.toggle('nb-off', page !== id));
-      const body = document.getElementById(SHOOT_PAGE_BODIES[id]);
-      flows[id] = buildFlow(body, shootFlowAtoms, limit);
+      flows[id] = buildFlow(document.getElementById(SHOOT_PAGE_BODIES[id]), shootFlowAtoms);
     });
     shootFlows = flows;
-    shootPageEls.forEach(({ el, page }) => el.classList.toggle('nb-off', page !== shootPageId));
     const flow = shootFlows[shootPageId];
     // An edit on this page outranks the remembered page.
     if (changedHere.length) shootWanted = null;
@@ -8526,80 +8434,55 @@
     });
   }
 
+  // Scrolls to a section (the first one is the top of the page). opts.turn:
+  // asked for by a tap, so it glides there.
   function showShootPage(id, opts = {}) {
     const pages = availableShootPages();
     if (!pages.some(p => p.id === id)) {
       if (!opts.orFirst) return;
       id = pages[0].id;
     }
-    const subs = (shootFlows && shootFlows[id] && shootFlows[id].pages.length) || 1;
-    const sub = Math.max(0, Math.min(opts.sub || 0, subs - 1));
-    const flat = shootFlatPages();
-    const from = flat.findIndex(p => p.id === shootPageId && p.sub === shootSub);
-    const to = flat.findIndex(p => p.id === id && p.sub === sub);
-    const changed = id !== shootPageId || sub !== shootSub;
-    const turning = opts.turn && changed && motionOk();
-    const oldCopy = turning ? shootPageCopy() : null;
     shootWanted = null;
     shootPageId = id;
-    shootSub = sub;
-    if (currentShootId) shootPageMemory[currentShootId] = { id, sub };
-    shootPageEls.forEach(({ el, page }) => el.classList.toggle('nb-off', page !== id));
+    shootSub = 0;
+    if (currentShootId) shootPageMemory[currentShootId] = { id, sub: 0 };
+    shootPageEls.forEach(({ el }) => el.classList.remove('nb-off'));
     drawShootSub();
     drawShootPageNumber();
     updateShootRunningHead();
-    shootModalOverlay.querySelector('.modal').scrollTop = 0;
-    // Boxes on a page that was hidden measured zero height.
+    // Boxes that were out of sight may have measured nothing.
     autoSizeAllListTextareas();
     syncAllShootFormFields();
-    if (turning) {
-      const layer = shootModalOverlay.querySelector('.nb-turn-layer');
-      if (to > from || from === -1) playTurn(layer, '', oldCopy);
-      else playTurn(layer, 'back', shootPageCopy(), oldCopy);
-    }
+    const modal = shootModalOverlay.querySelector('.modal');
+    const head = document.getElementById(id);
+    const top = id === pages[0].id || !head ? 0
+      : modal.scrollTop + head.getBoundingClientRect().top - modal.getBoundingClientRect().top - parseFloat(getComputedStyle(modal).paddingTop);
+    modal.scrollTo({ top: Math.max(0, top), behavior: opts.turn && motionOk() ? 'smooth' : 'auto' });
     if (shootBreakWatch) shootBreakWatch.takeRecords();
   }
 
-  function stepShootPage(by) {
-    if (shootWizardActive || shootWizardPendingId) return;
-    const pages = shootFlatPages();
-    const next = pages[pages.findIndex(p => p.id === shootPageId && p.sub === shootSub) + by];
-    if (!next) return;
-    if (document.activeElement && shootForm.contains(document.activeElement)) document.activeElement.blur();
-    showShootPage(next.id, { turn: true, sub: next.sub });
-  }
-  document.getElementById('nbPagePrev').addEventListener('click', () => stepShootPage(-1));
-  document.getElementById('nbPageNext').addEventListener('click', () => stepShootPage(1));
-
-  // Swiped sideways like a notebook. Not while typing, over something that
-  // takes the finger itself (a drag handle, a sideways scroller, a slider),
-  // or under the new-shoot steps.
-  (function setupShootPageSwipe() {
-    const scrollerEnd = shootModalOverlay.querySelector('.modal');
-    const wizard = document.getElementById('shootWizard');
-    let start = null;
-    const scrollsSideways = (el) => {
-      for (let node = el; node && node !== scrollerEnd; node = node.parentElement) {
-        if (node.scrollWidth > node.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(node).overflowX)) return true;
-      }
-      return false;
-    };
-    shootModalOverlay.addEventListener('touchstart', (e) => {
-      start = null;
-      if (e.touches.length !== 1 || !wizard.hidden || typingNow()) return;
-      const selection = window.getSelection();
-      if (selection && !selection.isCollapsed) return;
-      if (e.target.closest('[class*="drag-handle"], input[type="range"], .nb-shoot-bar, .nb-page-num') || scrollsSideways(e.target)) return;
-      start = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }, { passive: true });
-    shootModalOverlay.addEventListener('touchcancel', () => { start = null; }, { passive: true });
-    shootModalOverlay.addEventListener('touchend', (e) => {
-      if (!start) return;
-      const dx = e.changedTouches[0].clientX - start.x;
-      const dy = e.changedTouches[0].clientY - start.y;
-      start = null;
-      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      stepShootPage(dx < 0 ? 1 : -1);
+  // Scrolled by hand: the section at the top of the page is the one it's on.
+  (function followShootScroll() {
+    const modal = shootModalOverlay.querySelector('.modal');
+    let due = false;
+    modal.addEventListener('scroll', () => {
+      if (due) return;
+      due = true;
+      setTimeout(() => {
+        due = false;
+        if (shootModalOverlay.hidden || shootWizardActive || shootWizardPendingId) return;
+        const line = modal.getBoundingClientRect().top + modal.clientHeight / 3;
+        let on = null;
+        availableShootPages().forEach(({ id }) => {
+          const head = document.getElementById(id);
+          if (head && head.getBoundingClientRect().top <= line) on = id;
+        });
+        on = on || availableShootPages()[0].id;
+        if (on === shootPageId) return;
+        shootPageId = on;
+        if (currentShootId) shootPageMemory[currentShootId] = { id: on, sub: 0 };
+        drawShootPageNumber();
+      }, 120);
     }, { passive: true });
   })();
 
@@ -18942,9 +18825,9 @@
     return atoms;
   }
 
-  const shootModePages = () => (shootModeFlows
-    ? ['main', 'board', 'more'].flatMap(part => (shootModeFlows[part] ? shootModeFlows[part].pages.map((page, i) => ({ part, i })) : []))
-    : []);
+  // One page that scrolls: its three parts (the shot list, the mood board and
+  // the notes) one under another.
+  const shootModePages = () => (shootModeFlows ? [{ part: 'main', i: 0 }] : []);
 
   // The mood board's photos in rows of `cols` (a page breaks between rows).
   function groupShootModeBoard(cols) {
@@ -19019,7 +18902,6 @@
       shootModeSheet.dataset.part = page.part;
       drawFlowPage(shootModeFlows[page.part], page.i);
     }
-    shootModePage.scrollTop = 0;
     document.getElementById('shootModeFoot').textContent = `${shootModeAt + 1} / ${Math.max(1, pages.length)}`;
     document.getElementById('shootModePrev').disabled = shootModeAt <= 0;
     document.getElementById('shootModeNext').disabled = shootModeAt >= pages.length - 1;
@@ -19045,7 +18927,7 @@
     let anchor = show || (was && shootModeFlows[was.part].pages[was.i] && shootModeFlows[was.part].pages[was.i].atoms[0] && shootModeFlows[was.part].pages[was.i].atoms[0].el);
     // A row of photos can be taken apart below: hold on to its first photo.
     if (anchor && anchor.matches && anchor.matches('.shoot-mode-moodboard-row')) anchor = anchor.querySelector('.moodboard-thumb') || anchor;
-    shootModePage.scrollTop = 0;
+    const scrolled = Number.isInteger(opts.at) ? 0 : shootModePage.scrollTop;
     const limit = () => shootModePage.getBoundingClientRect().top + shootModePage.clientHeight - parseFloat(getComputedStyle(shootModePage).paddingBottom);
     // Each part is measured while it's the one showing, its writing sized to
     // fit first (a hidden one would measure nothing and lose its height).
@@ -19054,7 +18936,11 @@
     shootModeMain.querySelectorAll('.shot-text').forEach(autoSizeTextarea);
     const main = buildFlow(shootModeMain, shootModeAtoms, limit(), { margins: true, later: true });
     shootModeSheet.dataset.part = 'board';
-    fitShootModeBoard(limit());
+    // Its photos in rows of three, as tall as they come (not fitted to a page).
+    const boardGrid = document.getElementById('shootModeMoodboard');
+    boardGrid.classList.remove('is-fitted');
+    ['--mb-cols', '--mb-w', '--mb-h'].forEach(v => boardGrid.style.removeProperty(v));
+    groupShootModeBoard(3);
     const board = buildFlow(shootModeBoardPart, shootModeAtoms, limit(), { margins: true, later: true });
     shootModeSheet.dataset.part = 'more';
     autoSizeTextarea(document.getElementById('shootModeShootingNotes'));
@@ -19075,7 +18961,11 @@
         if (at >= 0) shootModeAt = at;
       }
     }
+    shootModeSheet.dataset.part = 'main';
     drawShootModePage();
+    shootModePage.scrollTop = scrolled;
+    // Something that has to be seen (a new shot row, the newest photo) is scrolled to.
+    if (show && show.scrollIntoView) show.scrollIntoView({ block: 'nearest' });
   }
 
   // The header sets where every page starts, and its clock lines come and
@@ -19705,11 +19595,11 @@
 
   function breakArchivePages() {
     if (archiveModeOverlay.hidden) return;
-    archiveModePage.scrollTop = 0;
-    const limit = archiveModePage.getBoundingClientRect().top + archiveModePage.clientHeight - parseFloat(getComputedStyle(archiveModePage).paddingBottom);
-    archiveFlow = buildFlow(archiveModeBody, archiveAtoms, limit);
+    const scrolled = archiveModePage.scrollTop;
+    archiveFlow = buildFlow(archiveModeBody, archiveAtoms);
     if (archiveWanted !== null) archiveAt = archiveWanted;
     drawArchivePage();
+    archiveModePage.scrollTop = scrolled;
   }
 
   // Its look comes from a class, so the copy can lose the id: a copy in the
@@ -19762,6 +19652,7 @@
     renderArchiveModeBody(shoot);
     archiveModeOverlay.hidden = false;
     archiveAt = at > 0 ? at : 0;
+    archiveModePage.scrollTop = 0;
     breakArchivePages();
   }
 
@@ -21451,15 +21342,18 @@
       );
       book.style.setProperty('--shut-x', `${-(Math.min(...seen) + Math.max(...seen)) / 2 / cos}px`);
       relayStickers();
-      // Zoomed in, the page lands exactly on the page frame behind it.
-      const frame = document.querySelector('.nb-board').getBoundingClientRect();
-      const top = Math.max(0, frame.top);
-      const bottom = Math.min(vh, frame.bottom);
+      // Zoomed in, the spine lies along one side of the screen and the page's
+      // white covers the rest, OVER past every edge so even its round corners
+      // are off the screen; then the plain page underneath takes over. The
+      // white inside the cover's block art (df-*-block.webp) stops 2.5% short
+      // of the outer edge and 1.9% short of the top and bottom; a section's
+      // own right-hand page (.nb-right-page) 1.6% and 1.4%.
+      const OVER = 12;
       book.style.setProperty('--zoom-x', `${vw / 2}px`);
-      book.style.setProperty('--zoom-y', `${(top + bottom) / 2 - vh / 2}px`);
-      book.style.setProperty('--zoom-sx', String((vw - 10) / W));
-      book.style.setProperty('--zoom-rx', String(frame.right / W));
-      book.style.setProperty('--zoom-sy', String((bottom - top) / H));
+      book.style.setProperty('--zoom-y', '0px');
+      book.style.setProperty('--zoom-sx', String((vw + OVER) / 0.975 / W));
+      book.style.setProperty('--zoom-rx', String((vw + OVER) / 0.984 / W));
+      book.style.setProperty('--zoom-sy', String((vh + 2 * OVER) / 0.962 / H));
     }
 
     function setMode(mode) {
@@ -21522,7 +21416,6 @@
       setMode(at > 0 ? 'opened at-section' : 'opened');
       timer = setTimeout(() => {
         document.querySelector(`.tabbar .tab[data-view="${view}"]`).click();
-        measure(); // the frame sits differently on a right-hand page
         leaveTo(at > 0 ? 'opened at-section zoom-r' : 'opened zoom-l');
       }, at > 0 ? SECTION_MS : OPEN_MS);
     }
@@ -22790,8 +22683,8 @@
     }
     prev.addEventListener('click', () => go(-1));
     next.addEventListener('click', () => go(1));
-    // A tap on the icon goes back to its screen's first page.
-    now.addEventListener('click', () => turnScreenPage(tabs[idx].view, 0));
+    // A tap on the icon goes back to the top of its page.
+    now.addEventListener('click', () => { if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: motionOk() ? 'smooth' : 'auto' }); });
 
     // A finger the width of a third of the screen moves one icon over.
     const span = () => (window.innerWidth || 1) / 3;
