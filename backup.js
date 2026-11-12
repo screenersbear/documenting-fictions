@@ -1,18 +1,18 @@
 // Documenting Fictions: one backup for all four notebooks, from the shelf.
 //
-// The file holds each notebook's own backup, as that notebook makes it:
-// Ref, Contact Sheet and Overthoughts as their databases (df-data.js's
-// exportDb, with their cover colour), The Eye as its "Back up all data" file
-// (its shoots and journal from localStorage, its photos from
-// starky-moodboards). So a part can also be cut out and restored inside its
-// own notebook if ever needed.
+// A zip (df-data.js's zipBackup), put together from what's stored so the
+// phone never holds all four in memory: every notebook's database (Ref,
+// Contact Sheet, Overthoughts, and The Eye's photos, starky-moodboards),
+// df-links (the boards sent from Ref to The Eye's shoots) and df-stickers
+// (the covers' stickers), plus from localStorage The Eye's shoots and
+// journal (dailies_state_v1) and each notebook's cover colour. A notebook's
+// own Restore takes its part out of this file too.
 //
+// Backups of all four made the first way (one .json, kind 'suite-backup':
 //   { app: 'documenting-fictions', kind: 'suite-backup', version: 1, exportedAt,
-//     notebooks: { ref, 'the-eye', 'contact-sheet', overthoughts, links, stickers } }   (a part is null if that notebook has nothing yet;
-//     links = df-links, the boards sent from Ref to The Eye's shoots; stickers = df-stickers, the covers' stickers;
-//     a backup from before the stickers has no stickers part, and restoring it leaves them as they are)
-//
-// Built in pieces (Blobs), so a big library never has to be one string.
+//     notebooks: { ref, 'the-eye', 'contact-sheet', overthoughts, links, stickers } }, a part null
+//   if that notebook had nothing; one from before the stickers has no stickers part, and leaves
+//   them as they are) still go back in.
 (function () {
   'use strict';
   const D = window.DFData;
@@ -39,21 +39,52 @@
     return new Set((await indexedDB.databases()).map((d) => d.name));
   }
 
-  async function makeBackup() {
+  const EYE_DB = 'starky-moodboards'; // The Eye's photos
+  const DB_NAMES = [...DBS.map((n) => n.db), EYE_DB];
+
+  // { parts, size, release, done } (df-data.js's zipBackup), or null with nothing to back up.
+  async function makeBackup(onProgress) {
     const have = await existing();
-    const parts = [`{"app":"documenting-fictions","kind":"suite-backup","version":1,"exportedAt":${JSON.stringify(D.nowIso())},"notebooks":{`];
-    const counts = [];
-    for (const [i, n] of DBS.entries()) {
-      let file = null;
-      if (!have || have.has(n.db)) file = await D.exportDb(n.db, { app: n.app, extra: { book: (n.book && ls.get(n.book)) || '' } });
-      parts.push(`${i ? ',' : ''}${JSON.stringify(n.id)}:`, file || 'null');
-      if (file) counts.push(n.id);
+    const eye = !!ls.get(EYE_STATE);
+    const dbs = DBS.map((n) => n.db).filter((n) => !have || have.has(n));
+    if (eye) dbs.push(EYE_DB);
+    if (!dbs.length) return null;
+    return D.zipBackup({
+      app: 'documenting-fictions',
+      kind: 'suite',
+      databases: dbs,
+      local: [...(eye ? [EYE_STATE] : []), ...DBS.filter((n) => n.book).map((n) => n.book)],
+      filename: `documenting-fictions-backup-${D.todayStr()}.zip`,
+      onProgress,
+    });
+  }
+
+  // A backup zip of all four back in: the databases it has (each swapped for
+  // its part), then the cover colours and The Eye's shoots and journal. The
+  // Eye's part is checked before anything is changed.
+  async function restoreZip(files, onProgress) {
+    const r = await D.restoreZip(files, {
+      kind: 'suite',
+      databases: DB_NAMES,
+      onProgress,
+      check: async (local) => {
+        const st = await local(EYE_STATE);
+        if (st == null) return;
+        let ok = false;
+        try { ok = Array.isArray(JSON.parse(st).shoots); } catch (e) { /* not JSON */ }
+        if (!ok) throw new Error("The Eye's part of that file isn't right. Nothing was changed.");
+      },
+    });
+    for (const n of DBS) {
+      const book = n.book ? await r.local(n.book) : null;
+      if (book) ls.set(n.book, book);
     }
-    const eye = ls.get(EYE_STATE) ? await D.eyeBackupFile() : null;
-    parts.push(',"the-eye":', eye || 'null', '}}');
-    if (eye) counts.push('the-eye');
-    if (!counts.length) return null;
-    return new File(parts, `documenting-fictions-backup-${D.todayStr()}.json`, { type: 'application/json' });
+    const st = await r.local(EYE_STATE);
+    if (st != null) {
+      localStorage.setItem(EYE_STATE, st); // throws if it doesn't fit, and the restore says so
+      const color = JSON.parse(st).presentation && JSON.parse(st).presentation.color;
+      if (color) ls.set('df-app-color', color);
+    }
   }
 
   // Puts one notebook's database back from its part, exactly as it was: its
@@ -122,7 +153,8 @@
     if (part.state.presentation && part.state.presentation.color) ls.set('df-app-color', part.state.presentation.color);
   }
 
-  async function restore(file) {
+  // A backup of all four made the first way (one .json).
+  async function restoreJson(file) {
     let data;
     try { data = JSON.parse(await file.text()); } catch (e) { throw new Error("That file isn't a Documenting Fictions backup."); }
     if (!data || data.kind !== 'suite-backup' || !data.notebooks) throw new Error("That file isn't a backup of all four. A single notebook's backup goes back in from that notebook's options.");
@@ -139,13 +171,13 @@
   }
 
   // ---------- The sheet ----------
-  function sheet(html) {
+  function sheet(html, onClose) {
     const dim = document.createElement('div');
     dim.className = 'sheet-dim';
     dim.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
     document.body.appendChild(dim);
     requestAnimationFrame(() => dim.classList.add('in'));
-    const close = () => { dim.classList.remove('in'); setTimeout(() => dim.remove(), 220); };
+    const close = () => { dim.classList.remove('in'); setTimeout(() => dim.remove(), 220); if (onClose) onClose(); };
     dim.addEventListener('click', (e) => { if (e.target === dim || e.target.closest('[data-close]')) close(); });
     return { el: dim.firstElementChild, close };
   }
@@ -153,34 +185,52 @@
 
   // Opened from the film roll's panel on the shelf (home.js).
   window.DFBackup = { open() {
+    // The backup's made on the first tap and handed over on a second one, as
+    // an iPhone only shares a file straight from a tap.
+    let open = true;
+    let made = null;
+    let steps = null;
     const s = sheet(`
       <h2>Back up all four</h2>
       <p>One file with Ref, The Eye, Contact Sheet and Overthoughts, photos and all. Keep it somewhere safe, like Files or iCloud Drive.</p>
       <button type="button" class="sheet-btn primary" data-save>Save a backup</button>
       <button type="button" class="sheet-btn" data-restore>Restore from a backup</button>
       <p class="sheet-note" hidden></p>
-      <button type="button" class="sheet-btn plain" data-close>Close</button>`);
+      <button type="button" class="sheet-btn plain" data-close>Close</button>`, () => { open = false; if (made) made.done(); });
     s.el.addEventListener('click', async (e) => {
       const save = e.target.closest('[data-save]');
+      if (save && made) {
+        try {
+          if (await steps.tap()) { ls.set(EYE_LAST_BACKUP, String(Date.now())); say(s, 'Backup saved.'); save.disabled = true; }
+          save.textContent = steps.label;
+        } catch (err) {
+          say(s, err.message || "The backup wasn't saved.");
+        }
+        return;
+      }
       if (save) {
         save.disabled = true;
         save.textContent = 'Putting it together';
         try {
-          const file = await makeBackup();
-          if (!file) { say(s, 'There is nothing to back up yet.'); return; }
-          const how = await D.saveFile(file);
-          if (how !== 'cancelled') { ls.set(EYE_LAST_BACKUP, String(Date.now())); say(s, 'Backup saved.'); }
+          const m = await makeBackup((f) => { save.textContent = `Putting it together, ${Math.floor(f * 100)}%`; });
+          if (!open) { if (m) m.done(); return; }
+          if (!m) { say(s, 'There is nothing to back up yet.'); save.textContent = 'Save a backup'; return; }
+          made = m;
+          steps = D.backupSteps(m); // one file, or a few on a phone: a tap each
+          save.textContent = steps.label;
+          say(s, steps.note);
         } catch (err) {
+          console.error(err);
+          save.textContent = 'Save a backup';
           say(s, err.message || "The backup wasn't saved.");
         } finally {
           save.disabled = false;
-          save.textContent = 'Save a backup';
         }
         return;
       }
       if (e.target.closest('[data-restore]')) {
-        const file = await D.pickFile(); // straight from the tap, or iOS won't open the picker
-        if (!file) return;
+        const files = await D.pickFiles('.zip,application/zip,.json,application/json'); // straight from the tap, or iOS won't open the picker
+        if (!files.length) return;
         const c = sheet(`
           <h2>Restore all four?</h2>
           <p>Everything in Ref, The Eye, Contact Sheet and Overthoughts on this device is swapped for what's in the file. This can't be undone, so save a backup first if you might want today's back.</p>
@@ -192,7 +242,8 @@
           yes.disabled = true;
           yes.textContent = 'Restoring';
           try {
-            await restore(file);
+            if (await D.isZipFile(files[0])) await restoreZip(files, (f) => { yes.textContent = `Restoring, ${Math.floor(f * 100)}%`; });
+            else await restoreJson(files[0]);
             yes.textContent = 'Restored';
             say(c, 'All four are back as they were in the file.');
             setTimeout(() => location.reload(), 900);
