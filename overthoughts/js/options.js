@@ -1,5 +1,7 @@
-// The sun on the shut notebook: how it looks, where it opens, its backups.
+// The sun on the shut notebook (inside Documenting Fictions, the menu at the
+// top of Entries): how it looks, where it opens, its backups, the tour.
 import { openSheet, confirmSheet, toast } from './ui.js';
+import { openIntro } from './intro.js';
 
 const D = window.DFData;
 const BOOK_KEY = 'overthoughts-book'; // also read in index.html, before the first paint
@@ -33,7 +35,8 @@ export function openOptions() {
       </div>`}
       <span class="field-label opt-gap">Backup</span>
       <button type="button" class="btn secondary opt-wide" data-save>Save a backup</button>
-      <button type="button" class="btn secondary opt-wide" data-restore>Restore a backup</button>`,
+      <button type="button" class="btn secondary opt-wide" data-restore>Restore a backup</button>
+      <button type="button" class="btn secondary opt-wide opt-gap" data-intro>How it works</button>`,
   });
   s.body.addEventListener('click', async (e) => {
     const c = e.target.closest('[data-color]');
@@ -46,6 +49,7 @@ export function openOptions() {
       try { localStorage.setItem(START_KEY, st.dataset.start); } catch {}
       s.body.querySelectorAll('[data-start]').forEach((b) => b.classList.toggle('on', b === st));
     }
+    if (e.target.closest('[data-intro]')) { s.close(); openIntro(); return; }
     if (e.target.closest('[data-save]')) {
       try {
         await D.overthoughts();

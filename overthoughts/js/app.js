@@ -7,6 +7,8 @@ import { closeAllSheets } from './ui.js';
 import { showSection, setPuller } from './navbar.js';
 import { sideOf } from './spread.js';
 import { openOptions, startPage } from './options.js';
+import { openIntro } from './intro.js';
+import { welcome } from './welcome.js';
 import { moved } from './nav.js';
 import { ICONS } from './icons.js';
 import { esc } from './util.js';
@@ -16,9 +18,10 @@ const book = document.getElementById('book');
 const frame = document.getElementById('frame');
 let destroyCurrent = null;
 let token = 0;
-// Inside Documenting Fictions (../suite.js) the shelf is the shut notebook.
+// Inside Documenting Fictions (../suite.js) the shelf is the shut notebook,
+// and Options are in the menu at the top of Entries.
 const suite = window.DF_SUITE;
-let suiteOpened = !(suite && suite.options);
+document.addEventListener('click', (e) => { if (e.target.closest('[data-app-menu]')) openOptions(); });
 
 const HASHES = ['/entries', '/reviews'];
 const NAMES = ['Entries', 'Reviews'];
@@ -120,8 +123,7 @@ async function route() {
   if (destroyCurrent) { destroyCurrent(); destroyCurrent = null; }
   closeAllSheets();
   const h = (location.hash || '#/').slice(1) || '/';
-  if (suite && h === '/' && suiteOpened) { suite.home(); return; }
-  if (h !== '/') suiteOpened = true;
+  if (suite && h === '/') { suite.home(); return; }
   const section = HASHES.indexOf(h);
   if (h !== '/') {
     frame.dataset.side = sideOf(section);
@@ -232,13 +234,12 @@ book.addEventListener('click', (e) => { if (performance.now() - held.ended < 350
 window.addEventListener('hashchange', route);
 const atEntry = suite && suite.get && suite.get('entry');
 if (atEntry) history.replaceState(null, '', `#/entry/${encodeURIComponent(atEntry)}`);
-else if (suite && !suite.options && (location.hash || '#/') === '#/') history.replaceState(null, '', AT[suite.at] || '#/entries');
+else if (suite && (location.hash || '#/') === '#/') history.replaceState(null, '', AT[suite.at] || '#/entries');
 else if (!suite && startPage() && (location.hash || '#/') === '#/') history.replaceState(null, '', startPage());
 route();
-if (suite && suite.options) {
-  setTimeout(openOptions, 60);
-  suite.whenOptionsDone(() => (location.hash || '#/') !== '#/');
-}
+// Inside Documenting Fictions, the first time: how to get back to the shelf,
+// and the tour if it's wanted.
+if (suite && suite.firstVisit) setTimeout(() => { if (!document.querySelector('.sheet-overlay')) welcome('Overthoughts', openIntro); }, 900);
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('./sw.js').catch(() => {});
 

@@ -47,6 +47,17 @@
   // shutting) stands up straight again, so its page still fills the screen.
   const TILT = 10;
   const STEP = 360 / N;
+  // Three ways to stand the books, swapped with a swipe up or down on them
+  // (user, 11-12): the ring; dominoes (the front book low on the left, each
+  // one behind it a little further up and to the right, all at one angle);
+  // and a row facing the screen, swiped through side to side. The last one
+  // used is kept.
+  const LAYOUTS = ['ring', 'dominoes', 'row'];
+  const LAYOUT_KEY = 'df-suite-layout';
+  const DOM = { x0: -0.55, dx: 0.4, dy: 0.32, dz: 0.55, yaw: -22 }; // of W, per book behind the front one
+  const ROW_GAP = 1.22; // of W, from one book to the next in the row
+  const DRAG = { ring: 1.15, dominoes: 1.05, row: ROW_GAP }; // a finger this far (of W) moves the books one along
+  const RESHAPE_MS = 620;
   const OPEN_MS = 900, ZOOM_MS = 760, TURN_MS = 420;
   const OVER = 12; // how far the page's white goes past every edge of the screen once it has grown
   const FRONT_KEY = 'df-suite-front';
@@ -85,10 +96,10 @@
     stage.append(slot);
     return slot;
   });
-  // One mark for the shelf (The Eye's S), drawn once: swapping in each front
-  // book's own logo as the books turned made the turning lag. (The books'
-  // logos are kept above for if they come back.)
-  logoBtn.innerHTML = BOOKS[1].logo;
+  // One mark for the shelf, drawn once: a roll of film (user, 11-12; it was
+  // The Eye's S). Swapping in each front book's own logo as the books turned
+  // made the turning lag. (The books' logos are kept above for if they come back.)
+  logoBtn.innerHTML = svg('<rect x="3.6" y="6.2" width="6.8" height="12.4" rx=".9"/><path d="M2.6 6.2h8.8M2.6 18.6h8.8M6 6.2V4.3h2v1.9M10.4 8.4H21v8.2H10.4M10.4 10.4H21M10.4 14.6H21M13.4 9.4h.01M16.2 9.4h.01M19 9.4h.01M13.4 15.6h.01M16.2 15.6h.01M19 15.6h.01"/>');
   const tri = '<svg viewBox="0 0 10 12" aria-hidden="true"><path d="M2.3 1.5Q5.6 3.8 8.7 6.1 5.5 8.3 2.2 10.5 2.5 6 2.3 1.5Z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
   prevBtn.innerHTML = tri;
   nextBtn.innerHTML = tri;
@@ -101,6 +112,13 @@
     // wider ring below still shows all four books at once.
     W = Math.round(Math.max(130, Math.min(vw * SIZE, (vh - 240) / 1.36 / 1.1, MAX_W)));
     stage.style.setProperty('--W', `${W}px`);
+    // Low on the screen (user, 11-12): the front book's middle two thirds of
+    // the way down, its foot well clear of the bar. The camera's eye moves
+    // down with it, so the books are seen from the same height as before.
+    const barTop = vh - bar.getBoundingClientRect().top;
+    const y = Math.max(vh * 0.4, Math.min(vh * 0.67, vh - barTop - 44 - W * 0.68));
+    stage.style.setProperty('--y', `${y.toFixed(1)}px`);
+    stage.style.perspectiveOrigin = `50% ${(y - vh * 0.2).toFixed(1)}px`;
   }
 
   // ---------- The turntable ----------
@@ -113,23 +131,69 @@
   const fromAt = BOOKS.findIndex((b) => b.id === from);
   if (fromAt >= 0) pos = fromAt;
   let facing = null; // a book turned to face you straight on (opening or shutting)
+  let layout = LAYOUTS.includes(store.get(LAYOUT_KEY)) ? store.get(LAYOUT_KEY) : 'ring';
 
-  function place(i) {
+  // Where book i stands, wherever the turning has got to: [x, y, z, yaw, depth
+  // order, fog]. pos is the book in front (fractions while turning).
+  function spot(i) {
+    if (layout === 'row') {
+      // Side by side, facing you. The book swapping ends is off the screen.
+      const o = mod(i - pos + N / 2) - N / 2;
+      return [o * ROW_GAP * W, 0, 0, 0, 100 - Math.abs(o) * 20, 0];
+    }
+    if (layout === 'dominoes') {
+      // In a line from the front book up and to the right. The front book
+      // going to the back slips out of the screen low on the left and comes
+      // back in high on the right, behind the others.
+      const t = mod(i - pos);
+      const line = (u) => [W * (DOM.x0 + DOM.dx * u), -W * DOM.dy * u, -W * DOM.dz * u];
+      let at, order;
+      if (t <= N - 1) { at = line(t); order = 200 - t * 40; }
+      else {
+        const f = t - (N - 1); // 0 at the back .. 1 at the front
+        if (f < 0.5) { const g = f * 2, b = line(N - 1); at = [b[0] + g * 1.7 * W, b[1] - g * 1.1 * W, b[2]]; order = 0; }
+        else { const g = (1 - f) * 2, a = line(0); at = [a[0] - g * 1.9 * W, a[1] + g * 1.3 * W, a[2] + g * 0.4 * W]; order = 300; }
+      }
+      return [at[0], at[1], at[2], DOM.yaw, order, 0.16 * Math.min(1, Math.max(0, t) / (N - 1))];
+    }
     const r = wrap((i - pos) * STEP) * Math.PI / 180;
     const back = (1 - Math.cos(r)) / 2;
-    const x = W * RING_X * Math.sin(r), y = -LIFT * W * back, z = W * RING_Z * (Math.cos(r) - 1);
-    const yaw = facing === i ? 0 : -20 * (0.25 + 0.75 * (1 + Math.cos(r)) / 2) - 10 * Math.sin(r);
+    return [W * RING_X * Math.sin(r), -LIFT * W * back, W * RING_Z * (Math.cos(r) - 1),
+      -20 * (0.25 + 0.75 * (1 + Math.cos(r)) / 2) - 10 * Math.sin(r), 100 + Math.cos(r) * 100, 0.2 * back];
+  }
+  function place(i) {
+    const [x, y, z, yaw, order, fog] = spot(i);
     const s = slots[i];
-    const upright = facing === i ? TILT : 0;
-    s.style.transform = `rotateX(${-TILT}deg) translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px) rotateX(${upright}deg) rotateY(${yaw.toFixed(2)}deg)`;
-    s.style.zIndex = String(Math.round(100 + Math.cos(r) * 100));
-    s.querySelector('.fog').style.opacity = (0.2 * back).toFixed(3);
+    const tilt = layout === 'row' ? 0 : TILT; // the row looks at you straight on
+    const upright = facing === i ? tilt : 0;
+    s.style.transform = `rotateX(${-tilt}deg) translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px) rotateX(${upright}deg) rotateY(${(facing === i ? 0 : yaw).toFixed(2)}deg)`;
+    s.style.zIndex = String(Math.round(order));
+    s.querySelector('.fog').style.opacity = fog.toFixed(3);
+  }
+  // How many books along book i is from the front, the way it should come round.
+  function stepsTo(i) {
+    const at = Math.round(pos);
+    if (layout === 'dominoes') return mod(i - at); // the ones behind come forward
+    if (layout === 'row') return mod(i - at + N / 2) - N / 2;
+    return wrap((i - at) * STEP) / STEP;
+  }
+  // A swipe up: the next way of standing them; down: the one before.
+  function reshape(by) {
+    layout = LAYOUTS[(LAYOUTS.indexOf(layout) + by + LAYOUTS.length) % LAYOUTS.length];
+    store.set(LAYOUT_KEY, layout);
+    cancelAnimationFrame(anim);
+    pos = mod(Math.round(pos));
+    slots.forEach((sl) => sl.classList.add('reshaping'));
+    render();
+    clearTimeout(reshape.t);
+    reshape.t = setTimeout(() => slots.forEach((sl) => sl.classList.remove('reshaping')), RESHAPE_MS + 40);
+    store.set(FRONT_KEY, String(pos));
   }
   let shownFront = -1;
   function render() {
     for (let i = 0; i < N; i++) place(i);
     const at = mod(Math.round(pos));
-    if (at !== shownFront) { shownFront = at; logoBtn.setAttribute('aria-label', `${BOOKS[at].name}: options`); }
+    if (at !== shownFront) { shownFront = at; logoBtn.setAttribute('aria-label', `Open ${BOOKS[at].name}`); }
   }
 
   let anim = 0;
@@ -168,13 +232,16 @@
   stage.addEventListener('pointermove', (e) => {
     const d = drag;
     if (!d || d.id !== e.pointerId) return;
-    const dx = e.clientX - d.x;
-    if (!d.moved && Math.hypot(dx, e.clientY - d.y) > 6) d.moved = true;
-    if (!d.moved) return;
+    const dx = e.clientX - d.x, dy = e.clientY - d.y;
+    if (!d.moved && Math.hypot(dx, dy) > 8) {
+      d.moved = true;
+      d.upDown = Math.abs(dy) > Math.abs(dx); // up or down changes how they stand; across turns them
+    }
+    if (!d.moved || d.upDown) return;
     const dt = Math.max(1, e.timeStamp - d.lastT);
     d.v = 0.7 * d.v + 0.3 * ((e.clientX - d.lastX) / dt);
     d.lastX = e.clientX; d.lastT = e.timeStamp;
-    pos = d.pos - dx / (W * 1.15);
+    pos = d.pos - dx / (W * DRAG[layout]);
     render();
   });
   function letGo(e) {
@@ -186,14 +253,19 @@
       const front = mod(Math.round(pos));
       if (d.slot >= 0 && d.slot !== front) {
         // A tap on a book behind brings it round to the front.
-        go(Math.round(pos) + wrap((d.slot - Math.round(pos)) * STEP) / STEP);
+        go(Math.round(pos) + stepsTo(d.slot));
         return;
       }
       if (d.slot === front) { openBook(front, d.at); return; }
       go(Math.round(pos));
       return;
     }
-    const fling = -d.v * 260 / (W * 1.15);
+    if (d.upDown) {
+      const dy = e.clientY - d.y;
+      if (e.type === 'pointerup' && Math.abs(dy) > 36) reshape(dy < 0 ? 1 : -1);
+      return;
+    }
+    const fling = -d.v * 260 / (W * DRAG[layout]);
     const base = Math.round(d.pos);
     go(Math.max(base - 1, Math.min(base + 1, Math.round(pos + fling))));
   }
@@ -228,7 +300,7 @@
     const dt = Math.max(1, e.timeStamp - d.lastT);
     d.v = 0.7 * d.v + 0.3 * ((e.clientX - d.lastX) / dt);
     d.lastX = e.clientX; d.lastT = e.timeStamp;
-    pos = d.pos - dx / (W * 1.15);
+    pos = d.pos - dx / (W * DRAG[layout]);
     render();
   });
   const barLetGo = (e) => {
@@ -237,7 +309,7 @@
     barDrag = null;
     if (!d.moved) return; // a tap: the button under it has it
     barSwiped = performance.now();
-    const fling = -d.v * 260 / (W * 1.15);
+    const fling = -d.v * 260 / (W * DRAG[layout]);
     const base = Math.round(d.pos);
     go(Math.max(base - 1, Math.min(base + 1, Math.round(pos + fling))));
   };
@@ -246,10 +318,16 @@
   // A swipe that ends on a button isn't a tap on it.
   bar.addEventListener('click', (e) => { if (performance.now() - barSwiped < 350) { e.preventDefault(); e.stopPropagation(); } }, true);
 
+  // The film roll opens the book in front, as a tap on it does. (It used to
+  // open that notebook's Options over its own shut book, which flashed the
+  // notebook's old one-book view: each notebook has its own menu inside now.)
   logoBtn.addEventListener('click', () => {
     if (busy) return;
-    const b = BOOKS[mod(Math.round(pos))];
-    leave(`${b.id}/?options`);
+    cancelAnimationFrame(anim);
+    clearTimeout(go.t);
+    pos = mod(Math.round(pos));
+    render();
+    openBook(pos);
   });
 
   // ---------- Opening and shutting ----------
@@ -344,17 +422,30 @@
     render();
   }
 
+  // The covers' letters are in their pictures, so the books wait for those
+  // (and the first pages) before they show: a second and a half at most.
+  function whenArtIn(ms) {
+    const urls = [...new Set(BOOKS.flatMap((b) => { const c = colorOf(b); return [b.cover(c), b.block(c)]; }))];
+    const one = (u) => new Promise((done) => { const im = new Image(); im.onload = im.onerror = done; im.src = u; });
+    return Promise.race([Promise.all(urls.map(one)), wait(ms)]);
+  }
+
   // ---------- Start ----------
   store.set('df-suite-in', null); // on the shelf, not in a notebook
   size();
   render();
   window.addEventListener('resize', () => { size(); render(); });
+  const quiet = new URLSearchParams(location.search).has('still');
   if (fromAt >= 0) {
-    const quiet = new URLSearchParams(location.search).has('still');
     history.replaceState(null, '', location.pathname);
     if (quiet || still()) { settle(); store.set(FRONT_KEY, String(fromAt)); }
-    else shutBook(fromAt);
+    else { busy = true; shelf.classList.add('away'); }
   }
+  stage.classList.add('waiting');
+  whenArtIn(1500).then(() => {
+    stage.classList.remove('waiting');
+    if (fromAt >= 0 && !quiet && !still()) shutBook(fromAt);
+  });
   // Coming back with the browser's back button can bring the page back as it
   // was left: mid-zoom. Put it right.
   window.addEventListener('pageshow', (e) => {

@@ -6516,7 +6516,10 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
   --tab-light: #fff0ae; /* a pale yellow, well apart from the mango */
   --screen-gap: 0px;
   --nb-h: calc(100 * var(--svh));
-  --nb-foot: min(var(--sa-bottom), 16px);
+  /* The navigator's icon sits 25px + the bottom safe area (10px at least)
+     above the screen's edge: the same height in all four notebooks and on
+     the shelf (its centre is this + 19px). */
+  --nb-foot: max(16px, calc(var(--sa-bottom) + 6px));
   --nb-bar: calc(38px + var(--nb-foot));
   --nb-edge: max(22px, calc(50% - 270px));
 }
@@ -6597,7 +6600,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 /* Laid out short (see measureScreenGap): the navigator sits on the bottom of
    what iOS laid out, above the strip it leaves blank, so it needs no room for
    the home bar. */
-:root.nb-short { --nb-foot: 0px; }
+:root.nb-short { --nb-foot: 16px; }
 
 /* Moving along the open spread. */
 .nb-pan { position: fixed; z-index: 8; top: 0; left: 0; right: 0; bottom: calc(0px - var(--screen-gap)); overflow: hidden; background: #fff; pointer-events: none; }
@@ -7157,3 +7160,11 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 .ref-board-actions { display: flex; gap: 16px; }
 .ref-board-actions .manage-link { margin-top: 4px; }
 .has-ref-boards #moodboardGrid .empty-hint { display: none; }
+
+/* App options' Notebook button, there only inside Documenting Fictions. */
+#appMenuOverlay .opt-label[hidden], #appMenuOverlay .opt-wide[hidden] { display: none; }
+/* The tour's cards and the first visit's (app.js eyeCards): a dot for each card. */
+.eye-cards-dots { display: flex; justify-content: center; gap: 6px; margin: -4px 0 18px; }
+.eye-cards-dots[hidden] { display: none; }
+.eye-cards-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(49, 61, 69, .2); }
+.eye-cards-dots i.on { background: var(--text); }

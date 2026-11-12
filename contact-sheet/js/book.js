@@ -10,6 +10,7 @@ import { openNotebookExport } from './export.js';
 import { mountStickers, openStickers } from './stickers.js';
 import { makeTurnable } from './turn.js';
 import { navHtml, mountNav } from './navicon.js';
+import { openIntro } from './intro.js';
 
 const TIP_KEY = 'contact-sheet-home-tip';
 const RATIO = 1000 / 1360; // the notebook art's width over its height
@@ -83,8 +84,8 @@ function openOptions(stickers) {
             <span>${name}</span>
           </button>`).join('')}
       </div>
-      <span class="field-label opt-gap">Stickers</span>
-      <button type="button" class="btn secondary opt-wide" data-stickers>Stickers</button>
+      ${window.DF_SUITE ? '' : `<span class="field-label opt-gap">Stickers</span>
+      <button type="button" class="btn secondary opt-wide" data-stickers>Stickers</button>`}
       ${window.DF_SUITE ? '' : `<span class="field-label opt-gap">Always start</span>
       <div class="opt-seg" role="group" aria-label="Always start">
         <button type="button" data-start="notebook" aria-pressed="${!first}">In the notebook</button>
@@ -94,7 +95,8 @@ function openOptions(stickers) {
       <button type="button" class="btn secondary opt-wide" data-pdf>Whole notebook as PDF</button>
       <span class="field-label opt-gap">Backup</span>
       <button type="button" class="btn secondary opt-wide" data-save-backup>Save a backup</button>
-      <button type="button" class="btn secondary opt-wide" data-restore-backup>Restore a backup</button>`,
+      <button type="button" class="btn secondary opt-wide" data-restore-backup>Restore a backup</button>
+      <button type="button" class="btn secondary opt-wide opt-gap" data-intro>How it works</button>`,
   });
   s.body.addEventListener('click', (e) => {
     const color = e.target.closest('[data-color]');
@@ -116,6 +118,10 @@ function openOptions(stickers) {
     else if (e.target.closest('[data-pdf]')) {
       s.close();
       openNotebookExport();
+    }
+    else if (e.target.closest('[data-intro]')) {
+      s.close();
+      openIntro();
     }
     else if (e.target.closest('[data-save-backup]')) saveBackup();
     else if (e.target.closest('[data-restore-backup]')) restoreBackup(() => s.close());
@@ -293,7 +299,7 @@ export function mountBook(view, startMode, onNew) {
   function pageHtml() {
     const rows = chapters.map(rowHtml).join('');
     return `
-      <h2 class="nb-head">Table of contents</h2>
+      ${window.DF_SUITE ? `<h2 class="nb-head has-menu"><button type="button" class="toc-menu" data-app-menu aria-label="Menu">${ICONS.menu}</button>Table of contents</h2>` : '<h2 class="nb-head">Table of contents</h2>'}
       <div class="toc-list">${rows || '<p class="toc-empty">No chapters yet.</p>'}</div>
       ${showTip ? TIP : ''}`;
   }
@@ -427,6 +433,10 @@ export function mountBook(view, startMode, onNew) {
   sun.addEventListener('click', () => {
     if (root.dataset.mode === 'closed' && !root.classList.contains('is-sticking')) openOptions(stickers);
   });
+  // Inside Documenting Fictions: Options from the menu at the top of the contents.
+  root.addEventListener('click', (e) => {
+    if (e.target.closest('[data-app-menu]') && root.dataset.mode === 'toc' && !sheetIsOpen()) { e.stopPropagation(); openOptions(stickers); }
+  }, true);
 
   root.addEventListener('click', async (e) => {
     // Placing a sticker: the cover and tabs wait until OK.

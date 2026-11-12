@@ -14,15 +14,17 @@ button { font: inherit; color: inherit; }
 
 .shelf { position: fixed; inset: 0; overflow: hidden; background: #fff; }
 .stage {
-  --W: 242px; --H: calc(var(--W) * 1.36); --T: calc(var(--W) * 0.19);
-  position: absolute; inset: 0; perspective: 1100px; perspective-origin: 50% 30%;
+  --W: 242px; --H: calc(var(--W) * 1.36); --T: calc(var(--W) * 0.19); --y: 60%;
+  position: absolute; inset: 0; perspective: 1100px; perspective-origin: 50% 40%;
   touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab;
-  transform-origin: 0 0;
+  transform-origin: 0 0; transition: opacity .25s;
 }
+.stage.waiting { opacity: 0; } /* until the covers are in (home.js whenArtIn) */
 .stage.measuring, .stage.measuring * { transition: none !important; }
 .stage.zooming { transition: transform var(--zoom-ms, 760ms) cubic-bezier(.5, 0, .2, 1); }
-.slot { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; }
+.slot { position: absolute; left: 50%; top: var(--y); width: 0; height: 0; transform-style: preserve-3d; }
 .slot.turning { transition: transform 420ms cubic-bezier(.4, 0, .2, 1); }
+.slot.reshaping { transition: transform 620ms cubic-bezier(.4, 0, .2, 1); } /* ring, dominoes, row */
 .float { position: absolute; transform-style: preserve-3d; animation: nbFloat 5.2s ease-in-out infinite; }
 @keyframes nbFloat { 0%, 100% { transform: translateY(-7px) rotateZ(-0.7deg) rotateY(-2deg); } 50% { transform: translateY(7px) rotateZ(0.7deg) rotateY(2deg); } }
 .slot.still .float, .slot.still .ground { animation: none; }
@@ -55,10 +57,11 @@ button { font: inherit; color: inherit; }
 @keyframes nbGround { 0%, 100% { opacity: .78; transform: rotateX(90deg) scale(1.06); } 50% { opacity: 1; transform: rotateX(90deg) scale(.96); } }
 .slot.open .ground { opacity: 0; transition: opacity .3s; }
 
-/* The bar under the books: the S (which opens the front notebook's options)
+/* The bar under the books: a roll of film (which opens the front notebook)
    with a triangle each side. A swipe across it turns the books, like the
-   notebooks' own bars. */
-.shelf-bar { position: absolute; left: 50%; bottom: calc(26px + var(--safe-b) * .5); display: flex; align-items: center; transform: translateX(-50%); touch-action: none; user-select: none; -webkit-user-select: none; transition: opacity .3s; }
+   notebooks' own bars. Its icon sits 25px + the bottom safe area (10px at
+   least) above the screen's edge: the same height in all four notebooks. */
+.shelf-bar { position: absolute; left: 50%; bottom: calc(3px + max(10px, var(--safe-b))); display: flex; align-items: center; transform: translateX(-50%); touch-action: none; user-select: none; -webkit-user-select: none; transition: opacity .3s; }
 .logo-btn { width: 44px; height: 44px; border: 0; padding: 10px; background: none; color: #334045; cursor: pointer; }
 .logo-btn svg { display: block; width: 100%; height: 100%; }
 .slide-arrow { width: 44px; height: 44px; display: grid; place-items: center; border: 0; padding: 0; background: none; color: #334045; cursor: pointer; }

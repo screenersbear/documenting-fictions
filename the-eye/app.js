@@ -17655,6 +17655,69 @@
     if (e.target === appMenuOverlay) closeAppMenu();
   });
 
+  // ---------- The tour, and the first visit inside Documenting Fictions ----------
+  // A few cards in the same small popup as the app's other questions. App
+  // options > How it works shows the tour; inside the suite, the first time
+  // The Eye is opened, cards say how to get back to the shelf and offer it
+  // (the words are the suite's, ../suite.js, so all four notebooks match).
+  const eyeCards = document.createElement('div');
+  eyeCards.className = 'modal-overlay intro-overlay eye-cards';
+  eyeCards.hidden = true;
+  eyeCards.innerHTML = '<div class="modal intro-modal" role="dialog" aria-modal="true" aria-labelledby="eyeCardsTitle"><h2 id="eyeCardsTitle"></h2><p></p><span class="eye-cards-dots" aria-hidden="true"></span><div class="modal-actions"></div></div>';
+  document.body.appendChild(eyeCards);
+  let eyeCardsDim = null; // what a tap on the dim does, if anything
+  function showEyeCard(title, text, buttons, dots) {
+    eyeCards.querySelector('h2').textContent = title;
+    eyeCards.querySelector('p').textContent = text;
+    const dotsEl = eyeCards.querySelector('.eye-cards-dots');
+    dotsEl.hidden = !dots;
+    if (dots) dotsEl.innerHTML = Array.from({ length: dots[0] }, (_, i) => `<i class="${i === dots[1] ? 'on' : ''}"></i>`).join('');
+    const actions = eyeCards.querySelector('.modal-actions');
+    actions.classList.toggle('is-one', buttons.length === 1);
+    actions.innerHTML = buttons.map((b, i) => `<button type="button" class="${b.kind}" data-card="${i}">${escapeHtml(b.label)}</button>`).join('');
+    actions.onclick = (e) => { const hit = e.target.closest('[data-card]'); if (hit) buttons[Number(hit.dataset.card)].go(); };
+    eyeCards.hidden = false;
+  }
+  const hideEyeCards = () => { eyeCards.hidden = true; eyeCardsDim = null; };
+  eyeCards.addEventListener('click', (e) => { if (e.target === eyeCards && eyeCardsDim) eyeCardsDim(); });
+
+  const eyeTourCards = () => [
+    ['Plan a shoot', 'Tap + New Shoot. Each shoot gets its own pages: basic info, logistics, team, direction, visuals and a shot list.'],
+    ['On the day, and after', 'Tick off the shot list as you go. Afterwards, write a reflection: what went right, what could be better, and lessons for next time.'],
+    ['Your week', 'Overview shows what’s coming up. Weekly keeps the week’s log, and Archive holds the shoots you’ve done.'],
+    ...(window.DF_SUITE ? [['Mood boards from Ref', 'Send a board from Ref to a shoot and it shows on that shoot’s page, kept up to date until the shoot is captured.']] : []),
+    ['Keep a copy', 'Everything is saved inside the app, on this phone. Now and then, back up all data in App options.'],
+  ];
+  function openEyeTour(then) {
+    const cards = eyeTourCards();
+    let at = 0;
+    const done = () => { hideEyeCards(); if (then) then(); };
+    const draw = () => {
+      const last = at === cards.length - 1;
+      showEyeCard(cards[at][0], cards[at][1], [
+        ...(at ? [{ label: 'Back', kind: 'secondary', go: () => { at--; draw(); } }] : []),
+        { label: last ? 'Got it' : 'Next', kind: 'primary', go: () => { if (last) done(); else { at++; draw(); } } },
+      ], [cards.length, at]);
+      eyeCardsDim = done;
+    };
+    draw();
+  }
+  document.getElementById('appTourBtn').addEventListener('click', () => {
+    closeAppMenu();
+    openEyeTour();
+  });
+  function eyeWelcome(then) {
+    const suite = window.DF_SUITE;
+    const w = suite.words('The Eye');
+    const finish = (tour) => { suite.welcomed(); hideEyeCards(); if (tour) openEyeTour(then); else if (then) then(); };
+    showEyeCard(w.back[0], w.back[1], [{ label: 'Next', kind: 'primary', go: () => {
+      showEyeCard(w.ask[0], w.ask[1], [
+        { label: w.ask[3], kind: 'secondary', go: () => showEyeCard(w.later[0], w.later[1], [{ label: w.later[2], kind: 'primary', go: () => finish(false) }]) },
+        { label: w.ask[2], kind: 'primary', go: () => finish(true) },
+      ]);
+    } }]);
+  }
+
   // ---------- Shoot display options (app-wide talent/title preference) ----------
   const markChoice = (id, on) => {
     const btn = document.getElementById(id);
@@ -21325,8 +21388,9 @@
   });
   // Introductions first: on a genuinely first run this is the welcome step, and
   // the rest of the launch popups defer so they don't stack on top of it.
-  maybeShowPhotographerPrompt();
-  if (document.getElementById('photographerModalOverlay').hidden) {
+  function launchPopups() {
+    maybeShowPhotographerPrompt();
+    if (!document.getElementById('photographerModalOverlay').hidden) return;
     // Shoot mode outranks every launch popup. If it's still switched on you're
     // mid-shoot and want the working view, not a report; and on a shoot day the
     // offer to enter it is the most time-sensitive thing the app can say, so it
@@ -21346,6 +21410,10 @@
       }
     }
   }
+  // Inside Documenting Fictions, the first visit's cards come before all of
+  // these; they follow once the cards (and the tour, if taken) are done
+  // (setupNotebook).
+  if (!(window.DF_SUITE && window.DF_SUITE.firstVisit)) launchPopups();
 
   // ---------- restore an in-progress journal entry across restarts ----------
   function restoreOpenJournalEntry() {
@@ -21820,7 +21888,7 @@
     // tab picked there or else where the sun menu says.
     const suite = window.DF_SUITE;
     const suiteAt = suite && SCREENS.some(sc => sc.view === suite.at) ? suite.at : null;
-    const startShut = suite ? suite.options
+    const startShut = suite ? false
       : afterUpdate ? saved !== 'open'
       : resuming ? (place && (place.book === 'shut' || place.book === 'open') ? place.book === 'shut' : saved !== 'open')
       : state.presentation.start !== 'first';
@@ -21834,7 +21902,7 @@
     if (atShoot) setTimeout(() => { if (atShoot.archived) openArchiveMode(atShoot.id); else openShootModal(atShoot.id); }, 120);
     else if (fromBoard) setTimeout(() => openShootFromBoard(fromBoard), 120);
     remember(startShut ? 'shut' : 'open');
-    if (suite && suite.options) setTimeout(() => document.getElementById('bookSunBtn').click(), 60);
+    if (suite && suite.firstVisit) setTimeout(() => eyeWelcome(launchPopups), 400);
   })();
 
   // ---------- The sun menu: how the notebook looks ----------
@@ -22132,8 +22200,8 @@
             <span class="opt-book" style="background-image:url(art/df-${key}-cover.webp)"></span>
             <span>${name}</span>
           </button>`).join('')}</div>
-        <span class="opt-label opt-gap">Stickers</span>
-        <button type="button" class="opt-wide" data-pane="stickers">Stickers</button>
+        ${window.DF_SUITE ? '' : `<span class="opt-label opt-gap">Stickers</span>
+        <button type="button" class="opt-wide" data-pane="stickers">Stickers</button>`}
         <span class="opt-label opt-gap">Always start in</span>
         <div class="opt-seg opt-seg-fit">${START_CHOICES.map(([key, name]) => `
           <button type="button" data-start="${key}" class="${state.presentation.start === key ? 'active' : ''}" aria-pressed="${state.presentation.start === key}">${name}</button>`).join('')}</div>`],
@@ -22163,9 +22231,6 @@
 
     function closeMenu() {
       overlay.hidden = true;
-      // Opened from the shelf's button: done with Options, back to the shelf,
-      // unless a sticker is being put on the cover.
-      if (window.DF_SUITE && window.DF_SUITE.options && stage.hidden && document.getElementById('stickerCrop').hidden && !pendingShape) window.DF_SUITE.home(true);
     }
     // The X and a tap on the dim: one step back, or shut on Options.
     function stepBack() {
@@ -22174,6 +22239,18 @@
     }
 
     document.getElementById('bookSunBtn').addEventListener('click', () => {
+      showPane('main');
+      body.scrollTop = 0;
+      overlay.hidden = false;
+    });
+    // Inside Documenting Fictions the shelf is the shut book, so App options
+    // opens these (the color and where it starts) itself. (The shelf's
+    // stickers aren't drawn, so they're left out in there.)
+    const lookBtn = document.getElementById('appLookBtn');
+    lookBtn.hidden = !window.DF_SUITE;
+    document.getElementById('appLookLabel').hidden = !window.DF_SUITE;
+    lookBtn.addEventListener('click', () => {
+      document.getElementById('appMenuOverlay').hidden = true;
       showPane('main');
       body.scrollTop = 0;
       overlay.hidden = false;

@@ -6,7 +6,8 @@ import {
   allEntries, hasWords, entryTitle, oneLine, hasText, byNewest, dayOf, monthKey, monthName, MONTHS,
 } from './store.js';
 
-const head = (title, plus) => `<h1 class="head${plus ? ' head-add' : ''}">${esc(title)}${plus ? `<a class="head-plus" href="#/new" aria-label="Write an entry">${ICONS.plus}</a>` : ''}</h1>`;
+// Inside Documenting Fictions the first page has the menu (Options) on its left.
+const head = (title, plus, menu) => `<h1 class="head${plus || menu ? ' head-add' : ''}">${menu && window.DF_SUITE ? `<button type="button" class="head-plus head-menu" data-app-menu aria-label="Menu">${ICONS.menu}</button>` : ''}${esc(title)}${plus ? `<a class="head-plus" href="#/new" aria-label="Write an entry">${ICONS.plus}</a>` : ''}</h1>`;
 const note = (t) => `<p class="note">${esc(t)}</p>`;
 
 // ---------- Entries ----------
@@ -35,7 +36,7 @@ export async function entriesScreen(view) {
   });
   const empty = 'Nothing here yet. Tap + to write your first entry.';
   view.innerHTML = `<div class="screen">
-    ${head('Entries', true)}
+    ${head('Entries', true, true)}
     <div class="scroll"><div class="rows">${html || note(empty)}</div></div>
   </div>`;
 }

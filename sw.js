@@ -2,7 +2,7 @@
 // worker for its own folder (registered from the shelf, see home.js); this one
 // answers for the shelf itself and the covers it shows.
 // Bump CACHE_NAME with every deploy so installed copies pick up new files.
-const CACHE_NAME = 'df-suite-v6';
+const CACHE_NAME = 'df-suite-v7';
 const ASSETS = [
   './', './index.html', './home.css', './home.js', './backup.js', './shared/df-data.js', './suite.js', './manifest.json', './icon-180.png', './icon-512.png',
   './ref/fonts/klee-one-latin.woff',
@@ -39,7 +39,18 @@ self.addEventListener('fetch', (event) => {
   const notebook = notebookOf(url.pathname);
   // A notebook's own pages belong to its own worker; this one only stands in
   // until that's installed, and keeps none of them.
-  const keep = !notebook || /\/(art|fonts)\//.test(url.pathname);
+  const art = /\/(art|fonts)\//.test(url.pathname);
+  const keep = !notebook || art;
+  // The covers and fonts don't change between deploys (a deploy clears this
+  // cache): straight from the cache, so the shelf doesn't wait on the network
+  // for the letters on its covers.
+  if (art) {
+    event.respondWith(caches.match(req, { ignoreSearch: true }).then((hit) => hit || fetch(req).then((res) => {
+      if (res && res.status === 200 && res.type === 'basic') { const copy = res.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)); }
+      return res;
+    })));
+    return;
+  }
   event.respondWith(
     fetch(req, { cache: 'no-store' })
       .then((res) => {
