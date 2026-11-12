@@ -2,7 +2,7 @@
 // worker for its own folder (registered from the shelf, see home.js); this one
 // answers for the shelf itself and the covers it shows.
 // Bump CACHE_NAME with every deploy so installed copies pick up new files.
-const CACHE_NAME = 'df-suite-v5';
+const CACHE_NAME = 'df-suite-v6';
 const ASSETS = [
   './', './index.html', './home.css', './home.js', './backup.js', './shared/df-data.js', './suite.js', './manifest.json', './icon-180.png', './icon-512.png',
   './ref/fonts/klee-one-latin.woff',

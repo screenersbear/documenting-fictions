@@ -53,8 +53,10 @@
 
   const shelf = document.getElementById('shelf');
   const stage = document.getElementById('stage');
-  const dotsEl = document.getElementById('dots');
+  const bar = document.getElementById('shelfBar');
   const logoBtn = document.getElementById('logoBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* private mode: nothing kept */ } },
@@ -83,8 +85,13 @@
     stage.append(slot);
     return slot;
   });
-  dotsEl.innerHTML = BOOKS.map(() => '<span class="dot"></span>').join('');
-  const dots = [...dotsEl.children];
+  // One mark for the shelf (The Eye's S), drawn once: swapping in each front
+  // book's own logo as the books turned made the turning lag. (The books'
+  // logos are kept above for if they come back.)
+  logoBtn.innerHTML = BOOKS[1].logo;
+  const tri = '<svg viewBox="0 0 10 12" aria-hidden="true"><path d="M2.3 1.5Q5.6 3.8 8.7 6.1 5.5 8.3 2.2 10.5 2.5 6 2.3 1.5Z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+  prevBtn.innerHTML = tri;
+  nextBtn.innerHTML = tri;
 
   // ---------- Size ----------
   let W = 242;
@@ -122,21 +129,7 @@
   function render() {
     for (let i = 0; i < N; i++) place(i);
     const at = mod(Math.round(pos));
-    dots.forEach((d, k) => d.classList.toggle('on', k === at));
-    if (at !== shownFront) showLogo(at);
-  }
-  function showLogo(at) {
-    const first = shownFront < 0;
-    shownFront = at;
-    const put = () => {
-      logoBtn.innerHTML = BOOKS[at].logo;
-      logoBtn.setAttribute('aria-label', `${BOOKS[at].name}: options`);
-      logoBtn.classList.remove('swap');
-    };
-    if (first) { put(); return; }
-    logoBtn.classList.add('swap');
-    clearTimeout(showLogo.t);
-    showLogo.t = setTimeout(put, 180);
+    if (at !== shownFront) { shownFront = at; logoBtn.setAttribute('aria-label', `${BOOKS[at].name}: options`); }
   }
 
   let anim = 0;
@@ -212,6 +205,47 @@
     else if (e.key === 'ArrowLeft') go(Math.round(pos) - 1);
     else if (e.key === 'Enter' && document.activeElement === document.body) openBook(mod(Math.round(pos)));
   });
+  // The bar: a triangle turns the books one along; a swipe across the bar
+  // turns them with the finger, as on the books themselves.
+  prevBtn.addEventListener('click', () => { if (!busy) go(Math.round(pos) - 1); });
+  nextBtn.addEventListener('click', () => { if (!busy) go(Math.round(pos) + 1); });
+  let barDrag = null, barSwiped = 0;
+  bar.addEventListener('pointerdown', (e) => {
+    if (busy || e.button) return;
+    barDrag = { id: e.pointerId, x: e.clientX, y: e.clientY, pos, lastX: e.clientX, lastT: e.timeStamp, v: 0, moved: false };
+  });
+  bar.addEventListener('pointermove', (e) => {
+    const d = barDrag;
+    if (!d || d.id !== e.pointerId) return;
+    const dx = e.clientX - d.x;
+    if (!d.moved) {
+      if (Math.hypot(dx, e.clientY - d.y) < 10) return;
+      d.moved = true;
+      cancelAnimationFrame(anim);
+      d.pos = pos; // from wherever a turn had got to
+      try { bar.setPointerCapture(e.pointerId); } catch (err) { /* fine */ }
+    }
+    const dt = Math.max(1, e.timeStamp - d.lastT);
+    d.v = 0.7 * d.v + 0.3 * ((e.clientX - d.lastX) / dt);
+    d.lastX = e.clientX; d.lastT = e.timeStamp;
+    pos = d.pos - dx / (W * 1.15);
+    render();
+  });
+  const barLetGo = (e) => {
+    const d = barDrag;
+    if (!d || d.id !== e.pointerId) return;
+    barDrag = null;
+    if (!d.moved) return; // a tap: the button under it has it
+    barSwiped = performance.now();
+    const fling = -d.v * 260 / (W * 1.15);
+    const base = Math.round(d.pos);
+    go(Math.max(base - 1, Math.min(base + 1, Math.round(pos + fling))));
+  };
+  bar.addEventListener('pointerup', barLetGo);
+  bar.addEventListener('pointercancel', barLetGo);
+  // A swipe that ends on a button isn't a tap on it.
+  bar.addEventListener('click', (e) => { if (performance.now() - barSwiped < 350) { e.preventDefault(); e.stopPropagation(); } }, true);
+
   logoBtn.addEventListener('click', () => {
     if (busy) return;
     const b = BOOKS[mod(Math.round(pos))];
