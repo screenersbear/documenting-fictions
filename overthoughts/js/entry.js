@@ -1,5 +1,5 @@
 // One entry, open to read and write. Everything saves as you go: date, a
-// title if you like, the writing, photos, tags, the shoot it's about (inside
+// title if you like, the writing, photos, the shoot it's about (inside
 // the suite, picked from The Eye's shoots, read only) and a takeaway.
 import { ICONS } from './icons.js';
 import { back as goBack } from './nav.js';
@@ -67,7 +67,6 @@ export async function entryScreen(view, id) {
         <button type="button" class="link-btn" data-prompt>${ICONS.bulb}<span>Need a starting prompt?</span></button>
       </div>
       <div class="group"><span class="label">Photos</span><div class="pics" data-pics></div></div>
-      ${field('Tags', 'tags', { placeholder: 'Separate them with commas' })}
       ${shoots.length || e.shootId ? `<div class="group"><span class="label">About a shoot</span><button type="button" class="pick-line" data-shoot>${esc(shootName() || 'None')}</button>${e.shootId && eyeLink(e.shootId) ? `<a class="small-link" href="${eyeLink(e.shootId)}">Open it in The Eye</a>` : ''}</div>` : ''}
       ${field('Takeaway', 'takeaway', { area: true, rows: 2, placeholder: 'The one thing to keep from this' })}`;
 

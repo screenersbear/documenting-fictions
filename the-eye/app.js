@@ -3,6 +3,18 @@
   // touch listener — this no-op unlocks tap-flash feedback app-wide.
   document.body.addEventListener('touchstart', () => {}, false);
 
+  // Visual language and framework tags (App options): hidden on the shoot
+  // page, and left out of Stats, unless turned on (since 11-12). The tags
+  // already on a shoot are kept either way.
+  const LOOK_TAGS_ON_KEY = 'dailies_look_tags_on_v1';
+  function lookTagsOn() {
+    try { return localStorage.getItem(LOOK_TAGS_ON_KEY) === '1'; } catch (e) { return false; }
+  }
+  function applyLookTags() {
+    document.documentElement.classList.toggle('no-look-tags', !lookTagsOn());
+  }
+  applyLookTags();
+
   // ---------- held upright: what the app sees while it's turned back ----------
   // Turned sideways, the page is turned back upright (index.html decides it,
   // style.css turns the body). Everything the app reads about where a finger
@@ -5769,8 +5781,61 @@
   // until Save is tapped, so canceling out of an edit throws nothing away.
   let currentTalents = [];
 
+  // ---------- Under a shoot's talent: last time with them ----------
+  // The "Lessons for next time" from other shoots with any of the same people
+  // (newest first, up to three; a shoot's later days share their lessons, so
+  // each one shows once), so planning starts from what was learned before.
+  function renderPastLessons() {
+    const box = document.getElementById('pastLessons');
+    const norm = n => (n || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    const names = new Map();
+    currentTalents.forEach(t => { if (hasText(t.name)) names.set(norm(t.name), t.name.trim()); });
+    const seen = new Set();
+    const shown = !names.size ? [] : state.shoots
+      .filter(s => s.id !== editingShootId && hasText(s.lessonsLearned) && (s.talents || []).some(t => names.has(norm(t.name))))
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      .filter(s => { const k = s.lessonsLearned.trim(); if (seen.has(k)) return false; seen.add(k); return true; })
+      .slice(0, 3);
+    box.hidden = !shown.length;
+    if (!shown.length) { box.innerHTML = ''; return; }
+    const who = [...new Set(shown.flatMap(s => (s.talents || []).map(t => norm(t.name)).filter(n => names.has(n))))].map(n => names.get(n));
+    box.innerHTML = `<p class="team-question">Last time with ${escapeHtml(joinWithAnd(who))}</p>` + shown.map(s => `
+      <div class="past-lesson">
+        <span class="past-lesson-head">${escapeHtml(hasText(s.title) ? s.title.trim() : shootDisplayName(s))}${s.date ? ` · ${escapeHtml(prettyDate(s.date))}` : ''}</span>
+        <span class="past-lesson-text">${escapeHtml(s.lessonsLearned.trim())}</span>
+      </div>`).join('');
+  }
+
+  // ---------- Notes about this shoot, written in Overthoughts ----------
+  // Inside Documenting Fictions an Overthoughts entry can say which shoot
+  // it's about: it shows here, read only, and opens in Overthoughts. Nothing
+  // goes the other way: The Eye never writes to Overthoughts.
+  function renderShootNotes(shootId) {
+    const box = document.getElementById('shootNotes');
+    box.hidden = true;
+    box.innerHTML = '';
+    const D = window.DFData;
+    if (!shootId || !D || !D.inSuite()) return;
+    const firstLine = t => (t || '').split('\n').map(l => l.trim()).find(Boolean) || 'Untitled entry';
+    D.overthoughts().then(db => D.rows(db, 'entries')).then(rows => {
+      if (editingShootId !== shootId) return;
+      const notes = rows.map(([, e]) => e)
+        .filter(e => e && e.shootId === shootId && e.kind !== 'reflection' && e.from !== 'the-eye' && (hasText(e.title) || hasText(e.body) || hasText(e.takeaway)))
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+        .slice(0, 5);
+      if (!notes.length) return;
+      box.innerHTML = '<p class="team-question">Notes in Overthoughts</p>' + notes.map(e => `
+        <a class="past-lesson past-lesson-link" href="${escapeHtml(D.notebookUrl('overthoughts', { entry: e.id }) || '#')}">
+          <span class="past-lesson-head">${escapeHtml(hasText(e.title) ? e.title.trim() : firstLine(e.body))}${e.date ? ` · ${escapeHtml(prettyDate(e.date))}` : ''}</span>
+          ${hasText(e.takeaway) ? `<span class="past-lesson-text">${escapeHtml(e.takeaway.trim())}</span>` : ''}
+        </a>`).join('');
+      box.hidden = false;
+    }).catch(() => {});
+  }
+
   function renderTalents() {
     updateShootRunningHead();
+    renderPastLessons();
     const container = document.getElementById('talentsList');
     container.innerHTML = currentTalents.map((talent, idx) => {
       const handles = (talent.socialHandles || []).filter(sh => hasText(sh.handle));
@@ -13793,6 +13858,7 @@
     renderTeamMembers();
 
     renderShootFrameworkTags(s);
+    renderShootNotes(s ? s.id : null);
 
     document.getElementById('postShootContent').hidden = !isPostCaptureStatus(previousStatusValue);
     document.getElementById('postShootPromptOverlay').hidden = true;
@@ -17376,6 +17442,8 @@
   document.getElementById('appMenuBtn').addEventListener('click', () => {
     updateDisplayChoiceHighlight();
     updateNewShootGuideChoice();
+    updateDailyReportChoice();
+    updateLookTagsChoice();
     appMenuOverlay.hidden = false;
     appMenuOverlay.querySelector('.opt-sheet-body').scrollTop = 0;
   });
@@ -17433,6 +17501,32 @@
     setNewShootGuideOn(false);
     updateNewShootGuideChoice();
   });
+
+  // ---------- Daily report: before a shoot, or everything ----------
+  function updateDailyReportChoice() {
+    const all = dailyReportEverything();
+    markChoice('dailyReportSoonBtn', !all);
+    markChoice('dailyReportAllBtn', all);
+  }
+  document.getElementById('dailyReportSoonBtn').addEventListener('click', () => { setDailyReportEverything(false); updateDailyReportChoice(); });
+  document.getElementById('dailyReportAllBtn').addEventListener('click', () => { setDailyReportEverything(true); updateDailyReportChoice(); });
+
+  // ---------- Visual language and framework tags: hidden, or on the shoot page ----------
+  function updateLookTagsChoice() {
+    const on = lookTagsOn();
+    markChoice('lookTagsOffBtn', !on);
+    markChoice('lookTagsOnBtn', on);
+  }
+  function setLookTagsOn(on) {
+    try { if (on) localStorage.setItem(LOOK_TAGS_ON_KEY, '1'); else localStorage.removeItem(LOOK_TAGS_ON_KEY); } catch (e) { /* storage unavailable */ }
+    applyLookTags();
+    STATS_PAGES = statsPagesNow();
+    statsPageIdx = 0;
+    updateLookTagsChoice();
+    renderAll();
+  }
+  document.getElementById('lookTagsOffBtn').addEventListener('click', () => setLookTagsOn(false));
+  document.getElementById('lookTagsOnBtn').addEventListener('click', () => setLookTagsOn(true));
 
   // ---------- App color (the sun menu's: sets :root[data-book] and df-app-color) ----------
   function applyAppColor(color) {
@@ -17962,7 +18056,7 @@
     return data;
   }
 
-  const STATS_PAGES = [
+  const ALL_STATS_PAGES = [
     { key: 'status', title: 'Status', build: buildStatusStats },
     { key: 'visualLanguage', title: 'Visual Languages', build: buildVisualLanguageStats },
     { key: 'shootCategory', title: 'Shoot Categories', build: buildCategoryStats },
@@ -17970,6 +18064,11 @@
     { key: 'location', title: 'Locations', build: buildLocationStats },
     { key: 'regions', title: 'Regions', custom: true },
   ];
+  // Visual languages only while those tags are on (App options).
+  function statsPagesNow() {
+    return lookTagsOn() ? ALL_STATS_PAGES : ALL_STATS_PAGES.filter(p => p.key !== 'visualLanguage');
+  }
+  let STATS_PAGES = statsPagesNow();
 
   // ---------- Regions map (world-map.svg, fetched once and cached) ----------
   let worldMapSvgEl = null;
@@ -20256,12 +20355,34 @@
   // ---------- Daily report (in-app "notifications" shown once per day on open) ----------
   // No backend exists to fire real background push, so this checks on open
   // instead: once per day (the first time the app is opened that day), it
-  // looks at every shoot for shoots that actually need something — 7 days
-  // out with something still pending, a post-shoot reflection that's gone
-  // 3+ days unanswered, and an editing check-in once a week — and surfaces
-  // whatever applies in one popup, plus a random fun fact about the user's
-  // own shoot history. Tapping an item jumps straight to that shoot.
+  // looks for what the next shoots need and shows it in one popup. Tapping an
+  // item jumps straight to that shoot.
+  // What it brings up is a choice in App options (11-12). "Before a shoot",
+  // the default: a shoot in the next 7 days still missing its team or mood
+  // board, a reflection asked for once (3 days after the shoot), and the
+  // monthly backup reminder. "Everything" brings back the rest: the
+  // reflection asked again every 3 days, the weekly "How's editing going?",
+  // delivered shoots missing final images, team and mood board nudges for
+  // every shoot, and the stat of the day.
   const DAILY_REPORT_SHOWN_KEY = 'dailies_daily_report_shown_v1';
+  const DAILY_REPORT_ALL_KEY = 'dailies_daily_report_everything_v1';
+  function dailyReportEverything() {
+    try { return localStorage.getItem(DAILY_REPORT_ALL_KEY) === '1'; } catch (e) { return false; }
+  }
+  function setDailyReportEverything(on) {
+    try {
+      if (on) localStorage.setItem(DAILY_REPORT_ALL_KEY, '1');
+      else localStorage.removeItem(DAILY_REPORT_ALL_KEY);
+      localStorage.removeItem(DAILY_REPORT_CONTENT_KEY); // today's report is put together again the new way
+    } catch (e) { /* storage unavailable */ }
+  }
+  // Not yet shot, not postponed or canceled, and on the calendar within the
+  // next seven days (today counts).
+  function shootWithinAWeek(s, today) {
+    if (s.archived || !s.date || POST_CAPTURE_STATUSES.includes(s.status) || s.status === 'rescheduled' || s.status === 'canceled') return false;
+    const daysUntil = Math.round((parseShootDate(s.date) - today) / 86400000);
+    return daysUntil >= 0 && daysUntil <= 7;
+  }
 
   function parseShootDate(dateStr) {
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -20282,6 +20403,7 @@
   }
 
   function computeDailyReportItems() {
+    const everything = dailyReportEverything();
     const items = [];
     // Collected across the loop and emitted as a single line at the end —
     // four shoots owing reflections used to mean four near-identical rows,
@@ -20302,7 +20424,8 @@
         }
       }
 
-      // Post-shoot reflection still blank — repeats every 3 days until filled in.
+      // Post-shoot reflection still blank, 3 days on: asked once ("Everything":
+      // again every 3 days until it's filled in).
       // Only while the shoot is Captured or later: stepped back a status, its
       // Reflection is hidden (capturedAt stays), so there's nothing to ask for.
       if (s.capturedAt && isPostCaptureStatus(s.status) && !hasText(s.whatWentRight) && !hasText(s.couldBeBetter) && !hasText(s.lessonsLearned)) {
@@ -20310,15 +20433,15 @@
         const daysSinceLastReminder = s.lastReflectionReminderAt
           ? Math.floor((Date.now() - new Date(s.lastReflectionReminderAt).getTime()) / 86400000)
           : Infinity;
-        if (daysSinceCaptured >= 3 && daysSinceLastReminder >= 3) {
+        if (daysSinceCaptured >= 3 && (everything ? daysSinceLastReminder >= 3 : !s.lastReflectionReminderAt)) {
           reflectionMissing.push(s);
           s.lastReflectionReminderAt = new Date().toISOString();
         }
       }
 
-      // Editing check-in — repeats weekly for as long as the shoot stays in the
-      // edit (Editing, or a video's Rough cut/Client review/Revisions).
-      if (isInTheEditStatus(s.status) && s.editingAt) {
+      // Editing check-in ("Everything" only): weekly for as long as the shoot
+      // stays in the edit (Editing, or a video's Rough cut/Client review/Revisions).
+      if (everything && isInTheEditStatus(s.status) && s.editingAt) {
         const daysSinceEditing = Math.floor((Date.now() - new Date(s.editingAt).getTime()) / 86400000);
         const daysSinceLastReminder = s.lastEditingReminderAt
           ? Math.floor((Date.now() - new Date(s.lastEditingReminderAt).getTime()) / 86400000)
@@ -20535,7 +20658,11 @@
   // always reflects today's real pending state rather than a one-time flag.
   function computeDailyReportNudges(finalImagesMissingCount) {
     const nudges = [];
-    const activeShoots = state.shoots.filter(s => !s.archived);
+    const everything = dailyReportEverything();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    // "Before a shoot": only the shoots in the next 7 days.
+    const activeShoots = state.shoots.filter(s => !s.archived && (everything || shootWithinAWeek(s, today)));
 
     const moodboardPendingShoots = activeShoots.filter(moodboardPending);
     const moodboardPendingCount = moodboardPendingShoots.length;
@@ -20554,8 +20681,8 @@
     if (teamPendingCount === 1) nudges.push("There's teams yet to be assembled!");
     else if (teamPendingCount > 1) nudges.push('Are all your teams set?');
 
-    if (finalImagesMissingCount === 1) nudges.push('A delivered shoot is still missing its final images!');
-    else if (finalImagesMissingCount > 1) nudges.push(`${finalImagesMissingCount} delivered shoots are still missing final images!`);
+    if (everything && finalImagesMissingCount === 1) nudges.push('A delivered shoot is still missing its final images!');
+    else if (everything && finalImagesMissingCount > 1) nudges.push(`${finalImagesMissingCount} delivered shoots are still missing final images!`);
 
     return nudges;
   }
@@ -20585,7 +20712,7 @@
   // automatic popup already showed) would silently lose items whose flags
   // just got set. Both the automatic popup and the on-demand bell read
   // through this same cache.
-  const DAILY_REPORT_CONTENT_KEY = 'dailies_daily_report_content_v2';
+  const DAILY_REPORT_CONTENT_KEY = 'dailies_daily_report_content_v3';
 
   function loadCachedDailyReportContent() {
     try {
@@ -20599,7 +20726,7 @@
 
   function buildTodaysDailyReportContent() {
     const items = computeDailyReportItems();
-    const fact = pickRandomFunFact();
+    const fact = dailyReportEverything() ? pickRandomFunFact() : null; // the stat of the day is "Everything" only
     return countActiveDeliveredShootsMissingFinalImages().then(finalImagesMissingCount => {
       const nudge = pickDailyReportNudge(finalImagesMissingCount);
       const content = { date: effectiveReportDateStr(), items, nudge, fact };
@@ -20751,10 +20878,10 @@
   // ---------- Monday brief (last week, once a week on open) ----------
   // The first time the app's opened on a Monday — from 5am, the same day
   // boundary as the daily report (effectiveReportDateStr) — a look back at
-  // last week to take into the new one: its numbers first (shoots, shoots
-  // delivered, locations), then the week laid out like a page of the
-  // Journal's weekly log (its shoots and the lessons learned from each), and
-  // a nudge for any shoot still without a reflection. "Last week" is Monday
+  // last week to take into the new one: the week laid out like a page of the
+  // weekly log (its shoots and the lessons learned from each), and a nudge
+  // for any shoot still without a reflection. No counts (11-12): only the
+  // lessons go into the new week. "Last week" is Monday
   // to Sunday, the seven days up to yesterday: the same week as the weekly
   // log's (see daysIntoWeek).
   // It's the last launch popup before the daily report, which follows it
@@ -20797,7 +20924,7 @@
 
   // Last week's window and contents, or null when it isn't Monday, this
   // Monday's brief has already shown, or there's nothing to look back on:
-  // no shoot shot and nothing delivered.
+  // no shoot shot last week.
   function mondayBriefDue() {
     const today = mondayBriefWaiting();
     if (!today) return null;
@@ -20812,19 +20939,9 @@
     const shoots = state.shoots
       .filter(s => s.date && s.date >= startStr && s.date <= endStr && POST_CAPTURE_STATUSES.includes(s.status))
       .sort((a, b) => a.date.localeCompare(b.date));
-    // Delivered last week means marked Delivered last week (deliveredAt),
-    // whenever it was shot, and still Delivered — one sent back for
-    // revisions since hasn't gone out yet.
-    const delivered = state.shoots.filter(s => {
-      if (s.status !== 'delivered' || !s.deliveredAt) return false;
-      const at = new Date(s.deliveredAt);
-      if (isNaN(at)) return false;
-      const day = formatDate(at);
-      return day >= startStr && day <= endStr;
-    });
-    if (!shoots.length && !delivered.length) return null;
-    const week = shoots.length ? { shoots, takeaways: logTakeaways(shoots) } : null;
-    return { today, label: weekRangeLabel(start, end), week, delivered };
+    if (!shoots.length) return null;
+    const week = { shoots, takeaways: logTakeaways(shoots) };
+    return { today, label: weekRangeLabel(start, end), week };
   }
 
   // Shows this Monday's brief if one's due. True when it's on its way, so
@@ -20850,7 +20967,7 @@
     return true;
   }
 
-  function renderMondayBrief({ label, week, delivered }) {
+  function renderMondayBrief({ label, week }) {
     document.getElementById('mondayBriefTitle').textContent = label;
     const body = document.getElementById('mondayBriefBody');
     body.innerHTML = '';
@@ -20859,30 +20976,8 @@
     const sectionHeading = (text) => archiveModeSectionHeading(text, headingCount++ % 2 ? 'heading-navy' : 'heading-yellow');
     const shoots = week ? week.shoots : [];
 
-    // Different locations: the same place twice (a shoot's later days copy
-    // the first's) is one. A country on its own isn't a place — every new
-    // shoot starts with the default one (see getAllPastLocations).
-    const locations = new Set();
-    shoots.forEach(s => {
-      const loc = normalizeLocation(s.location);
-      if (['name', 'street', 'city', 'state', 'zip'].some(k => hasText(loc[k]))) locations.add(locationKey(loc));
-    });
-    const tile = (n, one, many) => `<div class="stat-box"><span class="stat-num">${n}</span><span class="stat-label">${n === 1 ? one : many}</span></div>`;
-
-    body.appendChild(sectionHeading('Last week'));
-    const stats = document.createElement('div');
-    stats.className = 'stats-row monday-brief-stats';
-    // Delivered counts shoots, photo and video alike: the app keeps no count
-    // of the photos in a delivery. Soft hyphens, as on the Overview's tiles:
-    // a word too long for a third of a phone breaks inside its own tile
-    // rather than stretching it.
-    stats.innerHTML = tile(shoots.length, 'Shoot', 'Shoots')
-      + tile(delivered.length, 'Shoot deliv&shy;ered', 'Shoots deliv&shy;ered')
-      + tile(locations.size, 'Loca&shy;tion', 'Loca&shy;tions');
-    body.appendChild(stats);
-
     if (week) {
-      body.appendChild(sectionHeading('Weekly log'));
+      body.appendChild(sectionHeading('Last week'));
       const card = document.createElement('div');
       card.className = 'card log-card monday-brief-log';
       card.innerHTML = logWeekPaperHtml(week, 'Shoots', 'No takeaways logged last week.');

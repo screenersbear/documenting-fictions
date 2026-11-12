@@ -7133,5 +7133,15 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 /* A shoot's sections follow on, each heading clear of the one before. */
 #shootForm .shoot-section-heading:not(#basicInfoHeading) { margin-top: 36px; }
 
+/* Visual language and framework tags, while they're hidden (App options). */
+.no-look-tags #frameworkTagsContainerEarly, .no-look-tags #frameworkTagsContainer, .no-look-tags #visualsBody > .form-section-label-row { display: none !important; }
+
+/* Under a shoot's talent: lessons from past shoots with them, and notes about this shoot from Overthoughts. */
+.past-lessons { margin-top: 18px; }
+.past-lesson { display: block; margin: 8px 0 0; color: inherit; text-decoration: none; }
+.past-lesson-head { display: block; font-size: 0.85em; opacity: 0.7; }
+.past-lesson-text { display: block; white-space: pre-wrap; }
+.past-lesson-link .past-lesson-head { text-decoration: underline; text-underline-offset: 3px; }
+
 /* The Weekly tab (the Journal before) is the weekly log: entries of your own are written in Overthoughts. */
 #addJournalBtn { display: none !important; }

@@ -64,4 +64,21 @@ button { font: inherit; color: inherit; }
 .logo-btn.swap svg { opacity: 0; }
 .shelf.away .dots, .shelf.away .logo-btn { opacity: 0; pointer-events: none; }
 
+/* Back up all four: top right, out of the books' way. */
+.backup-btn { position: absolute; right: 10px; top: calc(10px + var(--safe-t, 0px)); width: 44px; height: 44px; border: 0; padding: 11px; background: none; color: #334045; opacity: .7; cursor: pointer; transition: opacity .3s; }
+.backup-btn svg { display: block; width: 100%; height: 100%; }
+.shelf.away .backup-btn { opacity: 0; pointer-events: none; }
+.sheet-dim { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-end; justify-content: center; background: rgba(51, 64, 69, 0); transition: background .2s; }
+.sheet-dim.in { background: rgba(51, 64, 69, .28); }
+.sheet { width: 100%; max-width: 480px; box-sizing: border-box; padding: 22px 20px calc(18px + var(--safe-b)); border-radius: 18px 18px 0 0; background: #fff; color: #334045; box-shadow: 0 -8px 30px rgba(0, 0, 0, .12); transform: translateY(100%); transition: transform .22s ease-out; }
+.sheet-dim.in .sheet { transform: none; }
+.sheet h2 { margin: 0 0 8px; font-size: 21px; font-weight: 600; }
+.sheet p { margin: 0 0 16px; font-size: 15px; line-height: 1.45; }
+.sheet .sheet-note { margin: 12px 0 0; text-align: center; }
+.sheet-btn { display: block; width: 100%; margin-top: 10px; padding: 13px; border: 1.5px solid #334045; border-radius: 12px; background: #fff; color: #334045; font: inherit; font-size: 16px; cursor: pointer; }
+.sheet-btn.primary { background: #334045; color: #fff; }
+.sheet-btn.danger { background: #b3261e; border-color: #b3261e; }
+.sheet-btn.plain { border-color: transparent; }
+.sheet-btn:disabled { opacity: .6; }
+
 @media (prefers-reduced-motion: reduce) { .float, .ground { animation: none; } }

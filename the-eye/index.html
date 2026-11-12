@@ -327,6 +327,9 @@
           <button type="button" id="addTalentBtn" class="primary small-btn">+ Add talent</button>
           <input type="file" id="talentPhotoFileInput" accept="image/*" hidden />
           <div id="talentsList" class="team-members-list"></div>
+          <!-- Lessons from past shoots with the same talent, and notes about this shoot from Overthoughts (app.js). -->
+          <div id="pastLessons" class="past-lessons" hidden></div>
+          <div id="shootNotes" class="past-lessons" hidden></div>
         </div>
       </div>
       <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
@@ -1257,6 +1260,16 @@
       <div class="opt-seg">
         <button type="button" id="newShootGuideOnBtn">In the guide</button>
         <button type="button" id="newShootGuideOffBtn">On the page</button>
+      </div>
+      <span class="opt-label opt-gap">Daily report</span>
+      <div class="opt-seg">
+        <button type="button" id="dailyReportSoonBtn">Before a shoot</button>
+        <button type="button" id="dailyReportAllBtn">Everything</button>
+      </div>
+      <span class="opt-label opt-gap">Visual language and frameworks</span>
+      <div class="opt-seg">
+        <button type="button" id="lookTagsOffBtn">Hidden</button>
+        <button type="button" id="lookTagsOnBtn">On the shoot page</button>
       </div>
       <span class="opt-label opt-gap">Photographer</span>
       <button type="button" class="opt-wide" id="photographerInfoBtn">Photographer information</button>
