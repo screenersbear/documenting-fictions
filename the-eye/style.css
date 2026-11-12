@@ -7133,8 +7133,5 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 /* A shoot's sections follow on, each heading clear of the one before. */
 #shootForm .shoot-section-heading:not(#basicInfoHeading) { margin-top: 36px; }
 
-/* Inside Documenting Fictions: a shoot's lessons stay here, its whole reflection is in Overthoughts. */
-.refl-more { display: none; margin: 2px 0 16px; }
-.in-suite .refl-more { display: block; }
-.in-suite #postShootBody > .refl-full { display: none; }
-.refl-more-link { padding: 0; border: 0; background: none; font: inherit; color: var(--text); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+/* The Weekly tab (the Journal before) is the weekly log: entries of your own are written in Overthoughts. */
+#addJournalBtn { display: none !important; }

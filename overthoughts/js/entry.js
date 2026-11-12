@@ -1,8 +1,6 @@
-// One entry, open to read and write. Everything saves as you go.
-//  - Your own: date, a title if you like, the writing, photos, tags, the shoot
-//    it's about (inside the suite, picked from The Eye's shoots) and a takeaway.
-//  - A shoot's reflection, from The Eye: the same three questions The Eye
-//    asks, and a way back to the shoot.
+// One entry, open to read and write. Everything saves as you go: date, a
+// title if you like, the writing, photos, tags, the shoot it's about (inside
+// the suite, picked from The Eye's shoots, read only) and a takeaway.
 import { ICONS } from './icons.js';
 import { back as goBack } from './nav.js';
 import { esc, debounce } from './util.js';
@@ -50,8 +48,7 @@ export async function entryScreen(view, id) {
   }
   let saved = !fresh; // a new entry is only kept once something's written in it
   let pics = fresh ? [] : await photos(e.id);
-  const reflection = e.kind === 'reflection';
-  const shoots = reflection ? [] : eyeShoots();
+  const shoots = eyeShoots();
   const eyeLink = (shootId) => D.notebookUrl('the-eye', { shoot: shootId });
   const shootName = () => { const s = shoots.find((x) => x.id === e.shootId); return s ? s.name : (e.shootName || ''); };
 
@@ -62,13 +59,7 @@ export async function entryScreen(view, id) {
         : `<input class="hand-input" type="${opts.type || 'text'}" data-f="${f}" value="${esc(f === 'tags' ? (e.tags || []).join(', ') : e[f] || '')}" placeholder="${esc(opts.placeholder || '')}" autocomplete="off" />`}
     </label>`;
 
-  const body = reflection
-    ? `<p class="shoot-line"><b>${esc(e.shootName || 'Untitled shoot')}</b> · ${esc(prettyDay(e.date))}${eyeLink(e.shootId) ? ` · <a href="${eyeLink(e.shootId)}">Open the shoot in The Eye</a>` : ''}</p>
-      ${field('What went right', 'wentRight', { area: true, rows: 3 })}
-      ${field('What could\'ve gone better', 'couldBeBetter', { area: true, rows: 3 })}
-      ${field('Lessons for next time', 'takeaway', { area: true, rows: 2, placeholder: 'This is the takeaway in the weekly log' })}
-      ${field('Tags', 'tags', { placeholder: 'Separate them with commas' })}`
-    : `${field('Date', 'date', { type: 'date' })}
+  const body = `${field('Date', 'date', { type: 'date' })}
       ${field('Title', 'title', { placeholder: 'If you like' })}
       <div class="group">
         <span class="label">What's on your mind</span>
@@ -83,15 +74,15 @@ export async function entryScreen(view, id) {
   view.innerHTML = `<div class="screen entry-page">
     <div class="folder-head">
       <button type="button" class="icon-btn" data-back aria-label="Back">${ICONS.back}</button>
-      <h1>${reflection ? 'Reflection' : fresh ? 'New entry' : 'Entry'}</h1>
-      ${reflection ? '<span class="icon-btn"></span>' : `<button type="button" class="icon-btn" data-delete aria-label="Delete this entry">${ICONS.trash}</button>`}
+      <h1>${fresh ? 'New entry' : 'Entry'}</h1>
+      <button type="button" class="icon-btn" data-delete aria-label="Delete this entry">${ICONS.trash}</button>
     </div>
     <div class="scroll"><div class="form-page">${body}</div></div>
   </div>`;
   const root = view.querySelector('.screen');
   root.querySelectorAll('textarea').forEach(grow);
 
-  let dirty = false; // only a real change is saved (and, for a reflection, sent back to The Eye)
+  let dirty = false; // only a real change is saved
   const store = async () => {
     if (!dirty) return;
     if (!saved && !hasWords(e) && !pics.length) return; // nothing written yet: nothing kept

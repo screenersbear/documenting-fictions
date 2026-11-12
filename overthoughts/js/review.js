@@ -1,5 +1,5 @@
-// A month's (or a year's) review: that stretch's takeaways gathered by
-// themselves, from shoots and from your own entries, the counts, and one
+// A month's (or a year's) review: that stretch's takeaways from your entries,
+// gathered by themselves, the counts, and one
 // question to answer in your own words. Saves as you go.
 import { ICONS } from './icons.js';
 import { back as goBack } from './nav.js';
@@ -22,7 +22,6 @@ export async function reviewScreen(view, id) {
       <span class="take-name">${esc(name)}<small>${esc(prettyDay(e.date))}</small></span>
       <span class="take-text">${esc(oneLine(e.takeaway))}</span>
     </a>`;
-  const shoots = g.shoots.filter((e) => hasText(e.takeaway));
   const mine = g.mine.filter((e) => hasText(e.takeaway));
   const question = p.period === 'month' ? 'What changed this month?' : 'What changed this year?';
 
@@ -34,10 +33,8 @@ export async function reviewScreen(view, id) {
     </div>
     <div class="scroll"><div class="form-page">
       <p class="count-line">${esc(countLine(g))}</p>
-      <h2 class="month">From shoots</h2>
-      ${shoots.map((e) => take(e, e.shootName || 'Untitled shoot')).join('') || `<p class="note">No shoot takeaways ${p.period === 'month' ? 'this month' : 'this year'}.</p>`}
-      <h2 class="month">From your entries</h2>
-      ${mine.map((e) => take(e, entryTitle(e))).join('') || `<p class="note">No takeaways from your own entries ${p.period === 'month' ? 'this month' : 'this year'}.</p>`}
+      <h2 class="month">Takeaways</h2>
+      ${mine.map((e) => take(e, entryTitle(e))).join('') || `<p class="note">No takeaways from your entries ${p.period === 'month' ? 'this month' : 'this year'}.</p>`}
       <label class="group review-q">
         <span class="label">${esc(question)}</span>
         <textarea class="write big" data-f="summary" rows="6" placeholder="In your own words">${esc(r.summary || '')}</textarea>

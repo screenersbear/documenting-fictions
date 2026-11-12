@@ -1,12 +1,12 @@
-// Routes: #/ shut, #/entries, #/week, #/reviews, #/new, #/entry/<id>, #/review/<id>
-// The shut notebook, its opening and the bar are Ref's, with three sections.
+// Routes: #/ shut, #/entries, #/reviews, #/new, #/entry/<id>, #/review/<id>
+// The shut notebook, its opening and the bar are Ref's, with two sections.
 import { SECTIONS } from './screens.js';
 import { entryScreen } from './entry.js';
 import { reviewScreen } from './review.js';
 import { closeAllSheets } from './ui.js';
 import { showSection, setPuller } from './navbar.js';
 import { sideOf } from './spread.js';
-import { openOptions, startPage, offerJournal } from './options.js';
+import { openOptions, startPage } from './options.js';
 import { moved } from './nav.js';
 import { ICONS } from './icons.js';
 import { esc } from './util.js';
@@ -20,9 +20,9 @@ let token = 0;
 const suite = window.DF_SUITE;
 let suiteOpened = !(suite && suite.options);
 
-const HASHES = ['/entries', '/week', '/reviews'];
-const NAMES = ['Entries', 'Weekly log', 'Reviews'];
-const AT = { entries: '#/entries', week: '#/week', reviews: '#/reviews' }; // the shelf's tabs
+const HASHES = ['/entries', '/reviews'];
+const NAMES = ['Entries', 'Reviews'];
+const AT = { entries: '#/entries', reviews: '#/reviews' }; // the shelf's tabs
 
 document.getElementById('bookHit').addEventListener('click', () => { location.hash = '#/entries'; });
 const sun = document.getElementById('bookSun');
@@ -227,14 +227,14 @@ book.addEventListener('pointerup', letGo);
 book.addEventListener('pointercancel', letGo);
 book.addEventListener('click', (e) => { if (performance.now() - held.ended < 350) { e.preventDefault(); e.stopPropagation(); } }, true);
 
-// Where it opens: a link from The Eye straight to one entry, a tab on the
+// Where it opens: a link straight to one entry (?entry=<id>), a tab on the
 // shelf's book, or (on its own) wherever Options says.
 window.addEventListener('hashchange', route);
 const atEntry = suite && suite.get && suite.get('entry');
 if (atEntry) history.replaceState(null, '', `#/entry/${encodeURIComponent(atEntry)}`);
 else if (suite && !suite.options && (location.hash || '#/') === '#/') history.replaceState(null, '', AT[suite.at] || '#/entries');
 else if (!suite && startPage() && (location.hash || '#/') === '#/') history.replaceState(null, '', startPage());
-route().then(() => { if (!(suite && suite.options)) setTimeout(offerJournal, 900); });
+route();
 if (suite && suite.options) {
   setTimeout(openOptions, 60);
   suite.whenOptionsDone(() => (location.hash || '#/') !== '#/');

@@ -142,7 +142,7 @@
   <!-- ============ JOURNAL ============ -->
   <section id="view-journal" class="view" hidden>
     <header class="topbar">
-      <h1 id="journalTitle">Journal</h1>
+      <h1 id="journalTitle">Weekly</h1>
     </header>
 
     <div class="journal-toolbar">
@@ -186,7 +186,7 @@
     <button class="tab" data-view="journal">
       <span class="tab-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
-      </span><span>Journal</span>
+      </span><span>Weekly</span>
     </button>
     <button class="tab" data-view="archive">
       <span class="tab-icon">
@@ -203,7 +203,7 @@
   <!-- The page's card edge. Fixed over the scrolling view: the hole in the
        middle is the page, so the window itself still does the scrolling. -->
   <div class="nb-board"><div class="nb-board-page" aria-hidden="true"></div><div class="nb-screen-foot"><button type="button" class="nb-page-step" id="nbScreenPrev" aria-label="Previous page"></button><span id="nbScreenNum"></span><button type="button" class="nb-page-step" id="nbScreenNext" aria-label="Next page"></button></div></div>
-  <nav class="nb-screen-tabs" aria-label="Sections of the notebook"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Journal</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></nav>
+  <nav class="nb-screen-tabs" aria-label="Sections of the notebook"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Weekly</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></nav>
 </div>
 
 <!-- ============ THE NOTEBOOK ============ -->
@@ -490,17 +490,15 @@
         <div id="postShootBody">
           <!-- The reflection helper (see REFLECTION_FLOWS in app.js). -->
           <button type="button" class="primary small-btn" id="reflectHelperBtn">Need help reflecting?</button>
-          <label class="refl-full">What went right
+          <label>What went right
             <textarea id="shootWentRight" rows="3" maxlength="4000" readonly></textarea>
           </label>
-          <label class="refl-full">What could've gone better
+          <label>What could've gone better
             <textarea id="shootCouldBeBetter" rows="3" maxlength="4000" readonly></textarea>
           </label>
           <label>Lessons for next time
             <textarea id="shootLessonsLearned" rows="3" maxlength="4000" readonly></textarea>
           </label>
-          <!-- Inside Documenting Fictions: the lessons here, the whole reflection in Overthoughts. -->
-          <p class="refl-more"><button type="button" class="refl-more-link" id="reflectionMoreBtn">Read the whole reflection in Overthoughts</button></p>
 
           <div class="moodboard-section" id="finalImagesSection">
             <span class="moodboard-label">Final images</span>
@@ -553,7 +551,7 @@
     <span id="nbPageFoot"></span>
     <button type="button" class="nb-page-step" id="nbPageNext" aria-label="Next page"></button>
   </div>
-  <div class="nb-screen-tabs nb-screen-tabs-shoot"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Journal</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></div>
+  <div class="nb-screen-tabs nb-screen-tabs-shoot"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Weekly</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></div>
   <nav class="nb-shoot-bar" aria-label="This shoot">
     <button type="button" class="nb-tool" id="nbBarBack" aria-label="Back"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <button type="button" class="nb-tool" id="nbBarShootMode" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Shoot mode</span></button>
@@ -1269,7 +1267,6 @@
       <button type="button" class="opt-wide" id="importDataBtn">Restore from backup</button>
       <span class="opt-label opt-gap">Export</span>
       <button type="button" class="opt-wide" id="exportPreviousShootsBtn">Export previous shoots</button>
-      <button type="button" class="opt-wide" id="exportReflectionsBtn" hidden>Save reflections for Overthoughts</button>
       <span class="opt-label opt-gap">Storage</span>
       <button type="button" class="opt-wide" id="storageUsageBtn">Storage usage</button>
       <!-- The one that can't be undone stays last, away from the rest. -->
@@ -1284,7 +1281,7 @@
 <div id="deleteAllConfirmOverlay" class="modal-overlay intro-overlay" hidden>
   <div class="modal intro-modal delete-all-confirm-modal" id="deleteAllConfirmModal">
     <h2 id="deleteAllConfirmTitle">Are you SURE sure, my guy?</h2>
-    <p id="deleteAllConfirmText">This permanently removes every shoot and its photos: mood boards, final images, cover and talent photos. Your Journal entries and their photos are kept. This can't be undone.</p>
+    <p id="deleteAllConfirmText">This permanently removes every shoot and its photos: mood boards, final images, cover and talent photos. Any journal entries you wrote and their photos are kept. This can't be undone.</p>
     <div class="modal-actions" id="deleteAllConfirmActions">
       <button type="button" class="secondary" id="deleteAllConfirmCancelBtn">Cancel</button>
       <button type="button" class="danger" id="deleteAllConfirmYesBtn">Yes, delete all shoots</button>
@@ -1681,7 +1678,7 @@
     <span id="archiveModeFoot"></span>
     <button type="button" class="nb-page-step" id="archiveModeNext" aria-label="Next page"></button>
   </div>
-  <div class="nb-screen-tabs nb-screen-tabs-shoot"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Journal</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></div>
+  <div class="nb-screen-tabs nb-screen-tabs-shoot"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Weekly</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></div>
   <nav class="nb-shoot-bar" aria-label="This shoot">
     <button type="button" class="nb-tool" id="archiveModeExitBtn" aria-label="Back"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
   </nav>

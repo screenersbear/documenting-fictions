@@ -1,5 +1,5 @@
 // The bottom bar, the same as Ref's: the section you're in as one icon with a
-// little triangle each side. Entries, Weekly log, Reviews; before Entries,
+// little triangle each side. Entries, Reviews; before Entries,
 // the left triangle shuts the notebook. A swipe on the page
 // does the same as one on the bar, and going between the two turns a page.
 import { ICONS } from './icons.js';
@@ -7,7 +7,6 @@ import { dragFrame, settleFrame, turnTo, isTurning } from './spread.js';
 
 export const SECTIONS = [
   { href: '#/entries', name: 'Entries', icon: ICONS.entries },
-  { href: '#/week', name: 'Weekly log', icon: ICONS.week },
   { href: '#/reviews', name: 'Reviews', icon: ICONS.reviews },
 ];
 const STEP = 46; // px from one icon to the next on the strip

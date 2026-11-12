@@ -20,7 +20,7 @@
     {
       id: 'the-eye', name: 'The Eye', key: 'df-app-color', color: 'mango', light: '#fff0ae', italic: true,
       cover: (c) => `the-eye/art/df-${c}-cover.webp`, block: (c) => `the-eye/art/df-${c}-block.webp`,
-      tabs: [['Overview', 16, 16.6, .105, .3, true, 'overview'], ['Shoots', 33.55, 16.6, .11, .1, false, 'shoots'], ['Archive', 51.1, 16.6, .115, -.1, true, 'archive'], ['Stats', 68.65, 16.6, .12, -.3, false, 'stats']],
+      tabs: [['Overview', 16, 13.6, .1, .3, true, 'overview'], ['Shoots', 30.6, 13.6, .105, .15, false, 'shoots'], ['Weekly', 45.2, 13.6, .11, 0, true, 'journal'], ['Archive', 59.8, 13.6, .115, -.15, false, 'archive'], ['Stats', 74.4, 13.6, .12, -.3, true, 'stats']],
       logo: svg('<path d="M18 3.5H9.2a3 3 0 0 0-3 3v4.6M6 20.5h8.8a3 3 0 0 0 3-3v-4.6M8.7 6.6l6.6 10.8"/>'),
     },
     {
@@ -32,11 +32,16 @@
     {
       id: 'overthoughts', name: 'Overthoughts', key: 'overthoughts-book', color: 'leaf', light: '#d4ecdb',
       cover: (c) => `overthoughts/art/${c}-cover.webp`, block: (c) => `overthoughts/art/${c}-block.webp`,
-      tabs: [['Entries', 15, 22.6, .1, .25, true, 'entries'], ['Weekly log', 38.6, 22.6, .105, 0, false, 'week'], ['Reviews', 62.2, 22.6, .11, -.25, true, 'reviews']],
+      tabs: [['Entries', 15, 33.5, .11, .2, true, 'entries'], ['Reviews', 50, 33.8, .115, -.2, false, 'reviews']],
       logo: svg('<path d="M8.2 15.8a3.4 3.4 0 0 1-.5-6.8 4.5 4.5 0 0 1 8.6-1.5 3.5 3.5 0 0 1 2 8.3z"/><circle cx="6.6" cy="19" r="1.2"/><circle cx="4" cy="21.3" r=".6"/>'),
     },
   ];
   const N = BOOKS.length;
+  // The turntable: how wide and deep the ring is (of a book's width W), and how
+  // far up the books further round sit. Wider than the first shelf (0.95, 1.9,
+  // 0.22) so the books have room between them.
+  const SIZE = 0.43, MAX_W = 240;
+  const RING_X = 1.1, RING_Z = 2.9, LIFT = 0.34;
   const STEP = 360 / N;
   const OPEN_MS = 900, ZOOM_MS = 760, TURN_MS = 420;
   const OVER = 12; // how far the page's white goes past every edge of the screen once it has grown
@@ -81,7 +86,9 @@
   let W = 242;
   function size() {
     const vw = window.innerWidth, vh = window.innerHeight;
-    W = Math.round(Math.max(150, Math.min(vw * 0.62, (vh - 240) / 1.36 / 1.1, 300)));
+    // Zoomed out a little from the first shelf (vw * 0.62, 300 at most), so the
+    // wider ring below still shows all four books at once.
+    W = Math.round(Math.max(130, Math.min(vw * SIZE, (vh - 240) / 1.36 / 1.1, MAX_W)));
     stage.style.setProperty('--W', `${W}px`);
   }
 
@@ -99,7 +106,7 @@
   function place(i) {
     const r = wrap((i - pos) * STEP) * Math.PI / 180;
     const back = (1 - Math.cos(r)) / 2;
-    const x = W * 0.95 * Math.sin(r), y = -0.22 * W * back, z = W * 1.9 * (Math.cos(r) - 1);
+    const x = W * RING_X * Math.sin(r), y = -LIFT * W * back, z = W * RING_Z * (Math.cos(r) - 1);
     const yaw = facing === i ? 0 : -20 * (0.25 + 0.75 * (1 + Math.cos(r)) / 2) - 10 * Math.sin(r);
     const s = slots[i];
     s.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px) rotateY(${yaw.toFixed(2)}deg)`;

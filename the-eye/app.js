@@ -3,14 +3,6 @@
   // touch listener — this no-op unlocks tap-flash feedback app-wide.
   document.body.addEventListener('touchstart', () => {}, false);
 
-  // The Journal lives in Overthoughts now (Documenting Fictions, 11-12): its
-  // tab goes from the bar and the side tabs, and the tabs left alternate
-  // light and dark again. Nothing in the Journal is deleted: its entries stay
-  // in The Eye's data and backups, and Overthoughts copies them over once.
-  document.querySelectorAll('.tabbar .tab[data-view="journal"], .nb-screen-tabs > [data-view="journal"]').forEach(el => el.remove());
-  document.querySelectorAll('.nb-screen-tabs').forEach(nav => [...nav.children].forEach((b, i) => { b.classList.toggle('y', i % 2 === 0); b.classList.toggle('n', i % 2 === 1); }));
-  if (window.DF_SUITE) document.documentElement.classList.add('in-suite');
-
   // ---------- held upright: what the app sees while it's turned back ----------
   // Turned sideways, the page is turned back upright (index.html decides it,
   // style.css turns the body). Everything the app reads about where a finger
@@ -1133,84 +1125,12 @@
       if (!isStorageFullError(err)) throw err;
       noteStorageFull(err);
     }
-    syncReflectionsSoon();
   }
 
   let refreshStickers = () => {}; // set up with the sun menu
   let relayStickers = () => {}; // the same: the folds are worked out in pixels
   let state = loadState();
   applyAppColor(state.presentation.color);
-
-  // ---------- Reflections, kept in Overthoughts ----------
-  // Inside Documenting Fictions, Overthoughts keeps every shot shoot's
-  // reflection (df-data.js). Each save here sends it the shoots whose
-  // reflection (or name, date, status) changed; opening The Eye brings back
-  // whatever was written about a shoot over there since. On its own, The Eye
-  // keeps them, and Options can save them in a file for Overthoughts.
-  // `var`, not `let`: saveState can run before this point is reached.
-  var reflSent = null; // shoot id -> what Overthoughts last got
-  var reflTimer = 0;
-  var reflInSuite = !!(window.DFData && window.DFData.inSuite());
-  function reflKey(s) {
-    return JSON.stringify([s.status || '', s.date || '', !!s.archived, s.whatWentRight || '', s.couldBeBetter || '', s.lessonsLearned || '', shootDisplayName(s)]);
-  }
-  function wantsReflection(s) {
-    return isPostCaptureStatus(s.status) || hasText(s.whatWentRight) || hasText(s.couldBeBetter) || hasText(s.lessonsLearned);
-  }
-  function syncReflectionsSoon() {
-    if (!reflInSuite || !reflSent) return;
-    clearTimeout(reflTimer);
-    reflTimer = setTimeout(sendReflections, 400);
-  }
-  async function sendReflections() {
-    if (!reflInSuite || !reflSent) return;
-    clearTimeout(reflTimer);
-    const D = window.DFData;
-    const changed = state.shoots.filter(s => s && s.id && (wantsReflection(s) || reflSent.has(s.id)) && reflSent.get(s.id) !== reflKey(s));
-    const gone = [...reflSent.keys()].filter(id => !state.shoots.some(s => s.id === id));
-    if (!changed.length && !gone.length) return;
-    const at = new Date().toISOString();
-    try {
-      if (changed.length) await D.saveReflections(changed.map(s => ({ shoot: s, name: shootDisplayName(s), at })));
-      changed.forEach(s => reflSent.set(s.id, reflKey(s)));
-      if (gone.length) await D.dropReflections(gone);
-      gone.forEach(id => reflSent.delete(id));
-    } catch (err) { console.error("Overthoughts wasn't updated", err); }
-  }
-  async function bringBackReflections() {
-    if (!reflInSuite) return;
-    try {
-      const list = await window.DFData.reflections();
-      const byShoot = new Map(list.map(e => [e.shootId, e]));
-      let changed = false;
-      list.forEach(e => {
-        if (e.editedIn !== 'overthoughts') return;
-        const s = state.shoots.find(x => x.id === e.shootId);
-        if (!s || (s.reflectionUpdatedAt && e.updatedAt && s.reflectionUpdatedAt >= e.updatedAt)) return;
-        s.whatWentRight = e.wentRight || '';
-        s.couldBeBetter = e.couldBeBetter || '';
-        s.lessonsLearned = e.takeaway || '';
-        s.reflectionUpdatedAt = e.updatedAt || new Date().toISOString();
-        changed = true;
-      });
-      // What Overthoughts has now, as far as it matches; anything else is sent below.
-      reflSent = new Map();
-      state.shoots.forEach(s => {
-        const e = byShoot.get(s.id);
-        if (e && (e.wentRight || '') === (s.whatWentRight || '') && (e.couldBeBetter || '') === (s.couldBeBetter || '') && (e.takeaway || '') === (s.lessonsLearned || '')
-          && (e.shootStatus || '') === (s.status || '') && (e.date || '') === (s.date || '') && !!e.archived === !!s.archived && e.shootName === shootDisplayName(s)) reflSent.set(s.id, reflKey(s));
-        else if (e) reflSent.set(s.id, '');
-      });
-      if (changed) { saveState(); renderAll(); }
-      sendReflections();
-    } catch (err) { console.error("Overthoughts couldn't be read", err); }
-  }
-  bringBackReflections();
-  // Opens a shoot's whole reflection in Overthoughts, once it has the latest.
-  async function openReflectionInOverthoughts(shootId) {
-    await sendReflections();
-    location.href = window.DFData.notebookUrl('overthoughts', { entry: window.DFData.reflectionId(shootId) });
-  }
 
   // ---------- helpers ----------
   function todayStr() {
@@ -3336,7 +3256,7 @@
       text: "shoots move here once you mark them complete, keeping your active list clean while still letting you look back. This is also where you'll find backup and restore for all your data.",
     },
     journal2: {
-      title: 'Journal',
+      title: 'Weekly',
       text: "one running page with two kinds of entries. The weekly log fills itself in for every week you shoot: which shoots happened, their categories, and the lessons learned pulled from each shoot's reflection. Tap any shoot or takeaway to see where it came from. Tap '+' to add your own reflection anytime, and tag entries with hashtags so you can find them again later. The table of contents jumps you to any entry or week.",
     },
     stats: {
@@ -5123,6 +5043,10 @@
     // "Filter: " is dropped where the band is too narrow for all three (style.css).
     document.getElementById('journalFilterToggle').innerHTML =
       `<span class="jt-word">Filter: </span>${escapeHtml(JOURNAL_FILTERS.find(f => f.key === journalFilter).label)}`;
+    // The Weekly tab is the weekly log. Entries written here back when it was
+    // the Journal still show in it (new ones are written in Overthoughts), so
+    // the filter is only there when there are some.
+    document.getElementById('journalFilterToggle').style.display = state.journalEntries.length ? '' : 'none';
   }
 
   document.getElementById('journalFilterToggle').addEventListener('click', () => {
@@ -5188,7 +5112,7 @@
         ? "No weekly log yet. It fills in on its own once a shoot is marked captured."
         : journalFilter === 'entries'
           ? "No entries of your own yet. Tap + to write one. Anything on your mind?"
-          : "Nothing here yet. The weekly log fills in on its own once a shoot is marked captured, and + adds an entry of your own. Anything on your mind?";
+          : "No weekly log yet. It fills in on its own once a shoot is marked captured.";
     }
 
     const imagePromises = renderYearMonthGroups(list, items, {
@@ -8063,8 +7987,6 @@
     updateShootModalJumpMenuVisibility();
     return true;
   }
-
-  document.getElementById('reflectionMoreBtn').addEventListener('click', () => { if (currentShootId) openReflectionInOverthoughts(currentShootId); });
 
   document.getElementById('postShootPromptYesBtn').addEventListener('click', () => {
     const shootId = postShootPromptShootId;
@@ -17552,7 +17474,7 @@
   const deleteAllConfirmActions = document.getElementById('deleteAllConfirmActions');
   const deleteAllConfirmOkBtn = document.getElementById('deleteAllConfirmOkBtn');
   // Same words as the popup's default text in index.html.
-  const DELETE_ALL_WARNING = 'This permanently removes every shoot and its photos: mood boards, final images, cover and talent photos. Your Journal entries and their photos are kept. This can\'t be undone.';
+  const DELETE_ALL_WARNING = 'This permanently removes every shoot and its photos: mood boards, final images, cover and talent photos. Any journal entries you wrote and their photos are kept. This can\'t be undone.';
 
   // Straight to the app's own "are you SURE sure" popup — the browser
   // confirm() that used to come first only asked the same thing twice.
@@ -17579,7 +17501,7 @@
     renderAll();
     deleteAllConfirmModal.classList.remove('danger-state');
     deleteAllConfirmTitle.textContent = 'All shoot data deleted.';
-    deleteAllConfirmText.textContent = 'Your Journal is still here. Good luck on your next shoots!';
+    deleteAllConfirmText.textContent = 'Good luck on your next shoots!';
     deleteAllConfirmActions.hidden = true;
     deleteAllConfirmOkBtn.hidden = false;
   });
@@ -17738,34 +17660,6 @@
   document.getElementById('exportDataBtn').addEventListener('click', () => {
     closeAppMenu();
     exportAllData();
-  });
-
-  // On its own (no Overthoughts beside it): the shoots' reflections and any
-  // Journal entries from before, in a file Overthoughts' Options can bring in.
-  const exportReflectionsBtn = document.getElementById('exportReflectionsBtn');
-  exportReflectionsBtn.hidden = reflInSuite || !window.DFData;
-  exportReflectionsBtn.addEventListener('click', async () => {
-    closeAppMenu();
-    try {
-      const shoots = state.shoots.filter(wantsReflection);
-      const journal = state.journalEntries.filter(e => !e.sourceShootId);
-      if (!shoots.length && !journal.length) { showToast('No reflections yet'); return; }
-      const found = await idbGetManyImages(journal.map(e => journalImagesKey(e.id)));
-      const payload = {
-        version: 1,
-        app: 'the-eye',
-        kind: 'reflections',
-        exportedAt: new Date().toISOString(),
-        state: { titleDisplayMode: state.titleDisplayMode, shoots, journalEntries: journal },
-        images: Object.fromEntries(found),
-      };
-      const file = new File([JSON.stringify(payload)], `the-eye-reflections-${todayStr()}.json`, { type: 'application/json' });
-      const how = await window.DFData.saveFile(file);
-      if (how !== 'cancelled') showToast('Reflections saved');
-    } catch (err) {
-      console.error('Reflections not saved', err);
-      showToast("Couldn't save the reflections");
-    }
   });
 
   // The Daily report's backup reminder — not part of the day's cached
@@ -19628,17 +19522,7 @@
       if (hasText(shoot.couldBeBetter)) reflectionFields.push(["What could've gone better", shoot.couldBeBetter]);
       if (hasText(shoot.lessonsLearned)) reflectionFields.push(['Lessons for next time', shoot.lessonsLearned]);
     }
-    if (reflInSuite && reflectionFields.length) {
-      // Inside the suite the lessons are shown here and the whole reflection is in Overthoughts.
-      const lessons = reflectionFields.filter(([label]) => label === 'Lessons for next time');
-      body.appendChild(sectionHeading('Reflection'));
-      lessons.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
-      const more = document.createElement('p');
-      more.className = 'refl-more';
-      more.innerHTML = '<button type="button" class="refl-more-link">Read the whole reflection in Overthoughts</button>';
-      more.querySelector('button').addEventListener('click', () => openReflectionInOverthoughts(shoot.id));
-      body.appendChild(more);
-    } else if (reflectionFields.length) {
+    if (reflectionFields.length) {
       body.appendChild(sectionHeading('Reflection'));
       reflectionFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
     }
@@ -20607,7 +20491,7 @@
       facts.push(`You've completed post-shoot reflections for ${Math.round((reflectedCount / capturedShoots.length) * 100)}% of your captured shoots.`);
     }
 
-    // (The Journal's facts went with it to Overthoughts.)
+    // (No Journal facts: the Journal is the Weekly tab now, the weekly log.)
 
     const locCounts = {};
     const locLabels = {};
@@ -21637,7 +21521,7 @@
       : afterUpdate ? saved !== 'open'
       : resuming ? (place && (place.book === 'shut' || place.book === 'open') ? place.book === 'shut' : saved !== 'open')
       : state.presentation.start !== 'first';
-    // A link from Overthoughts to one shoot opens it.
+    // A link to one shoot (?shoot=<id>, from an Overthoughts entry about it) opens it.
     const atShoot = suite && suite.get ? state.shoots.find(x => x.id === suite.get('shoot')) : null;
     resumePlace = resuming && !startShut && !suiteAt && !atShoot && place ? place : null;
     if (startShut) show('closed');
