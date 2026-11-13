@@ -1,4 +1,4 @@
-const CACHE_NAME = 'the-eye-v156';
+const CACHE_NAME = 'the-eye-v157';
 // The same notebook can live twice on one website (inside the Documenting
 // Fictions suite and as its own app), and both workers see every cache there:
 // each name carries the folder this copy lives in, and each copy only ever
