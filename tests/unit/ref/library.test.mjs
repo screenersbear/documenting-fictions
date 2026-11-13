@@ -1,4 +1,4 @@
-// ref/js/library.js: the notebook in memory (photos, folders, thumbnail and
+// ref/data/library.js: the notebook in memory (photos, folders, thumbnail and
 // full-size picture addresses), folder sorting, color search and filter chips.
 // db.js and photos.js are mocked: storage has its own tests (db.test.mjs).
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -7,8 +7,8 @@ const h = vi.hoisted(() => ({
   db: { listPhotos: vi.fn(), listFolders: vi.fn(), getThumbs: vi.fn(), moveThumbOff: vi.fn(), getFile: vi.fn() },
   remakeThumb: vi.fn(),
 }));
-vi.mock('../../../ref/js/db.js', () => h.db);
-vi.mock('../../../ref/js/photos.js', () => ({ remakeThumb: h.remakeThumb }));
+vi.mock('../../../ref/data/db.js', () => h.db);
+vi.mock('../../../ref/data/photos.js', () => ({ remakeThumb: h.remakeThumb }));
 
 let L, made, created, revoked;
 const realCreate = URL.createObjectURL, realRevoke = URL.revokeObjectURL;
@@ -25,7 +25,7 @@ beforeEach(async () => {
   created = URL.createObjectURL = vi.fn(() => `blob:url-${++made}`);
   revoked = URL.revokeObjectURL = vi.fn();
   localStorage.clear();
-  L = await import('../../../ref/js/library.js');
+  L = await import('../../../ref/data/library.js');
 });
 afterEach(() => {
   URL.createObjectURL = realCreate;

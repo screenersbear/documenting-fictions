@@ -598,7 +598,7 @@
   // Right after it opens, iOS 26 can leave the screen about a status bar
   // short at the bottom, and it draws nothing pinned below that edge: the
   // film roll then sat that much higher than the bar's icon in the notebooks.
-  // Put right the notebooks' way (ref/js/ui.js): iOS is made to measure again
+  // Put right the notebooks' way (ref/components/screen-fit.js): iOS is made to measure again
   // by making the page a moment taller and scrolling a pixel and back. If it
   // stays short, the bar comes down by that much less instead. The bar waits
   // unseen until then (html.settled), so it never shows high and drops.

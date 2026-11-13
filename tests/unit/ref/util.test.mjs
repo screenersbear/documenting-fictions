@@ -1,8 +1,8 @@
-// ref/js/util.js and its two byte-for-byte copies (overthoughts, contact-sheet):
+// ref/components/util.js and its two byte-for-byte copies (overthoughts, contact-sheet):
 // ids, times, escaping, file names, timers, downloads, canvas export, image
 // loading and device checks. One describe block runs over all three copies.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import * as refUtil from '../../../ref/js/util.js';
+import * as refUtil from '../../../ref/components/util.js';
 import * as overthoughtsUtil from '../../../overthoughts/components/util.js';
 import * as contactSheetUtil from '../../../contact-sheet/js/util.js';
 
@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 describe.each([
-  ['ref/js/util.js', refUtil],
+  ['ref/components/util.js', refUtil],
   ['overthoughts/components/util.js', overthoughtsUtil],
   ['contact-sheet/js/util.js', contactSheetUtil],
 ])('%s', (_name, u) => {

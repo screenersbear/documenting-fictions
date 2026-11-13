@@ -1,5 +1,5 @@
 // @vitest-environment node
-// ref/js/db.js: Ref's IndexedDB storage (photos, thumbs, files, folders, boards,
+// ref/data/db.js: Ref's IndexedDB storage (photos, thumbs, files, folders, boards,
 // stickers, meta), run against fake-indexeddb. The node environment gives the
 // real Blob class, which IndexedDB can store, so old Blob-backed records can be tested.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -18,7 +18,7 @@ beforeEach(async () => {
   vi.useFakeTimers({ toFake: ['Date'] }); // only the clock: fake-indexeddb needs real timers
   at(T1);
   vi.resetModules(); // the open connection is cached in the module
-  db = await import('../../../ref/js/db.js');
+  db = await import('../../../ref/data/db.js');
 });
 afterEach(() => {
   vi.useRealTimers();

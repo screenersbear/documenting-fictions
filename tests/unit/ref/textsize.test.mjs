@@ -1,10 +1,10 @@
-// ref/js/textsize.js: page title / page text / text box sizes, stepped from 60%
+// ref/components/textsize.js: page title / page text / text box sizes, stepped from 60%
 // to 400%, kept per page, with a saved default per kind of text.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   KEYS, TEXT_STEPS, savedDefaults, defaultSize, sizeOf, setSize, stepSize,
   useDefault, saveDefault, isDefault, withTextDefaults,
-} from '../../../ref/js/textsize.js';
+} from '../../../ref/components/textsize.js';
 
 const STORE = 'ref-notebook-text-defaults';
 const store = (v) => localStorage.setItem(STORE, typeof v === 'string' ? v : JSON.stringify(v));

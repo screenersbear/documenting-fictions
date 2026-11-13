@@ -1,10 +1,10 @@
-// ref/js/templates.js: page layouts (authored in inches, stored as fractions of
+// ref/data/templates.js: page layouts (authored in inches, stored as fractions of
 // the page), guide grids, board covers, layout styles and pouring images into pages.
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   SHAPES, TEMPLATES, GUIDE_MIN, GUIDE_MAX, guideTemplateId, templateFor, defaultTemplate,
   coverTemplateId, makeCover, STYLES, styleFor, styleTemplate, paginate,
-} from '../../../ref/js/templates.js';
+} from '../../../ref/data/templates.js';
 
 const LP = 'letter-portrait', WIDE = 'wide-16x9';
 const SIZE = { [LP]: [8.5, 11], [WIDE]: [13.333, 7.5] };

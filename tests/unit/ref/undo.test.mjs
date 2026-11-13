@@ -1,10 +1,10 @@
-// ref/js/undo.js: one undo list (newest last, at most 30) for filing, favorites
+// ref/components/undo.js: one undo list (newest last, at most 30) for filing, favorites
 // and deleting. library.js and ui.js are mocked: only the list logic is tested.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const h = vi.hoisted(() => ({ refresh: vi.fn(), toast: vi.fn() }));
-vi.mock('../../../ref/js/library.js', () => ({ refresh: h.refresh }));
-vi.mock('../../../ref/js/ui.js', () => ({ toast: h.toast }));
+vi.mock('../../../ref/data/library.js', () => ({ refresh: h.refresh }));
+vi.mock('../../../ref/components/toast.js', () => ({ toast: h.toast }));
 
 let undo, events, onUndo;
 beforeEach(async () => {
@@ -14,7 +14,7 @@ beforeEach(async () => {
   events = [];
   onUndo = (e) => events.push({ e, toasts: h.toast.mock.calls.length });
   window.addEventListener('ref-undo', onUndo);
-  undo = await import('../../../ref/js/undo.js');
+  undo = await import('../../../ref/components/undo.js');
 });
 afterEach(() => {
   window.removeEventListener('ref-undo', onUndo);
