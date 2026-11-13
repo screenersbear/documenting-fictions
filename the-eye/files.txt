@@ -91,6 +91,8 @@ built/app.css
   styles/shoot-report.css
   styles/guide-page.css
   styles/not-sure.css
+  styles/shoot-mode-dark.css
+  styles/shoot-mode-dark-popups.css
 
 # The screens and popups, in the order they sit in the page. Each piece starts
 # with a line saying what it is, which isn't joined.

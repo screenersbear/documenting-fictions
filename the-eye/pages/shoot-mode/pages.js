@@ -53,9 +53,11 @@ window.EyeParts.addShootModePages = function addShootModePages(ed) {
     return atoms;
   }
 
-  // One page that scrolls: its three parts (the shot list, the mood board and
-  // the notes) one under another.
-  const shootModePages = () => (ed.shootModeFlows ? [{ part: 'main', i: 0 }] : []); ed.shootModePages = shootModePages;
+  // Three pages, each scrolling on its own (round 2, 07-shoot-mode): the
+  // shot list, the mood board, then the notes. A swipe turns them; the dots
+  // under the clock say which one this is.
+  const PARTS = ['main', 'board', 'more'];
+  const shootModePages = () => (ed.shootModeFlows ? PARTS.map(part => ({ part, i: 0 })) : []); ed.shootModePages = shootModePages;
 
   // The mood board's photos in rows of `cols` (a page breaks between rows).
   function groupShootModeBoard(cols) {
@@ -131,6 +133,8 @@ window.EyeParts.addShootModePages = function addShootModePages(ed) {
       ed.drawFlowPage(ed.shootModeFlows[page.part], page.i);
     }
     document.getElementById('shootModeFoot').textContent = `${ed.shootModeAt + 1} / ${Math.max(1, pages.length)}`;
+    document.getElementById('shootModeDots').innerHTML = pages.map((p, i) => `<span class="${i === ed.shootModeAt ? 'on' : ''}"></span>`).join('');
+    shootModePage.scrollTop = 0;
     document.getElementById('shootModePrev').disabled = ed.shootModeAt <= 0;
     document.getElementById('shootModeNext').disabled = ed.shootModeAt >= pages.length - 1;
     ed.queueLastPlace();

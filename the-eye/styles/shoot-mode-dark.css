@@ -1,0 +1,129 @@
+/* Shoot mode is dark (round 2, 07-shoot-mode): berry blade black ground,
+   paper text, mango for the must-haves, ticks and Done shooting, so it
+   doesn't light up the set or the talent's face. Exit up top; the big
+   time-left figure and the wrap time; golden hour and the must-haves as
+   chips; three pages with dots; Wild card and Done shooting at the foot.
+   The last layer for Shoot mode (.sm-dark), after every older one. Its
+   Quick review and Wild card popups are in shoot-mode-dark-popups.css. */
+.sm-dark {
+  --sm-ground: #313D45; --sm-raised: #3B4851; --sm-paper: #FAFAF7; --sm-quiet: #AEB6BB; --sm-rule: #4A565E; --sm-off: #8E9AA2;
+  color: var(--sm-paper);
+}
+#shootModeOverlay.sm-dark, #shootModeOverlay.sm-dark > .modal.shoot-mode-modal { background: var(--sm-ground); }
+#shootModeOverlay.sm-dark > .modal.shoot-mode-modal { padding-top: 14px; }
+
+/* One of the three pages at a time (pages/shoot-mode/pages.js). */
+.shoot-mode-sheet:not([data-part="main"]) .shoot-mode-page-main,
+.shoot-mode-sheet:not([data-part="board"]) .shoot-mode-page-board,
+.shoot-mode-sheet:not([data-part="more"]) .shoot-mode-page-more { display: none; }
+
+/* The top: SHOOT MODE and Exit, then the shoot's name. */
+#shootModeOverlay .shoot-mode-header { display: block; padding: 0; background: none; }
+#shootModeOverlay .shoot-mode-heading-wrap { display: block; }
+.shoot-mode-top { display: flex; align-items: center; justify-content: space-between; min-height: 36px; }
+#shootModeOverlay .shoot-mode-eyebrow { margin: 0; font: 700 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.shoot-mode-exit {
+  flex: none; height: 36px; min-height: 0; margin: 0; padding: 0 16px; border: 0; border-radius: 18px; background: var(--sm-raised);
+  color: var(--sm-paper); font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+}
+#shootModeOverlay #shootModeTitle { margin: 4px 0 0; font: 300 26px/32px var(--ui); letter-spacing: 0; text-transform: none; color: var(--sm-paper); text-shadow: none; }
+
+/* The clock: time left big at the left, the wrap time at the right. */
+#shootModeOverlay .shoot-mode-clock { display: flex; flex-wrap: nowrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 10px 0 0; }
+.shoot-mode-left { display: flex; flex-direction: column; min-width: 0; margin: 0; }
+.shoot-mode-left[hidden] { display: none; }
+.shoot-mode-left-figure { font: 300 44px/48px var(--ui); color: var(--sm-paper); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.shoot-mode-left.is-over .shoot-mode-left-figure { color: var(--accent); }
+.shoot-mode-clock-label { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--sm-quiet); white-space: nowrap; }
+#shootModeOverlay .shoot-mode-wrap { display: flex; flex-direction: column; align-items: flex-end; margin-left: auto; text-align: right; }
+#shootModeOverlay #shootModeWrapPill { padding: 0; border: 0; border-radius: 0; background: none; font: 300 20px/24px var(--ui); color: var(--sm-paper); white-space: nowrap; }
+
+/* Golden hour and the must-haves still to get, side by side. */
+.shoot-mode-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+.shoot-mode-chips:not(:has(.shoot-mode-chip:not([hidden]))) { display: none; }
+#shootModeOverlay .shoot-mode-chip {
+  flex: 1 1 0; min-width: max-content; display: flex; align-items: center; justify-content: center; gap: 8px; height: 36px; margin: 0; padding: 0 12px;
+  box-sizing: border-box; border-radius: 8px; background: var(--sm-raised);
+  font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--sm-paper); white-space: nowrap;
+}
+#shootModeOverlay .shoot-mode-chip[hidden] { display: none; }
+#shootModeOverlay .shoot-mode-chip svg { flex: none; width: 24px; height: 12px; color: var(--accent); }
+#shootModeOverlay .shoot-mode-chip.shoot-mode-must-haves { background: var(--accent); color: #313D45; }
+
+/* Which page this is. */
+.shoot-mode-dots { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 18px 0 0; }
+.shoot-mode-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--sm-rule); }
+.shoot-mode-dots span.on { width: 8px; height: 8px; background: var(--sm-paper); }
+
+/* Last time's lesson, a card at the top of the first page. */
+#shootModeOverlay .shoot-mode-last-time { margin: 18px 0 0; padding: 14px 16px; border-radius: 12px; background: var(--sm-raised); font: 300 17px/24px var(--ui); color: var(--sm-paper); }
+#shootModeOverlay .shoot-mode-last-time[hidden] { display: none; }
+.shoot-mode-last-time-lead { display: block; margin: 0 0 4px; font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+#shootModeOverlay .shoot-mode-last-time-more { border: 1px solid var(--sm-rule); background: var(--sm-ground); color: var(--sm-paper); }
+
+/* Section names, small and quiet; the shot list's count at the right. */
+#shootModeOverlay .shoot-mode-body .shoot-mode-section-heading {
+  margin: 18px 0 8px; padding: 0; background: none; box-shadow: none;
+  font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--sm-quiet); text-shadow: none;
+}
+#shootModeOverlay .shoot-mode-section-heading::before, #shootModeOverlay .shoot-mode-section-heading::after { content: none; }
+#shootModeOverlay .shoot-mode-list-head { display: flex; justify-content: space-between; align-items: baseline; align-self: stretch; width: auto; }
+#shootModeShotCount { font-variant-numeric: tabular-nums; }
+
+/* Quick review: three outlined buttons in a row. */
+#shootModeOverlay .shoot-mode-quick-review { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0; }
+#shootModeOverlay .shoot-mode-quick-review .shoot-mode-quick-review-btn, #shootModeOverlay .shoot-mode-add-shot-btn {
+  display: flex; align-items: center; justify-content: center; height: 44px; min-height: 0; margin: 0; padding: 0 6px;
+  border: 0; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--sm-rule); background: none;
+  font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--sm-paper); white-space: nowrap;
+}
+#shootModeOverlay .shoot-mode-quick-review #shootModeWildCardBtn { background: none; color: var(--sm-paper); }
+#shootModeOverlay .shoot-mode-add-shot-btn { width: 100%; margin: 14px 0 0; }
+
+/* The shot list: a ring to tick (mango once shot), the shot, its star. */
+#shootModeOverlay .shoot-mode-shots { padding: 0; }
+#shootModeOverlay .shoot-mode-shot-row { gap: 12px; min-height: 52px; padding: 8px 0; border-bottom: 1px solid var(--sm-rule); }
+#shootModeOverlay .shoot-mode-shot-row:last-child { border-bottom: 1px solid var(--sm-rule); }
+#shootModeOverlay .shoot-mode-shot-check {
+  -webkit-appearance: none; appearance: none; flex: none; width: 24px; height: 24px; margin: 0; border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--sm-paper); background: none; cursor: pointer;
+}
+#shootModeOverlay .shoot-mode-shot-check:checked {
+  box-shadow: none; background: var(--accent) no-repeat center / 14px
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23313D45' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}
+#shootModeOverlay .shoot-mode-shot-row .shot-text {
+  flex: 1 1 auto; min-width: 0; padding: 2px 0; border: 0; background: none; box-shadow: none;
+  font: 400 18px/24px var(--ui); color: var(--sm-paper);
+}
+#shootModeOverlay .shoot-mode-shot-row .shot-text::placeholder { color: var(--sm-off); }
+#shootModeOverlay .shoot-mode-shot-row.shot-checked .shot-text { color: var(--sm-quiet); text-decoration: line-through; }
+#shootModeOverlay .shoot-mode-shot-row :is(.star-shot, .delete-shot) { width: 28px; height: 28px; border: 0; background: none; color: var(--sm-off); }
+#shootModeOverlay .shoot-mode-shot-row .star-shot.starred { color: var(--accent); }
+#shootModeOverlay .shoot-mode-shot-row .star-shot .star-icon { width: 20px; height: 20px; }
+#shootModeOverlay .shoot-mode-shot-row .star-shot.starred .star-icon { fill: var(--accent); }
+#shootModeOverlay .shoot-mode-shot-row .shot-drag-handle { color: var(--sm-off); background: none; }
+#shootModeOverlay .shoot-mode-empty { margin: 8px 0 0; padding: 0; font: 300 17px/24px var(--ui); color: var(--sm-quiet); }
+
+/* The mood board and the notes, each a page of its own. */
+#shootModeOverlay .shoot-mode-page-board .shoot-mode-section-heading, #shootModeOverlay .shoot-mode-page-more .shoot-mode-shooting-notes-label { margin-top: 18px; }
+#shootModeOverlay .shoot-mode-shooting-notes-label {
+  margin-left: 0; margin-right: 0; padding: 0; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--sm-quiet);
+}
+#shootModeOverlay .shoot-mode-shooting-notes-label textarea {
+  display: block; width: 100%; box-sizing: border-box; margin: 8px 0 0; padding: 12px 14px; border: 0; border-radius: 8px;
+  background: var(--sm-raised); box-shadow: none; font: 300 17px/24px var(--ui); letter-spacing: 0; text-transform: none; color: var(--sm-paper);
+}
+#shootModeOverlay .shoot-mode-shooting-notes-label textarea::placeholder { color: var(--sm-off); }
+
+/* Wild card and Done shooting, where the navigator is: its 64px over the
+   foot holds the 56px buttons. */
+#shootModeOverlay .shoot-mode-bottom-bar { gap: 8px; padding: 4px 16px calc(var(--nb-foot) + 4px); box-sizing: border-box; border: 0; box-shadow: none; background: var(--sm-ground); }
+#shootModeOverlay .shoot-mode-bottom-bar .shoot-mode-bottom-cta {
+  flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 8px; height: 56px; min-height: 0; margin: 0; padding: 0 10px;
+  border: 0; border-radius: 10px; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
+}
+#shootModeOverlay #shootModeWildCardBarBtn { background: var(--sm-raised); color: var(--sm-paper); }
+#shootModeOverlay #shootModeWildCardBarBtn svg { flex: none; width: 24px; height: 24px; color: var(--accent); }
+#shootModeOverlay #shootModeDoneBtn { background: var(--accent); color: #313D45; }
+#shootModeOverlay #shootModeDoneBtn svg { display: none; }

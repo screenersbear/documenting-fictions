@@ -5,12 +5,11 @@ window.EyeParts.addShootModeLastTime = function addShootModeLastTime(ed) {
   Object.assign(ed, { showShootModeLastTime });
   // ---------- Last time, in Shoot mode ----------
   // The first sentence of the lessons from the newest shoot of the same
-  // category shot on or before this one (lastShootWithLessons), in the same
-  // "Last time (name, date)" line the shoot page's guide uses, at the top of
-  // the first page. Read-only here: the Shooting notes page is the place to
+  // category shot on or before this one (lastShootWithLessons), under a
+  // "Last time, name on date" lead, in a card at the top of the first page. Read-only here: the Shooting notes page is the place to
   // copy it to if it's worth keeping.
-  // When that leaves some of the lessons out, a small "…" pill closes the
-  // quote: a tap on it (or on the quote) opens all of it in place, the pill
+  // When that leaves some of the lessons out, a small "…" pill ends the
+  // line: a tap on it (or on the quote) opens all of it in place, the pill
   // turning to an up arrow to fold it back — no "Read more" words added.
   function showShootModeLastTime(shoot) {
     const el = document.getElementById('shootModeLastTime');
@@ -25,19 +24,19 @@ window.EyeParts.addShootModeLastTime = function addShootModeLastTime(ed) {
     const first = (lessons.match(/^.*?[.!?…](?=\s+[A-Z“"‘'(]|$)/) || [lessons])[0];
     const line = first.length > 160 ? first.slice(0, 160).replace(/\s+\S*$/, '') : first;
     const when = ed.prettyDate(past.date);
-    const source = when ? `${ed.shootDisplayName(past)}, ${when}` : ed.shootDisplayName(past);
-    const lead = `<span class="field-hint-bold">Last time</span> (${ed.escapeHtml(source)}): `;
+    const source = when ? `${ed.shootDisplayName(past)} on ${when}` : ed.shootDisplayName(past);
+    const lead = `<span class="shoot-mode-last-time-lead">Last time, ${ed.escapeHtml(source)}</span>`;
     if (line === lessons) {
-      el.innerHTML = `${lead}“${ed.escapeHtml(line)}”`;
+      el.innerHTML = `${lead}${ed.escapeHtml(line)}`;
       return;
     }
-    // The quote stays plain text, so it runs on from "Last time (…):" like
-    // before (a <button> always lays out as a block); only the pill is one.
-    el.innerHTML = `${lead}<span class="shoot-mode-last-time-quote"></span><button type="button" class="shoot-mode-last-time-more" aria-expanded="false"></button>”`;
+    // The lesson stays plain text under its lead (a <button> always lays
+    // out as a block); only the pill after it is one.
+    el.innerHTML = `${lead}<span class="shoot-mode-last-time-quote"></span><button type="button" class="shoot-mode-last-time-more" aria-expanded="false"></button>`;
     const quote = el.querySelector('.shoot-mode-last-time-quote');
     const more = el.querySelector('.shoot-mode-last-time-more');
     const show = (open) => {
-      quote.textContent = `“${open ? lessons : line}`;
+      quote.textContent = open ? lessons : line;
       more.setAttribute('aria-expanded', open ? 'true' : 'false');
       more.setAttribute('aria-label', open ? 'Show less' : 'Show the rest');
       more.innerHTML = open
@@ -51,12 +50,8 @@ window.EyeParts.addShootModeLastTime = function addShootModeLastTime(ed) {
     quote.addEventListener('click', flip);
   }
 
+  // Exit, up top: out of Shoot mode with nothing changed.
   document.getElementById('shootModeExitBtn').addEventListener('click', ed.exitShootMode);
-  // The bottom bar's "Exit", beside "Done shooting": the same as the X up
-  // top — out of Shoot mode with nothing changed — for someone who only
-  // opened it to look, or by accident, and is looking down there for a way
-  // out rather than up at the X.
-  document.getElementById('shootModeLeaveBtn').addEventListener('click', ed.exitShootMode);
 
   // Same field as the main edit form's Shot list section (#shootShootingNotes)
   // — writes straight to the shoot, same as every other Shoot Mode field.

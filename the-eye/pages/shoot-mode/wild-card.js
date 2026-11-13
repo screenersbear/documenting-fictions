@@ -151,6 +151,7 @@ window.EyeParts.addShootModeWildCard = function addShootModeWildCard(ed) {
   }
 
   document.getElementById('shootModeWildCardBtn').addEventListener('click', showWildCard);
+  document.getElementById('shootModeWildCardBarBtn').addEventListener('click', showWildCard);
   // "Another" draws the next card in place, from the same deck.
   document.getElementById('shootModeWildCardAnotherBtn').addEventListener('click', showWildCard);
   document.getElementById('shootModeWildCardCloseBtn').addEventListener('click', closeWildCard);

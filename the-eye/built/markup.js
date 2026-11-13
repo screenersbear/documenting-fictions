@@ -1506,7 +1506,7 @@
 
 <!-- ============ TAB INTRO ============ -->
 <!-- Shoot mode: a stripped-back, full-screen working view for the day of -->
-<div id="shootModeOverlay" class="modal-overlay shoot-mode-overlay" hidden>
+<div id="shootModeOverlay" class="modal-overlay shoot-mode-overlay sm-dark" hidden>
   <!-- A page of the notebook, like Archive mode's, with the notebook around it
        dimmed so it reads as a page of its own (see breakShootModePages in
        app.js), in three parts that each start a fresh page: last time's
@@ -1518,48 +1518,55 @@
     <div class="shoot-mode-sheet" id="shootModeSheet" data-part="main">
     <div class="shoot-mode-header">
       <div class="shoot-mode-heading-wrap">
-        <p class="shoot-mode-eyebrow">Shoot mode</p>
+        <div class="shoot-mode-top">
+          <p class="shoot-mode-eyebrow">Shoot mode</p>
+          <button type="button" class="shoot-mode-exit" id="shootModeExitBtn" aria-label="Exit shoot mode">Exit</button>
+        </div>
         <h2 id="shootModeTitle"></h2>
-        <!-- The shoot's clock (see renderShootModeClock in app.js): the wrap
-             time as Archive mode's header pill, with the time left beside
-             it. The time input lies invisibly over the pill, so a tap opens
-             the phone's own time picker to move the wrap when the shoot
-             runs long. Under it, golden hour when it falls in the shoot, and
-             the must-haves still to get once time's short. -->
+        <!-- The shoot's clock (pages/shoot-mode/clock.js): how long is left
+             as the big figure, the wrap time at the right. The time input
+             lies invisibly over the wrap time, so a tap opens the phone's
+             own time picker to move the wrap when the shoot runs long.
+             Under it, golden hour when it falls in the shoot, and the
+             must-haves still to get once time's short. -->
         <div class="shoot-mode-clock">
+          <p class="shoot-mode-left" id="shootModeLeft" hidden><span class="shoot-mode-left-figure" id="shootModeTimeLeft"></span><span class="shoot-mode-clock-label" id="shootModeLeftLabel"></span></p>
           <span class="shoot-mode-wrap">
-            <span class="archive-mode-details-btn shoot-mode-wrap-pill" id="shootModeWrapPill"></span>
+            <span class="shoot-mode-wrap-pill" id="shootModeWrapPill"></span>
+            <span class="shoot-mode-clock-label" id="shootModeWrapLabel"></span>
             <input type="time" class="shoot-mode-wrap-input" id="shootModeWrapInput" aria-label="Wrap time" />
           </span>
-          <span class="shoot-mode-clock-text" id="shootModeTimeLeft"></span>
         </div>
-        <p class="shoot-mode-clock-text shoot-mode-clock-line" id="shootModeGoldenHour" hidden></p>
-        <p class="shoot-mode-clock-text shoot-mode-clock-line shoot-mode-must-haves" id="shootModeMustHaves" hidden></p>
+        <div class="shoot-mode-chips">
+          <p class="shoot-mode-chip shoot-mode-clock-line" id="shootModeGoldenHour" hidden></p>
+          <p class="shoot-mode-chip shoot-mode-clock-line shoot-mode-must-haves" id="shootModeMustHaves" hidden></p>
+        </div>
+        <!-- Which of the three pages this is (pages/shoot-mode/pages.js). -->
+        <div class="shoot-mode-dots" id="shootModeDots" aria-hidden="true"></div>
       </div>
-      <button type="button" class="icon-btn close-btn" id="shootModeExitBtn" aria-label="Exit shoot mode"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div class="shoot-mode-body shoot-mode-page-main" id="shootModeMain">
       <!-- What last time's shoot of this kind taught (see
            showShootModeLastTime in app.js), the same "Last time" line the
            shoot page's guide shows. -->
       <p class="field-hint shoot-mode-last-time" id="shootModeLastTime" hidden></p>
-      <h3 class="shoot-mode-section-heading heading-yellow">Quick review</h3>
+      <h3 class="shoot-mode-section-heading">Quick review</h3>
       <div class="shoot-mode-quick-review">
         <button type="button" class="shoot-mode-quick-review-btn" id="shootModeReviewDirectionBtn">Direction</button>
-        <button type="button" class="shoot-mode-quick-review-btn" id="shootModeReviewLightingBtn">Lighting setups</button>
+        <button type="button" class="shoot-mode-quick-review-btn" id="shootModeReviewLightingBtn">Lighting</button>
         <!-- Not a review like the two beside it: a random "try this" card
              (see Wild card in app.js). Same pill, so the row reads as one
              set of quick taps. -->
         <button type="button" class="shoot-mode-quick-review-btn" id="shootModeWildCardBtn">Wild card</button>
       </div>
-      <h3 class="shoot-mode-section-heading heading-navy" id="shootModeShotListHeading">Shot list</h3>
+      <h3 class="shoot-mode-section-heading shoot-mode-list-head" id="shootModeShotListHeading">Shot list <span id="shootModeShotCount"></span></h3>
       <div id="shootModeShotList" class="shoot-mode-shots"></div>
       <p class="shoot-mode-empty" id="shootModeShotsEmpty" hidden>No shots on the list for this shoot.</p>
       <button type="button" id="shootModeAddShotBtn" class="primary small-btn shoot-mode-add-shot-btn">+ Add shot</button>
     </div>
     <div class="shoot-mode-body shoot-mode-page-board" id="shootModeBoardPage">
       <div class="shoot-mode-moodboard-block" id="shootModeMoodboardBlock">
-      <h3 class="shoot-mode-section-heading heading-yellow" id="shootModeMoodboardHeading">Mood board</h3>
+      <h3 class="shoot-mode-section-heading" id="shootModeMoodboardHeading">Mood board</h3>
       <div id="shootModeMoodboard" class="moodboard-grid"></div>
       <p class="shoot-mode-empty" id="shootModeMoodEmpty" hidden>No mood board images for this shoot.</p>
       <!-- Same as the shoot page's own "+ Add photos", and the same look as
@@ -1581,10 +1588,10 @@
     <span id="shootModeFoot"></span>
     <button type="button" class="nb-page-step" id="shootModeNext" aria-label="Next page"></button>
   </div>
-    <!-- "Exit" leaves Shoot mode and changes nothing (same as the X up top);
-         "Done shooting" wraps up the shoot. One bar, split in two. -->
+    <!-- A wild card (the same as Quick review's), and "Done shooting",
+         which wraps up the shoot. One bar, split in two. Exit is up top. -->
     <div class="shoot-mode-bottom-bar">
-      <button type="button" class="shoot-mode-bottom-cta shoot-mode-bottom-cta-secondary" id="shootModeLeaveBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Exit</button>
+      <button type="button" class="shoot-mode-bottom-cta shoot-mode-bottom-cta-secondary" id="shootModeWildCardBarBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>Wild card</button>
       <button type="button" class="primary shoot-mode-bottom-cta" id="shootModeDoneBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Done shooting</button>
     </div>
 </div>
@@ -1594,7 +1601,7 @@
      there. Every field is tap-to-edit (see openExpandField's config-object
      form), writing straight to the shoot, same as everything else in
      Shoot Mode. -->
-<div id="shootModeReviewOverlay" class="modal-overlay shoot-mode-overlay" hidden>
+<div id="shootModeReviewOverlay" class="modal-overlay shoot-mode-overlay sm-dark" hidden>
   <div class="modal shoot-mode-modal shoot-mode-review-modal">
     <div class="shoot-mode-header">
       <div class="shoot-mode-heading-wrap">
@@ -1612,7 +1619,7 @@
      rounded, ink-outlined card (and its yellow eyebrow), but only as tall as
      the card itself, with Shoot mode's own split bar: "Another" draws the
      next one in place, OK puts it away. -->
-<div id="shootModeWildCardOverlay" class="modal-overlay shoot-mode-overlay" hidden>
+<div id="shootModeWildCardOverlay" class="modal-overlay shoot-mode-overlay sm-dark" hidden>
   <div class="modal shoot-mode-modal shoot-mode-review-modal shoot-mode-wild-card-modal">
     <div class="shoot-mode-header shoot-mode-wild-card-header">
       <div class="shoot-mode-heading-wrap">

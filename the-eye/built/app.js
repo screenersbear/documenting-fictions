@@ -21028,6 +21028,12 @@ window.EyeParts.addShootModeShotList = function addShootModeShotList(ed) {
   // a different interaction to relearn mid-shoot — just without the
   // checked-to-bottom sort, since watching the active list you're working
   // through reshuffle itself would be more disorienting than helpful here.
+  // "1 of 4" beside the list's name: how many are shot so far.
+  function renderShootModeShotCount(shoot) {
+    const shots = (shoot.shotList || []).filter(item => item && ed.hasText(item.text));
+    document.getElementById('shootModeShotCount').textContent = shots.length ? `${shots.filter(item => item.checked).length} of ${shots.length}` : '';
+  }
+
   function renderShootModeShots(shoot, focusIdx) {
     const list = document.getElementById('shootModeShotList');
     const shots = shoot.shotList || [];
@@ -21041,6 +21047,7 @@ window.EyeParts.addShootModeShotList = function addShootModeShotList(ed) {
       </div>
     `).join('');
     document.getElementById('shootModeShotsEmpty').hidden = shots.length !== 0;
+    renderShootModeShotCount(shoot);
 
     list.querySelectorAll('.star-shot').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -21059,6 +21066,7 @@ window.EyeParts.addShootModeShotList = function addShootModeShotList(ed) {
         shoot.shotList[idx].checked = cb.checked;
         ed.saveState();
         cb.closest('.shoot-mode-shot-row').classList.toggle('shot-checked', cb.checked);
+        renderShootModeShotCount(shoot);
         ed.renderAll();
         ed.renderShootModeClock();
       });
@@ -21069,6 +21077,7 @@ window.EyeParts.addShootModeShotList = function addShootModeShotList(ed) {
         shoot.shotList[Number(textarea.dataset.idx)].text = textarea.value;
         ed.autoSizeTextarea(textarea);
         ed.saveState();
+        renderShootModeShotCount(shoot);
       });
       textarea.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
@@ -21379,9 +21388,11 @@ window.EyeParts.addShootModePages = function addShootModePages(ed) {
     return atoms;
   }
 
-  // One page that scrolls: its three parts (the shot list, the mood board and
-  // the notes) one under another.
-  const shootModePages = () => (ed.shootModeFlows ? [{ part: 'main', i: 0 }] : []); ed.shootModePages = shootModePages;
+  // Three pages, each scrolling on its own (round 2, 07-shoot-mode): the
+  // shot list, the mood board, then the notes. A swipe turns them; the dots
+  // under the clock say which one this is.
+  const PARTS = ['main', 'board', 'more'];
+  const shootModePages = () => (ed.shootModeFlows ? PARTS.map(part => ({ part, i: 0 })) : []); ed.shootModePages = shootModePages;
 
   // The mood board's photos in rows of `cols` (a page breaks between rows).
   function groupShootModeBoard(cols) {
@@ -21457,6 +21468,8 @@ window.EyeParts.addShootModePages = function addShootModePages(ed) {
       ed.drawFlowPage(ed.shootModeFlows[page.part], page.i);
     }
     document.getElementById('shootModeFoot').textContent = `${ed.shootModeAt + 1} / ${Math.max(1, pages.length)}`;
+    document.getElementById('shootModeDots').innerHTML = pages.map((p, i) => `<span class="${i === ed.shootModeAt ? 'on' : ''}"></span>`).join('');
+    shootModePage.scrollTop = 0;
     document.getElementById('shootModePrev').disabled = ed.shootModeAt <= 0;
     document.getElementById('shootModeNext').disabled = ed.shootModeAt >= pages.length - 1;
     ed.queueLastPlace();
@@ -21592,13 +21605,13 @@ window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootModeClock = function addShootModeClock(ed) {
   Object.assign(ed, { startShootModeClock, stopShootModeClock, shootDateTime, shootWrapAt, renderShootModeClock });
   // ---------- Shoot mode clock ----------
-  // Under the shoot's name: when it wraps and, on the shoot's day, when it
-  // starts until it has, then how long is left ("Wrap 6:30 PM · 1h 12m
-  // left", then "10m over"). Tapping the wrap
-  // time moves it: the shoot's own end time, for a shoot that's running
-  // long. Under that, golden hour when it falls inside the shoot, and with
-  // MUST_HAVE_WARNING_MINUTES or less to go, how many must-have (starred)
-  // shots are still to get. Redrawn every 30 seconds while Shoot mode is up,
+  // Under the shoot's name: on the shoot's day, when it starts until it
+  // has, then how long is left as the big figure ("1h 12m", left until
+  // wrap; then "10m", over wrap), and at the right when it wraps. Tapping
+  // the wrap time moves it: the shoot's own end time, for a shoot that's
+  // running long. Under that, golden hour when it falls inside the shoot,
+  // and with MUST_HAVE_WARNING_MINUTES or less to go, how many must-have
+  // (starred) shots are still to get. Redrawn every 30 seconds while Shoot mode is up,
   // and whenever a shot is ticked, starred or removed.
   const MUST_HAVE_WARNING_MINUTES = 45;
   let shootModeClockTimer = null;
@@ -21638,12 +21651,9 @@ window.EyeParts.addShootModeClock = function addShootModeClock(ed) {
     return ed.prettyTime(`${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`);
   }
 
-  // "5:41–6:29 PM", or "11:40 AM–12:15 PM" across noon.
-  function clockRangeOf(from, to) {
-    const a = clockTimeOf(from);
-    const b = clockTimeOf(to);
-    return a.slice(-2) === b.slice(-2) ? `${a.slice(0, -3)}–${b}` : `${a}–${b}`;
-  }
+  // "5:41", for the golden hour chip.
+  const shortTimeOf = date => clockTimeOf(date).replace(/\s*[AP]M$/i, '');
+  const HALF_SUN = '<svg viewBox="0 0 24 12" aria-hidden="true"><path d="M1 12a11 11 0 0 1 22 0z" fill="currentColor"/></svg>';
 
   // "1h 12m", "2h", "45m".
   function formatMinutes(mins) {
@@ -21668,7 +21678,8 @@ window.EyeParts.addShootModeClock = function addShootModeClock(ed) {
     if (!shoot) return;
     const now = new Date();
     const input = document.getElementById('shootModeWrapInput');
-    document.getElementById('shootModeWrapPill').textContent = shoot.endTime ? `Wrap ${ed.prettyTime(shoot.endTime)}` : 'Set wrap time';
+    document.getElementById('shootModeWrapPill').textContent = shoot.endTime ? ed.prettyTime(shoot.endTime) : 'Not set';
+    document.getElementById('shootModeWrapLabel').textContent = shoot.endTime ? 'Wrap, tap to move' : 'Wrap, tap to set';
     // Not while the picker's open on it: its wheel writes as it turns.
     if (document.activeElement !== input) input.value = shoot.endTime || nextHalfHour(now);
 
@@ -21679,16 +21690,23 @@ window.EyeParts.addShootModeClock = function addShootModeClock(ed) {
     const wrap = onTheDay ? shootWrapAt(shoot) : null;
     const start = onTheDay ? shootDateTime(shoot.date, shoot.startTime) : null;
     let minsLeft = null;
-    let leftText = '';
+    let figure = '';
+    let label = '';
     if (start && now < start) {
-      leftText = `Starts ${ed.prettyTime(shoot.startTime)}`;
+      figure = ed.prettyTime(shoot.startTime);
+      label = 'Starts';
     } else if (wrap) {
       const ms = wrap - now;
       minsLeft = ms > 0 ? Math.ceil(ms / 60000) : -Math.floor(-ms / 60000);
-      if (minsLeft > 0) leftText = `${formatMinutes(minsLeft)} left`;
-      else leftText = minsLeft < 0 ? `${formatMinutes(-minsLeft)} over` : "It's wrap time";
+      if (minsLeft > 0) [figure, label] = [formatMinutes(minsLeft), 'Left until wrap'];
+      else if (minsLeft < 0) [figure, label] = [formatMinutes(-minsLeft), 'Over wrap'];
+      else [figure, label] = ['Now', "It's wrap time"];
     }
-    document.getElementById('shootModeTimeLeft').textContent = leftText;
+    const leftEl = document.getElementById('shootModeLeft');
+    leftEl.hidden = !figure;
+    leftEl.classList.toggle('is-over', minsLeft !== null && minsLeft < 0);
+    document.getElementById('shootModeTimeLeft').textContent = figure;
+    document.getElementById('shootModeLeftLabel').textContent = label;
 
     const mustHaves = (shoot.shotList || []).filter(item => item && item.starred && !item.checked && ed.hasText(item.text)).length;
     const mustHavesEl = document.getElementById('shootModeMustHaves');
@@ -21700,9 +21718,8 @@ window.EyeParts.addShootModeClock = function addShootModeClock(ed) {
     const golden = coords ? ed.shootGoldenHour(shoot, coords, now) : null;
     goldenEl.hidden = !golden;
     if (golden) {
-      goldenEl.textContent = golden.start <= now
-        ? `Golden hour now, until ${clockTimeOf(golden.end)}`
-        : `Golden hour ${clockRangeOf(golden.start, golden.end)}`;
+      const words = golden.start <= now ? `Golden hour till ${shortTimeOf(golden.end)}` : `Golden hour ${shortTimeOf(golden.start)}`;
+      goldenEl.innerHTML = `${HALF_SUN}<span>${words}</span>`;
     }
   }
 
@@ -21836,12 +21853,11 @@ window.EyeParts.addShootModeLastTime = function addShootModeLastTime(ed) {
   Object.assign(ed, { showShootModeLastTime });
   // ---------- Last time, in Shoot mode ----------
   // The first sentence of the lessons from the newest shoot of the same
-  // category shot on or before this one (lastShootWithLessons), in the same
-  // "Last time (name, date)" line the shoot page's guide uses, at the top of
-  // the first page. Read-only here: the Shooting notes page is the place to
+  // category shot on or before this one (lastShootWithLessons), under a
+  // "Last time, name on date" lead, in a card at the top of the first page. Read-only here: the Shooting notes page is the place to
   // copy it to if it's worth keeping.
-  // When that leaves some of the lessons out, a small "…" pill closes the
-  // quote: a tap on it (or on the quote) opens all of it in place, the pill
+  // When that leaves some of the lessons out, a small "…" pill ends the
+  // line: a tap on it (or on the quote) opens all of it in place, the pill
   // turning to an up arrow to fold it back — no "Read more" words added.
   function showShootModeLastTime(shoot) {
     const el = document.getElementById('shootModeLastTime');
@@ -21856,19 +21872,19 @@ window.EyeParts.addShootModeLastTime = function addShootModeLastTime(ed) {
     const first = (lessons.match(/^.*?[.!?…](?=\s+[A-Z“"‘'(]|$)/) || [lessons])[0];
     const line = first.length > 160 ? first.slice(0, 160).replace(/\s+\S*$/, '') : first;
     const when = ed.prettyDate(past.date);
-    const source = when ? `${ed.shootDisplayName(past)}, ${when}` : ed.shootDisplayName(past);
-    const lead = `<span class="field-hint-bold">Last time</span> (${ed.escapeHtml(source)}): `;
+    const source = when ? `${ed.shootDisplayName(past)} on ${when}` : ed.shootDisplayName(past);
+    const lead = `<span class="shoot-mode-last-time-lead">Last time, ${ed.escapeHtml(source)}</span>`;
     if (line === lessons) {
-      el.innerHTML = `${lead}“${ed.escapeHtml(line)}”`;
+      el.innerHTML = `${lead}${ed.escapeHtml(line)}`;
       return;
     }
-    // The quote stays plain text, so it runs on from "Last time (…):" like
-    // before (a <button> always lays out as a block); only the pill is one.
-    el.innerHTML = `${lead}<span class="shoot-mode-last-time-quote"></span><button type="button" class="shoot-mode-last-time-more" aria-expanded="false"></button>”`;
+    // The lesson stays plain text under its lead (a <button> always lays
+    // out as a block); only the pill after it is one.
+    el.innerHTML = `${lead}<span class="shoot-mode-last-time-quote"></span><button type="button" class="shoot-mode-last-time-more" aria-expanded="false"></button>`;
     const quote = el.querySelector('.shoot-mode-last-time-quote');
     const more = el.querySelector('.shoot-mode-last-time-more');
     const show = (open) => {
-      quote.textContent = `“${open ? lessons : line}`;
+      quote.textContent = open ? lessons : line;
       more.setAttribute('aria-expanded', open ? 'true' : 'false');
       more.setAttribute('aria-label', open ? 'Show less' : 'Show the rest');
       more.innerHTML = open
@@ -21882,12 +21898,8 @@ window.EyeParts.addShootModeLastTime = function addShootModeLastTime(ed) {
     quote.addEventListener('click', flip);
   }
 
+  // Exit, up top: out of Shoot mode with nothing changed.
   document.getElementById('shootModeExitBtn').addEventListener('click', ed.exitShootMode);
-  // The bottom bar's "Exit", beside "Done shooting": the same as the X up
-  // top — out of Shoot mode with nothing changed — for someone who only
-  // opened it to look, or by accident, and is looking down there for a way
-  // out rather than up at the X.
-  document.getElementById('shootModeLeaveBtn').addEventListener('click', ed.exitShootMode);
 
   // Same field as the main edit form's Shot list section (#shootShootingNotes)
   // — writes straight to the shoot, same as every other Shoot Mode field.
@@ -22418,6 +22430,7 @@ window.EyeParts.addShootModeWildCard = function addShootModeWildCard(ed) {
   }
 
   document.getElementById('shootModeWildCardBtn').addEventListener('click', showWildCard);
+  document.getElementById('shootModeWildCardBarBtn').addEventListener('click', showWildCard);
   // "Another" draws the next card in place, from the same deck.
   document.getElementById('shootModeWildCardAnotherBtn').addEventListener('click', showWildCard);
   document.getElementById('shootModeWildCardCloseBtn').addEventListener('click', closeWildCard);
