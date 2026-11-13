@@ -177,7 +177,7 @@ describe('opening the database', () => {
     };
     const e = await reason(tooLong(db.getMeta('k')));
     expect(e).toBeInstanceOf(Error);
-    expect(e.message).toBe('Close Contact Sheet in your other tabs, then try again.');
+    expect(e.message).toBe('Close Layouts in your other tabs, then try again.');
   });
 
   it('really can try again: once the other tabs are closed, the next call opens', async () => {

@@ -30,7 +30,7 @@
     let steps = null;
     const s = sheet(`
       <h2>Back up all four</h2>
-      <p>One file with Ref, The Eye, Contact Sheet and Overthoughts, photos and all. Keep it somewhere safe, like Files or iCloud Drive.</p>
+      <p>One file with Ref, The Eye, Layouts and Overthoughts, photos and all. Keep it somewhere safe, like Files or iCloud Drive.</p>
       <button type="button" class="sheet-btn primary" data-save>Save a backup</button>
       <button type="button" class="sheet-btn" data-restore>Restore from a backup</button>
       <p class="sheet-note" hidden></p>
@@ -71,7 +71,7 @@
         if (!files.length) return;
         const c = sheet(`
           <h2>Restore all four?</h2>
-          <p>Everything in Ref, The Eye, Contact Sheet and Overthoughts on this device is swapped for what's in the file. This can't be undone, so save a backup first if you might want today's back.</p>
+          <p>Everything in Ref, The Eye, Layouts and Overthoughts on this device is swapped for what's in the file. This can't be undone, so save a backup first if you might want today's back.</p>
           <button type="button" class="sheet-btn primary danger" data-yes>Restore</button>
           <button type="button" class="sheet-btn plain" data-close>Cancel</button>
           <p class="sheet-note" hidden></p>`);

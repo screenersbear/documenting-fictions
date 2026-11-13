@@ -63,7 +63,7 @@ route();
 if (suite && suite.at === 'new') setTimeout(newChapter, 400);
 // Inside Documenting Fictions, the first time: how to get back to the shelf,
 // and the tour if it's wanted.
-else if (suite && suite.firstVisit) setTimeout(() => { if (!document.querySelector('.sheet-overlay')) welcome('Contact Sheet', openIntro); }, 900);
+else if (suite && suite.firstVisit) setTimeout(() => { if (!document.querySelector('.sheet-overlay')) welcome('Layouts', openIntro); }, 900);
 
 // Always upright, quietly. The manifest asks for it once the app is
 // installed; where a browser allows a lock, this holds it. iPhone home-screen

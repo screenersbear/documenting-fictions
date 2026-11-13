@@ -94,7 +94,7 @@ export function openExport(p, photos) {
       <ol class="order-grid${n > 1 ? ' is-pick' : ''}" data-grid>
         ${files.map((f, i) => `<li data-i="${i}"><img style="aspect-ratio:${f.width}/${f.height}" src="${urls[i]}" alt="${esc(pageWord(p))} ${i + 1}" draggable="false" /><span class="order-num"></span>${f.isVideo ? `<span class="order-vid">${ICONS.play}</span>` : ''}<span class="order-off">Left out</span></li>`).join('')}
       </ol>
-      ${empty ? `<p class="tip">${empty === 1 ? '1 frame is' : `${empty} frames are`} empty and show the background color.</p>` : ''}
+      ${empty ? `<p class="tip">${empty === 1 ? '1 box is' : `${empty} boxes are`} empty and show the background color.</p>` : ''}
       ${slidesWithVideo.length && !record ? '<p class="tip">This browser can\'t save video, so those slides are saved as still images. Safari and Chrome can.</p>' : ''}
       <div class="button-stack wide">
         <button type="button" class="modal-cta primary" data-save></button>

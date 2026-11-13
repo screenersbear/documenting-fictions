@@ -34,7 +34,7 @@ export function openNotebookExport() {
     }
     if (!s.overlay.isConnected) return;
     if (!book) {
-      s.body.innerHTML = '<p class="sheet-message">There are no chapters to export yet.</p>';
+      s.body.innerHTML = '<p class="sheet-message">There are no layouts to export yet.</p>';
       return;
     }
     free = showPdf(s, { ...book, fileName: 'contact-sheet-notebook.pdf', onSaved: () => s.close() });

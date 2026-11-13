@@ -40,7 +40,7 @@
     // The notebooks with the notebooks button in their band (round 2) say to
     // tap it; the others, to swipe the notebook shut.
     words: function (name) {
-      var button = ['the-eye', 'ref'].indexOf(id) >= 0;
+      var button = ['the-eye', 'ref', 'contact-sheet'].indexOf(id) >= 0;
       return {
         back: ['Back to your notebooks', button
           ? 'Tap the notebooks button at the top of the screen. That takes you back to all four.'

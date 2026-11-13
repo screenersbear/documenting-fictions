@@ -554,7 +554,7 @@ function openDb() {
 			resolve(db);
 		};
 		req.onerror = () => reject(req.error);
-		req.onblocked = () => reject(new Error("Close Contact Sheet in your other tabs, then try again."));
+		req.onblocked = () => reject(new Error("Close Layouts in your other tabs, then try again."));
 	});
 	dbPromise.catch(() => {
 		dbPromise = null;
@@ -1590,7 +1590,7 @@ function addStrip(ed) {
 		const html = [];
 		for (let i = 0; i < ed.p.slides; i++) {
 			for (const b of borderBands(ed.p, i)) {
-				html.push(`<div class="band" style="left:${b.x * ed.z}px;top:${b.y * ed.z}px;width:${b.w * ed.z}px;height:${b.h * ed.z}px;background:${esc(ed.p.background)}"></div>`);
+				html.push(`<div class="border-band" style="left:${b.x * ed.z}px;top:${b.y * ed.z}px;width:${b.w * ed.z}px;height:${b.h * ed.z}px;background:${esc(ed.p.background)}"></div>`);
 			}
 		}
 		ed.bandsEl.innerHTML = html.join("");
@@ -1713,7 +1713,7 @@ function addTools(ed) {
 		ed.toolsEl.innerHTML = [
 			smallTool("back", ICONS.back, "Back to the notebook"),
 			...history,
-			tool("add-frame", ICONS.addFrame, "Frame"),
+			tool("add-frame", ICONS.addFrame, "Box"),
 			tool("slides", ICONS.slides, pageTitle(ed.p, true)),
 			tool("layout", ICONS.layout, "Layout"),
 			tool("more", ICONS.more, "More"),
@@ -1737,7 +1737,7 @@ function addTools(ed) {
 		const keep = was ? was.scrollLeft : 0;
 		ed.trayEl.innerHTML = `
       <button type="button" class="tray-add" data-act="add-photos">${ICONS.plus}<span>Photos</span></button>
-      <div class="tray-list" data-tray-list>${items || "<p class=\"tray-hint\">Add photos and videos from your camera roll. They fill empty frames in order.</p>"}</div>`;
+      <div class="tray-list" data-tray-list>${items || "<p class=\"tray-hint\">Add photos and videos from your camera roll. They fill empty boxes in order.</p>"}</div>`;
 		ed.trayEl.querySelector("[data-tray-list]").scrollLeft = keep;
 	}
 }
@@ -2000,7 +2000,7 @@ function addFrameActions(ed) {
 		if (!f) return;
 		const idx = ed.p.frames.indexOf(f);
 		const key = await choiceSheet({
-			title: "Frame",
+			title: "Box",
 			options: [
 				{
 					key: "fill",
@@ -2010,16 +2010,16 @@ function addFrameActions(ed) {
 				{
 					key: "front",
 					label: "Bring to front",
-					detail: "Over the frames it overlaps."
+					detail: "Over the boxes it overlaps."
 				},
 				{
 					key: "back",
 					label: "Send to back",
-					detail: "Under the frames it overlaps."
+					detail: "Under the boxes it overlaps."
 				},
 				...f.photoId ? [{
 					key: "empty",
-					label: "Empty this frame",
+					label: "Empty this box",
 					detail: "The photo stays in the tray."
 				}] : []
 			].filter((o) => !(o.key === "front" && idx === ed.p.frames.length - 1) && !(o.key === "back" && idx === 0))
@@ -2269,12 +2269,12 @@ function addPhotosInOut(ed) {
 			const word = pageWord(ed.p, room !== 1);
 			const photosLine = queue.length === 1 ? "One photo" : `${queue.length} photos`;
 			const key = await choiceSheet({
-				title: "More photos than frames",
-				message: open ? `${photosLine}, ${open === 1 ? "one empty frame" : `${open} empty frames`}.` : `${photosLine} without a frame.`,
+				title: "More photos than boxes",
+				message: open ? `${photosLine}, ${open === 1 ? "one empty box" : `${open} empty boxes`}.` : `${photosLine} without a box.`,
 				options: [{
 					key: "slides",
 					label: `Add ${room} ${word}`,
-					detail: open ? `Fills the empty frames, then one photo on each new ${pageWord(ed.p)}.` : `One photo on each new ${pageWord(ed.p)}.`
+					detail: open ? `Fills the empty boxes, then one photo on each new ${pageWord(ed.p)}.` : `One photo on each new ${pageWord(ed.p)}.`
 				}, {
 					key: "tray",
 					label: "Keep them in the tray",
@@ -2341,14 +2341,14 @@ function addPhotosInOut(ed) {
 			title: f.photoId ? "Swap photo" : many ? "Add photos" : "Add a photo",
 			className: many ? "has-footer" : "",
 			body: `
-        ${many ? `<p class="sheet-message">Pick up to ${max}, one for each empty frame on this ${esc(pageWord(ed.p))}.</p>` : ""}
+        ${many ? `<p class="sheet-message">Pick up to ${max}, one for each empty box on this ${esc(pageWord(ed.p))}.</p>` : ""}
         ${pickColumns(list, f.photoId)}
         ${many ? `<div class="sheet-footer"><div class="button-stack">
               <button type="button" class="small-btn primary" data-place disabled>Place photos</button>
               <button type="button" class="small-btn secondary" data-new>+ From camera roll</button>
             </div></div>` : `<div class="button-stack">
               <button type="button" class="small-btn primary" data-new>+ From camera roll</button>
-              ${f.photoId ? "<button type=\"button\" class=\"small-btn secondary\" data-empty>Empty this frame</button>" : ""}
+              ${f.photoId ? "<button type=\"button\" class=\"small-btn secondary\" data-empty>Empty this box</button>" : ""}
             </div>`}`
 		});
 		const picked = [];
@@ -2455,7 +2455,7 @@ function addSheets(ed) {
               </span>
             </li>`).join("")}
         </ol>
-        <p class="field-hint">The grid button picks a new layout for that ${pageWord(ed.p)}. Copy makes a new ${pageWord(ed.p)} with the same empty frames. A photo that crosses a seam moves with the ${pageWord(ed.p)} it starts on.</p>
+        <p class="field-hint">The grid button picks a new layout for that ${pageWord(ed.p)}. Copy makes a new ${pageWord(ed.p)} with the same empty boxes. A photo that crosses a seam moves with the ${pageWord(ed.p)} it starts on.</p>
         <div class="sheet-footer">
           <button type="button" class="modal-cta primary" data-add${n >= 20 ? " disabled" : ""}>${n >= 20 ? `${20} is the most` : `+ Add a ${pageWord(ed.p)}`}</button>
         </div>`;
@@ -2537,7 +2537,7 @@ function addSlideLayouts(ed) {
 				title: isNew ? `New ${word}` : `${word} ${k + 1} layout`,
 				className: "sheet-wide",
 				body: `
-          ${hasPhotos ? `<p class="sheet-message">Its photos move into the new frames, in order.</p>` : ""}
+          ${hasPhotos ? `<p class="sheet-message">Its photos move into the new boxes, in order.</p>` : ""}
           <div class="layout-grid">
             ${options.map((o, n) => `<button type="button" class="layout-opt" data-n="${n}">${layoutSvg(q, at, o)}<span>${esc(o.name)}</span></button>`).join("")}
           </div>
@@ -2598,7 +2598,7 @@ function addSlideLayouts(ed) {
           <div class="field">
             <span class="field-label">Slide border <b class="range-val" data-val="pad"></b></span>
             <input type="range" min="0" max="200" step="2" value="${ed.p.padding}" data-range="pad" />
-            <span class="field-hint">An even border around each ${pageWord(ed.p)}, in the background color. Frames also snap this far apart.</span>
+            <span class="field-hint">An even border around each ${pageWord(ed.p)}, in the background color. Boxes also snap this far apart.</span>
             <label class="check"><input type="checkbox" data-seams${ed.p.seamsOpen ? " checked" : ""} /> Leave seams open</label>
             <span class="field-hint">No border where ${pageWord(ed.p, true)} meet, so a panorama runs straight across.</span>
           </div>
@@ -2666,7 +2666,7 @@ function addSlideLayouts(ed) {
 		const unused = ed.p.photoIds.filter((pid) => !ed.usedIds().has(pid));
 		const both = ed.z <= ed.fitZ("all") * 1.05;
 		const key = await choiceSheet({
-			title: "Chapter",
+			title: "Layout",
 			options: [
 				{
 					key: "rename",
@@ -2701,11 +2701,11 @@ function addSlideLayouts(ed) {
 				...unused.length ? [{
 					key: "clear",
 					label: "Remove unused photos",
-					detail: `${unused.length} in the tray, not in a frame.`
+					detail: `${unused.length} in the tray, not in a box.`
 				}] : [],
 				{
 					key: "delete",
-					label: "Delete chapter",
+					label: "Delete layout",
 					detail: "It and its photos go from this device.",
 					danger: true
 				}
@@ -2725,7 +2725,7 @@ function addSlideLayouts(ed) {
 	}
 	async function deleteChapter() {
 		const ok = await confirmSheet({
-			title: "Delete chapter?",
+			title: "Delete layout?",
 			message: `<b>${esc(ed.p.name)}</b> and its photos will be deleted from this device. Photos in your camera roll stay where they are.`,
 			confirmLabel: "Delete",
 			danger: true
@@ -3413,7 +3413,7 @@ function showPdf(s, { sheets, report, fileName, onSaved }) {
 					label: l.label,
 					detail: `${l.ppi} pixels per inch. ${l.blurry ? "Will look blurry." : "May look a little soft."}`
 				})),
-				footer: "<p class=\"field-hint\">To fix one, use a larger copy of the picture, zoom out of it, or make its frame smaller.</p>"
+				footer: "<p class=\"field-hint\">To fix one, use a larger copy of the picture, zoom out of it, or make its box smaller.</p>"
 			});
 			if (key !== null) goTo(report.low[Number(key)].sheet);
 		});
@@ -3651,7 +3651,7 @@ function openNotebookExport() {
 		}
 		if (!s.overlay.isConnected) return;
 		if (!book) {
-			s.body.innerHTML = "<p class=\"sheet-message\">There are no chapters to export yet.</p>";
+			s.body.innerHTML = "<p class=\"sheet-message\">There are no layouts to export yet.</p>";
 			return;
 		}
 		free = showPdf(s, {
@@ -3793,7 +3793,7 @@ function openExport(p, photos) {
       <ol class="order-grid${n > 1 ? " is-pick" : ""}" data-grid>
         ${files.map((f, i) => `<li data-i="${i}"><img style="aspect-ratio:${f.width}/${f.height}" src="${urls[i]}" alt="${esc(pageWord(p))} ${i + 1}" draggable="false" /><span class="order-num"></span>${f.isVideo ? `<span class="order-vid">${ICONS.play}</span>` : ""}<span class="order-off">Left out</span></li>`).join("")}
       </ol>
-      ${empty ? `<p class="tip">${empty === 1 ? "1 frame is" : `${empty} frames are`} empty and show the background color.</p>` : ""}
+      ${empty ? `<p class="tip">${empty === 1 ? "1 box is" : `${empty} boxes are`} empty and show the background color.</p>` : ""}
       ${slidesWithVideo.length && !record ? "<p class=\"tip\">This browser can't save video, so those slides are saved as still images. Safari and Chrome can.</p>" : ""}
       <div class="button-stack wide">
         <button type="button" class="modal-cta primary" data-save></button>
@@ -4934,8 +4934,13 @@ async function mountEditor(view, id) {
 			const get = await previewSources();
 			const c = previewCanvas(p, get, {
 				height: 200,
-				count: Math.min(3, p.slides)
+				count: Math.min(3, p.slides),
+				gap: 11
 			});
+			const ctx = c.getContext("2d");
+			ctx.globalCompositeOperation = "destination-over";
+			ctx.fillStyle = "#ffffff";
+			ctx.fillRect(0, 0, c.width, c.height);
 			const blob = await canvasToBlob(c, "image/jpeg", .8);
 			c.width = c.height = 0;
 			p.thumb = blob;
@@ -4971,7 +4976,7 @@ async function mountEditor(view, id) {
         </div>
       </div>
       <button type="button" class="ws-add" data-act="add-slide" aria-label="Add a slide">${ICONS.plus}</button>
-      <div class="ed-name" data-name><button type="button" data-act="rename" aria-label="Rename this chapter"><span>${esc(p.name)}</span></button></div>
+      <div class="ed-name" data-name><button type="button" data-act="rename" aria-label="Rename this layout"><span>${esc(p.name)}</span></button></div>
       <div class="ed-adjust" data-adjust hidden>
         <span class="ed-adjust-label">Zoom</span>
         <input type="range" min="1" max="5" step="0.01" value="1" data-zoom aria-label="Photo zoom" />
@@ -5664,106 +5669,10 @@ function mountStickers(root, front) {
 	};
 }
 
-// components/navicon.js
-const STEP = 30;
-const SLIDE_MS = 200;
-const far = () => Math.min(window.innerWidth * .25, 120);
-const TRI = "<svg viewBox=\"0 0 10 12\" aria-hidden=\"true\"><path d=\"M2.3 1.5Q5.6 3.8 8.7 6.1 5.5 8.3 2.2 10.5 2.5 6 2.3 1.5Z\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/></svg>";
-const navHtml = () => `
-  <div class="tool nb-nav">
-    <div class="slider">
-      <button type="button" class="slide-arrow is-prev" data-toc="shut" aria-label="Close the notebook">${TRI}</button>
-      <button type="button" class="slide-now" data-toc="first" aria-label="Table of contents, first page"><span class="slide-strip" aria-hidden="true" style="transform: translateX(-${STEP}px)"><span class="slide-icon">${ICONS.shut}</span><span class="slide-icon">${ICONS.contents}</span></span></button>
-      <button type="button" class="slide-arrow is-next is-off" tabindex="-1" aria-hidden="true" disabled>${TRI}</button>
-    </div>
-  </div>`;
-function mountNav(bar, { onShut, onSwiped }) {
-	const strip = bar.querySelector(".nb-nav .slide-strip");
-	let drag = null;
-	let busy = false;
-	let timer = 0;
-	const to = (x, moving = false) => {
-		strip.classList.toggle("is-moving", moving);
-		strip.style.transform = `translateX(${(x - STEP).toFixed(1)}px)`;
-	};
-	const along = (dx) => {
-		const f = far();
-		if (dx <= 0) return -6 * (1 - Math.exp(dx / 40));
-		if (dx <= f) return STEP * dx / f;
-		return STEP + 6 * (1 - Math.exp(-(dx - f) / 40));
-	};
-	function shut() {
-		if (busy) return;
-		busy = true;
-		to(STEP, true);
-		clearTimeout(timer);
-		timer = setTimeout(onShut, SLIDE_MS);
-	}
-	function reset() {
-		clearTimeout(timer);
-		busy = false;
-		drag = null;
-		to(0);
-	}
-	bar.addEventListener("pointerdown", (e) => {
-		if (busy || e.button) return;
-		drag = {
-			id: e.pointerId,
-			x0: e.clientX,
-			y0: e.clientY,
-			moved: false,
-			dx: 0,
-			v: 0,
-			t: e.timeStamp,
-			lx: e.clientX
-		};
-	});
-	bar.addEventListener("pointermove", (e) => {
-		const d = drag;
-		if (!d || e.pointerId !== d.id) return;
-		const dx = e.clientX - d.x0;
-		const dy = e.clientY - d.y0;
-		if (!d.moved) {
-			if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-			if (Math.abs(dy) > Math.abs(dx)) {
-				drag = null;
-				return;
-			}
-			d.moved = true;
-			onSwiped();
-			try {
-				bar.setPointerCapture(e.pointerId);
-			} catch {}
-		}
-		d.v = (e.clientX - d.lx) / Math.max(1, e.timeStamp - d.t);
-		d.lx = e.clientX;
-		d.t = e.timeStamp;
-		d.dx = dx;
-		to(along(dx));
-	});
-	const end = (e) => {
-		const d = drag;
-		if (!d || e.pointerId !== d.id) return;
-		drag = null;
-		if (!d.moved) return;
-		onSwiped();
-		const flick = d.v > .45 && d.dx > 24;
-		if (e.type === "pointerup" && (along(d.dx) > STEP / 2 || flick)) shut();
-		else to(0, true);
-	};
-	bar.addEventListener("pointerup", end);
-	bar.addEventListener("pointercancel", end);
-	return {
-		shut,
-		reset,
-		destroy: () => clearTimeout(timer)
-	};
-}
-
 // pages/book-sizes.js
 const TIP_KEY = "contact-sheet-home-tip";
 const RATIO = 1e3 / 1360;
-const TIP = `<p class="toc-tip"><b>Keep your chapters safe:</b> add Contact Sheet to your Home Screen. Safari can clear the photos of sites that aren't on it. <button type="button" class="text-btn" data-tip-off>Got it</button></p>`;
+const TIP = `<p class="toc-tip"><b>Keep your layouts safe:</b> add Layouts to your Home Screen. Safari can clear the photos of sites that aren't on it. <button type="button" class="text-btn" data-tip-off>Got it</button></p>`;
 const STACK = 16;
 const TURNED = 20 * Math.PI / 180;
 const PERSPECTIVE = 1100;
@@ -5773,9 +5682,9 @@ const PAPER_IN = 7;
 const OVER = 7 + 12;
 const OPEN_MS = 860;
 const ZOOM_MS = 760;
-const TABS = [["toc", "Table of contents"], ["new", "New chapter"]];
+const TABS = [["toc", "All layouts"], ["new", "New layout"]];
 function artReady() {
-	const book = document.documentElement.dataset.book || "orange";
+	const book = document.documentElement.dataset.book || "berry";
 	const ready = ["cover", "block"].map((part) => {
 		const img = new Image();
 		img.src = `art/${book}-${part}.webp`;
@@ -5789,6 +5698,40 @@ function modeOfHash(h) {
 }
 const currentMode = () => modeOfHash((location.hash || "#/").slice(1) || "/");
 
+// components/band.js
+const ring = (label, attr, svg) => `<button type="button" class="ring-btn" ${attr} aria-label="${esc(label)}"><span>${svg}</span></button>`;
+const line = (d) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const BOOKS = "<svg viewBox=\"0 0 24 24\" width=\"19\" height=\"19\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"5\" width=\"4.5\" height=\"14\" rx=\"1\"/><rect x=\"9.5\" y=\"3\" width=\"4.5\" height=\"16\" rx=\"1\"/><path d=\"M16 6.2l3.6-1 3 12.6-3.6 1z\"/></svg>";
+const PLUS = line("<line x1=\"12\" y1=\"5\" x2=\"12\" y2=\"19\"/><line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/>");
+const MENU = line("<line x1=\"4\" y1=\"7\" x2=\"20\" y2=\"7\"/><line x1=\"4\" y1=\"12\" x2=\"20\" y2=\"12\"/><line x1=\"4\" y1=\"17\" x2=\"20\" y2=\"17\"/>");
+const MARK = "<svg class=\"band-mark\" viewBox=\"0 0 80 40\" aria-hidden=\"true\"><rect x=\"6\" width=\"20\" height=\"40\" class=\"mk-p\"/><rect x=\"32\" y=\"8\" width=\"20\" height=\"32\" class=\"mk-w\"/><rect x=\"58\" y=\"14.4\" width=\"20\" height=\"25.6\" class=\"mk-p\"/></svg>";
+const BACK = line("<polyline points=\"15 5 8 12 15 19\"/>");
+const CLOSE = line("<line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/>");
+const MORE = "<svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\"><circle cx=\"5\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/><circle cx=\"19\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/></svg>";
+const bandDate = (d = new Date()) => d.toLocaleDateString("en-GB", {
+	weekday: "short",
+	day: "numeric",
+	month: "short"
+}).replace(",", "");
+function bandHtml({ title, place, add }) {
+	return `
+    <header class="band">
+      <h1 class="band-title">${esc(title)}</h1>
+      <div class="band-btns">${ring("Back to your notebooks", "data-books", BOOKS)}${ring(add, "data-band-add", PLUS)}${ring("Options", "data-app-menu", MENU)}</div>
+      ${MARK}
+      <p class="band-line"><b>${esc(place)}</b><span class="band-rule"></span><span class="band-date">${bandDate()}</span></p>
+    </header>`;
+}
+function shortBandHtml({ name, backAttr, backLabel = "Back", end = null }) {
+	const right = end ? ring(end.label, end.attr, end.svg) : "<span class=\"ring-btn\" aria-hidden=\"true\"></span>";
+	return `
+    <header class="band band-short">
+      ${ring(backLabel, backAttr, BACK)}
+      <p class="band-line"><b>${esc(name)}</b><span class="band-rule"></span></p>
+      ${right}
+    </header>`;
+}
+
 // pages/book-contents.js
 function addContents(ed) {
 	Object.assign(ed, {
@@ -5801,19 +5744,26 @@ function addContents(ed) {
 		return `
       <div class="toc-row">
         <a class="toc-open" href="#/edit/${esc(p.id)}" draggable="false">
-          <span class="toc-thumb">${u ? `<img src="${u}" alt="" draggable="false" />` : ""}</span>
+          <span class="toc-strip" aria-hidden="true">${u ? `<img src="${u}" alt="" draggable="false" />` : "<span class=\"toc-blank\"></span>"}</span>
           <span class="toc-text">
             <span class="toc-name">${esc(p.name)}</span>
             <span class="toc-meta">${p.slides} ${esc(pageWord(p, p.slides !== 1))} · ${esc(shortDate(p.updatedAt))}</span>
           </span>
         </a>
+        <button type="button" class="toc-more" data-layout-more="${esc(p.id)}" aria-label="More for ${esc(p.name)}">${MORE}</button>
       </div>`;
 	}
 	function pageHtml() {
 		const rows = ed.chapters.map(rowHtml).join("");
 		return `
-      <h2 class="nb-head has-plus${window.DF_SUITE ? " has-menu" : ""}">${window.DF_SUITE ? `<button type="button" class="toc-menu" data-app-menu aria-label="Menu">${ICONS.menu}</button>` : ""}Table of contents<button type="button" class="toc-plus" data-toc="new" aria-label="New chapter">${ICONS.plus}</button></h2>
-      <div class="toc-list">${rows || "<p class=\"toc-empty\">No chapters yet.</p>"}</div>
+      ${bandHtml({
+			title: "Layouts",
+			place: "All layouts",
+			add: "New layout"
+		})}
+      <div class="list-head"><h2>Newest first <span>${ed.chapters.length}</span></h2><button type="button" class="list-act" data-toc="new">${PLUS}New layout</button></div>
+      <div class="list-rule"></div>
+      <div class="toc-list">${rows || "<p class=\"toc-empty\">No layouts yet.</p>"}</div>
       ${ed.showTip ? TIP : ""}`;
 	}
 	function drawPages() {
@@ -5991,10 +5941,10 @@ function openStickers(stickers, leave) {
 
 // pages/intro.js
 const CARDS = [
-	["A chapter is a post", "Tap New chapter, pick a size and start from a template or a blank page. Each chapter is one post: slides for a carousel, or stories."],
-	["Fill the frames", "Double-tap a frame to add a photo or video. A frame can run across the edge of a slide, so one photo carries on into the next."],
-	["Save it out", "In a chapter, Export saves its slides to Photos, ready to post. Options can save the whole notebook as a PDF."],
-	["Keep a copy", "Your chapters are saved inside the app, on this phone. Now and then, save a backup in Options."]
+	["A layout is a post", "Tap New layout, pick a size and start from a template or a blank one. Each layout is one post: slides for a carousel, or stories."],
+	["Fill the boxes", "Double-tap a box to add a photo or video. A box can run across the edge of a slide, so one photo carries on into the next."],
+	["Save it out", "In a layout, Export saves its slides to Photos, ready to post. Options can save everything as one PDF."],
+	["Keep a copy", "Your layouts are saved inside the app, on this phone. Now and then, save a backup in Options."]
 ];
 function openIntro() {
 	let at = 0;
@@ -6102,7 +6052,7 @@ async function restoreBackup(close) {
 	if (!files.length) return;
 	if (!await confirmSheet({
 		title: "Restore backup",
-		message: "Everything in Contact Sheet now is swapped for what's in the file.",
+		message: "Everything in Layouts now is swapped for what's in the file.",
 		confirmLabel: "Restore",
 		danger: true
 	})) return;
@@ -6131,11 +6081,12 @@ async function restoreBackup(close) {
 const BOOK_KEY = "contact-sheet-book";
 const START_KEY = "contact-sheet-start";
 const COLORS = [
-	["orange", "Orange"],
 	["mango", "Mango"],
+	["orange", "Orange"],
 	["berry", "Berry"],
 	["fern", "Fern"],
 	["ocean", "Ocean"],
+	["leaf", "Leaf"],
 	["ink", "Black"]
 ];
 function useBook(name) {
@@ -6151,40 +6102,44 @@ function startsOnFirstPage() {
 		return false;
 	}
 }
+const TICK = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><polyline points=\"5 12.5 10 17 19 7\"/></svg>";
+const CHEVRON = "<svg class=\"opt-chevron\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><polyline points=\"9 5 16 12 9 19\"/></svg>";
+function colorsHtml() {
+	const now = document.documentElement.dataset.book || "berry";
+	return `<div class="opt-colors" role="radiogroup" aria-label="Notebook color">${COLORS.map(([key, name]) => `
+    <button type="button" class="opt-color" role="radio" data-color="${key}" aria-checked="${key === now}">
+      <span class="opt-swatch" data-swatch="${key}"><span class="opt-swatch-line"></span><span class="opt-swatch-sun"></span>${key === now ? `<span class="opt-swatch-tick">${TICK}</span>` : ""}</span>
+      <span class="opt-color-name">${name}</span>
+    </button>`).join("")}</div>`;
+}
+const row = (attr, name, sub = "") => `<button type="button" class="opt-row" ${attr}><span class="opt-row-words"><span class="opt-row-name">${name}</span>${sub ? `<span class="opt-row-sub">${sub}</span>` : ""}</span>${CHEVRON}</button>`;
 function openOptions(stickers) {
-	const now = document.documentElement.dataset.book;
+	const alone = !window.DF_SUITE;
 	const first = startsOnFirstPage();
 	const s = openSheet({
 		title: "Options",
-		className: "sheet-small sheet-options",
+		className: "opt-sheet",
 		body: `
-      <span class="field-label">App color</span>
-      <div class="opt-colors">
-        ${COLORS.map(([key, name]) => `
-          <button type="button" class="opt-color" data-color="${key}" aria-pressed="${key === now}">
-            <span class="opt-book" style="background-image:url(art/${key}-cover.webp)"></span>
-            <span>${name}</span>
-          </button>`).join("")}
-      </div>
-      ${window.DF_SUITE ? "" : `<span class="field-label opt-gap">Stickers</span>
-      <button type="button" class="btn secondary opt-wide" data-stickers>Stickers</button>`}
-      ${window.DF_SUITE ? "" : `<span class="field-label opt-gap">Always start</span>
+      <span class="opt-label">Notebook color</span>
+      <div data-colors>${colorsHtml()}</div>
+      ${alone ? `<span class="opt-label opt-gap">Always start</span>
       <div class="opt-seg" role="group" aria-label="Always start">
-        <button type="button" data-start="notebook" aria-pressed="${!first}">In the notebook</button>
-        <button type="button" data-start="first" aria-pressed="${first}">On the first page</button>
-      </div>`}
-      <span class="field-label opt-gap">Export</span>
-      <button type="button" class="btn secondary opt-wide" data-pdf>Whole notebook as PDF</button>
-      <span class="field-label opt-gap">Backup</span>
-      <button type="button" class="btn secondary opt-wide" data-save-backup>Save a backup</button>
-      <button type="button" class="btn secondary opt-wide" data-restore-backup>Restore a backup</button>
-      <button type="button" class="btn secondary opt-wide opt-gap" data-intro>How it works</button>`
+        <button type="button" data-start="notebook" class="${first ? "" : "on"}" aria-pressed="${!first}">In the notebook</button>
+        <button type="button" data-start="first" class="${first ? "on" : ""}" aria-pressed="${first}">On the first page</button>
+      </div>` : ""}
+      <span class="opt-label opt-gap">Export</span>
+      <div class="opt-rows">${row("data-pdf", "Everything as one PDF", "A cover in the app colour, then each layout")}</div>
+      ${alone ? `<span class="opt-label opt-gap">Cover</span><div class="opt-rows">${row("data-stickers", "Stickers")}</div>` : ""}
+      <span class="opt-label opt-gap">Backups</span>
+      <div class="opt-rows">${row("data-save-backup", "Save a backup")}${row("data-restore-backup", "Restore a backup")}</div>
+      <span class="opt-label opt-gap">Help</span>
+      <div class="opt-rows">${row("data-intro", "How it works")}</div>`
 	});
 	s.body.addEventListener("click", (e) => {
 		const color = e.target.closest("[data-color]");
 		if (color) {
 			useBook(color.dataset.color);
-			s.body.querySelectorAll("[data-color]").forEach((b) => b.setAttribute("aria-pressed", String(b === color)));
+			s.body.querySelector("[data-colors]").innerHTML = colorsHtml();
 			return;
 		}
 		const start = e.target.closest("[data-start]");
@@ -6192,7 +6147,10 @@ function openOptions(stickers) {
 			try {
 				localStorage.setItem(START_KEY, start.dataset.start);
 			} catch {}
-			s.body.querySelectorAll("[data-start]").forEach((b) => b.setAttribute("aria-pressed", String(b === start)));
+			s.body.querySelectorAll("[data-start]").forEach((b) => {
+				b.classList.toggle("on", b === start);
+				b.setAttribute("aria-pressed", String(b === start));
+			});
 			return;
 		}
 		if (e.target.closest("[data-stickers]")) openStickers(stickers, () => s.close());
@@ -6207,6 +6165,58 @@ function openOptions(stickers) {
 	});
 }
 
+// pages/layout-menu.js
+async function layoutMenu(id, redraw) {
+	const p = await getProject(id);
+	if (!p) return;
+	const key = await choiceSheet({
+		title: p.name,
+		options: [
+			{
+				key: "rename",
+				label: "Rename",
+				detail: "Also names the exported files."
+			},
+			{
+				key: "duplicate",
+				label: "Duplicate",
+				detail: "A copy with its own photos."
+			},
+			{
+				key: "delete",
+				label: "Delete",
+				detail: "It and its photos go from this device.",
+				danger: true
+			}
+		]
+	});
+	if (key === "rename") {
+		const v = await promptSheet({
+			title: "Rename",
+			value: p.name
+		});
+		if (!v || v === p.name) return;
+		await saveProject({
+			...p,
+			name: v
+		});
+	} else if (key === "duplicate") {
+		await duplicateProject(p.id, `${p.name} copy`);
+	} else if (key === "delete") {
+		const ok = await confirmSheet({
+			title: "Delete layout?",
+			message: `<b>${esc(p.name)}</b> and its photos will be deleted from this device. Photos in your camera roll stay where they are.`,
+			confirmLabel: "Delete",
+			danger: true
+		});
+		if (!ok) return;
+		await deleteProject(p.id);
+	} else {
+		return;
+	}
+	await redraw();
+}
+
 // pages/book-touch.js
 function addTouch(ed) {
 	Object.assign(ed, { onKey });
@@ -6217,11 +6227,6 @@ function addTouch(ed) {
 		canStart: (e) => ed.root.dataset.mode === "closed" && !ed.root.classList.contains("is-sticking") && Math.abs(e.clientX - window.innerWidth / 2) <= ed.geo.W * .62 && Math.abs(e.clientY - window.innerHeight / 2) <= ed.geo.H * .56
 	});
 	ed.turn = turn;
-	const nav = mountNav(ed.toc.querySelector(".ed-tools"), {
-		onShut: () => location.hash = "#/",
-		onSwiped: () => ed.swiped = true
-	});
-	ed.nav = nav;
 	ed.tocBook.addEventListener("pointerdown", (e) => {
 		ed.swipe = {
 			id: e.pointerId,
@@ -6292,14 +6297,17 @@ function addTouch(ed) {
 			else ed.startNew();
 			return;
 		}
-		const t = e.target.closest("[data-toc]");
-		if (t) {
-			if (t.dataset.toc === "shut") nav.shut();
-			else if (t.dataset.toc === "first") ed.leftEl.scrollTo({
-				top: 0,
-				behavior: "smooth"
-			});
-			else ed.startNew();
+		if (e.target.closest("[data-books]")) {
+			location.hash = "#/";
+			return;
+		}
+		if (e.target.closest("[data-band-add], [data-toc=\"new\"]")) {
+			ed.startNew();
+			return;
+		}
+		const more = e.target.closest("[data-layout-more]");
+		if (more) {
+			if (!sheetIsOpen()) layoutMenu(more.dataset.layoutMore, ed.drawToc);
 			return;
 		}
 		if (e.target.closest("[data-tip-off]")) {
@@ -6351,9 +6359,6 @@ function mountBook(view, startMode, onNew) {
       </div>
       <div class="nb-toc" hidden>
         <div class="toc-page" data-tocbook data-left></div>
-        <nav class="ed-tools" aria-label="Contents">
-          ${navHtml()}
-        </nav>
       </div>
     </div>
     <button type="button" class="nb-sun" aria-label="App options">${ICONS.sun}</button>`;
@@ -6446,7 +6451,6 @@ function mountBook(view, startMode, onNew) {
 	};
 	ed.step = step;
 	function setMode(next, instant = false) {
-		ed.nav.reset();
 		if (next !== "closed") {
 			stickers.drop();
 			ed.turn.reset();
@@ -6504,7 +6508,6 @@ function mountBook(view, startMode, onNew) {
 			document.removeEventListener("keydown", ed.onKey);
 			ed.releaseThumbs();
 			stickers.destroy();
-			ed.nav.destroy();
 			delete document.body.dataset.route;
 		}
 	};
@@ -6791,7 +6794,7 @@ if (suite || startsOnFirstPage()) {
 route();
 if (suite && suite.at === "new") setTimeout(newChapter, 400);
 else if (suite && suite.firstVisit) setTimeout(() => {
-	if (!document.querySelector(".sheet-overlay")) welcome("Contact Sheet", openIntro);
+	if (!document.querySelector(".sheet-overlay")) welcome("Layouts", openIntro);
 }, 900);
 try {
 	const o = screen.orientation;

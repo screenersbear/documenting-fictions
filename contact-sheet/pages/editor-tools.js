@@ -31,7 +31,7 @@ export function addTools(ed) {
     ed.toolsEl.innerHTML = [
       smallTool('back', ICONS.back, 'Back to the notebook'),
       ...history,
-      tool('add-frame', ICONS.addFrame, 'Frame'),
+      tool('add-frame', ICONS.addFrame, 'Box'),
       tool('slides', ICONS.slides, pageTitle(ed.p, true)),
       tool('layout', ICONS.layout, 'Layout'),
       tool('more', ICONS.more, 'More'),
@@ -64,7 +64,7 @@ export function addTools(ed) {
     const keep = was ? was.scrollLeft : 0;
     ed.trayEl.innerHTML = `
       <button type="button" class="tray-add" data-act="add-photos">${ICONS.plus}<span>Photos</span></button>
-      <div class="tray-list" data-tray-list>${items || '<p class="tray-hint">Add photos and videos from your camera roll. They fill empty frames in order.</p>'}</div>`;
+      <div class="tray-list" data-tray-list>${items || '<p class="tray-hint">Add photos and videos from your camera roll. They fill empty boxes in order.</p>'}</div>`;
     // A redraw must not throw the row back to its first photos.
     ed.trayEl.querySelector('[data-tray-list]').scrollLeft = keep;
   }

@@ -163,7 +163,12 @@ export async function mountEditor(view, id) {
   async function makeThumb() {
     try {
       const get = await previewSources();
-      const c = previewCanvas(p, get, { height: 200, count: Math.min(3, p.slides) });
+      // The home page's strip: 2px of white between the slides, at its size.
+      const c = previewCanvas(p, get, { height: 200, count: Math.min(3, p.slides), gap: 11 });
+      const ctx = c.getContext('2d');
+      ctx.globalCompositeOperation = 'destination-over';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, c.width, c.height);
       const blob = await canvasToBlob(c, 'image/jpeg', 0.8);
       c.width = c.height = 0;
       p.thumb = blob;
@@ -192,7 +197,7 @@ export async function mountEditor(view, id) {
         </div>
       </div>
       <button type="button" class="ws-add" data-act="add-slide" aria-label="Add a slide">${ICONS.plus}</button>
-      <div class="ed-name" data-name><button type="button" data-act="rename" aria-label="Rename this chapter"><span>${esc(p.name)}</span></button></div>
+      <div class="ed-name" data-name><button type="button" data-act="rename" aria-label="Rename this layout"><span>${esc(p.name)}</span></button></div>
       <div class="ed-adjust" data-adjust hidden>
         <span class="ed-adjust-label">Zoom</span>
         <input type="range" min="1" max="5" step="0.01" value="1" data-zoom aria-label="Photo zoom" />

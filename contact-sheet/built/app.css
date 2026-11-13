@@ -940,7 +940,7 @@ body[data-route="edit"] #app { padding: 0; max-width: none; }
   box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 5px rgba(0, 0, 0, 0.55);
 }
 
-.band { position: absolute; }
+.border-band { position: absolute; }
 .seam {
   position: absolute;
   top: 0;
@@ -1381,6 +1381,7 @@ body[data-route="edit"] .toast { bottom: calc(136px + var(--sa-b)); }
 :root[data-book="berry"] { --book-cover: url(../art/berry-cover.webp); --book-block: url(../art/berry-block.webp); --book-back: #a80a73; --book-rim: #bf0b83; --book-pale: #f2cee6; }
 :root[data-book="fern"] { --book-cover: url(../art/fern-cover.webp); --book-block: url(../art/fern-block.webp); --book-back: #286b4a; --book-rim: #2e7a55; --book-pale: #d5e4dd; }
 :root[data-book="ocean"] { --book-cover: url(../art/ocean-cover.webp); --book-block: url(../art/ocean-block.webp); --book-back: #1f5095; --book-rim: #235caa; --book-pale: #d3deee; }
+:root[data-book="leaf"] { --book-cover: url(../art/leaf-cover.webp); --book-block: url(../art/leaf-block.webp); --book-back: #249073; --book-rim: #28a583; --book-pale: #d4ede7; }
 :root[data-book="ink"] { --book-cover: url(../art/ink-cover.webp); --book-block: url(../art/ink-block.webp); --book-back: #2a353c; --book-rim: #303d44; --book-pale: #d6d8da; }
 
 /* The notebook's frame, the same in the contents and every chapter. */
@@ -1784,9 +1785,11 @@ body[data-route="book"] #app { padding: 0; max-width: none; }
 .nb:not([data-mode="closed"]) .nb-tabhits { display: none; }
 
 /* ---- styles/contents.css ---- */
-/* The Table of contents: the page, its bottom bar and the navigation icon,
-   the menu and the plus at its heading. */
-/* Table of contents: a plain white page that scrolls, the tools at the bottom. */
+/* The home page (round 2, 01-home): a plain paper page that scrolls, the
+   band at its top (band.css), then the list: each layout a row 76px high
+   with a hairline, a strip of its first slides in a white box, its name
+   (18px), "N slides · date" (14px, quiet) and its ... menu. No bar at the
+   foot: the notebooks button is in the band, and a swipe right shuts it. */
 .nb-toc {
   position: absolute;
   inset: 0;
@@ -1796,61 +1799,22 @@ body[data-route="book"] #app { padding: 0; max-width: none; }
 }
 .nb.is-reading .nb-toc { opacity: 1; }
 .nb-toc[hidden] { display: none; }
-.nb-toc .ed-tools { position: absolute; left: 20px; right: 20px; bottom: var(--nb-b); margin: 0; touch-action: none; }
-/* The contents' bar is the navigation icon alone (New chapter is the plus at
-   the top, user 11-12). Its middle sits where an iPhone's home button used to
-   be: the bottom safe area + 6px, 30px at least, above the screen's edge, as
-   in the other notebooks and on the shelf. The row is the icon's own 21px. */
-.nb-toc { --toc-icon: max(30px, calc(var(--sa-b) + 6px)); --toc-bar: calc(var(--toc-icon) + 25px); }
-html.is-short .nb-toc { --toc-icon: 30px; }
-.nb-toc .ed-tools { bottom: calc(var(--toc-icon) - 10.5px); padding: 0; border-top: 0; background: none; }
-.nb-toc .ed-tools .nb-nav { padding: 0; }
-/* Installed, the bars and the sun show once iOS has its height right (components/screen-fit.js
-   adds .settled), so they never show high and then drop. */
-@media (display-mode: standalone) { html:not(.settled) :is(.ed-tools, .nb-sun) { visibility: hidden; } }
-/* The navigation icon (navicon.js): the icon in the same 21px row as the
-   other tools' icons, the triangles tucked up against it, its name below. */
-.nb-nav .slider { display: flex; align-items: center; justify-content: center; height: 21px; }
-.nb-nav .slide-arrow { appearance: none; -webkit-appearance: none; border: 0; background: none; padding: 0; width: 26px; height: 44px; margin: -11.5px 0; display: grid; align-items: center; color: var(--text); position: relative; z-index: 1; }
-.nb-nav .slide-arrow.is-prev { justify-items: end; margin-right: -3px; }
-.nb-nav .slide-arrow.is-next { justify-items: start; margin-left: -3px; }
-.nb-nav .slide-arrow.is-off { visibility: hidden; }
-.nb-nav .slide-arrow:active { opacity: 0.5; }
-.nb-nav .slide-arrow svg { width: 8px; height: 10px; display: block; }
-.nb-nav .slide-arrow.is-prev svg { transform: scaleX(-1); }
-.nb-nav .slide-now { appearance: none; -webkit-appearance: none; border: 0; background: none; padding: 0; display: block; flex: none; width: 30px; height: 21px; overflow: hidden; color: var(--text); -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%); }
-.nb-nav .slide-strip { display: flex; }
-.nb-nav .slide-strip.is-moving { transition: transform 0.2s cubic-bezier(0.3, 0.6, 0.3, 1); }
-.nb-nav .slide-icon { flex: 0 0 30px; height: 21px; display: grid; place-items: center; }
-.nb-nav .slide-icon svg { width: 21px; height: 21px; display: block; }
+/* Installed, the sun shows once iOS has its height right (components/screen-fit.js
+   adds .settled), so it never shows high and then drops. */
+@media (display-mode: standalone) { html:not(.settled) .nb-sun { visibility: hidden; } }
 .toc-page {
+  --side: max(16px, calc((100vw - 560px) / 2));
   position: absolute;
-  inset: 0 0 var(--toc-bar);
-  box-shadow: 0 2px 0 var(--line); /* a line under the list, where the bar starts (user, 11-12) */
+  inset: 0;
   box-sizing: border-box;
-  padding: calc(var(--sa-t) + 28px) max(20px, calc((100% - 560px) / 2)) 24px;
+  padding: 0 var(--side) calc(var(--sa-b) + 24px);
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
-}
-.nb-head {
-  margin: 0 0 14px;
-  font: 500 26px/1.25 var(--head);
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  text-align: center;
+  font-family: var(--ui);
   color: var(--text);
 }
-/* Inside Documenting Fictions: Options, in a menu at the heading's left. Out
-   of the text's way, so the heading stays in the middle. */
-.nb-head.has-menu { position: relative; }
-.toc-menu { position: absolute; left: -20px; top: 50%; margin-top: -22px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--text); cursor: pointer; }
-.toc-menu svg { width: 21px; height: 21px; display: block; } /* the size of the tools' icons at the foot */
-/* New chapter: a plus at the heading's right, opposite the menu. */
-.nb-head.has-plus { position: relative; }
-.toc-plus { position: absolute; right: -20px; top: 50%; margin-top: -22px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--text); cursor: pointer; }
-.toc-plus svg { width: 24px; height: 24px; display: block; }
-.toc-row { display: flex; align-items: center; border-bottom: 1px solid var(--line); }
+.toc-row { display: flex; align-items: center; gap: 4px; min-height: 76px; border-bottom: 1px solid var(--line); }
 .toc-open {
   flex: 1;
   min-width: 0;
@@ -1862,13 +1826,16 @@ html.is-short .nb-toc { --toc-icon: 30px; }
   text-decoration: none;
   -webkit-user-drag: none;
 }
-.toc-thumb { flex-shrink: 0; width: 52px; height: 52px; border-radius: 6px; background: #eef0f1; display: block; overflow: hidden; }
-.toc-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.toc-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.toc-name { font-family: var(--font-hand); font-size: 20px; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.toc-meta { font-size: 14px; color: var(--text-dim); }
-.toc-empty { margin: 48px 0 0; text-align: center; font-family: var(--font-title); font-size: 19px; color: var(--text-dim); }
-.toc-tip { margin: 22px 0 0; text-align: center; font-size: 13px; line-height: 1.4; color: var(--text-dim); }
+/* The first slides, side by side in a white box with a hairline. */
+.toc-strip { flex-shrink: 0; display: flex; padding: 4px; border-radius: 6px; background: #FFFFFF; box-shadow: inset 0 0 0 1px var(--line); }
+.toc-strip img { display: block; height: 37.5px; width: auto; max-width: 160px; }
+.toc-blank { display: block; width: 30px; height: 37.5px; background: #EFEFEA; }
+.toc-text { min-width: 0; display: flex; flex-direction: column; }
+.toc-name { font: 400 18px/23px var(--ui); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.toc-meta { font: 400 14px/19px var(--ui); color: var(--dim); font-variant-numeric: tabular-nums; }
+.toc-more { flex: none; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-right: -10px; padding: 0; border: 0; background: none; color: var(--text); cursor: pointer; }
+.toc-empty { margin: 32px 0 0; font: 400 17px/24px var(--ui); color: var(--dim); }
+.toc-tip { margin: 22px 0 0; font: 400 13px/18px var(--ui); color: var(--dim); }
 .toc-tip .text-btn { font-size: inherit; }
 
 /* ---- styles/editor-page.css ---- */
@@ -2005,16 +1972,170 @@ body[data-route="edit"] { background: var(--paper); }
 .pdfv-thumb { width: 48px; height: 48px; flex-shrink: 0; object-fit: cover; }
 
 /* ---- styles/header-band.css ---- */
-/* ===== Archivo Black capitals over Inter, under a band of the notebook's colour with its title in white (user, 11-12; The Eye's band is berry blade black). Levels: 1 the contents' title in the band, Archivo 21px; 2 sheet titles, Archivo 18px; 3 labels, Inter semibold spaced capitals. Names you wrote and the slides' labels stay as written. ===== */
-/* one weight for the text, as with Klee One (the old bold rules never showed, and still don't); semibold only for the labels */
-@font-face { font-family: "Figtree"; src: url("../fonts/figtree-latin.woff2") format("woff2"); font-weight: 400; font-display: swap; size-adjust: 96.5%; }
+/* ===== Figtree for the words, Archivo Black for the older headings that are left (user, 11-12). The round 2 band and its colours are in band.css and band-colors.css. Names you wrote and the slides' labels stay as written. ===== */
+/* Figtree: one file holding every weight; "Figtree Semibold" is the same file, for the older labels */
+@font-face { font-family: "Figtree"; src: url("../fonts/figtree-latin.woff2") format("woff2"); font-weight: 300 900; font-display: swap; size-adjust: 96.5%; }
 @font-face { font-family: "Figtree Semibold"; src: url("../fonts/figtree-latin.woff2") format("woff2"); font-weight: 600; font-display: swap; size-adjust: 96.5%; }
 @font-face { font-family: "Archivo Black"; src: url("../fonts/archivo-black-latin.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 :root { --ui: "Figtree", "Helvetica Neue", Arial, sans-serif; --display: "Archivo Black", "Arial Black", "Helvetica Neue", Arial, sans-serif; --head: var(--display); }
-:root[data-book] { --font-hand: var(--ui); --font-title: var(--ui); --font-body: var(--ui); --band: var(--book-back); --band-ink: #fff; }
-:root[data-book="mango"] { --band-ink: #313d45; }
-/* the band reaches the top of the screen and its sides; the page's own scrolling clips it */
-.toc-page .nb-head { margin: -18px 0 18px; padding: 12px 0; background: var(--band); color: var(--band-ink); box-shadow: 0 0 0 100vmax var(--band); clip-path: inset(-100vmax -100vmax 0 -100vmax); font: 400 21px/32px var(--display); letter-spacing: .02em; } /* 21px: the longest of the four titles, clear of the menu on a small phone */
-.toc-page .nb-head .toc-menu { color: var(--band-ink); }
+:root[data-book] { --font-hand: var(--ui); --font-title: var(--ui); --font-body: var(--ui); }
 .sheet-header h2 { font: 400 18px/1.3 var(--display); letter-spacing: .02em; }
 .field-label, .sheet-options .field-label { font: 600 15px/1.3 "Figtree Semibold", var(--ui); text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); }
+
+/* ---- styles/band-colors.css ---- */
+/* The notebook colours on the band (DESIGN.md 4.2), the same seven as The
+   Eye and Ref: the band itself, its partner (the title, ring buttons,
+   hairline and mark), the colour of small text on it, and the four steps
+   under it (75, 50, 25 and 10% on paper). Picked in Options (data-book on
+   <html>); berry when nothing is picked (round 2, Layouts). Buttons, chips
+   and ticks (--ink) take the band colour with its small-text colour. The
+   round 2 text colours are here too: berry blade black and its quiet grey. */
+:root {
+  --paper: #FAFAF7;
+  --text: #313D45;
+  --dim: #5C666D;
+  --text-dim: var(--dim);
+  --line: #E1E1DC;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='.14'/%3E%3C/svg%3E");
+}
+:root[data-book="mango"] { --band: #FFD100; --partner: #313D45; --band-small: #313D45; --step1: #FEDB3E; --step2: #FCE67C; --step3: #FBF0B9; --step4: #FAF6DE; }
+:root[data-book="orange"] { --band: #FF8A3D; --partner: #313D45; --band-small: #313D45; --step1: #FEA66C; --step2: #FCC29A; --step3: #FBDEC8; --step4: #FAEFE4; }
+:root, :root[data-book="berry"] { --band: #CC2E8A; --partner: #E2E600; --band-small: #FFFFFF; --step1: #D861A5; --step2: #E394C0; --step3: #EEC7DC; --step4: #F5E6EC; }
+:root[data-book="fern"] { --band: #13803F; --partner: #FFD100; --band-small: #FFFFFF; --step1: #4D9E6D; --step2: #86BD9B; --step3: #C0DCC9; --step4: #E3EEE5; }
+:root[data-book="ocean"] { --band: #0A4FD6; --partner: #FFAFAB; --band-small: #FFFFFF; --step1: #467ADE; --step2: #82A4E6; --step3: #BECFEF; --step4: #E2E9F4; }
+:root[data-book="leaf"] { --band: #14BFA0; --partner: #A1062A; --band-small: #313D45; --step1: #4ECEB6; --step2: #87DCCC; --step3: #C0EBE1; --step4: #E3F4EE; }
+:root[data-book="ink"] { --band: #313D45; --partner: #FFD100; --band-small: #FAFAF7; --step1: #636C72; --step2: #969C9E; --step3: #C8CBCA; --step4: #E6E7E5; }
+:root, :root[data-book] { --ink: var(--band); --on-ink: var(--band-small); }
+
+/* ---- styles/band.css ---- */
+/* The round 2 band, as in Ref and The Eye (DESIGN.md 9.1), on top of the
+   home page: the notebook's colour from the top of the screen, 92px under
+   the safe area, with its grain; the title (34px light capitals) and the
+   ring buttons on one line; the rising mark (three bars) at its foot; the
+   label line (the place, a hairline, the date); then four steps fading into
+   the paper. The list starts 53px under the band. The band scrolls with the
+   page and runs to the screen's sides; --side is the page's own margin.
+   (components/band.js draws it.) The short band is for pages inside (the
+   new layout guide, export): back, the name on the hairline, a ring. */
+.band {
+  position: relative; flex: none; display: flex; align-items: flex-start; gap: 8px; box-sizing: border-box;
+  height: calc(92px + var(--sa-t)); margin: 0 calc(-1 * var(--side, 16px)) 53px; padding: calc(var(--sa-t) + 8px) calc(var(--side, 16px) - 8px) 0 var(--side, 16px);
+  background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal; color: var(--partner);
+}
+.band::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 41.4px; pointer-events: none;
+  background: linear-gradient(var(--step1) 0 14px, var(--step2) 14px 25.2px, var(--step3) 25.2px 34.2px, var(--step4) 34.2px); }
+.band-title { flex: 1; min-width: 0; margin: 0; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;
+  font: 300 34px/40px var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--partner); }
+.band-btns { display: flex; flex: none; }
+.band-mark { position: absolute; left: var(--side, 16px); bottom: 0; width: 80px; height: 40px; pointer-events: none; }
+.band-mark .mk-p { fill: var(--partner); }
+.band-mark .mk-w { fill: var(--paper); }
+.band-line { position: absolute; left: calc(var(--side, 16px) + 92px); right: var(--side, 16px); top: calc(var(--sa-t) + 68px); display: flex; align-items: center; gap: 10px; margin: 0;
+  font: 500 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: var(--band-small); }
+.band-line b { font-weight: 700; }
+.band-rule { flex: 1; height: 1px; background: var(--partner); }
+.band-date { font-variant-numeric: tabular-nums; }
+/* A ring button (DESIGN.md 8): a 44px target, a 40px ring 1.5px thick. */
+.ring-btn { display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
+.ring-btn > span { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
+/* The notebooks button is the suite's: Layouts on its own has no shelf to go back to. */
+html:not(.df-suite) [data-books] { display: none; }
+
+/* A list's heading on the page: its name in small capitals, a count, an
+   action at the right, a navy rule under it. */
+.list-head { flex: none; display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.list-head h2 { margin: 0; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.list-head h2 span { font-weight: 500; color: var(--dim); font-variant-numeric: tabular-nums; }
+.list-act { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 8px; margin-right: -8px; border: 0; background: none;
+  font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--band-on-paper, var(--ink)); cursor: pointer; }
+.list-act svg { width: 14px; height: 14px; stroke-width: 2.4; }
+.list-rule { flex: none; border-top: 1px solid var(--text); }
+
+/* The short band: 56px under the safe area, back and a ring at the right,
+   the name on the hairline between them, then two steps. */
+.band.band-short { height: calc(56px + var(--sa-t)); justify-content: space-between; margin-bottom: 26px; padding: calc(var(--sa-t) + 6px) calc(var(--side, 16px) - 8px) 0; }
+.band-short::after { height: 18px; background: linear-gradient(var(--step1) 0 10px, var(--step3) 10px); }
+.band-short .band-line { left: calc(var(--side, 16px) + 48px); right: calc(var(--side, 16px) + 48px); top: calc(var(--sa-t) + 21px); }
+
+/* ---- styles/sheets.css ---- */
+/* Sheets in the round 2 look, as Ref's (DESIGN.md 9.5): white, rising from
+   the bottom, the title in small capitals and a ring to close it; rows 52px
+   with a hairline, the one in use bold, Delete in crimson; the buttons 48px,
+   radius 8, in button type: the main one in the notebook's colour, the
+   other outlined, Delete in crimson. Every sheet (components/sheet.js)
+   wears it; it comes after sheet.css and buttons.css, which it reframes. */
+.sheet-overlay { background: rgba(49, 61, 69, .5); }
+.sheet { border-top: 0; border-radius: 20px 20px 0 0; background: #FFFFFF; color: var(--text); font-family: var(--ui); }
+.sheet-header { padding: 25px 8px 0 16px; border-bottom: 0; background: none; }
+.sheet-header h2 { font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.sheet .close-btn { position: relative; width: 44px; height: 44px; border-radius: 0; background: none; color: var(--text); }
+.sheet .close-btn::before { content: ''; position: absolute; inset: 2px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
+.sheet .x-icon { width: 18px; height: 18px; stroke-width: 2; }
+.sheet-body { padding: 8px 16px calc(24px + var(--sa-b)); }
+.sheet-message { font: 400 17px/24px var(--ui); }
+.sheet-message b { font-weight: 700; }
+.sheet-actions { gap: 8px; margin-top: 20px; }
+.btn { height: 48px; min-height: 0; padding: 0 20px; border: 0; border-radius: 8px; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.btn.primary { border: 0; background: var(--ink); color: var(--on-ink); }
+.btn.secondary { border: 0; box-shadow: inset 0 0 0 1.5px var(--text); background: none; color: var(--text); }
+.btn.danger { border: 0; background: #A1062A; color: #FFFFFF; }
+/* The wide buttons at the foot of a sheet, the same. */
+.modal-cta { height: 48px; padding: 0 20px; border: 0; border-radius: 8px; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.sheet :is(.btn, .modal-cta).primary { border: 0; border-radius: 8px; background: var(--ink); color: var(--on-ink); font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.sheet .modal-cta.secondary { border: 0; border-radius: 8px; box-shadow: inset 0 0 0 1.5px var(--text); background: none; color: var(--text); font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.sheet-footer { border-top: 1px solid var(--line); background: #FFFFFF; }
+/* Choices (a ... menu): rows, the one in use bold, Delete in crimson. */
+.choice-list { gap: 0; }
+.choice { min-height: 52px; padding: 6px 0; border: 0; border-bottom: 1px solid #E1E1DC; border-radius: 0; background: none; color: var(--text); }
+.choice.current { background: none; color: var(--text); border-color: #E1E1DC; }
+.choice-label { font: 400 17px/22px var(--ui); letter-spacing: 0; text-transform: none; }
+.choice.current .choice-label { font-weight: 700; }
+.choice.is-danger, .choice.is-danger .choice-label { color: #A1062A; }
+.choice-detail { font: 400 13px/18px var(--ui); color: var(--dim); opacity: 1; }
+.field-label, .choice-heading { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+
+/* ---- styles/options-sheet.css ---- */
+/* Options (round 2, 07-options), as Ref's: the notebook colours as swatches
+   (the band with its partner's line and half circle, ticked when picked;
+   the same seven as The Eye and Ref), then rows in groups under small quiet
+   names: a name, a quiet line under it, a chevron. On its own, Always start
+   is a segmented switch with the picked part in the notebook's colour. After
+   options.css and sheets.css, which it reframes. */
+.opt-sheet .opt-label { display: block; margin: 0 0 10px; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.opt-sheet .opt-label.opt-gap { margin-top: 24px; }
+.opt-sheet .opt-label.opt-gap:has(+ .opt-rows) { margin-bottom: 0; }
+
+/* The notebook colours. */
+.opt-sheet .opt-colors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 12px; margin: 0; }
+.opt-sheet .opt-color { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 0; color: var(--text); }
+.opt-swatch { position: relative; display: block; height: 52px; border-radius: 8px; overflow: hidden; background: var(--sw); }
+.opt-color[aria-checked="true"] .opt-swatch { box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px var(--text); }
+.opt-swatch-line { position: absolute; left: 10px; top: 12px; width: 32px; height: 4px; border-radius: 2px; background: var(--sw-p); }
+.opt-swatch-sun { position: absolute; left: 10px; bottom: 0; width: 22px; height: 11px; border-radius: 11px 11px 0 0; background: var(--sw-p); }
+.opt-swatch-tick { position: absolute; right: 6px; top: 6px; display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--sw-p); color: var(--sw); }
+.opt-swatch-tick svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.opt-color-name { font: 400 13px/16px var(--ui); text-align: left; }
+.opt-color[aria-checked="true"] .opt-color-name { font-weight: 700; }
+[data-swatch="mango"] { --sw: #FFD100; --sw-p: #313D45; }
+[data-swatch="orange"] { --sw: #FF8A3D; --sw-p: #313D45; }
+[data-swatch="berry"] { --sw: #CC2E8A; --sw-p: #E2E600; }
+[data-swatch="fern"] { --sw: #13803F; --sw-p: #FFD100; }
+[data-swatch="ocean"] { --sw: #0A4FD6; --sw-p: #FFAFAB; }
+[data-swatch="leaf"] { --sw: #14BFA0; --sw-p: #A1062A; }
+[data-swatch="ink"] { --sw: #313D45; --sw-p: #FFD100; }
+
+/* Always start: a track, the picked part in the notebook colour. */
+.opt-sheet .opt-seg { display: flex; height: 44px; margin: 0; padding: 3px; box-sizing: border-box; border-radius: 10px; background: #EFEFEA; }
+.opt-sheet .opt-seg button { flex: 1 1 0; min-width: 0; height: auto; padding: 0 6px; border: 0; border-radius: 8px; background: none; font: 400 15px/18px var(--ui); color: var(--dim); white-space: nowrap; }
+.opt-sheet .opt-seg button.on { background: var(--band); color: var(--band-small); font-weight: 500; }
+
+/* Rows: a name, a quiet line under it, a chevron (or a switch). */
+.opt-rows { margin: 0; }
+.opt-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 52px; margin: 0; padding: 6px 0;
+  box-sizing: border-box; border: 0; border-bottom: 1px solid #E1E1DC; background: none; color: var(--text); text-align: left; cursor: pointer;
+}
+.opt-row-words { display: flex; flex-direction: column; min-width: 0; }
+.opt-row-name { font: 400 17px/22px var(--ui); }
+.opt-row-sub { font: 400 13px/18px var(--ui); color: var(--dim); }
+.opt-chevron { flex: none; width: 16px; height: 16px; fill: none; stroke: #9AA3A8; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }

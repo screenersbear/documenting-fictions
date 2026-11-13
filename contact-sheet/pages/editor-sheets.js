@@ -30,7 +30,7 @@ export function addSheets(ed) {
               </span>
             </li>`).join('')}
         </ol>
-        <p class="field-hint">The grid button picks a new layout for that ${pageWord(ed.p)}. Copy makes a new ${pageWord(ed.p)} with the same empty frames. A photo that crosses a seam moves with the ${pageWord(ed.p)} it starts on.</p>
+        <p class="field-hint">The grid button picks a new layout for that ${pageWord(ed.p)}. Copy makes a new ${pageWord(ed.p)} with the same empty boxes. A photo that crosses a seam moves with the ${pageWord(ed.p)} it starts on.</p>
         <div class="sheet-footer">
           <button type="button" class="modal-cta primary" data-add${n >= MAX_SLIDES ? ' disabled' : ''}>${n >= MAX_SLIDES ? `${MAX_SLIDES} is the most` : `+ Add a ${pageWord(ed.p)}`}</button>
         </div>`;
