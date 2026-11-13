@@ -1162,6 +1162,7 @@ function addLayout(ed) {
 		fitZ,
 		layout,
 		placeBook,
+		placeWhere,
 		setZoom,
 		visibleSlide,
 		pageX,
@@ -1184,7 +1185,7 @@ function addLayout(ed) {
 		const { h } = wsSize();
 		const g = sizes();
 		const room = (mode === "all" ? g.both : g.one) - 0 - 16;
-		return Math.max(.02, Math.min(room / SLIDE_W, (h - 2 * 34) / ed.H()));
+		return Math.max(.02, Math.min(room / SLIDE_W, (h - 34 - (ed.nameEl.offsetHeight || 110)) / ed.H()));
 	}
 	function pageW() {
 		const g = sizes();
@@ -1207,7 +1208,7 @@ function addLayout(ed) {
 		ed.bookX = bookLeft(w, pw);
 		ed.pageLeft = ed.bookX + pw - sw;
 		ed.margX = ed.pageLeft - ed.spread * both;
-		const room = Math.max(34, (h - sh) / 2);
+		const room = Math.max(34, (h - sh - (ed.nameEl.offsetHeight || 110)) / 2);
 		ed.margY = Math.max(lineH(), Math.round(room));
 		ed.inner.style.width = `${2 * pw + 2 * ed.bookX}px`;
 		ed.inner.style.height = `${Math.max(h, sh + ed.margY + room)}px`;
@@ -1219,11 +1220,18 @@ function addLayout(ed) {
 		const a = ed.spread * both;
 		const b = Math.min(total, a + both);
 		ed.strip.style.clipPath = `inset(0 ${total - b}px 0 ${a}px)`;
+		Object.assign(ed.shadowEl.style, {
+			left: `${ed.margX + a}px`,
+			top: `${ed.margY}px`,
+			width: `${b - a}px`,
+			height: `${sh}px`
+		});
 		ed.nbEl.style.width = `${2 * pw}px`;
 		ed.editorEl.style.setProperty("--ed-in", `${2 * pw + 2 * 0 <= w + 1 ? ed.bookX + 0 + 16 : 16}px`);
 		placeBook();
 		placeAdd();
 		placeName();
+		placeWhere();
 	}
 	function placeBook(extra = 0) {
 		const t = `translateX(${ed.bookX - ed.ws.scrollLeft - extra}px)`;
@@ -1231,21 +1239,22 @@ function addLayout(ed) {
 	}
 	function placeName() {
 		const { h } = wsSize();
-		const lh = lineH();
 		const under = Math.min(h, ed.margY + ed.H() * ed.z);
-		const mid = Math.min((under + h) / 2, h - lh / 2);
-		let top = Math.round(ed.ws.offsetTop + mid - lh / 2);
-		if (top + lh > ed.ws.offsetTop + h) top = ed.ws.offsetTop + h - lh;
+		const top = Math.round(ed.ws.offsetTop + Math.max(0, Math.min(under + 14, h - ed.nameEl.offsetHeight)));
 		ed.nameEl.style.top = `${top}px`;
 		ed.nameEl.classList.toggle("is-over", ed.ws.offsetTop + under > top);
 	}
 	function placeAdd() {
 		ed.addBtn.hidden = ed.p.slides >= 20;
-		if (ed.addBtn.hidden) return;
-		const { w, h } = wsSize();
-		const edge = parseFloat(ed.editorEl.style.getPropertyValue("--ed-in")) || 16;
-		ed.addBtn.style.left = `${ed.ws.offsetLeft + w - 44 - edge}px`;
-		ed.addBtn.style.top = `${ed.ws.offsetTop + h - 44 - 4}px`;
+	}
+	function placeWhere() {
+		const n = ed.p.slides;
+		const one = ed.zoomFit === "one" ? visibleSlide() : null;
+		const first = one ?? firstPage();
+		const last = one ?? lastPage();
+		ed.whereEl.textContent = first === last ? `${pageWord(ed.p)} ${first + 1} of ${n}` : `${pageWord(ed.p, true)} ${first + 1} and ${last + 1} of ${n}`;
+		const count = spreadCount(ed.p);
+		ed.dotsEl.innerHTML = count > 1 ? Array.from({ length: count }, (_, i) => `<i${i === ed.spread ? " class=\"on\"" : ""}></i>`).join("") : "";
 	}
 	function setZoom(nz, cx, cy) {
 		const r = ed.ws.getBoundingClientRect();
@@ -1689,11 +1698,10 @@ function addTools(ed) {
 		usedIds,
 		renderTray
 	});
-	const tool = (act, icon, label, { disabled = false, on = false } = {}) => `<button type="button" class="tool${on ? " is-on" : ""}" data-act="${act}"${disabled ? " disabled" : ""}><span class="tool-icon">${icon}</span><span class="tool-label">${esc(label)}</span></button>`;
-	const smallTool = (act, icon, label, disabled) => `<button type="button" class="tool tool-sm" data-act="${act}" aria-label="${esc(label)}"${disabled ? " disabled" : ""}><span class="tool-icon">${icon}</span></button>`;
+	const tool = (act, icon, label, { disabled = false, on = false, tone = "", name = "" } = {}) => `<button type="button" class="tool${on ? " is-on" : ""}${tone ? ` is-${tone}` : ""}" data-act="${act}"${name ? ` aria-label="${esc(name)}"` : ""}${disabled ? " disabled" : ""}><span class="tool-icon">${icon}</span><span class="tool-label">${esc(label)}</span></button>`;
 	function renderTools() {
 		const f = ed.selFrame();
-		const history = [smallTool("undo", ICONS.undo, "Undo", ed.hi === 0), smallTool("redo", ICONS.redo, "Redo", ed.hi >= ed.hist.length - 1)];
+		const history = [tool("undo", ICONS.undo, "Undo", { disabled: ed.hi === 0 }), tool("redo", ICONS.redo, "Redo", { disabled: ed.hi >= ed.hist.length - 1 })];
 		if (f) {
 			const has = !!f.photoId;
 			ed.toolsEl.innerHTML = [
@@ -1706,18 +1714,18 @@ function addTools(ed) {
 				tool("swap", has ? ICONS.swap : ICONS.photo, has ? "Swap" : "Photo"),
 				tool("fit", ICONS.fit, "Fit", { disabled: !has }),
 				tool("frame-more", ICONS.more, "More"),
-				tool("delete", ICONS.trash, "Delete")
+				tool("delete", ICONS.trash, "Delete", { tone: "danger" })
 			].join("");
 			return;
 		}
 		ed.toolsEl.innerHTML = [
-			smallTool("back", ICONS.back, "Back to the notebook"),
+			tool("back", ICONS.back, "Back", { name: "Back to all layouts" }),
 			...history,
 			tool("add-frame", ICONS.addFrame, "Box"),
 			tool("slides", ICONS.slides, pageTitle(ed.p, true)),
-			tool("layout", ICONS.layout, "Layout"),
+			tool("layout", ICONS.layout, "Grid"),
 			tool("more", ICONS.more, "More"),
-			tool("export", ICONS.export, "Export")
+			tool("export", ICONS.export, "Export", { tone: "accent" })
 		].join("");
 	}
 	function renderAdjust() {
@@ -1732,7 +1740,7 @@ function addTools(ed) {
 	function renderTray() {
 		const used = usedIds();
 		const items = ed.p.photoIds.filter((pid) => ed.photos[pid]).map((pid) => `<button type="button" class="tray-item${used.has(pid) ? " is-used" : ""}" data-pid="${pid}" aria-label="${used.has(pid) ? "Photo in use" : "Photo"}">
-          <img src="${ed.thumbOf(pid)}" alt="" draggable="false" />${ed.photos[pid].kind === "video" ? `<span class="tray-vid">${ICONS.play}</span>` : ""}${used.has(pid) ? `<span class="tray-used">${ICONS.check}</span>` : ""}</button>`).join("");
+          <img src="${ed.thumbOf(pid)}" alt="" draggable="false" />${ed.photos[pid].kind === "video" ? "<span class=\"tray-vid\"></span>" : ""}${used.has(pid) ? `<span class="tray-used">${ICONS.check}</span>` : ""}</button>`).join("");
 		const was = ed.trayEl.querySelector("[data-tray-list]");
 		const keep = was ? was.scrollLeft : 0;
 		ed.trayEl.innerHTML = `
@@ -2447,15 +2455,15 @@ function addSheets(ed) {
               <button type="button" class="slide-thumb r-${ed.p.ratio.replace(":", "x")}" data-go="${i}" aria-label="Show ${word} ${i + 1}"></button>
               <span class="slide-name">${word} ${i + 1}</span>
               <span class="slide-acts">
-                <button type="button" class="mini-btn" data-layout="${i}" aria-label="Change the layout">${ICONS.grid}</button>
+                <button type="button" class="mini-btn" data-layout="${i}" aria-label="Change the grid">${ICONS.grid}</button>
                 <button type="button" class="mini-btn" data-up="${i}" aria-label="Move earlier"${i === 0 ? " disabled" : ""}>${ICONS.up}</button>
                 <button type="button" class="mini-btn" data-down="${i}" aria-label="Move later"${i === n - 1 ? " disabled" : ""}>${ICONS.down}</button>
-                <button type="button" class="mini-btn" data-copy="${i}" aria-label="Copy the layout"${n >= 20 ? " disabled" : ""}>${ICONS.copy}</button>
+                <button type="button" class="mini-btn" data-copy="${i}" aria-label="Copy the grid"${n >= 20 ? " disabled" : ""}>${ICONS.copy}</button>
                 <button type="button" class="mini-btn" data-del="${i}" aria-label="Remove"${n <= 1 ? " disabled" : ""}>${ICONS.trash}</button>
               </span>
             </li>`).join("")}
         </ol>
-        <p class="field-hint">The grid button picks a new layout for that ${pageWord(ed.p)}. Copy makes a new ${pageWord(ed.p)} with the same empty boxes. A photo that crosses a seam moves with the ${pageWord(ed.p)} it starts on.</p>
+        <p class="field-hint">The grid button picks a new grid for that ${pageWord(ed.p)}. Copy makes a new ${pageWord(ed.p)} with the same empty boxes. A photo that crosses a seam moves with the ${pageWord(ed.p)} it starts on.</p>
         <div class="sheet-footer">
           <button type="button" class="modal-cta primary" data-add${n >= 20 ? " disabled" : ""}>${n >= 20 ? `${20} is the most` : `+ Add a ${pageWord(ed.p)}`}</button>
         </div>`;
@@ -2534,7 +2542,7 @@ function addSlideLayouts(ed) {
 		return new Promise((resolve) => {
 			let chosen = null;
 			const s = openSheet({
-				title: isNew ? `New ${word}` : `${word} ${k + 1} layout`,
+				title: isNew ? `New ${word}` : `${word} ${k + 1} grid`,
 				className: "sheet-wide",
 				body: `
           ${hasPhotos ? `<p class="sheet-message">Its photos move into the new boxes, in order.</p>` : ""}
@@ -2648,7 +2656,7 @@ function addSlideLayouts(ed) {
 	async function openGrid() {
 		const get = await ed.previewSources();
 		const s = openSheet({
-			title: "Grid preview",
+			title: "Profile preview",
 			body: `
         <div class="grid-preview">
           <div class="grid-tile is-post" data-post></div>
@@ -2675,8 +2683,8 @@ function addSlideLayouts(ed) {
 				},
 				{
 					key: "zoom",
-					label: both ? "See one page" : "See both pages",
-					detail: both ? "Closer in, one page at a time." : "The whole open notebook."
+					label: both ? `See one ${pageWord(ed.p)}` : `See two ${pageWord(ed.p, true)}`,
+					detail: both ? "Closer in, one at a time." : "Side by side, two at a time."
 				},
 				...isStory(ed.p) ? [{
 					key: "safe",
@@ -2691,11 +2699,11 @@ function addSlideLayouts(ed) {
 				{
 					key: "template",
 					label: "Save as template",
-					detail: "Keeps the layout, not the photos."
+					detail: "Keeps the boxes, not the photos."
 				},
 				...isStory(ed.p) || isPrint(ed.p) ? [] : [{
 					key: "grid",
-					label: "Grid preview",
+					label: "Profile preview",
 					detail: "How the first slide looks in your profile grid."
 				}],
 				...unused.length ? [{
@@ -4949,10 +4957,12 @@ async function mountEditor(view, id) {
 	}
 	view.innerHTML = `
     <div class="editor" data-editor>
+      <p class="ed-line"><b>Layouts</b><span data-where></span></p>
       <div class="nb-open" data-nb></div>
       <div class="ws" data-ws>
         <div class="ws-inner" data-inner>
           <div class="ws-labels" data-labels></div>
+          <div class="strip-shadow" data-shadow></div>
           <div class="strip" data-strip>
             <div class="strip-frames" data-frames></div>
             <div class="strip-bands" data-bands></div>
@@ -4975,8 +4985,11 @@ async function mountEditor(view, id) {
           </div>
         </div>
       </div>
-      <button type="button" class="ws-add" data-act="add-slide" aria-label="Add a slide">${ICONS.plus}</button>
-      <div class="ed-name" data-name><button type="button" data-act="rename" aria-label="Rename this layout"><span>${esc(p.name)}</span></button></div>
+      <div class="ed-under" data-name>
+        <button type="button" class="ed-name-btn" data-act="rename" aria-label="Rename this layout"><span>${esc(p.name)}</span></button>
+        <span class="ed-dots" data-dots aria-hidden="true"></span>
+        <button type="button" class="ed-add" data-act="add-slide">${ICONS.plus}Add a ${esc(pageWord(p))}</button>
+      </div>
       <div class="ed-adjust" data-adjust hidden>
         <span class="ed-adjust-label">Zoom</span>
         <input type="range" min="1" max="5" step="0.01" value="1" data-zoom aria-label="Photo zoom" />
@@ -5015,8 +5028,11 @@ async function mountEditor(view, id) {
 	ed.adjustEl = adjustEl;
 	const zoomInput = $("[data-zoom]");
 	ed.zoomInput = zoomInput;
-	const addBtn = $(".ws-add");
+	const addBtn = $(".ed-add");
 	ed.addBtn = addBtn;
+	ed.whereEl = $("[data-where]");
+	ed.dotsEl = $("[data-dots]");
+	ed.shadowEl = $("[data-shadow]");
 	const nameEl = $("[data-name]");
 	ed.nameEl = nameEl;
 	const trayEl = $("[data-tray]");
@@ -5025,6 +5041,7 @@ async function mountEditor(view, id) {
 	ed.toolsEl = toolsEl;
 	ws.addEventListener("scroll", () => {
 		ed.placeBook();
+		ed.placeWhere();
 		if (ed.sel) ed.placeX();
 	}, { passive: true });
 	addLayout(ed);
@@ -5047,9 +5064,7 @@ async function mountEditor(view, id) {
 	});
 	ro.observe(ws);
 	ed.render();
-	const zOne = ed.fitZ("one");
-	const zAll = ed.fitZ("all");
-	ed.fitTo(zAll >= zOne * .6 ? "all" : "one", 0);
+	ed.fitTo("all", 0);
 	ed.render();
 	if (!p.thumb) thumbSoon();
 	window.__editor = {

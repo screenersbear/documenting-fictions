@@ -47,6 +47,7 @@ built/app.css
   styles/sheets.css
   styles/options-sheet.css
   styles/new-layout-guide.css
+  styles/editor-look.css
 
 # The scripts: app.js and every ES module it imports (and those import), joined
 # by following the imports, so they aren't listed one by one.

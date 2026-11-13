@@ -38,7 +38,7 @@ export function addSlideLayouts(ed) {
     return new Promise((resolve) => {
       let chosen = null;
       const s = openSheet({
-        title: isNew ? `New ${word}` : `${word} ${k + 1} layout`,
+        title: isNew ? `New ${word}` : `${word} ${k + 1} grid`,
         className: 'sheet-wide',
         body: `
           ${hasPhotos ? `<p class="sheet-message">Its photos move into the new boxes, in order.</p>` : ''}
@@ -75,7 +75,7 @@ export function addSlideLayouts(ed) {
     ed.commit();
   }
 
-  // The Layout button: a new layout for the slide on screen.
+  // The Grid button: a new grid of boxes for the slide on screen.
   async function layoutThisSlide() {
     const k = ed.visibleSlide();
     const l = await pickLayout(k);
@@ -158,7 +158,7 @@ export function addSlideLayouts(ed) {
   async function openGrid() {
     const get = await ed.previewSources();
     const s = openSheet({
-      title: 'Grid preview',
+      title: 'Profile preview',
       body: `
         <div class="grid-preview">
           <div class="grid-tile is-post" data-post></div>
@@ -177,11 +177,11 @@ export function addSlideLayouts(ed) {
       title: 'Layout',
       options: [
         { key: 'rename', label: 'Rename', detail: 'Also names the exported files.' },
-        { key: 'zoom', label: both ? 'See one page' : 'See both pages', detail: both ? 'Closer in, one page at a time.' : 'The whole open notebook.' },
+        { key: 'zoom', label: both ? `See one ${pageWord(ed.p)}` : `See two ${pageWord(ed.p, true)}`, detail: both ? 'Closer in, one at a time.' : 'Side by side, two at a time.' },
         ...(isStory(ed.p) ? [{ key: 'safe', label: ed.showSafe ? 'Hide safe zone' : 'Show safe zone', detail: 'The parts Instagram covers.' }] : []),
         { key: 'borders', label: 'Background and borders', detail: 'The background color, and space around the photos.' },
-        { key: 'template', label: 'Save as template', detail: 'Keeps the layout, not the photos.' },
-        ...(isStory(ed.p) || isPrint(ed.p) ? [] : [{ key: 'grid', label: 'Grid preview', detail: 'How the first slide looks in your profile grid.' }]),
+        { key: 'template', label: 'Save as template', detail: 'Keeps the boxes, not the photos.' },
+        ...(isStory(ed.p) || isPrint(ed.p) ? [] : [{ key: 'grid', label: 'Profile preview', detail: 'How the first slide looks in your profile grid.' }]),
         ...(unused.length ? [{ key: 'clear', label: 'Remove unused photos', detail: `${unused.length} in the tray, not in a box.` }] : []),
         { key: 'delete', label: 'Delete layout', detail: 'It and its photos go from this device.', danger: true },
       ],
