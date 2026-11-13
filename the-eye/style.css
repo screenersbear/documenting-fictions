@@ -7212,10 +7212,10 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
      3  labels and sub-headings                   Inter semibold, spaced
    Names you wrote (a shoot's, a setup's) stay as you wrote them.
    ====================================================================== */
-@font-face { font-family: "Inter"; src: url("fonts/inter-latin.woff2") format("woff2"); font-weight: 100 900; font-display: swap; size-adjust: 91%; } /* sized to take Klee One's width, so every line still fits where it did */
+@font-face { font-family: "Figtree"; src: url("fonts/figtree-latin.woff2") format("woff2"); font-weight: 300 900; font-display: swap; size-adjust: 96.5%; } /* sized, like Inter before it, to take Klee One's width, so every line still fits where it did */
 @font-face { font-family: "Archivo Black"; src: url("fonts/archivo-black-latin.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 :root {
-  --ui: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --ui: "Figtree", "Helvetica Neue", Arial, sans-serif;
   --display: "Archivo Black", "Arial Black", "Helvetica Neue", Arial, sans-serif;
   --font-hand: var(--ui); --font-body: var(--ui); --font-title: var(--ui);
   --head: var(--display); --font-head: var(--display);
