@@ -86,8 +86,13 @@ Starky approved these seven pairs on the canvas board "Seven pairs" (2026-11-13,
 | `leaf` | `#2F9A55` | `#14BFA0` teal | crimson `#A1062A`, 3.5:1 | berry blade black, 4.8:1 |
 | `ink` | `#313D45` | `#313D45`, unchanged | mango `#FFD100`, 7.6:1 | paper |
 
-With this rule, The Eye's band depends on its colour. Mango, its default, gives a mango band with berry blade black. Ink gives
-today's berry blade black band with a mango title.
+With this rule, The Eye's band depends on its colour. Mango stays its default (**Decided**, Starky 11-13: "it follows the new
+rule"), so its band is mango with berry blade black. Ink, if picked, gives today's berry blade black band with a mango title.
+
+**Defaults per app (Proposed, canvas board "The four defaults"):** The Eye `mango`, Ref `ocean`, Contact Sheet `berry` (was
+`orange`), Overthoughts `leaf`. Today's four (mango, ocean, orange, leaf) are yellow, blue, orange-red and green, the same four
+as the Windows logo, and orange sits too close to mango. The proposed four are yellow, blue, pink and teal: warm and cool take
+turns along the shelf, and no two apps share a partner.
 
 Note: each notebook's cover and edge on the shelf are pictures made per colour (`<app>/art/<colour>-cover.webp` and
 `-block.webp`). New colours need new pictures for all four notebooks.
@@ -126,12 +131,15 @@ the shapes do the shouting.
 
 | Level | Font | Size | Use |
 |---|---|---|---|
-| 1 Band title | Figtree 300, capitals, `.06em`, **left-aligned** | 24px | the title in the top band |
+| 1 Band title | Figtree 300, capitals, `.04em`, **left-aligned** | 34px, line 40px (Proposed 11-13) | the title in the top band |
 | 2 Section / sheet title | Figtree 700, capitals, `.12em` | 13px | page sections, sheet and modal titles |
 | 3 Label | Figtree 500, capitals, `.12em`, dim | 12px | field labels, months, groups, captions under marks |
 | Name | Figtree 300 | 20–28px | names you wrote: a board, a shoot, a chapter (as you wrote them, never capitals) |
 | Body | Figtree 400 | 16–19px | everything else |
 | Numbers | Figtree, tabular figures, `.06em` | any | counts, dates, sizes, so they line up |
+
+Why 34px for the band title: light type has thin strokes, so the size has to carry it. 36px ran into the buttons with
+"MOOD BOARDS", so 34px leaves a gap. The mark in the band keeps its size; bigger, it hits the buttons or deepens the band.
 
 What's live today (until each app is brought up): Archivo Black capitals for band titles (24px, centred) and section titles
 (18px), Figtree 600 capital labels, Figtree 400 body. The Eye's band is berry blade black with a mango title; the others are
@@ -194,7 +202,7 @@ The app marks (drawn on the canvas board "App marks and icons"):
 
 | App | Idea |
 |---|---|
-| STKY / the shelf | four quarters, one in each notebook's colour |
+| STKY / the shelf | four spines on a shelf, one leaning, each in its notebook's colour with its partner as a band (Proposed 11-13: the four quarters looked like the Windows logo) |
 | Ref | a square cut into a 2 × 2 board |
 | The Eye | a ring with a dot: an eye |
 | Contact Sheet | three bars side by side: a strip of shots |
@@ -278,8 +286,10 @@ The app marks (drawn on the canvas board "App marks and icons"):
 | — | Band colour | The notebook colour leads, and a partner colour supports it (4.2) |
 | — | Colour pairs | The seven pairs in 4.2 ("They work") |
 | — | App mark ideas | Mock them up before settling |
+| — | The Eye's default | Mango ("it follows the new rule", 4.2) |
 
 Starky likes the app marks in section 7 ("the marks look great").
 
-Still open: the band layout details (9), the exact type sizes (5.1), and The Eye's default colour (mango band, or ink for today's look). They're on the mockup canvas
+Still open: the band layout details (9), the exact type sizes (5.1; the band title is proposed at 34px), the four app defaults
+(4.2) and the shelf mark (7). They're on the mockup canvas
 "STKY look mockups" (https://claude.ai/artifact/YDz11YGa9iKqPgNNNcoWrP), waiting on Starky.
