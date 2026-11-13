@@ -5707,7 +5707,7 @@ const MENU = line("<line x1=\"4\" y1=\"7\" x2=\"20\" y2=\"7\"/><line x1=\"4\" y1
 const MARK = "<svg class=\"band-mark\" viewBox=\"0 0 80 40\" aria-hidden=\"true\"><rect x=\"6\" width=\"20\" height=\"40\" class=\"mk-p\"/><rect x=\"32\" y=\"8\" width=\"20\" height=\"32\" class=\"mk-w\"/><rect x=\"58\" y=\"14.4\" width=\"20\" height=\"25.6\" class=\"mk-p\"/></svg>";
 const BACK = line("<polyline points=\"15 5 8 12 15 19\"/>");
 const CLOSE = line("<line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/>");
-const MORE = "<svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\"><circle cx=\"5\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/><circle cx=\"19\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/></svg>";
+const MORE$1 = "<svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\"><circle cx=\"5\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/><circle cx=\"19\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/></svg>";
 const bandDate = (d = new Date()) => d.toLocaleDateString("en-GB", {
 	weekday: "short",
 	day: "numeric",
@@ -5750,7 +5750,7 @@ function addContents(ed) {
             <span class="toc-meta">${p.slides} ${esc(pageWord(p, p.slides !== 1))} · ${esc(shortDate(p.updatedAt))}</span>
           </span>
         </a>
-        <button type="button" class="toc-more" data-layout-more="${esc(p.id)}" aria-label="More for ${esc(p.name)}">${MORE}</button>
+        <button type="button" class="toc-more" data-layout-more="${esc(p.id)}" aria-label="More for ${esc(p.name)}">${MORE$1}</button>
       </div>`;
 	}
 	function pageHtml() {
@@ -6564,27 +6564,25 @@ function welcome(name, openTour) {
 	return true;
 }
 
+// components/guide-marks.js
+function marksHtml(names, at) {
+	const last = names.length - 1;
+	const marks = names.map((_, i) => {
+		const line = i ? `<span class="guide-line${i <= at ? " inked" : ""}"></span>` : "";
+		return `${line}<span class="guide-mark${i === at ? " now" : i < at ? " done" : ""}"></span>`;
+	}).join("");
+	const words = names.map((n, i) => {
+		const where = i === 0 ? "left:0" : i === last ? "right:0" : `left:${i / last * 100}%`;
+		return `<span class="guide-mark-name${i <= at ? " reached" : ""}${i && i < last ? " mid" : ""}" style="${where}">${esc(n)}</span>`;
+	}).join("");
+	return `<div class="guide-marks" role="img" aria-label="Step ${at + 1} of ${names.length}: ${esc(names[at])}"><div class="guide-mark-row">${marks}</div><div class="guide-mark-names" aria-hidden="true">${words}</div></div>`;
+}
+
 // data/starters.js
 async function seedStarters() {
 	if (await getMeta("startersSeeded")) return;
 	await saveTemplates(starterTemplates());
 	await setMeta("startersSeeded", true);
-}
-
-// components/template-picture.js
-const HILLS = ["M0 100V64L24 36L44 58L70 24L100 62V100Z", "M0 100V56L30 26L54 60L78 40L100 66V100Z"];
-function layoutSvg(t) {
-	const W = SLIDE_W;
-	const H = RATIOS[t.ratio].h;
-	const n = t.slides;
-	let s = "";
-	for (let i = 0; i < n; i++) s += `<rect x="${i * W}" y="0" width="${W}" height="${H}" fill="${esc(t.background)}"/>`;
-	t.frames.forEach((f, i) => {
-		s += `<svg x="${f.x}" y="${f.y}" width="${f.w}" height="${f.h}" viewBox="0 0 100 100" preserveAspectRatio="none"><rect width="100" height="100" class="lay-sky"/><path d="${HILLS[i % 2]}" class="lay-land"/></svg>`;
-	});
-	for (let i = 1; i < n; i++) s += `<line x1="${i * W}" y1="0" x2="${i * W}" y2="${H}" class="lay-seam"/>`;
-	s += `<rect x="0" y="0" width="${n * W}" height="${H}" class="lay-edge"/>`;
-	return `<svg class="tpl-svg" viewBox="0 0 ${n * W} ${H}" preserveAspectRatio="xMinYMid meet" aria-hidden="true">${s}</svg>`;
 }
 
 // pages/template-menu.js
@@ -6663,88 +6661,224 @@ async function templateMenu(id, redraw) {
 	await redraw();
 }
 
-// pages/new-chapter.js
-const sizeOption = (r) => ({
-	key: r,
-	label: RATIOS[r].label,
-	detail: `${RATIOS[r].size}. ${RATIOS[r].detail}`
-});
-const dateName = () => `Chapter ${shortDate(new Date().toISOString())}`;
-async function createProject(layout, name) {
-	const p = await saveProject({
-		name: name || dateName(),
-		photoIds: [],
-		thumb: null,
-		...layout
-	});
-	location.hash = `#/edit/${p.id}`;
+// components/template-picture.js
+function spreadSvg(t, boxes = true) {
+	const W = SLIDE_W;
+	const H = RATIOS[t.ratio].h;
+	const rects = boxes ? (t.frames || []).filter((f) => f.x < 2 * W).map((f) => `<rect class="spread-box" x="${f.x}" y="${f.y}" width="${f.w}" height="${f.h}"/>`).join("") : "";
+	return `<svg class="spread-svg" viewBox="0 0 ${2 * W} ${H}" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><rect class="spread-paper" width="${2 * W}" height="${H}"/>${rects}<line class="spread-seam" x1="${W}" y1="0" x2="${W}" y2="${H}" stroke-width="16" stroke-dasharray="53 53"/></svg>`;
 }
-async function newChapter() {
-	await seedStarters();
-	const name = await promptSheet({
-		title: "New chapter",
-		label: "Chapter name",
-		placeholder: dateName(),
-		confirmLabel: "Next",
-		allowEmpty: true
-	});
-	if (name === null) return false;
-	const ratio = await choiceSheet({
-		title: "New chapter",
-		options: [
-			...RATIO_ORDER.map(sizeOption),
-			{ heading: "Other sizes" },
-			...MORE_RATIOS.map(sizeOption)
+
+// pages/new-layout-steps.js
+const MARKS = [
+	"Name",
+	"Size",
+	"Template"
+];
+const SIZE_GROUPS = [
+	["Feed and story", [
+		[
+			"4:5",
+			"Feed",
+			"4:5"
+		],
+		[
+			"3:4",
+			"Feed",
+			"3:4"
+		],
+		[
+			"1:1",
+			"Square",
+			"1:1"
+		],
+		[
+			"9:16",
+			"Story",
+			"9:16"
 		]
-	});
-	return ratio ? chooseTemplate(ratio, name) : false;
+	]],
+	["Print", [
+		[
+			"2:3",
+			"Photo",
+			"4 × 6"
+		],
+		[
+			"5:7",
+			"Photo",
+			"5 × 7"
+		],
+		[
+			"8:10",
+			"Print",
+			"8 × 10"
+		],
+		[
+			"a4",
+			"A4",
+			""
+		]
+	]],
+	["Screen", [
+		[
+			"3:2",
+			"Landscape",
+			"3:2"
+		],
+		[
+			"4:3",
+			"Landscape",
+			"4:3"
+		],
+		[
+			"16:9",
+			"Wide",
+			"16:9"
+		],
+		[
+			"letter",
+			"Letter",
+			"US"
+		]
+	]]
+];
+const MORE = "<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"5\" r=\"1.6\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.6\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"19\" r=\"1.6\" fill=\"currentColor\"/></svg>";
+const head = (title, ask) => `<h1 class="guide-title">${esc(title)}</h1><p class="guide-ask">${esc(ask)}</p>`;
+function nameStep(W) {
+	return `${head("Name", "What is this one called?")}
+    <input class="guide-input" type="text" data-name value="${esc(W.name)}" placeholder="${esc(W.defaultName)}" aria-label="Name" autocomplete="off" enterkeyhint="next" />`;
 }
+function shape(ratio) {
+	const r = SLIDE_W / RATIOS[ratio].h;
+	let w = Math.sqrt(2025 * r);
+	let h = Math.sqrt(2025 / r);
+	const k = Math.min(1, 60 / Math.max(w, h));
+	w *= k;
+	h *= k;
+	return `<span class="size-shape-box"><span class="size-shape" style="width:${w.toFixed(1)}px;height:${h.toFixed(1)}px"></span></span>`;
+}
+function sizeStep(W) {
+	const card = ([key, name, sub]) => `<button type="button" class="size-card" role="radio" aria-checked="${key === W.ratio}" data-ratio="${key}" aria-label="${esc(RATIOS[key].label)}">${shape(key)}<span class="size-name">${esc(name)}</span><span class="size-sub">${esc(sub)}</span></button>`;
+	return `${head("Size", "Where will this one live?")}
+    ${SIZE_GROUPS.map(([group, sizes]) => `<p class="guide-group">${esc(group)}</p><div class="size-cards" role="radiogroup" aria-label="${esc(group)}">${sizes.map(card).join("")}</div>`).join("")}`;
+}
+function templateStep(W, list, blank) {
+	const card = (t, id) => `
+    <div class="tpl-pick${W.template === id ? " on" : ""}">
+      <button type="button" class="tpl-pick-btn" role="radio" aria-checked="${W.template === id}" data-use="${esc(id)}">
+        <span class="tpl-pick-art">${spreadSvg(t, !!id)}</span>
+        <span class="tpl-pick-name">${esc(t.name)}</span>
+      </button>
+      ${id ? `<button type="button" class="tpl-pick-more" data-tmore="${esc(id)}" aria-label="More for ${esc(t.name)}">${MORE}</button>` : ""}
+    </div>`;
+	return `${head("Template", "Start from a layout you've saved, or blank.")}
+    <div class="tpl-picks" role="radiogroup" aria-label="Template">${card(blank, "")}${list.map((t) => card(t, t.id)).join("")}</div>
+    <p class="guide-small">Save any layout as a template from its More menu.</p>`;
+}
+
+// pages/new-layout.js
+const dateName = () => `Layout, ${shortDate(new Date().toISOString())}`;
 const inRatio = (t, ratio) => t.ratio === ratio ? t : changeRatio(t, ratio);
-function chooseTemplate(ratio, name) {
+async function newLayout() {
+	await seedStarters();
 	return new Promise((resolve) => {
 		let made = false;
+		const W = {
+			step: 0,
+			name: "",
+			defaultName: dateName(),
+			ratio: "3:4",
+			template: ""
+		};
+		let list = [];
 		const s = openSheet({
-			title: "Templates",
-			className: "sheet-templates",
+			title: "New layout",
+			className: "sheet-guide",
 			onClose: () => resolve(made)
 		});
-		let list = [];
-		async function draw() {
-			list = (await listTemplates()).filter((t) => t.starterKey !== "story" && t.starterKey !== "full-bleed");
+		s.body.innerHTML = `
+      ${shortBandHtml({
+			name: "New layout",
+			backAttr: "data-back",
+			end: {
+				label: "Close",
+				attr: "data-close",
+				svg: CLOSE
+			}
+		})}
+      <div class="guide-scroll" data-scroll></div>
+      <div class="guide-foot">
+        <button type="button" class="btn secondary" data-back>Back</button>
+        <button type="button" class="btn primary" data-next></button>
+      </div>`;
+		const scroll = s.body.querySelector("[data-scroll]");
+		const next = s.body.querySelector("[data-next]");
+		async function draw(keepPlace = false) {
+			if (W.step === 2) list = (await listTemplates()).filter((t) => t.starterKey !== "story" && t.starterKey !== "full-bleed");
+			if (!s.overlay.isConnected) return;
 			const blank = {
-				...blankLayout(ratio),
+				...blankLayout(W.ratio),
 				name: "Blank"
 			};
-			const card = (t, id) => {
-				const shaped = inRatio(t, ratio);
-				return `
-          <div class="tpl-card">
-            <button type="button" class="tpl-open" data-use="${esc(id)}" aria-label="Start from ${esc(t.name)}">
-              <span class="tpl-art">${layoutSvg(shaped)}</span>
-              <span class="row-main">
-                <span class="row-name">${esc(t.name)}</span>
-                <span class="row-meta">${shaped.slides} ${esc(pageWord(shaped, shaped.slides !== 1))}</span>
-              </span>
-            </button>
-            ${id ? `<button type="button" class="mini-btn" data-tmore="${esc(id)}" aria-label="More for ${esc(t.name)}">${ICONS.more}</button>` : ""}
-          </div>`;
-			};
-			s.body.innerHTML = `<div class="card-list">${card(blank, "")}${list.map((t) => card(t, t.id)).join("")}</div>`;
+			const body = W.step === 0 ? nameStep(W) : W.step === 1 ? sizeStep(W) : templateStep(W, list.map((t) => inRatio(t, W.ratio)), blank);
+			const top = scroll.scrollTop;
+			scroll.innerHTML = marksHtml(MARKS, W.step) + body;
+			scroll.scrollTop = keepPlace ? top : 0;
+			next.textContent = W.step < 2 ? `Next: ${MARKS[W.step + 1]}` : "Make it";
+			const name = scroll.querySelector("[data-name]");
+			name?.addEventListener("input", () => W.name = name.value);
+			name?.addEventListener("keydown", (e) => {
+				if (e.key === "Enter") {
+					e.preventDefault();
+					go(1);
+				}
+			});
 		}
-		draw();
+		async function make() {
+			const t = list.find((x) => x.id === W.template);
+			const layout = t ? layoutFromTemplate(inRatio(t, W.ratio)) : blankLayout(W.ratio);
+			made = true;
+			const p = await saveProject({
+				name: W.name.trim() || W.defaultName,
+				photoIds: [],
+				thumb: null,
+				...layout
+			});
+			s.close();
+			location.hash = `#/edit/${p.id}`;
+		}
+		function go(dir) {
+			if (dir < 0 && W.step === 0) return s.close();
+			if (dir > 0 && W.step === 2) return make();
+			W.step += dir;
+			draw();
+		}
 		s.body.addEventListener("click", (e) => {
+			if (e.target.closest("[data-back]")) return go(-1);
+			if (e.target.closest("[data-next]")) return go(1);
+			const size = e.target.closest("[data-ratio]");
+			if (size) {
+				W.ratio = size.dataset.ratio;
+				return draw(true);
+			}
 			const more = e.target.closest("[data-tmore]");
 			if (more) {
-				templateMenu(more.dataset.tmore, draw);
-				return;
+				return templateMenu(more.dataset.tmore, async () => {
+					await draw(true);
+					if (W.template && !list.some((t) => t.id === W.template)) {
+						W.template = "";
+						draw(true);
+					}
+				});
 			}
-			const b = e.target.closest("[data-use]");
-			if (!b) return;
-			const t = list.find((x) => x.id === b.dataset.use);
-			made = true;
-			s.close();
-			createProject(t ? layoutFromTemplate(inRatio(t, ratio)) : blankLayout(ratio), name);
+			const use = e.target.closest("[data-use]");
+			if (use) {
+				W.template = use.dataset.use;
+				draw(true);
+			}
 		});
+		draw();
 	});
 }
 
@@ -6779,7 +6913,7 @@ async function route() {
 		} else {
 			view.dataset.route = "book";
 			if (book) book.setMode(modeOfHash(h));
-			else book = mountBook(view, modeOfHash(h), newChapter);
+			else book = mountBook(view, modeOfHash(h), newLayout);
 		}
 	} catch (e) {
 		console.error(e);
@@ -6792,7 +6926,7 @@ if (suite || startsOnFirstPage()) {
 	if ((location.hash || "#/") === "#/") history.replaceState(null, "", "#/contents");
 }
 route();
-if (suite && suite.at === "new") setTimeout(newChapter, 400);
+if (suite && suite.at === "new") setTimeout(newLayout, 400);
 else if (suite && suite.firstVisit) setTimeout(() => {
 	if (!document.querySelector(".sheet-overlay")) welcome("Layouts", openIntro);
 }, 900);
