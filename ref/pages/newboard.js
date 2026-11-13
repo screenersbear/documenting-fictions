@@ -17,6 +17,7 @@ import { shortBandHtml, CLOSE } from '../components/band.js';
 import { esc, clamp } from '../components/util.js';
 import { cardHtml } from '../components/option-card.js';
 import { marksHtml, miniPage } from './newboard-parts.js';
+import { defaultShape } from './options.js';
 
 const SHAPE_INFO = {
   'letter-portrait': { name: 'Tall', blurb: 'For printing and bringing to a shoot.' },
@@ -31,7 +32,7 @@ const ORDERS = [
 
 export function newBoardScreen(view) {
   const W = {
-    step: 0, name: '', shape: 'letter-portrait', style: 'mosaic', cover: false,
+    step: 0, name: '', shape: defaultShape(), style: 'mosaic', cover: false,
     start: 'blank', blankPages: 3,
     sections: [{ name: '', tags: [], all: true }], order: 'newest', perSection: 3,
   };

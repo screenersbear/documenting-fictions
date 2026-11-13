@@ -967,7 +967,7 @@ async function undoLast() {
 }
 
 // data/templates.js
-const SHAPES = {
+const SHAPES$1 = {
 	"letter-portrait": {
 		W: 8.5,
 		H: 11,
@@ -1280,7 +1280,7 @@ const GUIDE_MIN = 4;
 const GUIDE_MAX = 12;
 const guideTemplateId = (shape, n, head) => `g-${shape === "wide-16x9" ? "w" : "lp"}-${n}${head ? "-head" : ""}`;
 function guides(shape) {
-	const { W, H } = SHAPES[shape], M = shape === "wide-16x9" ? .45 : .5, HEAD = .95;
+	const { W, H } = SHAPES$1[shape], M = shape === "wide-16x9" ? .45 : .5, HEAD = .95;
 	const out = [];
 	for (let n = 4; n <= 12; n++) for (const head of [true, false]) {
 		const area = {
@@ -1506,7 +1506,7 @@ const textParts = (page) => [{
 	bold: false
 }].filter((p) => p.text.trim());
 async function renderPage(board, page, { selected = -1, editing = false, mainHint = false } = {}) {
-	const shape = SHAPES[board.shape];
+	const shape = SHAPES$1[board.shape];
 	const t = pageTemplate(board, page);
 	const el = document.createElement("div");
 	el.className = "page";
@@ -1634,7 +1634,7 @@ function wrapLines(ctx, text, maxW) {
 	return out;
 }
 async function pageToCanvas(board, page, pxWidth) {
-	const shape = SHAPES[board.shape];
+	const shape = SHAPES$1[board.shape];
 	const W = Math.round(pxWidth);
 	const H = Math.round(pxWidth * shape.H / shape.W);
 	const c = document.createElement("canvas");
@@ -1865,6 +1865,60 @@ function promptSheet({ title, label = "Name", value = "", confirmLabel = "Save",
 	});
 }
 
+// components/shoot-picker.js
+const line$1 = /* @__PURE__ */ __name((d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`, "line");
+const PLUS$2 = line$1("<line x1=\"12\" y1=\"5\" x2=\"12\" y2=\"19\"/><line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/>");
+const CAMERA = line$1("<path d=\"M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z\"/><circle cx=\"12\" cy=\"13\" r=\"3.5\"/>");
+function pickShoot({ boardName, shoots }) {
+	return new Promise((resolve) => {
+		let answer = null;
+		let pick = shoots.find((x) => !x.has)?.id || null;
+		const row = (x) => `
+      <button type="button" class="send-shoot" role="radio" aria-checked="${x.id === pick}" data-shoot="${esc(x.id)}"${x.has ? " aria-disabled=\"true\"" : ""}>
+        <span class="send-thumb">${x.photo ? `<img src="${esc(x.photo)}" alt="" />` : CAMERA}</span>
+        <span class="send-words"><span class="send-name">${esc(x.name)}</span><span class="send-line">${esc(x.line)}</span></span>
+        <span class="send-radio" aria-hidden="true"></span>
+      </button>`;
+		const s = openSheet({
+			title: "Send to shoot",
+			className: "send-sheet",
+			body: `
+        <p class="send-lead">"${esc(boardName)}" goes to the shoot and stays live until the shoot happens.</p>
+        ${shoots.length ? "<span class=\"field-label choice-heading\">Upcoming in The Eye</span>" : "<p class=\"send-lead\">No shoots coming up in The Eye.</p>"}
+        <div class="send-list" role="radiogroup" aria-label="Shoot">${shoots.map(row).join("")}</div>
+        <button type="button" class="send-new" data-new><span class="send-plus">${PLUS$2}</span>New shoot from this board</button>
+        ${shoots.length ? "<div class=\"sheet-actions one\"><button type=\"button\" class=\"btn primary\" data-send></button></div>" : ""}`,
+			onClose: () => resolve(answer)
+		});
+		const send = s.body.querySelector("[data-send]");
+		const paint = () => {
+			s.body.querySelectorAll("[data-shoot]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.shoot === pick)));
+			if (!send) return;
+			const x = shoots.find((y) => y.id === pick);
+			send.textContent = x ? `Send to ${x.name}` : "Send";
+			send.disabled = !x;
+		};
+		paint();
+		s.body.addEventListener("click", (e) => {
+			const b = e.target.closest("[data-shoot]");
+			if (b && !b.hasAttribute("aria-disabled")) {
+				pick = b.dataset.shoot;
+				paint();
+				return;
+			}
+			if (e.target.closest("[data-new]")) {
+				answer = "+new";
+				s.close();
+				return;
+			}
+			if (e.target.closest("[data-send]") && pick) {
+				answer = pick;
+				s.close();
+			}
+		});
+	});
+}
+
 // data/sendshoot.js
 const D = window.DFData;
 const LONG_EDGE = 1600;
@@ -1876,6 +1930,12 @@ const UPCOMING = [
 	"waiting_to_shoot",
 	"rescheduled"
 ];
+const STATUS = {
+	prospect: "Prospect",
+	planning: "Active planning",
+	waiting_to_shoot: "Shoot ready",
+	rescheduled: "Postponed"
+};
 function boardKey(b) {
 	const str = JSON.stringify([
 		b.name,
@@ -1937,7 +1997,7 @@ async function drawCover(board, firstPage) {
 	return toPicture(c, .8);
 }
 async function drawBoard(board, say) {
-	const s = SHAPES[board.shape] || SHAPES["letter-portrait"];
+	const s = SHAPES$1[board.shape] || SHAPES$1["letter-portrait"];
 	const px = s.W >= s.H ? LONG_EDGE : Math.round(LONG_EDGE * s.W / s.H);
 	const pages = [];
 	for (let i = 0; i < board.pages.length; i++) {
@@ -1977,15 +2037,15 @@ const dateOf = (ymd) => {
 	return new Date(y, m - 1, d);
 };
 function shootDay(ymd) {
-	if (!ymd) return "No date yet";
+	if (!ymd) return "Date not set";
 	const d = dateOf(ymd);
 	const opts = {
 		weekday: "short",
-		month: "short",
-		day: "numeric"
+		day: "numeric",
+		month: "short"
 	};
 	if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
-	return d.toLocaleDateString(undefined, opts);
+	return d.toLocaleDateString("en-GB", opts).replace(",", "");
 }
 function upcomingShoots() {
 	const { shoots, mode } = eyeShoots();
@@ -1996,7 +2056,9 @@ function upcomingShoots() {
 			id: s.id,
 			name,
 			other: other !== name ? other : "",
-			date: s.date || ""
+			date: s.date || "",
+			status: STATUS[s.status || "prospect"],
+			photo: s.projectPhoto || ""
 		};
 	});
 }
@@ -2029,28 +2091,21 @@ async function sendToShoot(board) {
 	});
 	const has = new Set(links.map((l) => l.toId));
 	const shoots = upcomingShoots();
-	const key = await choiceSheet({
-		title: "Send to which shoot?",
-		message: shoots.length ? "" : "No shoots coming up in The Eye.",
-		options: [...shoots.map((s) => ({
-			key: s.id,
-			label: s.name,
-			detail: [
+	const key = await pickShoot({
+		boardName: board.name,
+		shoots: shoots.map((s) => ({
+			id: s.id,
+			name: s.name,
+			photo: s.photo,
+			has: has.has(s.id),
+			line: [
 				shootDay(s.date),
-				s.other,
+				s.status,
 				has.has(s.id) ? "Has this board" : ""
-			].filter(Boolean).join(" · "),
-			current: has.has(s.id)
-		})), {
-			key: "+new",
-			label: "+ New shoot from this board"
-		}]
+			].filter(Boolean).join(" · ")
+		}))
 	});
 	if (!key) return;
-	if (key !== "+new" && has.has(key)) {
-		toast("That shoot has this board already");
-		return;
-	}
 	let drawn;
 	try {
 		drawn = await drawBoard(board, (i) => toast(`Getting page ${i + 1} of ${board.pages.length} ready`, { ms: 6e4 }));
@@ -2430,7 +2485,7 @@ function fileSheet(ids) {
 }
 
 // pages/folders.js
-const CHEVRON = "<svg class=\"chevron\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><polyline points=\"9 5 16 12 9 19\"/></svg>";
+const CHEVRON$1 = "<svg class=\"chevron\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><polyline points=\"9 5 16 12 9 19\"/></svg>";
 const SEARCH = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"6.5\"/><line x1=\"16\" y1=\"16\" x2=\"20.5\" y2=\"20.5\"/></svg>";
 function foldersScreen(view) {
 	const row = (f, cls = "") => {
@@ -2440,7 +2495,7 @@ function foldersScreen(view) {
         <span class="tag-thumb">${list[0] ? `<img src="${thumbUrl(list[0])}" alt="" loading="lazy" />` : ""}</span>
         <span class="tag-name">${esc(f.name)}</span>
         <span class="tag-count" aria-label="${list.length} ${list.length === 1 ? "photo" : "photos"}">${list.length.toLocaleString()}</span>
-        ${CHEVRON}
+        ${CHEVRON$1}
       </a>`;
 	};
 	view.innerHTML = `
@@ -2497,6 +2552,8 @@ const del = (k) => {
 		localStorage.removeItem(k);
 	} catch {}
 };
+const isOff = () => get(ON) === "off";
+const tagsOn = () => !isOff();
 const scan = {
 	state: "off",
 	done: 0,
@@ -2507,6 +2564,7 @@ const emit = (tagged = false) => window.dispatchEvent(new CustomEvent("ref-scan"
 let worker = null;
 let running = false;
 let nextId = 1;
+let runs = 0;
 const waiting = new Map();
 const skip = new Set();
 const todo = () => lib.photos.filter((p) => p.tagsV !== VERSION && !p.tagsEdited && !skip.has(p.id));
@@ -2555,6 +2613,8 @@ async function run() {
 		return;
 	}
 	running = true;
+	const me = ++runs;
+	const stopped = () => isOff() || me !== runs;
 	scan.state = "loading";
 	scan.pct = 0;
 	scan.done = 0;
@@ -2580,7 +2640,7 @@ async function run() {
 		scan.state = "working";
 		emit();
 		let first = true;
-		for (let p = todo()[0]; p; p = todo()[0]) {
+		for (let p = todo()[0]; p && !stopped(); p = todo()[0]) {
 			await visible();
 			try {
 				const bytes = await getThumb(p.id);
@@ -2603,6 +2663,7 @@ async function run() {
 					};
 				}
 			} catch (e) {
+				if (stopped()) break;
 				console.error(e);
 				skip.add(p.id);
 			}
@@ -2614,13 +2675,14 @@ async function run() {
 			scan.total = scan.done + todo().length;
 			emit(scan.done % 4 === 0 || !todo().length);
 		}
+		if (stopped()) return;
 		worker.terminate();
 		worker = null;
 		running = false;
 		scan.state = "done";
 		emit(true);
 	} catch (e) {
-		fail(e);
+		if (!stopped()) fail(e);
 	}
 }
 function turnOnTags() {
@@ -2628,9 +2690,26 @@ function turnOnTags() {
 	del(BUSY);
 	run();
 }
+function turnOffTags() {
+	set(ON, "off");
+	del(BUSY);
+	runs++;
+	worker?.terminate();
+	worker = null;
+	for (const w of waiting.values()) w.reject(new Error("turned off"));
+	waiting.clear();
+	running = false;
+	scan.state = "off";
+	emit();
+}
 async function carryOn() {
 	if (get(ON) === "failed") {
 		scan.state = "failed";
+		emit();
+		return;
+	}
+	if (isOff()) {
+		scan.state = "off";
 		emit();
 		return;
 	}
@@ -2927,7 +3006,7 @@ function openColorPage(hex, onBack) {
 
 // pages/folder.js
 const SORT_ICON = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><line x1=\"4\" y1=\"7\" x2=\"20\" y2=\"7\"/><line x1=\"7\" y1=\"12\" x2=\"17\" y2=\"12\"/><line x1=\"10\" y1=\"17\" x2=\"14\" y2=\"17\"/></svg>";
-const TICK = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polyline points=\"5 12.5 10 17 19 7\"/></svg>";
+const TICK$1 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polyline points=\"5 12.5 10 17 19 7\"/></svg>";
 const filterMemory = {};
 let stopListening = null;
 function folderScreen(view, id) {
@@ -2967,7 +3046,7 @@ function folderScreen(view, id) {
 		if (!total) return `<p class="note center">${id === "favorites" ? "Tap the heart on a photo to keep it here." : "Nothing here yet. File photos in from Incoming."}</p>`;
 		return `<div class="grid">
       ${incoming && !selecting ? `<button type="button" class="tile add" data-phone aria-label="Add from your phone">${ICONS.plus}<span>Add from<br />your phone</span></button>` : ""}
-      ${current.map((p, i) => `<button type="button" class="tile${sel.has(p.id) ? " sel" : ""}" data-i="${i}" aria-label="${esc(p.name)}"><img src="${thumbUrl(p)}" alt="" decoding="async" draggable="false" />${p.favorite ? `<span class="fav">${ICONS.heartOn}</span>` : ""}${selecting ? `<span class="tile-tick">${TICK}</span>` : ""}</button>`).join("")}
+      ${current.map((p, i) => `<button type="button" class="tile${sel.has(p.id) ? " sel" : ""}" data-i="${i}" aria-label="${esc(p.name)}"><img src="${thumbUrl(p)}" alt="" decoding="async" draggable="false" />${p.favorite ? `<span class="fav">${ICONS.heartOn}</span>` : ""}${selecting ? `<span class="tile-tick">${TICK$1}</span>` : ""}</button>`).join("")}
     </div>`;
 	};
 	const countText = () => {
@@ -3286,12 +3365,704 @@ function marksHtml(names, at) {
 	return `<div class="guide-marks" role="img" aria-label="Step ${at + 1} of ${names.length}: ${esc(names[at])}"><div class="guide-mark-row">${marks}</div><div class="guide-mark-names" aria-hidden="true">${words}</div></div>`;
 }
 function miniPage(shape, tid, w) {
-	const s = SHAPES[shape];
+	const s = SHAPES$1[shape];
 	const t = templateFor(shape, tid);
 	const W = 60;
 	const H = 60 * s.H / s.W;
 	const r = (t?.slots || []).map((b) => `<rect x="${b.x * W}" y="${b.y * H}" width="${b.w * W}" height="${b.h * H}"/>`).join("");
 	return `<svg viewBox="0 0 ${W} ${H}" style="width:${w}px" aria-hidden="true"><rect class="paper-r" width="${W}" height="${H}"/>${r}</svg>`;
+}
+
+// pages/intro.js
+const SEEN = "ref-notebook-intro-seen";
+const CARDS = [
+	["Bring your photos in", "Open Incoming and pick photos from your phone. Tag them to sort them, then make mood boards from your tags."],
+	["It keeps its own copy", "Everything you add is saved inside Ref Notebook. Once a photo is in, you can delete it from your phone’s Photos to free up space, and it stays here in your boards and tags."],
+	["Good to know", "Photos are kept at a size made for boards and PDFs, not the full original. Your photos are saved inside the app, not in Photos. If you delete Ref Notebook from your home screen, its photos are deleted with it."]
+];
+const introSeen = () => {
+	try {
+		return localStorage.getItem(SEEN) === "1";
+	} catch {
+		return true;
+	}
+};
+function openIntro() {
+	let at = 0;
+	const s = openSheet({
+		title: CARDS[0][0],
+		className: "sheet-small intro",
+		onClose: () => {
+			try {
+				localStorage.setItem(SEEN, "1");
+			} catch {}
+		}
+	});
+	const draw = () => {
+		const last = at === CARDS.length - 1;
+		s.setTitle(CARDS[at][0]);
+		s.body.innerHTML = `
+      <p class="sheet-message">${CARDS[at][1]}</p>
+      <span class="wz-dots intro-dots" aria-hidden="true">${CARDS.map((_, i) => `<i class="${i === at ? "on" : ""}"></i>`).join("")}</span>
+      <div class="sheet-actions${at ? "" : " one"}">
+        ${at ? "<button type=\"button\" class=\"btn secondary\" data-back>Back</button>" : ""}
+        <button type="button" class="btn primary" data-next>${last ? "Got it" : "Next"}</button>
+      </div>`;
+	};
+	s.body.addEventListener("click", (e) => {
+		if (e.target.closest("[data-back]")) {
+			at--;
+			draw();
+		} else if (e.target.closest("[data-next]")) {
+			if (at === CARDS.length - 1) s.close();
+			else {
+				at++;
+				draw();
+			}
+		}
+	});
+	draw();
+	return s;
+}
+
+// pages/options-backup.js
+function saveBackup() {
+	const D = window.DFData;
+	let open = true;
+	let made = null;
+	const s = openSheet({
+		title: "Save a backup",
+		className: "sheet-small",
+		body: "<p class=\"sheet-message\" data-msg>Putting it together</p>",
+		onClose: () => {
+			open = false;
+			if (made) made.done();
+		}
+	});
+	const msg = s.body.querySelector("[data-msg]");
+	D.zipBackup({
+		app: "ref",
+		databases: ["ref-notebook"],
+		extra: { book: document.documentElement.dataset.book || "" },
+		filename: `ref-backup-${D.todayStr()}.zip`,
+		onProgress: (f) => {
+			if (open) msg.textContent = `Putting it together, ${Math.floor(f * 100)}%`;
+		}
+	}).then((m) => {
+		made = m;
+		if (!open) {
+			if (m) m.done();
+			return;
+		}
+		if (!m) {
+			msg.textContent = "There is nothing to back up yet.";
+			return;
+		}
+		const steps = D.backupSteps(m);
+		msg.textContent = steps.note;
+		msg.insertAdjacentHTML("afterend", `<button type="button" class="btn secondary opt-wide" data-save>${steps.label}</button>`);
+		const btn = s.body.querySelector("[data-save]");
+		btn.addEventListener("click", async () => {
+			try {
+				if (!await steps.tap()) {
+					btn.textContent = steps.label;
+					return;
+				}
+				s.close();
+				toast("Backup saved");
+			} catch (err) {
+				console.error(err);
+				toast(err.message || "The backup wasn't saved.");
+			}
+		});
+	}).catch((err) => {
+		console.error(err);
+		if (open) msg.textContent = err.message || "The backup couldn't be made.";
+	});
+}
+async function restoreBackup(close, BOOK_KEY) {
+	const D = window.DFData;
+	const files = await D.pickFiles(".zip,application/zip,.json,application/json");
+	if (!files.length) return;
+	if (!await confirmSheet({
+		title: "Restore backup",
+		message: "Everything in ref now is swapped for what's in the file.",
+		confirmLabel: "Restore",
+		danger: true
+	})) return;
+	toast("Restoring the backup", { ms: 6e5 });
+	try {
+		const r = await D.isZipFile(files[0]) ? await D.restoreZip(files, { databases: ["ref-notebook"] }) : await D.importDb(files[0], "ref-notebook", {
+			app: "ref",
+			replace: true
+		});
+		const book = r.extra && r.extra.book || (r.local ? await r.local(BOOK_KEY) : null);
+		if (book) {
+			try {
+				localStorage.setItem(BOOK_KEY, book);
+			} catch {}
+		}
+		close();
+		toast("Backup restored");
+		setTimeout(() => location.reload(), 700);
+	} catch (err) {
+		console.error(err);
+		toast(err.message || "That backup couldn't be restored.");
+	}
+}
+
+// components/stickers.js
+const ASPECT = {
+	circle: 1,
+	square: 1,
+	rect: 2 / 3
+};
+const COVER = 1e3 / 1360;
+const book$2 = document.getElementById("book");
+const flap = document.getElementById("stickerFlap");
+const front = () => book$2.querySelector(".nb-front");
+const urls = new Map();
+const urlOf = (s) => {
+	if (!urls.has(s.id)) urls.set(s.id, URL.createObjectURL(new Blob([s.bytes], { type: "image/jpeg" })));
+	return urls.get(s.id);
+};
+let stickers = [];
+function randomFrom(seed) {
+	let a = seed >>> 0;
+	return () => {
+		a = a + 1831565813 >>> 0;
+		let t = Math.imul(a ^ a >>> 15, 1 | a);
+		t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+		return ((t ^ t >>> 14) >>> 0) / 4294967296;
+	};
+}
+const seedOf = (s) => s.seed ?? [...String(s.id)].reduce((h, c) => Math.imul(h, 31) + c.charCodeAt(0) | 0, 7);
+const creases = new Map();
+function creaseArt(seed, aspect) {
+	const key = `${seed}:${aspect}`;
+	if (creases.has(key)) return creases.get(key);
+	const W = 480;
+	const H = Math.round(W * aspect);
+	const r = randomFrom(seed);
+	const c = document.createElement("canvas");
+	c.width = W;
+	c.height = H;
+	const g = c.getContext("2d");
+	for (let i = 0, n = 3 + Math.floor(r() * 3); i < n; i++) {
+		const side = Math.floor(r() * 4);
+		const along = r();
+		const x = side === 0 ? 0 : side === 1 ? W : along * W;
+		const y = side === 2 ? 0 : side === 3 ? H : along * H;
+		const rad = W * (.18 + r() * .24);
+		const shade = g.createRadialGradient(x, y, 0, x, y, rad);
+		shade.addColorStop(0, `rgba(58, 50, 42, ${.13 + r() * .12})`);
+		shade.addColorStop(1, "rgba(58, 50, 42, 0)");
+		g.fillStyle = shade;
+		g.fillRect(0, 0, W, H);
+	}
+	const edgePoint = (side) => {
+		const t = .1 + r() * .8;
+		return [
+			[t * W, 0],
+			[W, t * H],
+			[t * W, H],
+			[0, t * H]
+		][side];
+	};
+	const soft = (path, width, blur, color, dx, dy) => {
+		const far = W * 4;
+		g.save();
+		g.lineCap = "round";
+		g.lineJoin = "round";
+		g.lineWidth = width;
+		g.strokeStyle = "#000";
+		g.shadowColor = color;
+		g.shadowBlur = blur;
+		g.shadowOffsetX = far + dx;
+		g.shadowOffsetY = dy;
+		g.translate(-far, 0);
+		path();
+		g.stroke();
+		g.restore();
+	};
+	for (let i = 0, n = 2 + Math.floor(r() * 3); i < n; i++) {
+		const side = Math.floor(r() * 4);
+		const [ax, ay] = edgePoint(side);
+		let [bx, by] = edgePoint((side + 1 + Math.floor(r() * 3)) % 4);
+		const reach = .45 + r() * .55;
+		bx = ax + (bx - ax) * reach;
+		by = ay + (by - ay) * reach;
+		const len = Math.hypot(bx - ax, by - ay);
+		const nx = -(by - ay) / len;
+		const ny = (bx - ax) / len;
+		const bow = (r() - .5) * len * .18;
+		const cx = (ax + bx) / 2 + nx * bow;
+		const cy = (ay + by) / 2 + ny * bow;
+		const path = () => {
+			g.beginPath();
+			g.moveTo(ax, ay);
+			g.quadraticCurveTo(cx, cy, bx, by);
+		};
+		const depth = .55 + r() * .45;
+		const spread = W * (.035 + r() * .035);
+		const sx = nx > 0 ? 1 : -1;
+		const sy = ny > 0 ? 1 : -1;
+		const ox = sx * Math.abs(nx);
+		const oy = sy * Math.abs(ny);
+		soft(path, spread * .9, spread * 1.3, `rgba(52, 44, 38, ${.16 * depth})`, ox * spread * .6, oy * spread * .6);
+		soft(path, spread * .35, spread * .6, `rgba(52, 44, 38, ${.1 * depth})`, ox * spread * .25, oy * spread * .25);
+		soft(path, spread * .7, spread * 1.1, `rgba(255, 255, 255, ${.32 * depth})`, -ox * spread * .55, -oy * spread * .55);
+	}
+	const url = c.toDataURL("image/png");
+	c.width = c.height = 0;
+	creases.set(key, url);
+	return url;
+}
+function make(s, src, onFlap) {
+	const el = document.createElement("div");
+	el.className = `sticker ${s.shape}`;
+	el.innerHTML = `<img class="photo" alt="" draggable="false" /><img class="crease" alt="" draggable="false" />${onFlap ? "" : "<i class=\"fold r\" hidden></i><i class=\"fold l\" hidden></i><i class=\"fold t\" hidden></i><i class=\"fold b\" hidden></i>"}`;
+	el.querySelector(".photo").src = src;
+	el.querySelector(".crease").src = creaseArt(seedOf(s), ASPECT[s.shape]);
+	(onFlap ? placeOnFlap : place$1)(el, s);
+	return el;
+}
+const BEND = .075;
+function place$1(el, s) {
+	el.style.left = `${s.x * 100}%`;
+	el.style.top = `${s.y * 100}%`;
+	el.style.width = `${s.size * 100}%`;
+	const w = s.size;
+	const h = s.size * ASPECT[s.shape] * COVER;
+	const left = s.x - w / 2;
+	const top = s.y - h / 2;
+	const across = BEND / w * 100;
+	const down = BEND * COVER / h * 100;
+	const set = (cls, on, css) => {
+		const f = el.querySelector(`.fold.${cls}`);
+		f.hidden = !on;
+		if (on) Object.assign(f.style, css);
+	};
+	set("r", left + w > 1, {
+		left: `${(1 - left) / w * 100 - across}%`,
+		width: `${across}%`
+	});
+	set("l", left < 0, {
+		left: `${-left / w * 100}%`,
+		width: `${across}%`
+	});
+	set("b", top + h > 1, {
+		top: `${(1 - top) / h * 100 - down}%`,
+		height: `${down}%`
+	});
+	set("t", top < 0, {
+		top: `${-top / h * 100}%`,
+		height: `${down}%`
+	});
+}
+__name(place$1, "place");
+const placeOnFlap = (el, s) => {
+	el.style.left = `calc(${s.x - 1} * var(--W))`;
+	el.style.top = `calc(${s.y} * var(--H))`;
+	el.style.width = `calc(${s.size} * var(--W))`;
+};
+async function paintStickers() {
+	stickers = (await listStickers()).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+	front().querySelectorAll(".sticker").forEach((e) => e.remove());
+	flap.innerHTML = "";
+	for (const s of stickers) {
+		front().append(make(s, urlOf(s)));
+		flap.append(make(s, urlOf(s), true));
+	}
+	window.dispatchEvent(new Event("ref-stickers"));
+}
+const stickerThumb = urlOf;
+async function removeSticker(s) {
+	await deleteSticker(s.id);
+	await paintStickers();
+	toast("Sticker removed", { action: {
+		label: "Undo",
+		run: async () => {
+			await saveSticker(s);
+			await paintStickers();
+		}
+	} });
+}
+const twoFingers = (list) => list.length > 1 ? Math.hypot(list[0][0] - list[1][0], list[0][1] - list[1][1]) : 0;
+const middle = (list) => [list.reduce((a, p) => a + p[0], 0) / list.length, list.reduce((a, p) => a + p[1], 0) / list.length];
+async function cropSticker(file, shape) {
+	const url = URL.createObjectURL(file);
+	let img;
+	try {
+		img = await loadImage$1(url);
+	} finally {
+		URL.revokeObjectURL(url);
+	}
+	const fit = Math.min(1, 2e3 / Math.max(img.naturalWidth, img.naturalHeight));
+	const pic = document.createElement("canvas");
+	pic.width = Math.round(img.naturalWidth * fit);
+	pic.height = Math.round(img.naturalHeight * fit);
+	const pg = pic.getContext("2d", { colorSpace: "srgb" });
+	pg.imageSmoothingQuality = "high";
+	pg.drawImage(img, 0, 0, pic.width, pic.height);
+	return new Promise((resolve) => {
+		const layer = document.createElement("div");
+		layer.className = "crop-layer";
+		layer.innerHTML = `
+      <div class="crop-win ${shape}"></div>
+      <div class="place-foot">
+        <button type="button" class="btn secondary" data-no>Cancel</button>
+        <button type="button" class="btn primary" data-yes>Okay</button>
+      </div>`;
+		layer.prepend(pic);
+		document.body.append(layer);
+		const box = layer.getBoundingClientRect();
+		const footTop = layer.querySelector(".place-foot").getBoundingClientRect().top - box.top;
+		const ww = Math.min(box.width - 48, (footTop - 48) / ASPECT[shape], 420);
+		const wh = ww * ASPECT[shape];
+		const wx = (box.width - ww) / 2;
+		const wy = (footTop - wh) / 2;
+		Object.assign(layer.querySelector(".crop-win").style, {
+			left: `${wx}px`,
+			top: `${wy}px`,
+			width: `${ww}px`,
+			height: `${wh}px`
+		});
+		const least = Math.max(ww / pic.width, wh / pic.height);
+		let k = least;
+		let tx = wx + (ww - pic.width * k) / 2;
+		let ty = wy + (wh - pic.height * k) / 2;
+		const draw = () => {
+			k = Math.min(least * 6, Math.max(least, k));
+			tx = Math.min(wx, Math.max(wx + ww - pic.width * k, tx));
+			ty = Math.min(wy, Math.max(wy + wh - pic.height * k, ty));
+			pic.style.transform = `translate(${tx}px, ${ty}px) scale(${k})`;
+		};
+		draw();
+		const pts = new Map();
+		let grab = null;
+		const start = () => {
+			const list = [...pts.values()], [mx, my] = middle(list);
+			grab = {
+				mx,
+				my,
+				k,
+				px: (mx - tx) / k,
+				py: (my - ty) / k,
+				d: twoFingers(list)
+			};
+		};
+		layer.addEventListener("pointerdown", (e) => {
+			if (e.target.closest(".place-foot")) return;
+			try {
+				layer.setPointerCapture(e.pointerId);
+			} catch {}
+			pts.set(e.pointerId, [e.clientX, e.clientY]);
+			start();
+		});
+		layer.addEventListener("pointermove", (e) => {
+			if (!pts.has(e.pointerId)) return;
+			pts.set(e.pointerId, [e.clientX, e.clientY]);
+			const list = [...pts.values()], [mx, my] = middle(list);
+			if (list.length > 1 && grab.d) k = grab.k * (twoFingers(list) / grab.d);
+			tx = mx - grab.px * k;
+			ty = my - grab.py * k;
+			draw();
+		});
+		const up = (e) => {
+			if (pts.delete(e.pointerId) && pts.size) start();
+		};
+		layer.addEventListener("pointerup", up);
+		layer.addEventListener("pointercancel", up);
+		layer.addEventListener("wheel", (e) => {
+			e.preventDefault();
+			k *= e.deltaY < 0 ? 1.05 : .95;
+			draw();
+		}, { passive: false });
+		const finish = (bytes) => {
+			layer.remove();
+			pic.width = pic.height = 0;
+			resolve(bytes);
+		};
+		layer.querySelector("[data-no]").addEventListener("click", () => finish(null));
+		layer.querySelector("[data-yes]").addEventListener("click", async () => {
+			const sw = ww / k;
+			const sh = wh / k;
+			const out = Math.min(1e3, Math.round(sw));
+			const c = document.createElement("canvas");
+			c.width = out;
+			c.height = Math.round(out * ASPECT[shape]);
+			const g = c.getContext("2d", { colorSpace: "srgb" });
+			g.imageSmoothingQuality = "high";
+			g.drawImage(pic, (wx - tx) / k, (wy - ty) / k, sw, sh, 0, 0, c.width, c.height);
+			const bytes = await (await canvasToBlob(c, "image/jpeg", .88)).arrayBuffer();
+			c.width = c.height = 0;
+			finish(bytes);
+		});
+	});
+}
+function placeSticker(shape, bytes) {
+	const draft = {
+		shape,
+		x: .5,
+		y: .42,
+		size: .44,
+		seed: Math.floor(Math.random() * 2 ** 31)
+	};
+	const url = URL.createObjectURL(new Blob([bytes], { type: "image/jpeg" }));
+	book$2.className = "nb closed placing";
+	const el = make(draft, url);
+	const onFlap = make(draft, url, true);
+	front().append(el);
+	flap.append(onFlap);
+	const layer = document.createElement("div");
+	layer.className = "place-layer";
+	layer.innerHTML = `
+    <div class="place-foot">
+      <button type="button" class="btn secondary" data-no>Cancel</button>
+      <button type="button" class="btn primary" data-yes>Okay</button>
+    </div>`;
+	document.body.append(layer);
+	const clampAll = () => {
+		draft.size = Math.min(1.5, Math.max(.12, draft.size));
+		draft.x = Math.min(1.1, Math.max(-.1, draft.x));
+		draft.y = Math.min(1.1, Math.max(-.1, draft.y));
+		place$1(el, draft);
+		placeOnFlap(onFlap, draft);
+	};
+	const pts = new Map();
+	let grab = null;
+	const start = () => {
+		const list = [...pts.values()], [mx, my] = middle(list);
+		grab = {
+			w: front().offsetWidth,
+			h: front().offsetHeight,
+			mx,
+			my,
+			x: draft.x,
+			y: draft.y,
+			size: draft.size,
+			d: twoFingers(list)
+		};
+	};
+	layer.addEventListener("pointerdown", (e) => {
+		if (e.target.closest(".place-foot")) return;
+		try {
+			layer.setPointerCapture(e.pointerId);
+		} catch {}
+		pts.set(e.pointerId, [e.clientX, e.clientY]);
+		start();
+	});
+	layer.addEventListener("pointermove", (e) => {
+		if (!pts.has(e.pointerId)) return;
+		pts.set(e.pointerId, [e.clientX, e.clientY]);
+		const list = [...pts.values()], [mx, my] = middle(list);
+		draft.x = grab.x + (mx - grab.mx) / grab.w;
+		draft.y = grab.y + (my - grab.my) / grab.h;
+		if (list.length > 1 && grab.d) draft.size = grab.size * (twoFingers(list) / grab.d);
+		clampAll();
+	});
+	const up = (e) => {
+		if (pts.delete(e.pointerId) && pts.size) start();
+	};
+	layer.addEventListener("pointerup", up);
+	layer.addEventListener("pointercancel", up);
+	layer.addEventListener("wheel", (e) => {
+		e.preventDefault();
+		draft.size *= e.deltaY < 0 ? 1.05 : .95;
+		clampAll();
+	}, { passive: false });
+	const done = () => {
+		layer.remove();
+		book$2.className = "nb closed";
+		URL.revokeObjectURL(url);
+	};
+	layer.querySelector("[data-no]").addEventListener("click", () => {
+		el.remove();
+		onFlap.remove();
+		done();
+	});
+	layer.querySelector("[data-yes]").addEventListener("click", async () => {
+		try {
+			await saveSticker({
+				...draft,
+				bytes
+			});
+			done();
+			await paintStickers();
+		} catch (err) {
+			console.error(err);
+			toast("Could not save that. Try once more.");
+		}
+	});
+}
+
+// pages/options-stickers.js
+function stickerSheet(options) {
+	const s = openSheet({
+		title: "Stickers",
+		body: `
+      <div class="sticker-kinds">
+        <button type="button" class="sticker-kind" data-shape="circle"><span class="shape circle"></span><span>Circle</span></button>
+        <button type="button" class="sticker-kind" data-shape="square"><span class="shape square"></span><span>Square</span></button>
+        <button type="button" class="sticker-kind" data-shape="rect"><span class="shape rect"></span><span>Rectangle</span></button>
+      </div>
+      ${stickers.length ? "<button type=\"button\" class=\"btn secondary opt-wide\" data-remove>Remove sticker</button>" : ""}`
+	});
+	s.body.addEventListener("click", (e) => {
+		const k = e.target.closest("[data-shape]");
+		if (k) {
+			pickFiles(false).then(async ([file]) => {
+				if (!file) return;
+				try {
+					s.close();
+					options.close();
+					const bytes = await cropSticker(file, k.dataset.shape);
+					if (bytes) placeSticker(k.dataset.shape, bytes);
+				} catch (err) {
+					console.error(err);
+					toast("Could not read that photo");
+				}
+			});
+		}
+		if (e.target.closest("[data-remove]")) {
+			s.close();
+			removeSheet();
+		}
+	});
+}
+function removeSheet() {
+	const s = openSheet({
+		title: "Remove sticker",
+		onClose: () => window.removeEventListener("ref-stickers", draw)
+	});
+	function draw() {
+		if (!stickers.length) {
+			s.close();
+			return;
+		}
+		s.body.innerHTML = `<div class="sticker-list">${[...stickers].reverse().map((st) => `<button type="button" class="sticker-pick ${esc(st.shape)}" data-id="${esc(st.id)}" aria-label="Remove this sticker"><img src="${stickerThumb(st)}" alt="" /></button>`).join("")}</div>`;
+	}
+	window.addEventListener("ref-stickers", draw);
+	draw();
+	s.body.addEventListener("click", async (e) => {
+		const b = e.target.closest("[data-id]");
+		if (!b) return;
+		await removeSticker(stickers.find((x) => x.id === b.dataset.id));
+	});
+}
+
+// pages/options.js
+const BOOK_KEY = "ref-notebook-book";
+const START_KEY = "ref-notebook-start";
+const SHAPE_KEY = "ref-notebook-shape";
+const COLORS = [
+	["mango", "Mango"],
+	["orange", "Orange"],
+	["berry", "Berry"],
+	["fern", "Fern"],
+	["ocean", "Ocean"],
+	["leaf", "Leaf"],
+	["ink", "Black"]
+];
+const SHAPES = [["letter-portrait", "Tall"], ["wide-16x9", "Wide"]];
+const read = (k) => {
+	try {
+		return localStorage.getItem(k);
+	} catch {
+		return null;
+	}
+};
+const write = (k, v) => {
+	try {
+		localStorage.setItem(k, v);
+	} catch {}
+};
+const startsOpen = () => read(START_KEY) === "open";
+const startPage = () => startsOpen() ? "#/boards" : "";
+const defaultShape = () => SHAPES.some(([k]) => k === read("ref-notebook-shape")) ? read(SHAPE_KEY) : "letter-portrait";
+const TICK = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><polyline points=\"5 12.5 10 17 19 7\"/></svg>";
+const CHEVRON = "<svg class=\"opt-chevron\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><polyline points=\"9 5 16 12 9 19\"/></svg>";
+const recognizeLine = () => tagsOn() ? "On. Runs on this phone, nothing is uploaded" : "Off. New photos are not looked at";
+function useBook(name) {
+	document.documentElement.dataset.book = name;
+	write(BOOK_KEY, name);
+}
+function colorsHtml() {
+	const now = document.documentElement.dataset.book || "ocean";
+	return `<div class="opt-colors" role="radiogroup" aria-label="Notebook color">${COLORS.map(([key, name]) => `
+    <button type="button" class="opt-color" role="radio" data-color="${key}" aria-checked="${key === now}">
+      <span class="opt-swatch" data-swatch="${key}"><span class="opt-swatch-line"></span><span class="opt-swatch-sun"></span>${key === now ? `<span class="opt-swatch-tick">${TICK}</span>` : ""}</span>
+      <span class="opt-color-name">${name}</span>
+    </button>`).join("")}</div>`;
+}
+const row = (attr, name, sub = "") => `<button type="button" class="opt-row" ${attr}><span class="opt-row-words"><span class="opt-row-name">${name}</span>${sub ? `<span class="opt-row-sub">${sub}</span>` : ""}</span>${CHEVRON}</button>`;
+function openOptions() {
+	const alone = !window.DF_SUITE;
+	const shapeName = () => SHAPES.find(([k]) => k === defaultShape())[1];
+	const s = openSheet({
+		title: "Options",
+		className: "opt-sheet",
+		body: `
+      <span class="opt-label">Notebook color</span>
+      <div data-colors>${colorsHtml()}</div>
+      ${alone ? `<span class="opt-label opt-gap">Always start</span>
+      <div class="opt-seg">
+        <button type="button" data-start="shut"${startsOpen() ? "" : " class=\"on\""}>In the notebook</button>
+        <button type="button" data-start="open"${startsOpen() ? " class=\"on\"" : ""}>On the first page</button>
+      </div>` : ""}
+      <span class="opt-label opt-gap">Boards</span>
+      <div class="opt-rows">
+        ${row("data-shape-row", "Default page size", `<span data-shape-now>${shapeName()}</span>`)}
+        <label class="opt-row opt-switch-row"><span class="opt-row-words"><span class="opt-row-name">Recognize what's in new photos</span><span class="opt-row-sub" data-recognize-line>${recognizeLine()}</span></span>
+          <input type="checkbox" class="switch" role="switch" data-recognize${tagsOn() ? " checked" : ""} /></label>
+      </div>
+      ${alone ? `<span class="opt-label opt-gap">Cover</span><div class="opt-rows">${row("data-stickers", "Stickers")}</div>` : ""}
+      <span class="opt-label opt-gap">Backups</span>
+      <div class="opt-rows">${row("data-save-backup", "Save a backup")}${row("data-restore-backup", "Restore a backup")}</div>
+      <span class="opt-label opt-gap">Help</span>
+      <div class="opt-rows">${row("data-intro", "How it works")}</div>`
+	});
+	s.body.addEventListener("click", async (e) => {
+		const c = e.target.closest("[data-color]");
+		if (c) {
+			useBook(c.dataset.color);
+			s.body.querySelector("[data-colors]").innerHTML = colorsHtml();
+			return;
+		}
+		const st = e.target.closest("[data-start]");
+		if (st) {
+			write(START_KEY, st.dataset.start);
+			s.body.querySelectorAll("[data-start]").forEach((b) => b.classList.toggle("on", b === st));
+		}
+		if (e.target.closest("[data-shape-row]")) {
+			const key = await choiceSheet({
+				title: "Default page size",
+				options: SHAPES.map(([k, name]) => ({
+					key: k,
+					label: name,
+					current: k === defaultShape(),
+					detail: k === "wide-16x9" ? "For screens and sharing" : "For printing and bringing to a shoot"
+				}))
+			});
+			if (key) {
+				write(SHAPE_KEY, key);
+				s.body.querySelector("[data-shape-now]").textContent = shapeName();
+			}
+		}
+		if (e.target.closest("[data-stickers]")) stickerSheet(s);
+		if (e.target.closest("[data-intro]")) {
+			s.close();
+			openIntro();
+		}
+		if (e.target.closest("[data-save-backup]")) saveBackup();
+		if (e.target.closest("[data-restore-backup]")) restoreBackup(() => s.close(), BOOK_KEY);
+	});
+	s.body.querySelector("[data-recognize]").addEventListener("change", (e) => {
+		if (e.target.checked) turnOnTags();
+		else turnOffTags();
+		s.body.querySelector("[data-recognize-line]").textContent = recognizeLine();
+	});
 }
 
 // pages/newboard.js
@@ -3331,7 +4102,7 @@ function newBoardScreen(view) {
 	const W = {
 		step: 0,
 		name: "",
-		shape: "letter-portrait",
+		shape: defaultShape(),
 		style: "mosaic",
 		cover: false,
 		start: "blank",
@@ -3646,7 +4417,7 @@ function showBoard(board, start, onClose) {
 	const count = el.querySelector(".show-count");
 	async function pageEl(n) {
 		const p = await renderPage(board, board.pages[n]);
-		const s = SHAPES[board.shape];
+		const s = SHAPES$1[board.shape];
 		const k = Math.min(stage.clientWidth / s.W, stage.clientHeight / s.H);
 		p.style.width = `${Math.floor(s.W * k)}px`;
 		p.classList.add("show-page");
@@ -3947,7 +4718,7 @@ function addTools(ed) {
 		exportPdf
 	});
 	function layoutSheet() {
-		const s = SHAPES[ed.board.shape];
+		const s = SHAPES$1[ed.board.shape];
 		const W = 60;
 		const H = 60 * s.H / s.W;
 		const list = TEMPLATES[ed.board.shape].filter((t) => !t.guide);
@@ -4032,7 +4803,7 @@ function addTools(ed) {
 		ed.drawTray();
 	}
 	async function exportPdf() {
-		const s = SHAPES[ed.board.shape];
+		const s = SHAPES$1[ed.board.shape];
 		const px = ed.board.shape === "wide-16x9" ? 2e3 : 1700;
 		const sheets = [];
 		try {
@@ -4472,7 +5243,7 @@ async function boardScreen(view, id) {
 		}
 	}
 	function fit(el) {
-		const s = SHAPES[board.shape];
+		const s = SHAPES$1[board.shape];
 		const k = Math.min(stage.clientWidth / s.W, stage.clientHeight / s.H);
 		el.style.width = `${Math.floor(s.W * k)}px`;
 	}
@@ -4589,654 +5360,6 @@ async function boardScreen(view, id) {
 		});
 		window.removeEventListener("ref-layout", onResize);
 	};
-}
-
-// components/stickers.js
-const ASPECT = {
-	circle: 1,
-	square: 1,
-	rect: 2 / 3
-};
-const COVER = 1e3 / 1360;
-const book$2 = document.getElementById("book");
-const flap = document.getElementById("stickerFlap");
-const front = () => book$2.querySelector(".nb-front");
-const urls = new Map();
-const urlOf = (s) => {
-	if (!urls.has(s.id)) urls.set(s.id, URL.createObjectURL(new Blob([s.bytes], { type: "image/jpeg" })));
-	return urls.get(s.id);
-};
-let stickers = [];
-function randomFrom(seed) {
-	let a = seed >>> 0;
-	return () => {
-		a = a + 1831565813 >>> 0;
-		let t = Math.imul(a ^ a >>> 15, 1 | a);
-		t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-		return ((t ^ t >>> 14) >>> 0) / 4294967296;
-	};
-}
-const seedOf = (s) => s.seed ?? [...String(s.id)].reduce((h, c) => Math.imul(h, 31) + c.charCodeAt(0) | 0, 7);
-const creases = new Map();
-function creaseArt(seed, aspect) {
-	const key = `${seed}:${aspect}`;
-	if (creases.has(key)) return creases.get(key);
-	const W = 480;
-	const H = Math.round(W * aspect);
-	const r = randomFrom(seed);
-	const c = document.createElement("canvas");
-	c.width = W;
-	c.height = H;
-	const g = c.getContext("2d");
-	for (let i = 0, n = 3 + Math.floor(r() * 3); i < n; i++) {
-		const side = Math.floor(r() * 4);
-		const along = r();
-		const x = side === 0 ? 0 : side === 1 ? W : along * W;
-		const y = side === 2 ? 0 : side === 3 ? H : along * H;
-		const rad = W * (.18 + r() * .24);
-		const shade = g.createRadialGradient(x, y, 0, x, y, rad);
-		shade.addColorStop(0, `rgba(58, 50, 42, ${.13 + r() * .12})`);
-		shade.addColorStop(1, "rgba(58, 50, 42, 0)");
-		g.fillStyle = shade;
-		g.fillRect(0, 0, W, H);
-	}
-	const edgePoint = (side) => {
-		const t = .1 + r() * .8;
-		return [
-			[t * W, 0],
-			[W, t * H],
-			[t * W, H],
-			[0, t * H]
-		][side];
-	};
-	const soft = (path, width, blur, color, dx, dy) => {
-		const far = W * 4;
-		g.save();
-		g.lineCap = "round";
-		g.lineJoin = "round";
-		g.lineWidth = width;
-		g.strokeStyle = "#000";
-		g.shadowColor = color;
-		g.shadowBlur = blur;
-		g.shadowOffsetX = far + dx;
-		g.shadowOffsetY = dy;
-		g.translate(-far, 0);
-		path();
-		g.stroke();
-		g.restore();
-	};
-	for (let i = 0, n = 2 + Math.floor(r() * 3); i < n; i++) {
-		const side = Math.floor(r() * 4);
-		const [ax, ay] = edgePoint(side);
-		let [bx, by] = edgePoint((side + 1 + Math.floor(r() * 3)) % 4);
-		const reach = .45 + r() * .55;
-		bx = ax + (bx - ax) * reach;
-		by = ay + (by - ay) * reach;
-		const len = Math.hypot(bx - ax, by - ay);
-		const nx = -(by - ay) / len;
-		const ny = (bx - ax) / len;
-		const bow = (r() - .5) * len * .18;
-		const cx = (ax + bx) / 2 + nx * bow;
-		const cy = (ay + by) / 2 + ny * bow;
-		const path = () => {
-			g.beginPath();
-			g.moveTo(ax, ay);
-			g.quadraticCurveTo(cx, cy, bx, by);
-		};
-		const depth = .55 + r() * .45;
-		const spread = W * (.035 + r() * .035);
-		const sx = nx > 0 ? 1 : -1;
-		const sy = ny > 0 ? 1 : -1;
-		const ox = sx * Math.abs(nx);
-		const oy = sy * Math.abs(ny);
-		soft(path, spread * .9, spread * 1.3, `rgba(52, 44, 38, ${.16 * depth})`, ox * spread * .6, oy * spread * .6);
-		soft(path, spread * .35, spread * .6, `rgba(52, 44, 38, ${.1 * depth})`, ox * spread * .25, oy * spread * .25);
-		soft(path, spread * .7, spread * 1.1, `rgba(255, 255, 255, ${.32 * depth})`, -ox * spread * .55, -oy * spread * .55);
-	}
-	const url = c.toDataURL("image/png");
-	c.width = c.height = 0;
-	creases.set(key, url);
-	return url;
-}
-function make(s, src, onFlap) {
-	const el = document.createElement("div");
-	el.className = `sticker ${s.shape}`;
-	el.innerHTML = `<img class="photo" alt="" draggable="false" /><img class="crease" alt="" draggable="false" />${onFlap ? "" : "<i class=\"fold r\" hidden></i><i class=\"fold l\" hidden></i><i class=\"fold t\" hidden></i><i class=\"fold b\" hidden></i>"}`;
-	el.querySelector(".photo").src = src;
-	el.querySelector(".crease").src = creaseArt(seedOf(s), ASPECT[s.shape]);
-	(onFlap ? placeOnFlap : place$1)(el, s);
-	return el;
-}
-const BEND = .075;
-function place$1(el, s) {
-	el.style.left = `${s.x * 100}%`;
-	el.style.top = `${s.y * 100}%`;
-	el.style.width = `${s.size * 100}%`;
-	const w = s.size;
-	const h = s.size * ASPECT[s.shape] * COVER;
-	const left = s.x - w / 2;
-	const top = s.y - h / 2;
-	const across = BEND / w * 100;
-	const down = BEND * COVER / h * 100;
-	const set = (cls, on, css) => {
-		const f = el.querySelector(`.fold.${cls}`);
-		f.hidden = !on;
-		if (on) Object.assign(f.style, css);
-	};
-	set("r", left + w > 1, {
-		left: `${(1 - left) / w * 100 - across}%`,
-		width: `${across}%`
-	});
-	set("l", left < 0, {
-		left: `${-left / w * 100}%`,
-		width: `${across}%`
-	});
-	set("b", top + h > 1, {
-		top: `${(1 - top) / h * 100 - down}%`,
-		height: `${down}%`
-	});
-	set("t", top < 0, {
-		top: `${-top / h * 100}%`,
-		height: `${down}%`
-	});
-}
-__name(place$1, "place");
-const placeOnFlap = (el, s) => {
-	el.style.left = `calc(${s.x - 1} * var(--W))`;
-	el.style.top = `calc(${s.y} * var(--H))`;
-	el.style.width = `calc(${s.size} * var(--W))`;
-};
-async function paintStickers() {
-	stickers = (await listStickers()).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-	front().querySelectorAll(".sticker").forEach((e) => e.remove());
-	flap.innerHTML = "";
-	for (const s of stickers) {
-		front().append(make(s, urlOf(s)));
-		flap.append(make(s, urlOf(s), true));
-	}
-	window.dispatchEvent(new Event("ref-stickers"));
-}
-const stickerThumb = urlOf;
-async function removeSticker(s) {
-	await deleteSticker(s.id);
-	await paintStickers();
-	toast("Sticker removed", { action: {
-		label: "Undo",
-		run: async () => {
-			await saveSticker(s);
-			await paintStickers();
-		}
-	} });
-}
-const twoFingers = (list) => list.length > 1 ? Math.hypot(list[0][0] - list[1][0], list[0][1] - list[1][1]) : 0;
-const middle = (list) => [list.reduce((a, p) => a + p[0], 0) / list.length, list.reduce((a, p) => a + p[1], 0) / list.length];
-async function cropSticker(file, shape) {
-	const url = URL.createObjectURL(file);
-	let img;
-	try {
-		img = await loadImage$1(url);
-	} finally {
-		URL.revokeObjectURL(url);
-	}
-	const fit = Math.min(1, 2e3 / Math.max(img.naturalWidth, img.naturalHeight));
-	const pic = document.createElement("canvas");
-	pic.width = Math.round(img.naturalWidth * fit);
-	pic.height = Math.round(img.naturalHeight * fit);
-	const pg = pic.getContext("2d", { colorSpace: "srgb" });
-	pg.imageSmoothingQuality = "high";
-	pg.drawImage(img, 0, 0, pic.width, pic.height);
-	return new Promise((resolve) => {
-		const layer = document.createElement("div");
-		layer.className = "crop-layer";
-		layer.innerHTML = `
-      <div class="crop-win ${shape}"></div>
-      <div class="place-foot">
-        <button type="button" class="btn secondary" data-no>Cancel</button>
-        <button type="button" class="btn primary" data-yes>Okay</button>
-      </div>`;
-		layer.prepend(pic);
-		document.body.append(layer);
-		const box = layer.getBoundingClientRect();
-		const footTop = layer.querySelector(".place-foot").getBoundingClientRect().top - box.top;
-		const ww = Math.min(box.width - 48, (footTop - 48) / ASPECT[shape], 420);
-		const wh = ww * ASPECT[shape];
-		const wx = (box.width - ww) / 2;
-		const wy = (footTop - wh) / 2;
-		Object.assign(layer.querySelector(".crop-win").style, {
-			left: `${wx}px`,
-			top: `${wy}px`,
-			width: `${ww}px`,
-			height: `${wh}px`
-		});
-		const least = Math.max(ww / pic.width, wh / pic.height);
-		let k = least;
-		let tx = wx + (ww - pic.width * k) / 2;
-		let ty = wy + (wh - pic.height * k) / 2;
-		const draw = () => {
-			k = Math.min(least * 6, Math.max(least, k));
-			tx = Math.min(wx, Math.max(wx + ww - pic.width * k, tx));
-			ty = Math.min(wy, Math.max(wy + wh - pic.height * k, ty));
-			pic.style.transform = `translate(${tx}px, ${ty}px) scale(${k})`;
-		};
-		draw();
-		const pts = new Map();
-		let grab = null;
-		const start = () => {
-			const list = [...pts.values()], [mx, my] = middle(list);
-			grab = {
-				mx,
-				my,
-				k,
-				px: (mx - tx) / k,
-				py: (my - ty) / k,
-				d: twoFingers(list)
-			};
-		};
-		layer.addEventListener("pointerdown", (e) => {
-			if (e.target.closest(".place-foot")) return;
-			try {
-				layer.setPointerCapture(e.pointerId);
-			} catch {}
-			pts.set(e.pointerId, [e.clientX, e.clientY]);
-			start();
-		});
-		layer.addEventListener("pointermove", (e) => {
-			if (!pts.has(e.pointerId)) return;
-			pts.set(e.pointerId, [e.clientX, e.clientY]);
-			const list = [...pts.values()], [mx, my] = middle(list);
-			if (list.length > 1 && grab.d) k = grab.k * (twoFingers(list) / grab.d);
-			tx = mx - grab.px * k;
-			ty = my - grab.py * k;
-			draw();
-		});
-		const up = (e) => {
-			if (pts.delete(e.pointerId) && pts.size) start();
-		};
-		layer.addEventListener("pointerup", up);
-		layer.addEventListener("pointercancel", up);
-		layer.addEventListener("wheel", (e) => {
-			e.preventDefault();
-			k *= e.deltaY < 0 ? 1.05 : .95;
-			draw();
-		}, { passive: false });
-		const finish = (bytes) => {
-			layer.remove();
-			pic.width = pic.height = 0;
-			resolve(bytes);
-		};
-		layer.querySelector("[data-no]").addEventListener("click", () => finish(null));
-		layer.querySelector("[data-yes]").addEventListener("click", async () => {
-			const sw = ww / k;
-			const sh = wh / k;
-			const out = Math.min(1e3, Math.round(sw));
-			const c = document.createElement("canvas");
-			c.width = out;
-			c.height = Math.round(out * ASPECT[shape]);
-			const g = c.getContext("2d", { colorSpace: "srgb" });
-			g.imageSmoothingQuality = "high";
-			g.drawImage(pic, (wx - tx) / k, (wy - ty) / k, sw, sh, 0, 0, c.width, c.height);
-			const bytes = await (await canvasToBlob(c, "image/jpeg", .88)).arrayBuffer();
-			c.width = c.height = 0;
-			finish(bytes);
-		});
-	});
-}
-function placeSticker(shape, bytes) {
-	const draft = {
-		shape,
-		x: .5,
-		y: .42,
-		size: .44,
-		seed: Math.floor(Math.random() * 2 ** 31)
-	};
-	const url = URL.createObjectURL(new Blob([bytes], { type: "image/jpeg" }));
-	book$2.className = "nb closed placing";
-	const el = make(draft, url);
-	const onFlap = make(draft, url, true);
-	front().append(el);
-	flap.append(onFlap);
-	const layer = document.createElement("div");
-	layer.className = "place-layer";
-	layer.innerHTML = `
-    <div class="place-foot">
-      <button type="button" class="btn secondary" data-no>Cancel</button>
-      <button type="button" class="btn primary" data-yes>Okay</button>
-    </div>`;
-	document.body.append(layer);
-	const clampAll = () => {
-		draft.size = Math.min(1.5, Math.max(.12, draft.size));
-		draft.x = Math.min(1.1, Math.max(-.1, draft.x));
-		draft.y = Math.min(1.1, Math.max(-.1, draft.y));
-		place$1(el, draft);
-		placeOnFlap(onFlap, draft);
-	};
-	const pts = new Map();
-	let grab = null;
-	const start = () => {
-		const list = [...pts.values()], [mx, my] = middle(list);
-		grab = {
-			w: front().offsetWidth,
-			h: front().offsetHeight,
-			mx,
-			my,
-			x: draft.x,
-			y: draft.y,
-			size: draft.size,
-			d: twoFingers(list)
-		};
-	};
-	layer.addEventListener("pointerdown", (e) => {
-		if (e.target.closest(".place-foot")) return;
-		try {
-			layer.setPointerCapture(e.pointerId);
-		} catch {}
-		pts.set(e.pointerId, [e.clientX, e.clientY]);
-		start();
-	});
-	layer.addEventListener("pointermove", (e) => {
-		if (!pts.has(e.pointerId)) return;
-		pts.set(e.pointerId, [e.clientX, e.clientY]);
-		const list = [...pts.values()], [mx, my] = middle(list);
-		draft.x = grab.x + (mx - grab.mx) / grab.w;
-		draft.y = grab.y + (my - grab.my) / grab.h;
-		if (list.length > 1 && grab.d) draft.size = grab.size * (twoFingers(list) / grab.d);
-		clampAll();
-	});
-	const up = (e) => {
-		if (pts.delete(e.pointerId) && pts.size) start();
-	};
-	layer.addEventListener("pointerup", up);
-	layer.addEventListener("pointercancel", up);
-	layer.addEventListener("wheel", (e) => {
-		e.preventDefault();
-		draft.size *= e.deltaY < 0 ? 1.05 : .95;
-		clampAll();
-	}, { passive: false });
-	const done = () => {
-		layer.remove();
-		book$2.className = "nb closed";
-		URL.revokeObjectURL(url);
-	};
-	layer.querySelector("[data-no]").addEventListener("click", () => {
-		el.remove();
-		onFlap.remove();
-		done();
-	});
-	layer.querySelector("[data-yes]").addEventListener("click", async () => {
-		try {
-			await saveSticker({
-				...draft,
-				bytes
-			});
-			done();
-			await paintStickers();
-		} catch (err) {
-			console.error(err);
-			toast("Could not save that. Try once more.");
-		}
-	});
-}
-
-// pages/intro.js
-const SEEN = "ref-notebook-intro-seen";
-const CARDS = [
-	["Bring your photos in", "Open Incoming and pick photos from your phone. Tag them to sort them, then make mood boards from your tags."],
-	["It keeps its own copy", "Everything you add is saved inside Ref Notebook. Once a photo is in, you can delete it from your phone’s Photos to free up space, and it stays here in your boards and tags."],
-	["Good to know", "Photos are kept at a size made for boards and PDFs, not the full original. Your photos are saved inside the app, not in Photos. If you delete Ref Notebook from your home screen, its photos are deleted with it."]
-];
-const introSeen = () => {
-	try {
-		return localStorage.getItem(SEEN) === "1";
-	} catch {
-		return true;
-	}
-};
-function openIntro() {
-	let at = 0;
-	const s = openSheet({
-		title: CARDS[0][0],
-		className: "sheet-small intro",
-		onClose: () => {
-			try {
-				localStorage.setItem(SEEN, "1");
-			} catch {}
-		}
-	});
-	const draw = () => {
-		const last = at === CARDS.length - 1;
-		s.setTitle(CARDS[at][0]);
-		s.body.innerHTML = `
-      <p class="sheet-message">${CARDS[at][1]}</p>
-      <span class="wz-dots intro-dots" aria-hidden="true">${CARDS.map((_, i) => `<i class="${i === at ? "on" : ""}"></i>`).join("")}</span>
-      <div class="sheet-actions${at ? "" : " one"}">
-        ${at ? "<button type=\"button\" class=\"btn secondary\" data-back>Back</button>" : ""}
-        <button type="button" class="btn primary" data-next>${last ? "Got it" : "Next"}</button>
-      </div>`;
-	};
-	s.body.addEventListener("click", (e) => {
-		if (e.target.closest("[data-back]")) {
-			at--;
-			draw();
-		} else if (e.target.closest("[data-next]")) {
-			if (at === CARDS.length - 1) s.close();
-			else {
-				at++;
-				draw();
-			}
-		}
-	});
-	draw();
-	return s;
-}
-
-// pages/options.js
-const BOOK_KEY = "ref-notebook-book";
-const START_KEY = "ref-notebook-start";
-const COLORS = [
-	["orange", "Orange"],
-	["mango", "Mango"],
-	["berry", "Berry"],
-	["fern", "Fern"],
-	["ocean", "Ocean"],
-	["ink", "Black"]
-];
-const startsOpen = () => {
-	try {
-		return localStorage.getItem(START_KEY) === "open";
-	} catch {
-		return false;
-	}
-};
-const startPage = () => startsOpen() ? "#/boards" : "";
-function useBook(name) {
-	document.documentElement.dataset.book = name;
-	try {
-		localStorage.setItem(BOOK_KEY, name);
-	} catch {}
-}
-function openOptions() {
-	const now = document.documentElement.dataset.book;
-	const s = openSheet({
-		title: "Options",
-		body: `
-      <span class="field-label">App color</span>
-      <div class="opt-colors">
-        ${COLORS.map(([key, name]) => `
-          <button type="button" class="opt-color" data-color="${key}" aria-pressed="${key === now}">
-            <span class="opt-book" style="background-image:url(art/${key}-cover.webp)"></span>
-            <span>${name}</span>
-          </button>`).join("")}
-      </div>
-      ${window.DF_SUITE ? "" : `<span class="field-label opt-gap">Stickers</span>
-      <button type="button" class="btn secondary opt-wide" data-stickers>Stickers</button>`}
-      ${window.DF_SUITE ? "" : `<span class="field-label opt-gap">Always start</span>
-      <div class="seg opt-seg">
-        <button type="button" data-start="shut"${startsOpen() ? "" : " class=\"on\""}>In the notebook</button>
-        <button type="button" data-start="open"${startsOpen() ? " class=\"on\"" : ""}>On the first page</button>
-      </div>`}
-      <span class="field-label opt-gap">Backup</span>
-      <button type="button" class="btn secondary opt-wide" data-save-backup>Save a backup</button>
-      <button type="button" class="btn secondary opt-wide" data-restore-backup>Restore a backup</button>
-      <button type="button" class="btn secondary opt-wide opt-gap" data-intro>How it works</button>`
-	});
-	s.body.addEventListener("click", (e) => {
-		const c = e.target.closest("[data-color]");
-		if (c) {
-			useBook(c.dataset.color);
-			s.body.querySelectorAll("[data-color]").forEach((b) => b.setAttribute("aria-pressed", String(b === c)));
-		}
-		const st = e.target.closest("[data-start]");
-		if (st) {
-			try {
-				localStorage.setItem(START_KEY, st.dataset.start);
-			} catch {}
-			s.body.querySelectorAll("[data-start]").forEach((b) => b.classList.toggle("on", b === st));
-		}
-		if (e.target.closest("[data-stickers]")) stickerSheet(s);
-		if (e.target.closest("[data-intro]")) {
-			s.close();
-			openIntro();
-		}
-		if (e.target.closest("[data-save-backup]")) saveBackup();
-		if (e.target.closest("[data-restore-backup]")) restoreBackup(() => s.close());
-	});
-}
-function saveBackup() {
-	const D = window.DFData;
-	let open = true;
-	let made = null;
-	const s = openSheet({
-		title: "Save a backup",
-		className: "sheet-small",
-		body: "<p class=\"sheet-message\" data-msg>Putting it together</p>",
-		onClose: () => {
-			open = false;
-			if (made) made.done();
-		}
-	});
-	const msg = s.body.querySelector("[data-msg]");
-	D.zipBackup({
-		app: "ref",
-		databases: ["ref-notebook"],
-		extra: { book: document.documentElement.dataset.book || "" },
-		filename: `ref-backup-${D.todayStr()}.zip`,
-		onProgress: (f) => {
-			if (open) msg.textContent = `Putting it together, ${Math.floor(f * 100)}%`;
-		}
-	}).then((m) => {
-		made = m;
-		if (!open) {
-			if (m) m.done();
-			return;
-		}
-		if (!m) {
-			msg.textContent = "There is nothing to back up yet.";
-			return;
-		}
-		const steps = D.backupSteps(m);
-		msg.textContent = steps.note;
-		msg.insertAdjacentHTML("afterend", `<button type="button" class="btn secondary opt-wide" data-save>${steps.label}</button>`);
-		const btn = s.body.querySelector("[data-save]");
-		btn.addEventListener("click", async () => {
-			try {
-				if (!await steps.tap()) {
-					btn.textContent = steps.label;
-					return;
-				}
-				s.close();
-				toast("Backup saved");
-			} catch (err) {
-				console.error(err);
-				toast(err.message || "The backup wasn't saved.");
-			}
-		});
-	}).catch((err) => {
-		console.error(err);
-		if (open) msg.textContent = err.message || "The backup couldn't be made.";
-	});
-}
-async function restoreBackup(close) {
-	const D = window.DFData;
-	const files = await D.pickFiles(".zip,application/zip,.json,application/json");
-	if (!files.length) return;
-	if (!await confirmSheet({
-		title: "Restore backup",
-		message: "Everything in ref now is swapped for what's in the file.",
-		confirmLabel: "Restore",
-		danger: true
-	})) return;
-	toast("Restoring the backup", { ms: 6e5 });
-	try {
-		const r = await D.isZipFile(files[0]) ? await D.restoreZip(files, { databases: ["ref-notebook"] }) : await D.importDb(files[0], "ref-notebook", {
-			app: "ref",
-			replace: true
-		});
-		const book = r.extra && r.extra.book || (r.local ? await r.local(BOOK_KEY) : null);
-		if (book) {
-			try {
-				localStorage.setItem(BOOK_KEY, book);
-			} catch {}
-		}
-		close();
-		toast("Backup restored");
-		setTimeout(() => location.reload(), 700);
-	} catch (err) {
-		console.error(err);
-		toast(err.message || "That backup couldn't be restored.");
-	}
-}
-function stickerSheet(options) {
-	const s = openSheet({
-		title: "Stickers",
-		body: `
-      <div class="sticker-kinds">
-        <button type="button" class="sticker-kind" data-shape="circle"><span class="shape circle"></span><span>Circle</span></button>
-        <button type="button" class="sticker-kind" data-shape="square"><span class="shape square"></span><span>Square</span></button>
-        <button type="button" class="sticker-kind" data-shape="rect"><span class="shape rect"></span><span>Rectangle</span></button>
-      </div>
-      ${stickers.length ? "<button type=\"button\" class=\"btn secondary opt-wide\" data-remove>Remove sticker</button>" : ""}`
-	});
-	s.body.addEventListener("click", (e) => {
-		const k = e.target.closest("[data-shape]");
-		if (k) {
-			pickFiles(false).then(async ([file]) => {
-				if (!file) return;
-				try {
-					s.close();
-					options.close();
-					const bytes = await cropSticker(file, k.dataset.shape);
-					if (bytes) placeSticker(k.dataset.shape, bytes);
-				} catch (err) {
-					console.error(err);
-					toast("Could not read that photo");
-				}
-			});
-		}
-		if (e.target.closest("[data-remove]")) {
-			s.close();
-			removeSheet();
-		}
-	});
-}
-function removeSheet() {
-	const s = openSheet({
-		title: "Remove sticker",
-		onClose: () => window.removeEventListener("ref-stickers", draw)
-	});
-	function draw() {
-		if (!stickers.length) {
-			s.close();
-			return;
-		}
-		s.body.innerHTML = `<div class="sticker-list">${[...stickers].reverse().map((st) => `<button type="button" class="sticker-pick ${esc(st.shape)}" data-id="${esc(st.id)}" aria-label="Remove this sticker"><img src="${stickerThumb(st)}" alt="" /></button>`).join("")}</div>`;
-	}
-	window.addEventListener("ref-stickers", draw);
-	draw();
-	s.body.addEventListener("click", async (e) => {
-		const b = e.target.closest("[data-id]");
-		if (!b) return;
-		await removeSticker(stickers.find((x) => x.id === b.dataset.id));
-	});
 }
 
 // pages/cover-spin.js

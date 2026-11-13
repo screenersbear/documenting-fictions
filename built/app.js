@@ -36,7 +36,7 @@ window.ShelfColors = {
   window.ShelfBooks = [
     {
       id: 'ref', name: 'ref, do something', short: 'Ref', line: 'Tag photos, build mood boards', key: 'ref-notebook-book', color: 'ocean',
-      colors: ['ocean', 'orange', 'mango', 'berry', 'fern', 'ink'], mark: MARKS.ref,
+      colors: ['ocean', 'orange', 'mango', 'berry', 'fern', 'leaf', 'ink'], mark: MARKS.ref,
       block: (c) => `ref/art/${c}-block.webp`,
       tabs: [['Mood boards', 5.7, 17.7, .11, .2, true, 'boards'], ['Tags', 24.4, 17.7, .115, -.2, false, 'tags']],
     },
