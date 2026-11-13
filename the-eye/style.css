@@ -6500,11 +6500,12 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
   --tab-light: #fff0ae; /* a pale yellow, well apart from the mango */
   --screen-gap: 0px;
   --nb-h: calc(100 * var(--svh));
-  /* The navigator's icon sits 35px + the bottom safe area (10px at least)
-     above the screen's edge: the same height in all four notebooks and on
-     the shelf (its centre is this + 19px; 10px up on 11-12, the user's mark). */
-  --nb-foot: max(26px, calc(var(--sa-bottom) + 16px));
-  --nb-bar: calc(38px + var(--nb-foot));
+  /* The navigator's icon's middle (this + 19px) sits where an iPhone's home
+     button used to be (user, 11-12): the bottom safe area + 6px, 30px at
+     least, above the screen's edge, the same in all four notebooks and on
+     the shelf. */
+  --nb-foot: max(11px, calc(var(--sa-bottom) - 13px));
+  --nb-bar: calc(44px + var(--nb-foot)); /* its top (the line) 25px over the icon's middle, as in the other notebooks */
   --nb-edge: max(22px, calc(50% - 270px));
 }
 .nb-board, .nb-chapter-board { border-radius: 0 8px 8px 0; }
@@ -6524,7 +6525,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 .nb-screen-tabs-shoot > * { pointer-events: auto; }
 
 /* The navigator: the triangles right beside the icon, the page close above it. */
-.tabbar { bottom: calc(0px - var(--screen-gap)); padding: 1px 0 calc(1px + var(--nb-foot)); }
+.tabbar { bottom: calc(0px - var(--screen-gap)); padding: 7px 0 calc(1px + var(--nb-foot)); }
 .slider { gap: 0; height: 36px; }
 .slide-arrow { height: 36px; }
 .slide-arrow.is-prev { justify-items: end; }
@@ -6584,7 +6585,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 /* Laid out short (see measureScreenGap): the navigator sits on the bottom of
    what iOS laid out, above the strip it leaves blank, so it needs no room for
    the home bar. */
-:root.nb-short { --nb-foot: 16px; }
+:root.nb-short { --nb-foot: 11px; }
 
 /* Moving along the open spread. */
 .nb-pan { position: fixed; z-index: 8; top: 0; left: 0; right: 0; bottom: calc(0px - var(--screen-gap)); overflow: hidden; background: #fff; pointer-events: none; }
@@ -6641,7 +6642,7 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
 /* Right where the navigator's icon is once the book opens: the same middle,
    held the same way as the navigator (by its top on the installed app). */
 .nb-sun { bottom: calc(var(--nb-foot) - 5px); }
-:root.nb-installed .nb-sun { top: calc(var(--nb-h) - var(--nb-bar) - 5px); bottom: auto; }
+:root.nb-installed .nb-sun { top: calc(var(--nb-h) - var(--nb-bar) + 1px); bottom: auto; }
 .sun-remove-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 4px 4px 10px; }
 .sun-remove { display: block; width: 100%; min-height: 0; padding: 0; border: none; background: none; }
 .sun-remove-photo { display: block; aspect-ratio: 1; background: #f6f1e6 center / cover no-repeat; }
@@ -7192,6 +7193,9 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
    (app.js nudgeShortScreen): for a moment the page is taller than the screen. */
 :root.nb-nudge body { min-height: calc(100vh + 160px); }
 :root.nb-hold body { min-height: calc(100vh + 1px); }
+/* A line along the top of the bars at the foot, so a page scrolling under
+   them is cut off by something (user, 11-12). Drawn inside, so nothing moves. */
+:is(.tabbar, .nb-shoot-bar, #shootModeOverlay .shoot-mode-bottom-bar) { box-shadow: inset 0 2px 0 #d6dadd; }
 /* Installed, the navigator and the sun show once iOS has its height right
    (app.js adds .settled), so they never show high and then drop. */
 @media (display-mode: standalone) { :root:not(.settled) :is(.tabbar, .nb-sun) { visibility: hidden; } }
