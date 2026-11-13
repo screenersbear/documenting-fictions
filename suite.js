@@ -37,9 +37,14 @@
     // sheets, with these words, then calls welcomed().
     firstVisit: read(WELCOMED) !== '1',
     welcomed: function () { store(WELCOMED, '1'); this.firstVisit = false; },
+    // The notebooks with the notebooks button in their band (round 2) say to
+    // tap it; the others, to swipe the notebook shut.
     words: function (name) {
+      var button = ['the-eye', 'ref'].indexOf(id) >= 0;
       return {
-        back: ['Back to your notebooks', 'Swipe right along the bar at the bottom of the screen until this notebook shuts. That takes you back to all four.'],
+        back: ['Back to your notebooks', button
+          ? 'Tap the notebooks button at the top of the screen. That takes you back to all four.'
+          : 'Swipe right along the bar at the bottom of the screen until this notebook shuts. That takes you back to all four.'],
         ask: ['Take the tour?', 'A few quick cards on how ' + name + ' works.', 'Show me', 'Not now'],
         later: ['Any time', 'Each notebook has its own menu at the top of its first page. The tour is in there too, under How it works.', 'Got it'],
       };

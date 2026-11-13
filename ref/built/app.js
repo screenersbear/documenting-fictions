@@ -1991,10 +1991,6 @@ function upcomingShoots() {
 		};
 	});
 }
-const shortDay = (ymd) => ymd ? dateOf(ymd).toLocaleDateString(undefined, {
-	month: "short",
-	day: "numeric"
-}) : "";
 async function boardShoots() {
 	if (!D || !D.inSuite()) return {};
 	const { shoots, mode } = eyeShoots();
@@ -2006,7 +2002,7 @@ async function boardShoots() {
 		type: "moodboard"
 	})) {
 		const s = byId.get(l.toId);
-		if (s) (out[l.fromId] = out[l.fromId] || []).push(`${D.eyeShootName(s, mode)}${s.date ? ` (${shortDay(s.date)})` : ""}`);
+		if (s) (out[l.fromId] = out[l.fromId] || []).push(D.eyeShootName(s, mode));
 	}
 	return out;
 }
@@ -2169,30 +2165,73 @@ const ICONS = {
 	page: svg("<rect x=\"5\" y=\"3.5\" width=\"14\" height=\"17\"/><path d=\"M12 8.5v7M8.5 12h7\"/>")
 };
 
+// components/band.js
+const ring = (label, attr, svg) => `<button type="button" class="ring-btn" ${attr} aria-label="${label}"><span>${svg}</span></button>`;
+const line = (d) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const BOOKS = "<svg viewBox=\"0 0 24 24\" width=\"19\" height=\"19\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"5\" width=\"4.5\" height=\"14\" rx=\"1\"/><rect x=\"9.5\" y=\"3\" width=\"4.5\" height=\"16\" rx=\"1\"/><path d=\"M16 6.2l3.6-1 3 12.6-3.6 1z\"/></svg>";
+const PLUS = line("<line x1=\"12\" y1=\"5\" x2=\"12\" y2=\"19\"/><line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/>");
+const MENU = line("<line x1=\"4\" y1=\"7\" x2=\"20\" y2=\"7\"/><line x1=\"4\" y1=\"12\" x2=\"20\" y2=\"12\"/><line x1=\"4\" y1=\"17\" x2=\"20\" y2=\"17\"/>");
+const MARK = "<svg class=\"band-mark\" viewBox=\"0 0 40 40\" aria-hidden=\"true\"><rect width=\"20\" height=\"20\" class=\"mk-p\"/><rect x=\"20\" width=\"20\" height=\"20\" class=\"mk-w\"/><rect y=\"20\" width=\"20\" height=\"20\" class=\"mk-w\"/><rect x=\"20\" y=\"20\" width=\"20\" height=\"20\" class=\"mk-p\"/></svg>";
+const bandDate = (d = new Date()) => d.toLocaleDateString("en-GB", {
+	weekday: "short",
+	day: "numeric",
+	month: "short"
+}).replace(",", "");
+function bandHtml({ title, place, add }) {
+	return `
+    <header class="band">
+      <h1 class="band-title">${esc(title)}</h1>
+      <div class="band-btns">${ring("Back to your notebooks", "data-books", BOOKS)}${ring(add, "data-band-add", PLUS)}${ring("Options", "data-app-menu", MENU)}</div>
+      ${MARK}
+      <p class="band-line"><b>${esc(place)}</b><span class="band-rule"></span><span class="band-date">${bandDate()}</span></p>
+    </header>`;
+}
+function wireBand(view, onAdd) {
+	view.querySelector("[data-books]")?.addEventListener("click", () => {
+		location.hash = "#/";
+	});
+	view.querySelector("[data-band-add]")?.addEventListener("click", onAdd);
+}
+
 // pages/boards.js
 async function boardsScreen(view) {
 	const boards = await listBoards();
 	const onShoots = await boardShoots().catch(() => ({}));
 	const firstPhoto = (b) => b.pages.flatMap((p) => p.images).map((im) => im && photoById(im.id)).find(Boolean);
-	view.innerHTML = `
-    <div class="screen">
-      ${window.DF_SUITE ? `<h1 class="head head-add"><button type="button" class="icon-btn head-plus head-menu" data-app-menu aria-label="Menu">${ICONS.menu}</button>Mood boards</h1>` : "<h1 class=\"head\">Mood boards</h1>"}
-      <div class="scroll rows">
-        ${boards.map((b) => {
+	const card = (b) => {
 		const p = firstPhoto(b);
+		const href = `#/board/${esc(b.id)}`;
+		const flags = (onShoots[b.id] || []).map((s) => `<span class="flag">For ${esc(s)}</span>`).join("");
 		return `
-          <div class="row" data-b>
-            <a class="row-open" href="#/board/${esc(b.id)}">
-              <span class="thumb">${p ? `<img src="${thumbUrl(p)}" alt="" />` : ""}</span>
-              <span class="row-text"><span class="row-name">${esc(b.name)}</span><span class="row-meta">${b.pages.length} ${b.pages.length === 1 ? "page" : "pages"}, ${esc(shortDate(b.updatedAt))}</span>${onShoots[b.id] ? `<span class="row-meta row-shoots">For ${esc(onShoots[b.id].join(", "))}</span>` : ""}</span>
-            </a>
-            <button type="button" class="icon-btn" data-more="${esc(b.id)}" aria-label="More for ${esc(b.name)}">${ICONS.more}</button>
-          </div>`;
-	}).join("")}
-        <a class="row row-open" href="#/new"><span class="thumb add">${ICONS.plus}</span><span class="row-name">New board</span></a>
+      <div class="board-card" data-b>
+        <a class="card-cover" href="${href}" aria-label="Open ${esc(b.name)}">${p ? `<img src="${thumbUrl(p)}" alt="" />` : ""}</a>
+        <div class="card-info">
+          <a class="card-words" href="${href}">
+            <span class="card-name">${esc(b.name)}</span>
+            <span class="card-meta">${b.pages.length} ${b.pages.length === 1 ? "page" : "pages"} · ${esc(shortDate(b.updatedAt))}</span>
+            ${flags ? `<span class="flags">${flags}</span>` : ""}
+          </a>
+          <button type="button" class="icon-btn card-more" data-more="${esc(b.id)}" aria-label="More for ${esc(b.name)}">${ICONS.more}</button>
+        </div>
+      </div>`;
+	};
+	view.innerHTML = `
+    <div class="screen has-band">
+      <div class="scroll">
+        ${bandHtml({
+		title: "Ref",
+		place: "Mood boards",
+		add: "New board"
+	})}
+        <div class="list-head"><h2>Boards <span>${boards.length}</span></h2><a class="list-act" href="#/new">${ICONS.plus}New board</a></div>
+        <div class="list-rule"></div>
+        ${boards.map(card).join("")}
         ${!lib.photos.length ? "<p class=\"note\">Start in <a href=\"#/folder/incoming\">Incoming</a>: bring in the photos you want to work with, then make a board from them.</p>" : ""}
       </div>
     </div>`;
+	wireBand(view, () => {
+		location.hash = "#/new";
+	});
 	view.querySelectorAll("[data-more]").forEach((btn) => btn.addEventListener("click", async () => {
 		const b = boards.find((x) => x.id === btn.dataset.more);
 		const key = await choiceSheet({
@@ -2354,30 +2393,44 @@ function fileSheet(ids) {
 }
 
 // pages/folders.js
+const CHEVRON = "<svg class=\"chevron\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><polyline points=\"9 5 16 12 9 19\"/></svg>";
+const SEARCH = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"6.5\"/><line x1=\"16\" y1=\"16\" x2=\"20.5\" y2=\"20.5\"/></svg>";
 function foldersScreen(view) {
 	const row = (f, cls = "") => {
 		const list = sortList(photosIn(f.id), "newest");
 		return `
-      <a class="row row-open ${cls}" href="#/folder/${esc(f.id)}" data-t data-name="${esc(f.name.toLowerCase())}">
-        <span class="thumb">${list[0] ? `<img src="${thumbUrl(list[0])}" alt="" loading="lazy" />` : ""}</span>
-        <span class="row-text"><span class="row-name">${esc(f.name)}</span><span class="row-meta">${list.length} ${list.length === 1 ? "photo" : "photos"}</span></span>
+      <a class="tag-row ${cls}" href="#/folder/${esc(f.id)}" data-t data-name="${esc(f.name.toLowerCase())}">
+        <span class="tag-thumb">${list[0] ? `<img src="${thumbUrl(list[0])}" alt="" loading="lazy" />` : ""}</span>
+        <span class="tag-name">${esc(f.name)}</span>
+        <span class="tag-count" aria-label="${list.length} ${list.length === 1 ? "photo" : "photos"}">${list.length.toLocaleString()}</span>
+        ${CHEVRON}
       </a>`;
 	};
 	view.innerHTML = `
-    <div class="screen">
-      <h1 class="head head-add">Tags<button type="button" class="icon-btn head-plus" data-new aria-label="New tag">${ICONS.plus}</button></h1>
-      <div class="scroll rows tag-rows">
-        ${lib.folders.length > 8 ? "<input class=\"find\" type=\"search\" placeholder=\"Find a tag\" autocomplete=\"off\" />" : ""}
-        ${row(folderById("incoming"), "marked")}
-        ${row(folderById("favorites"))}
-        ${row(folderById("all"))}
+    <div class="screen has-band">
+      <div class="scroll tag-rows">
+        ${bandHtml({
+		title: "Tags",
+		place: "Ref",
+		add: "New tag"
+	})}
+        ${lib.folders.length > 8 ? `<label class="find-box">${SEARCH}<input class="find" type="search" placeholder="Find a tag" autocomplete="off" /></label>` : ""}
+        <div class="list-rule tag-top"></div>
+        ${row(folderById("incoming"), "special")}
+        ${row(folderById("favorites"), "special")}
+        ${row(folderById("all"), "special")}
+        <div class="list-head tag-mine-head" data-mine><h2>Your tags <span>${lib.folders.length}</span></h2></div>
+        <div class="list-rule" data-mine></div>
         ${lib.folders.map((f) => row(f, "mine")).join("")}
+        ${lib.folders.length ? "" : `<button type="button" class="list-act tag-new" data-new>${ICONS.plus}New tag</button>`}
       </div>
     </div>`;
 	const rows = [...view.querySelectorAll("[data-t]")];
-	view.querySelector("[data-new]").addEventListener("click", async () => {
+	const make = async () => {
 		if (await newFolder()) foldersScreen(view);
-	});
+	};
+	wireBand(view, make);
+	view.querySelector("[data-new]")?.addEventListener("click", make);
 	view.querySelector(".find")?.addEventListener("input", (e) => {
 		const q = e.target.value.trim().toLowerCase();
 		rows.forEach((r) => {
@@ -5361,29 +5414,26 @@ async function turnTo(i, dir, go) {
 }
 
 // components/navbar.js
+const q = (d, cls) => `<path class="${cls}" d="M12 12 ${d} Z"/>`;
+const MARKS = {
+	boards: `<svg viewBox="0 0 24 24" aria-hidden="true">${q("L0 12 A12 12 0 0 1 12 0", "mk-1")}${q("L12 0 A12 12 0 0 1 24 12", "mk-2")}${q("L24 12 A12 12 0 0 1 12 24", "mk-1")}${q("L12 24 A12 12 0 0 1 0 12", "mk-2")}</svg>`,
+	tags: "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path class=\"mk-1\" d=\"M0 12 A12 12 0 0 1 24 12 Z\"/><circle class=\"mk-2\" cx=\"12\" cy=\"18\" r=\"4\"/></svg>"
+};
 const SECTIONS = [{
 	href: "#/boards",
 	name: "Mood boards",
-	icon: ICONS.boards
+	key: "boards",
+	icon: MARKS.boards
 }, {
 	href: "#/folders",
 	name: "Tags",
-	icon: ICONS.folders
+	key: "tags",
+	icon: MARKS.tags
 }];
-const STEP = 46;
-const tri = "<svg viewBox=\"0 0 10 12\" aria-hidden=\"true\"><path d=\"M2.3 1.5Q5.6 3.8 8.7 6.1 5.5 8.3 2.2 10.5 2.5 6 2.3 1.5Z\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\"/></svg>";
 const bar = document.getElementById("navbar");
 const frame$1 = document.getElementById("frame");
-bar.innerHTML = `
-  <div class="slider">
-    <button type="button" class="slide-arrow is-prev">${tri}</button>
-    <a class="slide-now"><span class="slide-strip" aria-hidden="true">${SECTIONS.map((s) => `<span class="slide-icon">${s.icon}</span>`).join("")}</span></a>
-    <button type="button" class="slide-arrow is-next">${tri}</button>
-  </div>`;
-const strip = bar.querySelector(".slide-strip");
-const now = bar.querySelector(".slide-now");
-const prev = bar.querySelector(".is-prev");
-const next = bar.querySelector(".is-next");
+bar.innerHTML = `<div class="sec-row">${SECTIONS.map((s, i) => `<a class="sec sec-${s.key}" href="${s.href}" data-sec="${i}">${s.icon}<span>${s.name}</span></a>`).join("")}</div>`;
+const links = [...bar.querySelectorAll(".sec")];
 let at = 0;
 let busy = false;
 let swiped = 0;
@@ -5393,10 +5443,6 @@ let landed = null;
 let docked = null;
 const setPuller = (p) => {
 	puller = p;
-};
-const stripTo = (i, moving) => {
-	strip.classList.toggle("is-moving", !!moving);
-	strip.style.transform = `translateX(${-i * STEP}px)`;
 };
 function showSection(i, list = false) {
 	bar.hidden = i < 0;
@@ -5412,16 +5458,10 @@ function showSection(i, list = false) {
 		return;
 	}
 	at = i;
-	const s = SECTIONS[i];
-	const p = SECTIONS[i - 1];
-	const n = SECTIONS[i + 1];
-	now.setAttribute("href", s.href);
-	now.setAttribute("aria-label", s.name);
-	prev.setAttribute("aria-label", p ? `Previous: ${p.name}` : "Shut the notebook");
-	next.classList.toggle("is-off", !n);
-	next.disabled = !n;
-	next.setAttribute("aria-label", n ? `Next: ${n.name}` : "Nothing after this");
-	if (!busy) stripTo(i);
+	links.forEach((a, k) => {
+		if (k === i) a.setAttribute("aria-current", "page");
+		else a.removeAttribute("aria-current");
+	});
 }
 const navigate = (href) => new Promise((done) => {
 	landed = done;
@@ -5445,17 +5485,18 @@ async function go(dir, from = 0) {
 	if (!t) return settle(from);
 	busy = true;
 	dragFrame(0);
-	stripTo(target, true);
 	await turnTo(target, Math.sign(dir), () => navigate(t.href));
 	busy = false;
-	stripTo(at);
 }
-function settle(from) {
-	settleFrame(from);
-	stripTo(at, true);
-}
-prev.addEventListener("click", () => go(-1));
-next.addEventListener("click", () => go(1));
+const settle = (from) => settleFrame(from);
+links.forEach((a, k) => a.addEventListener("click", (e) => {
+	e.preventDefault();
+	if (k !== at) go(k - at);
+	else frame$1.querySelector(".scroll")?.scrollTo({
+		top: 0,
+		behavior: "smooth"
+	});
+}));
 function wire(el, fromPage) {
 	let d = null;
 	el.addEventListener("pointerdown", (e) => {
@@ -5495,11 +5536,7 @@ function wire(el, fromPage) {
 			else d.kind = "stop";
 		}
 		d.x = dx;
-		if (d.kind === "turn") {
-			const x = dx * d.dir > 0 ? 0 : Math.max(-frame$1.offsetWidth, Math.min(frame$1.offsetWidth, dx));
-			strip.classList.remove("is-moving");
-			strip.style.transform = `translateX(${-at * STEP + x / frame$1.offsetWidth * STEP}px)`;
-		} else if (d.kind === "shut") {
+		if (d.kind === "shut") {
 			d.x = Math.max(0, dx);
 			dragFrame(Math.min(d.x * .3, 60));
 		}
@@ -5514,7 +5551,6 @@ function wire(el, fromPage) {
 		const w = frame$1.offsetWidth;
 		if (g.kind === "turn") {
 			if (up && g.x * g.dir < 0 && Math.abs(g.x) > Math.min(60, w * .15)) go(g.dir);
-			else stripTo(at, true);
 		} else if (g.kind === "shut") {
 			if (up && g.x > 50) {
 				dragFrame(0);
@@ -5580,7 +5616,6 @@ function openDock(h) {
 		left,
 		centers: SECTIONS.map((s, i) => left + DOCK_PAD + (i + .5) * DOCK_SLOT)
 	};
-	stripTo(at, true);
 	dock.style.left = `${(left - r.left).toFixed(1)}px`;
 	dock.style.transformOrigin = `${(h.x - left).toFixed(1)}px 100%`;
 	dockSlots.forEach((slot, i) => slot.classList.toggle("is-here", i === at));
@@ -5591,7 +5626,7 @@ function openDock(h) {
 		bar.setPointerCapture(h.id);
 	} catch {}
 }
-now.addEventListener("pointerdown", (e) => {
+bar.addEventListener("pointerdown", (e) => {
 	if (e.button || !e.isPrimary) return;
 	if (hold) clearTimeout(hold.timer);
 	const h = {
@@ -5604,7 +5639,7 @@ now.addEventListener("pointerdown", (e) => {
 	}, 380);
 	hold = h;
 });
-now.addEventListener("contextmenu", (e) => e.preventDefault());
+bar.addEventListener("contextmenu", (e) => e.preventDefault());
 bar.addEventListener("pointermove", (e) => {
 	if (hold && e.pointerId === hold.id && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) >= 8) {
 		clearTimeout(hold.timer);

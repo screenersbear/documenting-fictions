@@ -103,8 +103,7 @@ function upcomingShoots() {
       return { id: s.id, name, other: other !== name ? other : '', date: s.date || '' };
     });
 }
-const shortDay = (ymd) => (ymd ? dateOf(ymd).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '');
-// The shoots each board is on: { boardId: ['Ana Rivera', ...] }. Shoots since deleted are left out.
+// The shoots each board is on, by name: { boardId: ['Ana Rivera', ...] }. Shoots since deleted are left out.
 export async function boardShoots() {
   if (!D || !D.inSuite()) return {};
   const { shoots, mode } = eyeShoots();
@@ -112,7 +111,7 @@ export async function boardShoots() {
   const out = {};
   for (const l of await D.linksWhere({ fromApp: 'ref', toApp: 'the-eye', type: 'moodboard' })) {
     const s = byId.get(l.toId);
-    if (s) (out[l.fromId] = out[l.fromId] || []).push(`${D.eyeShootName(s, mode)}${s.date ? ` (${shortDay(s.date)})` : ''}`);
+    if (s) (out[l.fromId] = out[l.fromId] || []).push(D.eyeShootName(s, mode));
   }
   return out;
 }

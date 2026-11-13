@@ -177,19 +177,6 @@ html.settled .nb.closed:not(.placing) .nb-sun { opacity: 1; pointer-events: auto
    every section a held finger opens. */
 .tools { position: fixed; left: 0; right: 0; top: calc(var(--app-h) - var(--nb-bar)); height: var(--nb-bar); max-width: 620px; margin: 0 auto; display: flex; justify-content: space-evenly; align-items: center; padding: 0 0 var(--nb-pad); background: #fff; z-index: 3; }
 .nav-bar { position: fixed; left: 0; right: 0; top: calc(var(--app-h) - var(--nb-bar)); height: var(--nb-bar); max-width: 620px; margin: 0 auto; padding: 0 0 var(--nb-pad); background: #fff; z-index: 0; touch-action: none; user-select: none; -webkit-user-select: none; }
-.slider { display: flex; align-items: center; justify-content: center; height: 50px; }
-.slide-arrow { width: 44px; height: 44px; display: grid; place-items: center; color: var(--text); }
-.slide-arrow.is-prev { justify-items: end; margin-right: -5px; position: relative; z-index: 1; }
-.slide-arrow.is-next { justify-items: start; margin-left: -5px; position: relative; z-index: 1; }
-.slide-arrow:active { opacity: .5; }
-.slide-arrow.is-off { visibility: hidden; }
-.slide-arrow svg { width: 9px; height: 11px; display: block; }
-.slide-arrow.is-prev svg { transform: scaleX(-1); }
-.slide-now { display: block; flex: none; width: 46px; height: 40px; overflow: hidden; color: var(--text); }
-.slide-strip { display: flex; }
-.slide-strip.is-moving { transition: transform .19s cubic-bezier(.3,.6,.3,1); }
-.slide-icon { flex: 0 0 46px; height: 40px; display: grid; place-items: center; }
-.slide-icon svg { width: 27px; height: 27px; stroke-width: 1.7; }
 /* Held, the bar's icon swells into a row of every section (navbar.js). No card
    around it (user, 11-12): just the icons and the name, on a soft white haze. */
 .nav-bar { -webkit-touch-callout: none; }
@@ -524,3 +511,136 @@ html.settled .nb.closed:not(.placing) .nb-sun { opacity: 1; pointer-events: auto
 .sheet-header h2 { font: 400 18px/1.3 var(--display); letter-spacing: .02em; }
 .field-label, .label, .choice-heading { font: 600 15px/1.3 var(--ui); text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
 .tpanel .size-row .label { font-size: 13px; }
+
+/* ---- styles/band-colors.css ---- */
+/* The notebook colours on the band (DESIGN.md 4.2), the same seven as The
+   Eye: the band itself, its partner (the title, ring buttons, hairline and
+   mark), the colour of small text on it, and the four steps under it (75,
+   50, 25 and 10% on paper). Picked in Options (data-book on <html>); ocean
+   when nothing is picked. Buttons, chips and ticks (--ink) take the band
+   colour with its small-text colour. */
+:root {
+  --paper: #FAFAF7;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='.14'/%3E%3C/svg%3E");
+}
+:root[data-book="mango"] { --band: #FFD100; --partner: #313D45; --band-small: #313D45; --step1: #FEDB3E; --step2: #FCE67C; --step3: #FBF0B9; --step4: #FAF6DE; }
+:root[data-book="orange"] { --band: #FF8A3D; --partner: #313D45; --band-small: #313D45; --step1: #FEA66C; --step2: #FCC29A; --step3: #FBDEC8; --step4: #FAEFE4; }
+:root[data-book="berry"] { --band: #CC2E8A; --partner: #E2E600; --band-small: #FFFFFF; --step1: #D861A5; --step2: #E394C0; --step3: #EEC7DC; --step4: #F5E6EC; }
+:root[data-book="fern"] { --band: #13803F; --partner: #FFD100; --band-small: #FFFFFF; --step1: #4D9E6D; --step2: #86BD9B; --step3: #C0DCC9; --step4: #E3EEE5; }
+:root, :root[data-book="ocean"] { --band: #0A4FD6; --partner: #FFAFAB; --band-small: #FFFFFF; --step1: #467ADE; --step2: #82A4E6; --step3: #BECFEF; --step4: #E2E9F4; }
+:root[data-book="leaf"] { --band: #14BFA0; --partner: #A1062A; --band-small: #313D45; --step1: #4ECEB6; --step2: #87DCCC; --step3: #C0EBE1; --step4: #E3F4EE; }
+:root[data-book="ink"] { --band: #313D45; --partner: #FFD100; --band-small: #FAFAF7; --step1: #636C72; --step2: #969C9E; --step3: #C8CBCA; --step4: #E6E7E5; }
+:root, :root[data-book] { --ink: var(--band); --on-ink: var(--band-small); }
+
+/* ---- styles/band.css ---- */
+/* The round 2 look, as in The Eye (DESIGN.md 9.1): paper behind every
+   screen, and on Mood boards and Tags the band of the notebook's colour
+   from the top of the screen, 92px under the safe area, with its grain; the
+   title (34px light capitals) and the ring buttons on one line; the rising
+   mark (a 2 x 2 board) at its foot; the label line (the place, a hairline,
+   the date); then four steps fading into the paper. The page starts 53px
+   under the band. (components/band.js draws it.) */
+html, body, .paper, .turn-leaf { background: var(--paper); }
+.band {
+  position: relative; flex: none; display: flex; align-items: flex-start; gap: 8px; box-sizing: border-box;
+  height: 92px; padding: 8px 8px 0 16px;
+  background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal; color: var(--partner);
+}
+/* the band reaches up past the safe area (the frame starts under it) */
+.frame::before { background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal; }
+.band::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 41.4px; pointer-events: none;
+  background: linear-gradient(var(--step1) 0 14px, var(--step2) 14px 25.2px, var(--step3) 25.2px 34.2px, var(--step4) 34.2px); }
+.band-title { flex: 1; min-width: 0; margin: 0; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;
+  font: 300 34px/40px var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--partner); }
+.band-btns { display: flex; flex: none; }
+.band-mark { position: absolute; left: 16px; bottom: 0; width: 40px; height: 40px; pointer-events: none; }
+.band-mark .mk-p { fill: var(--partner); }
+.band-mark .mk-w { fill: #FFFFFF; }
+.band-line { position: absolute; left: 108px; right: 16px; top: 68px; display: flex; align-items: center; gap: 10px; margin: 0;
+  font: 500 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: var(--band-small); }
+.band-line b { font-weight: 700; }
+.band-rule { flex: 1; height: 1px; background: var(--partner); }
+.band-date { font-variant-numeric: tabular-nums; }
+/* A ring button (DESIGN.md 8): a 44px target, a 40px ring 1.5px thick. */
+.ring-btn { display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; color: inherit; }
+.ring-btn > span { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
+/* The notebooks button is the suite's: Ref on its own has no shelf to go back to. */
+html:not(.df-suite) [data-books] { display: none; }
+
+/* A list's heading on the page: its name in small capitals, a count, an
+   action at the right, a navy rule under it. */
+.list-head { flex: none; display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.list-head h2 { margin: 0; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.list-head h2 span { font-weight: 500; color: var(--dim); font-variant-numeric: tabular-nums; }
+.list-act { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 8px; margin-right: -8px; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--band-on-paper, var(--ink)); }
+.list-act svg { width: 14px; height: 14px; stroke-width: 2.4; }
+.list-rule { flex: none; border-top: 1px solid var(--text); }
+
+/* A screen with the band: the band scrolls with the page, which runs to
+   the screen's sides. */
+.screen.has-band { padding: 0; }
+.screen.has-band > .scroll { padding: 0 16px 24px; }
+.screen.has-band > .scroll > .band { margin: 0 -16px 53px; }
+.screen.has-band .note { font: 400 17px/24px var(--ui); color: var(--dim); }
+
+/* ---- styles/section-bar.css ---- */
+/* The section bar (DESIGN.md 9.4), as The Eye's: on paper, a 1px line on
+   top, each section's mark (28px) over its name (10px capitals). The one
+   you're on is in berry blade black and the notebook's colour, its name
+   bold; the other in two greys. 64px over the foot. Swiping along it or
+   holding it: components/navbar.js. */
+:root {
+  --nb-foot: max(11px, calc(var(--safe-b) - 13px));
+  --nb-bar: calc(64px + var(--nb-foot));
+}
+html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by, 0px))); }
+.nav-bar { padding: 8px 12px var(--nb-foot); background: var(--paper); box-shadow: none; border-top: 1px solid #E1E1DC; }
+.sec-row { display: flex; justify-content: center; align-items: flex-start; gap: 48px; }
+.sec { --mk-1: #9AA3A8; --mk-2: #D6DADD; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 96px; height: 52px;
+  font: 500 10px/14px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); -webkit-touch-callout: none; }
+.sec[aria-current="page"] { --mk-1: var(--ink); color: var(--text); font-weight: 700; }
+.sec-boards[aria-current="page"] { --mk-2: var(--step3); } /* the board's other quarters, pale */
+.sec-tags[aria-current="page"] { --mk-2: var(--text); }    /* the dot under the half circle */
+.sec svg, .nav-dock-icon svg { width: 28px; height: 28px; }
+.mk-1 { fill: var(--mk-1, #9AA3A8); }
+.mk-2 { fill: var(--mk-2, #D6DADD); }
+/* The held bar's row of every section shows the marks too. */
+.nav-dock-label { font: 700 11px/22px var(--ui); letter-spacing: .1em; text-transform: uppercase; }
+
+/* ---- styles/board-rows.css ---- */
+/* Mood boards (round 2, 01-mood-boards): each board one big cover (its
+   first photo, 196px tall, full width, radius 8), then its name (20px
+   light), "N pages · date", the shoots it's on as flags, and its ... menu. */
+.board-card { padding: 16px 0 14px; border-bottom: 1px solid #E1E1DC; }
+.card-cover { position: relative; display: block; height: 196px; border-radius: 8px; overflow: hidden; background: #EFEFEA; }
+.card-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.card-info { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; }
+.card-words { flex: 1; min-width: 0; display: flex; flex-direction: column; color: var(--text); }
+.card-name { font: 300 20px/25px var(--ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-meta { font: 400 14px/19px var(--ui); color: var(--dim); font-variant-numeric: tabular-nums; }
+.flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+/* A flag (DESIGN.md 9.5): a 20px pill with a 1px berry blade black outline. */
+.flag { display: inline-flex; align-items: center; max-width: 100%; height: 20px; padding: 0 7px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--text);
+  font: 700 10px/12px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-more { width: 44px; height: 44px; margin: -8px -10px 0 0; color: var(--text); }
+.card-more svg { width: 22px; height: 22px; }
+
+/* ---- styles/tag-rows.css ---- */
+/* Tags (round 2, 03-tags): the find box (with more than eight tags), then
+   Incoming, Favorites and All photos, then YOUR TAGS; each row its newest
+   photo (52px, radius 8), the name, how many, a chevron. */
+.find-box { flex: none; display: flex; align-items: center; gap: 10px; height: 44px; margin: 8px 0 8px; padding: 0 14px; border-radius: 10px; background: #EFEFEA; color: var(--dim); }
+.find-box svg { flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.find-box .find { flex: 1; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: 400 16px/20px var(--ui); color: var(--text); outline: none; -webkit-appearance: none; }
+.find-box .find::placeholder { color: var(--dim); }
+.tag-top { margin-top: 8px; }
+.find-box + .tag-top { margin-top: 0; }
+.tag-row { display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 8px 0; border-bottom: 1px solid #E1E1DC; color: var(--text); }
+.tag-thumb { position: relative; flex: none; display: block; width: 52px; height: 52px; border-radius: 8px; overflow: hidden; background: #EFEFEA; }
+.tag-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tag-name { flex: 1; min-width: 0; font: 400 17px/22px var(--ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag-row.special .tag-name { font-weight: 500; }
+.tag-count { font: 400 15px/20px var(--ui); color: var(--dim); font-variant-numeric: tabular-nums; }
+.chevron { flex: none; width: 16px; height: 16px; fill: none; stroke: #9AA3A8; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tag-mine-head { margin-top: 20px; }
+.tag-new { margin-top: 8px; }
