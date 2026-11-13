@@ -34,15 +34,21 @@ export function wireBand(view, onAdd) {
 }
 
 export const BACK = line('<polyline points="15 5 8 12 15 19"/>');
+export const CLOSE = line('<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>');
+export const FULL = line('<polyline points="4 9 4 4 9 4"/><polyline points="20 9 20 4 15 4"/><polyline points="4 15 4 20 9 20"/><polyline points="20 15 20 20 15 20"/>');
 const MORE = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>';
-// The short band on a page inside a section (a tag): back, its name on the
-// hairline, and its ... menu (more: that button's name; none for Incoming,
-// Favorites and All photos).
-export function shortBandHtml({ name, back, backLabel = 'Back', more = '' }) {
+// The short band on a page inside a section (a tag, a board, the new board
+// guide): back, the name on the hairline, and a ring at the right.
+//   back: where Back goes (a link), or backAttr: Back is a button with it;
+//   more: the ... menu's name (none for Incoming, Favorites and All photos);
+//   end: another ring at the right instead, { label, attr, svg }.
+export function shortBandHtml({ name, back = '', backAttr = '', backLabel = 'Back', more = '', end = null }) {
+  const left = backAttr ? ring(backLabel, backAttr, BACK) : `<a class="ring-btn" href="${back}" aria-label="${esc(backLabel)}"><span>${BACK}</span></a>`;
+  const right = end ? ring(end.label, end.attr, end.svg) : more ? ring(more, 'data-band-more', MORE) : '<span class="ring-btn" aria-hidden="true"></span>';
   return `
     <header class="band band-short">
-      <a class="ring-btn" href="${back}" aria-label="${esc(backLabel)}"><span>${BACK}</span></a>
+      ${left}
       <p class="band-line"><b>${esc(name)}</b><span class="band-rule"></span></p>
-      ${more ? ring(more, 'data-band-more', MORE) : '<span class="ring-btn" aria-hidden="true"></span>'}
+      ${right}
     </header>`;
 }

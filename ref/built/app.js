@@ -1505,7 +1505,7 @@ const textParts = (page) => [{
 	scale: page.textSize ?? 1,
 	bold: false
 }].filter((p) => p.text.trim());
-async function renderPage(board, page, { selected = -1, editing = false } = {}) {
+async function renderPage(board, page, { selected = -1, editing = false, mainHint = false } = {}) {
 	const shape = SHAPES[board.shape];
 	const t = pageTemplate(board, page);
 	const el = document.createElement("div");
@@ -1524,7 +1524,10 @@ async function renderPage(board, page, { selected = -1, editing = false } = {}) 
 		el.append(slot);
 		const im = page.images[i];
 		const rec = im && photoById(im.id);
-		if (!rec) return;
+		if (!rec) {
+			if (editing) slot.innerHTML = "<span class=\"slot-hint\">Tap a photo below</span>";
+			return;
+		}
 		const img = document.createElement("img");
 		img.draggable = false;
 		img.alt = "";
@@ -1535,6 +1538,12 @@ async function renderPage(board, page, { selected = -1, editing = false } = {}) 
 	}));
 	const parts = textParts(page);
 	const cols = page.palette ? pagePalette(page, t) : [];
+	const hint = editing && mainHint && !parts.length;
+	if (hint) parts.push({
+		kind: "title empty",
+		text: "Title",
+		scale: page.titleSize ?? 1.5
+	});
 	if (parts.length || cols.length) {
 		const tx = document.createElement("div");
 		tx.className = `page-text${t.text.overlay ? " overlay" : ""}${page.textFill === false ? " nofill" : ""}`;
@@ -2162,6 +2171,7 @@ const ICONS = {
 	text: svg("<path d=\"M5 7V4.5h14V7M12 4.5v15M9 19.5h6\"/>"),
 	undo: svg("<path d=\"M8 5L4 9l4 4M4 9h10a5.5 5.5 0 0 1 0 11H9\"/>"),
 	share: svg("<path d=\"M12 15V3M8 7l4-4 4 4M6 11H4.5v10h15V11H18\"/>"),
+	download: svg("<path d=\"M12 4v11M7.5 10.5L12 15l4.5-4.5M5 20h14\"/>"),
 	page: svg("<rect x=\"5\" y=\"3.5\" width=\"14\" height=\"17\"/><path d=\"M12 8.5v7M8.5 12h7\"/>")
 };
 
@@ -2193,13 +2203,17 @@ function wireBand(view, onAdd) {
 	view.querySelector("[data-band-add]")?.addEventListener("click", onAdd);
 }
 const BACK = line("<polyline points=\"15 5 8 12 15 19\"/>");
+const CLOSE = line("<line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/>");
+const FULL = line("<polyline points=\"4 9 4 4 9 4\"/><polyline points=\"20 9 20 4 15 4\"/><polyline points=\"4 15 4 20 9 20\"/><polyline points=\"20 15 20 20 15 20\"/>");
 const MORE = "<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" aria-hidden=\"true\"><circle cx=\"5\" cy=\"12\" r=\"1.6\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.6\" fill=\"currentColor\"/><circle cx=\"19\" cy=\"12\" r=\"1.6\" fill=\"currentColor\"/></svg>";
-function shortBandHtml({ name, back, backLabel = "Back", more = "" }) {
+function shortBandHtml({ name, back = "", backAttr = "", backLabel = "Back", more = "", end = null }) {
+	const left = backAttr ? ring(backLabel, backAttr, BACK) : `<a class="ring-btn" href="${back}" aria-label="${esc(backLabel)}"><span>${BACK}</span></a>`;
+	const right = end ? ring(end.label, end.attr, end.svg) : more ? ring(more, "data-band-more", MORE) : "<span class=\"ring-btn\" aria-hidden=\"true\"></span>";
 	return `
     <header class="band band-short">
-      <a class="ring-btn" href="${back}" aria-label="${esc(backLabel)}"><span>${BACK}</span></a>
+      ${left}
       <p class="band-line"><b>${esc(name)}</b><span class="band-rule"></span></p>
-      ${more ? ring(more, "data-band-more", MORE) : "<span class=\"ring-btn\" aria-hidden=\"true\"></span>"}
+      ${right}
     </header>`;
 }
 
@@ -3253,6 +3267,33 @@ function withTextDefaults(page) {
 	return page;
 }
 
+// components/option-card.js
+function cardHtml({ attr, on, picture = "", name, blurb = "" }) {
+	return `<button type="button" class="opt-card" role="radio" aria-checked="${on}" ${attr}>${picture}<span class="opt-name">${esc(name)}</span>${blurb ? `<span class="opt-blurb">${esc(blurb)}</span>` : ""}</button>`;
+}
+
+// pages/newboard-parts.js
+function marksHtml(names, at) {
+	const last = names.length - 1;
+	const marks = names.map((_, i) => {
+		const line = i ? `<span class="guide-line${i <= at ? " inked" : ""}"></span>` : "";
+		return `${line}<span class="guide-mark${i === at ? " now" : i < at ? " done" : ""}"></span>`;
+	}).join("");
+	const words = names.map((n, i) => {
+		const where = i === 0 ? "left:0" : i === last ? "right:0" : `left:${i / last * 100}%`;
+		return `<span class="guide-mark-name${i <= at ? " reached" : ""}${i && i < last ? " mid" : ""}" style="${where}">${esc(n)}</span>`;
+	}).join("");
+	return `<div class="guide-marks" role="img" aria-label="Step ${at + 1} of ${names.length}: ${esc(names[at])}"><div class="guide-mark-row">${marks}</div><div class="guide-mark-names" aria-hidden="true">${words}</div></div>`;
+}
+function miniPage(shape, tid, w) {
+	const s = SHAPES[shape];
+	const t = templateFor(shape, tid);
+	const W = 60;
+	const H = 60 * s.H / s.W;
+	const r = (t?.slots || []).map((b) => `<rect x="${b.x * W}" y="${b.y * H}" width="${b.w * W}" height="${b.h * H}"/>`).join("");
+	return `<svg viewBox="0 0 ${W} ${H}" style="width:${w}px" aria-hidden="true"><rect class="paper-r" width="${W}" height="${H}"/>${r}</svg>`;
+}
+
 // pages/newboard.js
 const SHAPE_INFO = {
 	"letter-portrait": {
@@ -3286,14 +3327,6 @@ const ORDERS = [
 		"A fresh mix each time."
 	]
 ];
-function miniPage(shape, tid, w) {
-	const s = SHAPES[shape];
-	const t = templateFor(shape, tid);
-	const W = 60;
-	const H = 60 * s.H / s.W;
-	const r = (t?.slots || []).map((b) => `<rect x="${b.x * W}" y="${b.y * H}" width="${b.w * W}" height="${b.h * H}"/>`).join("");
-	return `<svg viewBox="0 0 ${W} ${H}" style="width:${w}px" aria-hidden="true"><rect class="paper-r" width="${W}" height="${H}"/>${r}</svg>`;
-}
 function newBoardScreen(view) {
 	const W = {
 		step: 0,
@@ -3333,6 +3366,18 @@ function newBoardScreen(view) {
 		[stepStart, "Start"],
 		[stepPhotos, "Which photos"]
 	]);
+	const MARKS = new Map([
+		[stepName, "Name"],
+		[stepLayout, "Layout"],
+		[stepStart, "Start"],
+		[stepPhotos, "Photos"]
+	]);
+	const ASKS = new Map([
+		[stepName, "What is it called, and how big are its pages?"],
+		[stepLayout, "How should the pages look? You can change any page later."],
+		[stepStart, "Empty pages to fill yourself, or pages filled from your tags?"],
+		[stepPhotos, "Which photos come first, and how many pages each section gets."]
+	]);
 	const photosOf = (sec) => {
 		if (!sec.tags.length) return [];
 		if (sec.all && sec.tags.length > 1) return lib.photos.filter((p) => sec.tags.every((t) => photosIn(t).includes(p)));
@@ -3345,14 +3390,26 @@ function newBoardScreen(view) {
 		const step = steps[W.step];
 		const last = W.step === steps.length - 1;
 		view.innerHTML = `
-      <div class="screen">
-        <h1 class="head">New board</h1>
-        <p class="wz-step">${W.step + 1} of ${steps.length}: ${TITLES.get(step)}</p>
-        <div class="scroll form-page">${step()}</div>
-        <div class="foot">
-          <button type="button" class="icon-btn" data-back aria-label="${W.step ? "Back a step" : "Back to mood boards"}">${ICONS.back}</button>
-          <span class="wz-dots" aria-hidden="true">${steps.map((_, i) => `<i class="${i === W.step ? "on" : ""}"></i>`).join("")}</span>
-          <button type="button" class="cta" data-next>${last ? "Make the board" : "Next"}</button>
+      <div class="screen new-board">
+        ${shortBandHtml({
+			name: "New board",
+			backAttr: "data-back",
+			backLabel: W.step ? "Back a step" : "Back to mood boards",
+			end: {
+				label: "Close",
+				attr: "data-close",
+				svg: CLOSE
+			}
+		})}
+        <div class="scroll form-page">
+          ${marksHtml(steps.map((f) => MARKS.get(f)), W.step)}
+          <h1 class="guide-title">${TITLES.get(step)}</h1>
+          <p class="guide-ask">${ASKS.get(step)}</p>
+          ${step()}
+        </div>
+        <div class="foot guide-foot">
+          <button type="button" class="btn secondary" data-back>Back</button>
+          <button type="button" class="btn primary" data-next>${last ? "Make the board" : `Next: ${MARKS.get(steps[W.step + 1])}`}</button>
         </div>
       </div>`;
 		if (keepScroll) view.querySelector(".screen").classList.add("still");
@@ -3361,69 +3418,82 @@ function newBoardScreen(view) {
 	}
 	function stepName() {
 		return `
-      <label class="group"><span class="label">Name</span>
-        <input class="hand-input" data-name value="${esc(W.name)}" placeholder="Name this board" maxlength="80" autocomplete="off" enterkeyhint="next" /></label>
-      <div class="group"><span class="label">Page size, the same for the whole board</span>
-        <div class="wz-cards">${Object.entries(SHAPE_INFO).map(([k, s]) => `
-          <button type="button" class="wz-card${W.shape === k ? " on" : ""}" data-shape="${k}">
-            <span class="wz-shape ${k === "wide-16x9" ? "wide" : "tall"}"></span>
-            <strong>${s.name}</strong><span>${s.blurb}</span></button>`).join("")}</div>
-      </div>`;
+      <label class="guide-field"><span class="guide-label">Name</span>
+        <input class="guide-input" data-name value="${esc(W.name)}" placeholder="Name this board" maxlength="80" autocomplete="off" enterkeyhint="next" /></label>
+      <p class="guide-label">Page size, the same for the whole board</p>
+      <div class="opt-cards two" role="radiogroup" aria-label="Page size">${Object.entries(SHAPE_INFO).map(([k, sh]) => cardHtml({
+			attr: `data-shape="${k}"`,
+			on: W.shape === k,
+			picture: `<span class="opt-shape ${k === "wide-16x9" ? "wide" : "tall"}"></span>`,
+			name: sh.name,
+			blurb: sh.blurb
+		})).join("")}</div>`;
 	}
 	function stepLayout() {
-		const big = W.shape === "wide-16x9" ? 30 : 22;
+		const w = W.shape === "wide-16x9" ? 80 : 60;
 		return `
-      <p class="small">Pick a general approach. Any page can still change layout afterwards.</p>
-      <div class="wz-cards">${STYLES.map((st) => `
-        <button type="button" class="wz-card${W.style === st.id ? " on" : ""}" data-style="${st.id}">
-          <span class="wz-pages">${[
-			0,
-			1,
-			2
-		].map((n) => miniPage(W.shape, styleTemplate(W.shape, st.id, n), big)).join("")}</span>
-          <strong>${esc(st.name)}</strong><span>${esc(st.blurb)}</span></button>`).join("")}</div>
-      <label class="check"><input type="checkbox" data-cover${W.cover ? " checked" : ""} /> Start with a cover page: the board's name, big, with its first photo</label>`;
+      <div class="opt-cards" role="radiogroup" aria-label="Layout">${STYLES.map((st) => cardHtml({
+			attr: `data-style="${st.id}"`,
+			on: W.style === st.id,
+			picture: miniPage(W.shape, styleTemplate(W.shape, st.id, 0), w),
+			name: st.name
+		})).join("")}</div>
+      <label class="switch-row"><span>Start with a cover page</span><input type="checkbox" class="switch" role="switch" data-cover${W.cover ? " checked" : ""} /></label>`;
 	}
 	function stepStart() {
+		const w = W.shape === "wide-16x9" ? 64 : 44;
+		const page = (cls) => `<span class="opt-glyph${cls}">${miniPage(W.shape, styleTemplate(W.shape, W.style, 0), w)}</span>`;
 		let out = `
-      <div class="wz-cards">
-        <button type="button" class="wz-card${W.start === "blank" ? " on" : ""}" data-start="blank">
-          <span class="wz-glyph">${miniPage(W.shape, styleTemplate(W.shape, W.style, 0), W.shape === "wide-16x9" ? 40 : 28)}</span>
-          <strong>Start blank</strong><span>Just the layout, with empty pages. You put the photos in yourself.</span></button>
-        <button type="button" class="wz-card${W.start === "fill" ? " on" : ""}" data-start="fill">
-          <span class="wz-glyph wz-glyph-fill">${miniPage(W.shape, styleTemplate(W.shape, W.style, 0), W.shape === "wide-16x9" ? 40 : 28)}</span>
-          <strong>Fill in sections</strong><span>Name sections and pick the tags each one fills from.</span></button>
+      <div class="opt-cards two" role="radiogroup" aria-label="Start">
+        ${cardHtml({
+			attr: "data-start=\"blank\"",
+			on: W.start === "blank",
+			picture: page(""),
+			name: "Start blank",
+			blurb: "Just the layout, with empty pages. You put the photos in yourself."
+		})}
+        ${cardHtml({
+			attr: "data-start=\"fill\"",
+			on: W.start === "fill",
+			picture: page(" filled"),
+			name: "Fill in sections",
+			blurb: "Name sections and pick the tags each one fills from."
+		})}
       </div>`;
-		if (W.start === "blank") {
-			return out + `
-        <div class="group row-group"><span class="label">Pages</span>
-          <span class="stepper"><button type="button" data-blank="-1" aria-label="Fewer pages">−</button><b>${W.blankPages}</b><button type="button" data-blank="1" aria-label="More pages">+</button></span></div>`;
-		}
-		out += "<p class=\"small\">Each section gets its own pages, with its name as the first page's title.</p>";
+		if (W.start === "blank") return out + stepperRow("Pages", "blank", W.blankPages, "pages");
+		out += "<p class=\"guide-small\">Each section gets its own pages, with its name as the first page's title.</p>";
 		W.sections.forEach((sec, i) => {
 			out += `
-        <div class="wz-section" data-sec="${i}">
-          <div class="wz-sechead"><span class="wz-secnum">${i + 1}</span>
-            <input class="hand-input wz-secname" data-secname="${i}" value="${esc(sec.name)}" placeholder="Section ${i + 1} name" maxlength="60" autocomplete="off" enterkeyhint="done" />
+        <div class="guide-section" data-sec="${i}">
+          <div class="guide-sechead"><span class="guide-secnum">${i + 1}</span>
+            <input class="guide-input" data-secname="${i}" value="${esc(sec.name)}" placeholder="Section ${i + 1} name" maxlength="60" autocomplete="off" enterkeyhint="done" />
             ${W.sections.length > 1 ? `<button type="button" class="icon-btn" data-drop="${i}" aria-label="Remove section ${i + 1}">${ICONS.x}</button>` : ""}</div>
-          <div class="pick-chips">${sources.map((f) => `<button type="button" class="pick${sec.tags.includes(f.id) ? " on" : ""}" data-tag="${esc(f.id)}" data-in="${i}">${esc(f.name)} ${photosIn(f.id).length}</button>`).join("")}</div>
-          ${sec.tags.length > 1 ? `<label class="check"><input type="checkbox" data-all="${i}"${sec.all ? " checked" : ""} /> Only photos with all of these tags</label>` : ""}
-          <p class="small">${sec.tags.length ? `${photosOf(sec).length} photos` : "Pick at least one tag."}</p>
+          <div class="pick-chips">${sources.map((f) => `<button type="button" class="pick${sec.tags.includes(f.id) ? " on" : ""}" data-tag="${esc(f.id)}" data-in="${i}" aria-pressed="${sec.tags.includes(f.id)}">${esc(f.name)} ${photosIn(f.id).length}</button>`).join("")}</div>
+          ${sec.tags.length > 1 ? `<label class="switch-row"><span>Only photos with all of these tags</span><input type="checkbox" class="switch" role="switch" data-all="${i}"${sec.all ? " checked" : ""} /></label>` : ""}
+          <p class="guide-small">${sec.tags.length ? `${photosOf(sec).length} photos` : "Pick at least one tag."}</p>
         </div>`;
 		});
-		return out + "<button type=\"button\" class=\"label-btn wz-add\" data-addsec>+ Add section</button>";
+		return out + "<button type=\"button\" class=\"btn secondary guide-add\" data-addsec>Add section</button>";
+	}
+	function stepperRow(name, key, n, word) {
+		return `
+      <div class="guide-stepper"><span>${name}</span>
+        <span class="stepper"><button type="button" data-${key}="-1" aria-label="Fewer ${word}">−</button><b>${n}</b><button type="button" data-${key}="1" aria-label="More ${word}">+</button></span></div>`;
 	}
 	function stepPhotos() {
 		return `
-      <div class="wz-cards">${ORDERS.map(([k, name, blurb]) => `
-        <button type="button" class="wz-card${W.order === k ? " on" : ""}" data-order="${k}"><strong>${name}</strong><span>${blurb}</span></button>`).join("")}</div>
-      <div class="group row-group"><span class="label">Pages per section</span>
-        <span class="stepper"><button type="button" data-per="-1" aria-label="Fewer pages">−</button><b>${W.perSection}</b><button type="button" data-per="1" aria-label="More pages">+</button></span></div>
-      <div class="wz-summary">${W.sections.map((sec, i) => {
+      <div class="opt-cards two" role="radiogroup" aria-label="Which photos come first">${ORDERS.map(([k, name, blurb]) => cardHtml({
+			attr: `data-order="${k}"`,
+			on: W.order === k,
+			name,
+			blurb
+		})).join("")}</div>
+      ${stepperRow("Pages per section", "per", W.perSection, "pages")}
+      <div class="guide-summary">${W.sections.map((sec, i) => {
 			const n = photosOf(sec).length;
-			return `<div class="wz-sumrow"><span>${esc(titleOf(sec, i))}</span><span class="row-meta">${n ? `${n} ${n === 1 ? "photo" : "photos"}` : "none yet"}</span></div>`;
+			return `<div class="guide-sumrow"><span>${esc(titleOf(sec, i))}</span><span class="guide-sumcount">${n ? `${n} ${n === 1 ? "photo" : "photos"}` : "none yet"}</span></div>`;
 		}).join("")}</div>
-      ${W.sections.every((s) => !photosOf(s).length) ? "<p class=\"small\">No photos match yet, so the board starts with empty pages.</p>" : ""}`;
+      ${W.sections.every((sec) => !photosOf(sec).length) ? "<p class=\"guide-small\">No photos match yet, so the board starts with empty pages.</p>" : ""}`;
 	}
 	function ok() {
 		const step = flow()[W.step];
@@ -3447,7 +3517,10 @@ function newBoardScreen(view) {
 		draw();
 	}
 	function wire() {
-		view.querySelector("[data-back]").addEventListener("click", () => go(-1));
+		view.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", () => go(-1)));
+		view.querySelector("[data-close]").addEventListener("click", () => {
+			location.hash = "#/boards";
+		});
 		view.querySelector("[data-next]").addEventListener("click", () => go(1));
 		const name = view.querySelector("[data-name]");
 		name?.addEventListener("input", () => {
@@ -3490,7 +3563,7 @@ function newBoardScreen(view) {
 					all: true
 				});
 				draw(true);
-				const all = view.querySelectorAll(".wz-secname");
+				const all = view.querySelectorAll("[data-secname]");
 				all[all.length - 1]?.scrollIntoView({ block: "center" });
 				return;
 			} else return;
@@ -3880,7 +3953,12 @@ function addTools(ed) {
 		const list = TEMPLATES[ed.board.shape].filter((t) => !t.guide);
 		const sh = openSheet({
 			title: "Layout",
-			body: `<div class="style-grid">${list.map((t) => `<button type="button" class="style${t.id === ed.page().template ? " on" : ""}" data-tpl="${esc(t.id)}"><svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><rect class="paper-r" width="${W}" height="${H}"/>${t.slots.map((b) => `<rect x="${b.x * W}" y="${b.y * H}" width="${b.w * W}" height="${b.h * H}"/>`).join("")}</svg><span>${esc(t.name)}</span></button>`).join("")}</div>`
+			body: `<div class="opt-cards" role="radiogroup" aria-label="Layout">${list.map((t) => cardHtml({
+				attr: `data-tpl="${esc(t.id)}"`,
+				on: t.id === ed.page().template,
+				picture: `<svg viewBox="0 0 ${W} ${H}" style="width:${s.W > s.H ? 80 : 60}px" aria-hidden="true"><rect class="paper-r" width="${W}" height="${H}"/>${t.slots.map((b) => `<rect x="${b.x * W}" y="${b.y * H}" width="${b.w * W}" height="${b.h * H}"/>`).join("")}</svg>`,
+				name: t.name
+			})).join("")}</div>`
 		});
 		sh.body.addEventListener("click", (e) => {
 			const b = e.target.closest("[data-tpl]");
@@ -4007,7 +4085,8 @@ function addTextBoxes(ed) {
 		dragBox,
 		endBoxGesture,
 		addNote,
-		closePanel
+		closePanel,
+		textSheet
 	});
 	const keyOf = (v) => v === "main" ? "main" : +v;
 	ed.keyOf = keyOf;
@@ -4150,7 +4229,26 @@ function addTextBoxes(ed) {
 		ed.drawPage();
 		openPanel(ed.tsel, true);
 	}
+	async function textSheet() {
+		const key = await choiceSheet({
+			title: "Add text",
+			options: [{
+				key: "title",
+				label: "Title",
+				detail: ed.page().title?.trim() ? "This page's title" : "A title for this page"
+			}, {
+				key: "text",
+				label: "Text",
+				detail: "A box of words, anywhere on the page"
+			}]
+		});
+		if (key === "title") {
+			ed.sel = -1;
+			openPanel("main", true);
+		} else if (key === "text") addNote();
+	}
 	const tpanel = ed.view.querySelector("[data-tpanel]");
+	const trayBox = ed.view.querySelector("[data-tray-box]");
 	function closePanel() {
 		if (ed.panel == null) return;
 		const p = ed.page();
@@ -4158,9 +4256,7 @@ function addTextBoxes(ed) {
 		ed.panel = null;
 		tpanel.hidden = true;
 		tpanel.innerHTML = "";
-		ed.view.querySelectorAll(".show-row, [data-tray-head], [data-tray]").forEach((x) => {
-			x.hidden = false;
-		});
+		trayBox.hidden = false;
 		if (n && !n.text.trim()) {
 			p.notes.splice(p.notes.indexOf(n), 1);
 			ed.tsel = null;
@@ -4178,9 +4274,7 @@ function addTextBoxes(ed) {
 		const p = ed.page();
 		const t = pageTemplate(ed.board, p);
 		const n = noteOf(key);
-		ed.view.querySelectorAll(".show-row, [data-tray-head], [data-tray]").forEach((x) => {
-			x.hidden = true;
-		});
+		trayBox.hidden = true;
 		tpanel.hidden = false;
 		tpanel.innerHTML = n ? `
         <textarea rows="2" data-note placeholder="Type here">${esc(n.text)}</textarea>
@@ -4244,9 +4338,7 @@ function addTextBoxes(ed) {
 				ed.tsel = null;
 				closePanel();
 				tpanel.hidden = true;
-				ed.view.querySelectorAll(".show-row, [data-tray-head], [data-tray]").forEach((x) => {
-					x.hidden = false;
-				});
+				trayBox.hidden = false;
 				ed.persist();
 				ed.drawPage();
 				return;
@@ -4316,25 +4408,31 @@ async function boardScreen(view, id) {
 	const page = () => board.pages[ed.at];
 	ed.page = page;
 	const asOpened = JSON.stringify([board.name, board.pages]);
+	const tool = (t, icon, label) => `<button type="button" class="tool" data-t="${t}">${ICONS[icon]}<span>${label}</span></button>`;
 	view.innerHTML = `
     <div class="screen editor">
-      <header class="folder-head">
-        <a class="icon-btn" href="#/boards" aria-label="Back to boards">${ICONS.back}</a>
-        <button type="button" class="hand board-name" data-rename></button>
+      ${shortBandHtml({
+		name: "Mood boards",
+		back: "#/boards",
+		backLabel: "Back to mood boards",
+		end: {
+			label: "Full screen",
+			attr: "data-show",
+			svg: FULL
+		}
+	})}
+      <div class="board-head">
+        <button type="button" class="board-name" data-rename></button>
         <span class="count" data-at></span>
-      </header>
+      </div>
       <div class="stage" data-stage></div>
-      <div class="show-row"><button type="button" class="label-btn show-open" data-show>${ICONS.expand}<span>Full screen</span></button></div>
       <div class="tpanel" data-tpanel hidden></div>
-      <div class="tray-head" data-tray-head></div>
-      <div class="tray" data-tray></div>
+      <div class="tray-box" data-tray-box>
+        <div class="tray-head" data-tray-head></div>
+        <div class="tray" data-tray></div>
+      </div>
       <nav class="tools" aria-label="Page tools">
-        <button type="button" class="tool" data-t="layout" aria-label="Change layout">${ICONS.layout}</button>
-        <button type="button" class="tool" data-t="text" aria-label="Edit text">${ICONS.text}</button>
-        <button type="button" class="tool" data-t="add" aria-label="Add a page">${ICONS.page}</button>
-        <button type="button" class="tool" data-t="undo" aria-label="Undo">${ICONS.undo}</button>
-        <button type="button" class="tool" data-t="more" aria-label="More">${ICONS.more}</button>
-        <button type="button" class="tool" data-t="pdf" aria-label="Save as PDF">${ICONS.share}</button>
+        ${tool("layout", "layout", "Layout")}${tool("text", "text", "Text")}${tool("add", "page", "Add page")}${tool("undo", "undo", "Undo")}${tool("more", "more", "More")}${tool("pdf", "download", "PDF")}
       </nav>
     </div>`;
 	const stage = view.querySelector("[data-stage]");
@@ -4346,10 +4444,11 @@ async function boardScreen(view, id) {
 	async function drawPage(turn = 0) {
 		const token = ++drawToken;
 		view.querySelector("[data-rename]").textContent = board.name;
-		view.querySelector("[data-at]").textContent = `${ed.at + 1} of ${board.pages.length}`;
+		view.querySelector("[data-at]").textContent = `Page ${ed.at + 1} of ${board.pages.length}`;
 		const el = await renderPage(board, page(), {
 			selected: ed.sel,
-			editing: true
+			editing: true,
+			mainHint: ed.tsel === "main"
 		});
 		if (token !== drawToken || destroyed) return;
 		fit(el);
@@ -4359,7 +4458,12 @@ async function boardScreen(view, id) {
 			x.className = "slot-x";
 			x.setAttribute("aria-label", "Take this photo off the page");
 			x.innerHTML = ICONS.x;
-			el.querySelector(`.slot[data-index="${ed.sel}"]`).append(x);
+			const spot = el.querySelector(`.slot[data-index="${ed.sel}"]`).style;
+			Object.assign(x.style, {
+				left: `min(calc(${spot.left} + ${spot.width}), calc(100% - 16px))`,
+				top: `max(${spot.top}, 16px)`
+			});
+			el.append(x);
 		}
 		stage.replaceChildren(el);
 		ed.paintTsel(el);
@@ -4425,7 +4529,7 @@ async function boardScreen(view, id) {
 		if (!b) return;
 		const k = b.dataset.t;
 		if (k === "layout") ed.layoutSheet();
-		else if (k === "text") ed.addNote();
+		else if (k === "text") ed.textSheet();
 		else if (k === "add") ed.addPage();
 		else if (k === "more") ed.moreSheet();
 		else if (k === "pdf") ed.exportPdf();

@@ -782,3 +782,178 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .color-page > .band-short { height: calc(var(--nb-top) + 56px); padding-top: calc(var(--nb-top) + 6px); }
 .color-page > .band-short .band-line { top: calc(var(--nb-top) + 21px); }
 .color-page .band-line .count { flex: none; min-width: 0; margin: 0; padding: 0; font: 700 11px/14px var(--ui); letter-spacing: .14em; color: var(--band-small); }
+
+/* ---- styles/option-cards.css ---- */
+/* Option cards (round 2, 07-new-board-layout): one choice of several, white
+   cards three across (two when they carry a line of words), the picked one
+   ringed in berry blade black. The page drawings are in the notebook's
+   colour. The new board guide and the Layout sheet use them. */
+.opt-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.opt-cards.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.opt-card {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; padding: 14px 10px 10px;
+  border: 0; border-radius: 12px; background: #FFFFFF; color: var(--text); text-align: center;
+}
+.opt-card[aria-checked="true"] { box-shadow: inset 0 0 0 2px var(--text); }
+.opt-card svg { display: block; height: auto; fill: var(--ink); }
+.opt-card .paper-r { fill: #FAFAF7; stroke: none; }
+.opt-name { font: 400 14px/18px var(--ui); }
+.opt-card[aria-checked="true"] .opt-name { font-weight: 500; }
+.opt-blurb { margin-top: -6px; font: 400 13px/18px var(--ui); color: var(--dim); }
+.opt-cards.two .opt-name { font-size: 15px; }
+/* A page's shape (Tall, Wide) and a start's page, drawn. */
+.opt-shape { display: block; box-shadow: inset 0 0 0 2px var(--ink); background: #FAFAF7; }
+.opt-shape.tall { width: 46px; height: 60px; }
+.opt-shape.wide { width: 80px; height: 45px; margin: 7px 0 8px; }
+.opt-glyph:not(.filled) svg rect:not(.paper-r) { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 2 2; }
+
+/* ---- styles/switch.css ---- */
+/* A switch row (round 2, 07-new-board-layout and 09-options): the words at
+   the left, the switch at the right, 52px tall. The switch is a checkbox
+   drawn as a 51 x 31 track, in the notebook's colour when on. */
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; margin-top: 14px; font: 400 17px/22px var(--ui); color: var(--text); }
+.switch {
+  -webkit-appearance: none; appearance: none; position: relative; flex: none; width: 51px; height: 31px; margin: 0;
+  border-radius: 16px; background: #D6DADD; transition: background .15s ease; cursor: pointer;
+}
+.switch::after { content: ''; position: absolute; left: 2px; top: 2px; width: 27px; height: 27px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(49, 61, 69, .25); transition: transform .15s ease; }
+.switch:checked { background: var(--ink); }
+.switch:checked::after { transform: translateX(20px); }
+.switch:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* ---- styles/new-board-guide.css ---- */
+/* The new board guide (round 2, 07-new-board-layout): the short band with
+   Back and Close, the step marks named underneath (as in The Eye's guide),
+   the step's title and question, its choices, and Back / Next at the foot
+   where the section bar would be. After newboard.css, which it reframes. */
+.screen.new-board { padding: 0 16px; }
+.screen.new-board > .band-short { flex: none; margin: 0 -16px 38px; }
+.new-board .form-page { display: block; padding: 0 0 24px; }
+
+/* The marks: done = solid 14px, this one = 22px with a dot, still to come =
+   an open 13px ring. The line is inked up to this step. */
+.guide-marks { position: relative; height: 50px; margin-top: 2px; }
+.guide-mark-row { display: flex; align-items: center; height: 28px; }
+.guide-mark { flex: none; box-sizing: border-box; width: 13px; height: 13px; border: 1.5px solid #9AA3A8; border-radius: 50%; background: var(--paper); }
+.guide-mark.done { width: 14px; height: 14px; border: 0; background: var(--text); }
+.guide-mark.now { position: relative; width: 22px; height: 22px; border: 0; background: var(--text); }
+.guide-mark.now::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: var(--ink); }
+.guide-line { flex: 1 1 auto; height: 1px; background: #D6DADD; }
+.guide-line.inked { background: var(--text); }
+.guide-mark-names { position: relative; height: 12px; margin-top: 4px; }
+.guide-mark-name { position: absolute; top: 0; font: 700 10px/12px var(--ui); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; color: var(--dim); }
+.guide-mark-name.reached { color: var(--text); }
+.guide-mark-name.mid { transform: translateX(-50%); }
+
+/* The step's own words. */
+.guide-title { margin: 16px 0 0; font: 300 30px/36px var(--ui); color: var(--text); }
+.guide-ask { margin: 6px 0 0; font: 400 17px/24px var(--ui); color: var(--dim); }
+.guide-small { margin: 12px 0 0; font: 400 15px/21px var(--ui); color: var(--dim); }
+.guide-label { display: block; margin: 22px 0 8px; font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.guide-field { display: block; }
+.guide-label + .opt-cards { margin-top: 0; }
+
+/* Fields: white, 52px, a hairline, ringed while typing. */
+.guide-input {
+  display: block; width: 100%; height: 52px; margin: 0; padding: 0 14px; border: 0; border-radius: 8px;
+  background: #FFFFFF; box-shadow: inset 0 0 0 1px #E1E1DC; font: 400 17px/22px var(--ui); color: var(--text); outline: none; -webkit-appearance: none;
+}
+.guide-input:focus { box-shadow: inset 0 0 0 2px var(--text); }
+.guide-input::placeholder { color: #9AA3A8; }
+
+/* A number with − and +. */
+.guide-stepper { display: flex; align-items: center; justify-content: space-between; min-height: 52px; margin-top: 14px; font: 400 17px/22px var(--ui); color: var(--text); }
+.new-board .stepper { gap: 6px; }
+.new-board .stepper button { width: 44px; height: 40px; border: 0; border-radius: 8px; box-shadow: inset 0 0 0 1.5px var(--text); background: none; font: 400 20px/1 var(--ui); color: var(--text); }
+.new-board .stepper b { width: 36px; font: 300 22px/28px var(--ui); text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Fill in sections: a white card each, its number, name, tags and count. */
+.guide-section { margin-top: 12px; padding: 12px; border-radius: 12px; background: #FFFFFF; }
+.guide-sechead { display: flex; align-items: center; gap: 10px; }
+.guide-secnum { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--on-ink); font: 700 13px/1 var(--ui); }
+.guide-section .guide-input { flex: 1; min-width: 0; height: 44px; background: #FAFAF7; }
+.guide-section .icon-btn { width: 44px; height: 44px; color: var(--text); }
+.guide-section .icon-btn svg { width: 20px; height: 20px; }
+.new-board .pick-chips { gap: 8px; margin-top: 12px; max-height: 160px; }
+.new-board .pick { min-height: 0; height: 32px; padding: 0 12px; border: 0; border-radius: 16px; background: #EFEFEA; font: 400 13px/16px var(--ui); color: var(--text); white-space: nowrap; }
+.new-board .pick.on { background: var(--ink); color: var(--on-ink); }
+.guide-section .switch-row { margin-top: 8px; font-size: 15px; }
+.guide-add { width: 100%; margin-top: 12px; }
+
+/* Which photos: what each section will get. */
+.guide-summary { margin-top: 14px; border-top: 1px solid #E1E1DC; }
+.guide-sumrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; border-bottom: 1px solid #E1E1DC; font: 400 17px/22px var(--ui); }
+.guide-sumcount { flex: none; font: 400 15px/20px var(--ui); color: var(--dim); }
+
+/* Back (outlined) and Next (the notebook's colour), at the foot. */
+.new-board .guide-foot {
+  position: fixed; left: 0; right: 0; top: calc(var(--app-h) - var(--nb-bar)); z-index: 3; height: var(--nb-bar); max-width: 620px;
+  box-sizing: border-box; display: flex; align-items: flex-start; gap: 8px; margin: 0 auto; padding: 12px 16px 0;
+  border-top: 1px solid #E1E1DC; background: var(--paper);
+}
+.guide-foot .btn { flex: 1 1 0; min-width: 0; white-space: nowrap; }
+.guide-foot .btn.primary { flex-grow: 1.3; }
+
+/* ---- styles/board-editor.css ---- */
+/* The board editor (round 2, 08-board-editor): the short band with Back and
+   Full screen, the board's name and PAGE 3 OF 8, the page on paper, the tray
+   of photos under a hairline, and the labelled tools where the section bar
+   would be. After board.css and board-page.css, which it reframes. */
+.screen.editor { padding: 0 16px; }
+.screen.editor > .band-short { flex: none; margin: 0 -16px 25px; }
+.board-head { flex: none; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.editor .board-name {
+  flex: 1; min-width: 0; padding: 0; font: 300 20px/24px var(--ui); letter-spacing: 0; text-transform: none; text-align: left;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text);
+}
+.editor .board-head .count { flex: none; margin: 0; padding: 0; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* The page, with room around it. */
+.editor .stage { margin: 16px 0; }
+.editor .stage .page { box-shadow: 0 2px 10px rgba(49, 61, 69, .15); }
+.editor .slot:not(.filled) { background: #EFEFEA; }
+.slot-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 4px; text-align: center; font: 400 12px/16px var(--ui); color: var(--dim); pointer-events: none; }
+/* The picked spot: a ring just outside it, and the x to take its photo off
+   on its corner (board.js places it), neither over the photo itself. */
+.editor .slot.sel { outline: 2px solid var(--ink); outline-offset: 0; }
+.editor .slot.sel::after { content: none; }
+.editor .slot-x { right: auto; transform: translate(-50%, -50%); width: 28px; height: 28px; background: var(--ink); color: var(--on-ink); }
+.editor .slot-x svg { width: 14px; height: 14px; stroke-width: 2.5; }
+.editor .page-text .pt-title.empty { color: #9AA3A8; }
+
+/* The tray: where the photos come from, then the photos. */
+.tray-box { flex: none; margin: 0 -16px; padding: 8px 16px 10px; border-top: 1px solid #E1E1DC; }
+.tray-box[hidden] { display: none; }
+.editor .tray-head { gap: 8px; padding: 0; }
+.editor .tray-head .chip { flex: none; height: 32px; padding: 0 12px; border: 0; border-radius: 16px; background: #EFEFEA; color: var(--text); font: 400 13px/16px var(--ui); white-space: nowrap; }
+.editor .tray-head .chip.on { background: var(--ink); color: var(--on-ink); }
+.editor .tray { gap: 6px; height: 56px; margin-top: 8px; }
+.editor .tray-photo { width: 56px; height: 56px; border-radius: 4px; background: #EFEFEA; }
+.editor .tray-photo.used { opacity: .35; }
+.editor .tray .note { margin: 0; font: 400 15px/56px var(--ui); color: var(--dim); }
+.editor .tpanel { padding-top: 10px; border-top: 1px solid #E1E1DC; margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+
+/* The tools, each with its name under it. */
+.editor .tools { align-items: flex-start; justify-content: stretch; padding: 4px 4px var(--nb-foot); background: var(--paper); box-shadow: none; border-top: 1px solid #E1E1DC; }
+.editor .tools .tool {
+  flex: 1 1 0; min-width: 0; width: auto; height: 56px; flex-direction: column; gap: 4px; padding: 0;
+  font: 700 9.5px/12px var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--text); white-space: nowrap;
+}
+.editor .tools .tool svg { width: 22px; height: 22px; stroke-width: 2; }
+.editor .tools .tool:disabled { color: #9AA3A8; }
+
+/* The Layout sheet: the option cards. */
+.sheet .opt-cards { margin-top: 4px; }
+
+/* A text box picked: its outline and corners in the notebook's colour. */
+.editor .tbox-sel { outline-color: var(--ink); }
+.editor .tbox-sel i::after { border-color: var(--ink); }
+/* The text menu, in place of the tray: the words, their sizes, Done. */
+.editor .tpanel :is(textarea, input[type=text]) { padding: 10px 12px; border: 0; border-radius: 8px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E1E1DC; font: 400 17px/22px var(--ui); color: var(--text); }
+.editor .tpanel :is(textarea, input[type=text]):focus { box-shadow: inset 0 0 0 2px var(--text); }
+.editor .tpanel .stepper button { width: 40px; height: 32px; border: 0; border-radius: 8px; box-shadow: inset 0 0 0 1.5px var(--text); background: none; font: 400 14px/1 var(--ui); color: var(--text); }
+.editor .tpanel .stepper b { width: 46px; font: 400 15px/1 var(--ui); font-variant-numeric: tabular-nums; }
+.editor .tpanel .label-btn { height: 32px; padding: 0 10px; border: 0; border-radius: 8px; box-shadow: inset 0 0 0 1.5px var(--text); font: 700 10px/12px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--text); }
+.editor .tpanel .label-btn:disabled { box-shadow: inset 0 0 0 1.5px #D6DADD; color: #9AA3A8; }
+.editor .tpanel .tp-done { height: 40px; padding: 0 20px; border: 0 !important; background: var(--ink); color: var(--on-ink); box-shadow: none; }
+.editor .tpanel .check { font: 400 15px/20px var(--ui); }

@@ -46,6 +46,10 @@ built/app.css
   styles/folder-grid.css
   styles/sheets.css
   styles/viewer-dark.css
+  styles/option-cards.css
+  styles/switch.css
+  styles/new-board-guide.css
+  styles/board-editor.css
 
 # The scripts: app.js and every ES module it imports (and those import), joined
 # by following the imports, so they aren't listed one by one.
