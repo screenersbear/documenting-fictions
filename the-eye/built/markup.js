@@ -13,11 +13,16 @@
       <p class="band-line"><b>Overview</b><span class="band-rule"></span><span class="band-date"></span></p>
     </header>
 
-    <div class="stats-row" id="statsRow"></div>
+    <!-- The Today card (pages/overview/today-card.js): only what needs you now, in place of the pop-ups that opened on launch. Hidden when there's nothing. -->
+    <div class="today-card" id="todayCard" hidden>
+      <div class="today-card-head"><h2>Today</h2><button type="button" class="today-report-btn" id="todayReportBtn">Full report <svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button></div>
+      <div id="todayCardItems"></div>
+    </div>
 
-    <div class="section-block" id="todaySection" hidden>
-      <h2>Today <span id="todayCount"></span></h2>
-      <div id="todayShootsList" class="mini-list"></div>
+    <!-- The next shoot coming up, as a card (pages/overview/next-shoot.js). -->
+    <div class="section-block" id="nextShootSection" hidden>
+      <h2>Next shoot</h2>
+      <div id="nextShootCard"></div>
     </div>
 
     <div class="section-block" id="upcomingSection">
@@ -1601,14 +1606,6 @@
   </div>
 </div>
 
-<div id="shootModePromptOverlay" class="modal-overlay intro-overlay" hidden>
-  <div class="modal intro-modal">
-    <h2>Shoot day</h2>
-    <p id="shootModePromptText"></p>
-    <button type="button" class="primary" id="shootModeStartBtn">start shoot mode</button>
-    <button type="button" class="secondary shoot-mode-skip" id="shootModeSkipBtn">not now</button>
-  </div>
-</div>
 
 <!-- Archive mode: a condensed, read-only report of a completed shoot — the
      same working-view shape as Shoot mode, but every field is plain typed
@@ -1673,17 +1670,6 @@
       <button type="button" class="secondary" id="completeShootPromptCancelBtn">Cancel</button>
       <button type="button" class="primary" id="completeShootPromptConfirmBtn">Complete shoot</button>
     </div>
-  </div>
-</div>
-
-<!-- ============ DAY-AFTER SHOOT CHECK-IN ============ -->
-<div id="dayAfterPromptOverlay" class="modal-overlay intro-overlay" hidden>
-  <div class="modal intro-modal">
-    <h2>Shoot check-in</h2>
-    <p id="dayAfterPromptText"></p>
-    <!-- A row per shoot with "Postponed" / "Shot it" (see checkDayAfterPrompt). -->
-    <div id="dayAfterList" class="day-after-list"></div>
-    <button type="button" class="secondary" id="dayAfterOkBtn">Not yet</button>
   </div>
 </div>
 

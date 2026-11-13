@@ -7,7 +7,7 @@ window.EyeParts.addFirstTimeIntros = function addFirstTimeIntros(ed) {
   const TAB_INTROS = {
     overview: {
       title: 'Overview',
-      text: "this is your at-a-glance dashboard to see how many shoots are ready to go, still being planned, or waiting on a team or mood board, plus what's coming up next. tap '+ new shoot' anytime to start logging one.",
+      text: "this is your at-a-glance page. the Today card at the top shows only what needs you now, then comes your next shoot and everything after it, with small flags for what each shoot still needs. tap + at the top anytime to start a new shoot.",
     },
     shoots: {
       title: 'Shoots',
@@ -24,20 +24,6 @@ window.EyeParts.addFirstTimeIntros = function addFirstTimeIntros(ed) {
     stats: {
       title: 'Stats',
       text: 'swipe between breakdowns of your visual languages, categories, team members, statuses, and locations. tap any slice to see exactly which shoots are behind it.',
-    },
-    // Shown once, right after the first automatic daily report is dismissed —
-    // that's the moment the report exists in your head and "where did that go?"
-    // is the natural next question. Routed through showTabIntro so it reuses
-    // the same popup and seen-once bookkeeping as the tab intros.
-    // Shown once, right after shoot mode is declined — the moment the question
-    // "fine, but how do I get it back?" actually occurs to you.
-    'shootmode:where': {
-      title: 'Whenever you want it',
-      text: "no problem. Shoot mode is always one tap away: open the shoot and hit 'Shoot mode' in the bar at the bottom of the page.",
-    },
-    'report:bell': {
-      title: 'Find this again',
-      text: "that was your daily report. It turns up once a day with anything that needs attention. You can pull it back up whenever you like: tap the bell at the top of the Overview screen.",
     },
   };
 

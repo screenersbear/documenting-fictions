@@ -5,6 +5,7 @@
   Object.assign(ed, { lookTagsOn, applyLookTags });
   // Needed from the start (only functions and fixed values, so they can run first):
   window.EyeParts.addDates(ed);
+  window.EyeParts.addRowWords(ed);
   window.EyeParts.addHelpers(ed);
   // iOS Safari only computes :active styles on elements it thinks have a
   // touch listener — this no-op unlocks tap-flash feedback app-wide.
@@ -55,6 +56,8 @@
   window.EyeParts.addOverview(ed);
   window.EyeParts.addProjectsProjectPopup(ed);
   window.EyeParts.addOverviewDrawOverview(ed);
+  window.EyeParts.addOverviewTodayCard(ed);
+  window.EyeParts.addOverviewNextShoot(ed);
   window.EyeParts.addShootsShootLog(ed);
   window.EyeParts.addArchive(ed);
   window.EyeParts.addJournal(ed);
@@ -141,7 +144,7 @@
   window.EyeParts.addStatsRegionsMap(ed);
   window.EyeParts.addStatsPages(ed);
   window.EyeParts.addRenderAll(ed);
-  window.EyeParts.addNoticesDayAfter(ed);
+  window.EyeParts.addNoticesReportDay(ed);
   window.EyeParts.addShootModeShotList(ed);
   window.EyeParts.addShootMode(ed);
   window.EyeParts.addShootModePages(ed);

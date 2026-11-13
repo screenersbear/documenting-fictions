@@ -11,14 +11,15 @@
 :root {
   --head: "Kaisei Decol", "Klee One", Georgia, serif; /* headers, always in capitals */
   --font-head: var(--head);
-  --page-side: 20px;
+  --page-side: 16px; /* the side gutter (DESIGN.md 9) */
 }
 
 /* Headers: Kaisei Decol capitals, every one (the old per-screen rules set
    their own case, hence the !important). Names the user wrote (a shoot's,
    an entry's, a lighting setup's) stay in their handwriting, and so do the
-   team questions, which are questions. */
-:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .moodboard-label, .app-menu-header, .stats-region-heading, #shootModeReviewTitle, #mondayBriefTitle):not(#projectDetailTitle, #shootModeTitle, #journalViewTitle, .journal-entry-title, .shoot-mode-review-setup-name, .modal-title-jump-wrap) {
+   team questions, which are questions. Not in the parts already in the
+   round 2 look (the band, the Overview), whose titles are Figtree's. */
+:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .moodboard-label, .app-menu-header, .stats-region-heading, #shootModeReviewTitle, #mondayBriefTitle):not(#projectDetailTitle, #shootModeTitle, #journalViewTitle, .journal-entry-title, .shoot-mode-review-setup-name, .modal-title-jump-wrap, .band *, #view-overview *) {
   font-family: var(--head) !important; font-weight: 500; text-transform: uppercase !important; letter-spacing: .08em !important; text-shadow: none;
 }
 :is(#appMenuOverlay, #sunMenuOverlay) .opt-sheet-head .app-menu-header { font-family: var(--head); font-weight: 500; text-transform: uppercase; letter-spacing: .08em; text-shadow: none; }

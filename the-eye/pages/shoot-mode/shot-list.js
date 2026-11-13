@@ -9,7 +9,6 @@ window.EyeParts.addShootModeShotList = function addShootModeShotList(ed) {
   // mode rather than a screen — once switched on it survives closing the app and
   // comes straight back on the next launch, until it's explicitly ended.
   const SHOOT_MODE_KEY = 'dailies_shoot_mode_shoot_v1';
-  const SHOOT_MODE_ASKED_KEY = 'dailies_shoot_mode_asked_v1'; ed.SHOOT_MODE_ASKED_KEY = SHOOT_MODE_ASKED_KEY;
   const shootModeOverlay = document.getElementById('shootModeOverlay'); ed.shootModeOverlay = shootModeOverlay;
 
   function getShootModeShootId() {

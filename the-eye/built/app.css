@@ -111,7 +111,6 @@ button,
 .card,
 .shoot-row,
 .pie-slice,
-.stat-box,
 .daily-report-item {
   transition: opacity 0.1s ease;
 }
@@ -120,7 +119,6 @@ button:active,
 .card:active,
 .shoot-row:active,
 .pie-slice:active,
-.stat-box:active,
 .daily-report-item:not(.daily-report-fact):active {
   opacity: 0.55;
 }
@@ -199,12 +197,6 @@ h1, h2, h3 {
   100% { transform: translateX(260%) skewX(-20deg); }
 }
 
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 24px;
-}
 
 /* ---- styles/band-colors.css ---- */
 /* The notebook colours on the band (DESIGN.md 4.2): the band itself, its
@@ -224,53 +216,8 @@ h1, h2, h3 {
 :root[data-book="leaf"] { --band: #14BFA0; --partner: #A1062A; --band-small: #313D45; --step1: #4ECEB6; --step2: #87DCCC; --step3: #C0EBE1; --step4: #E3F4EE; }
 :root[data-book="ink"] { --band: #313D45; --partner: #FFD100; --band-small: #FAFAF7; --step1: #636C72; --step2: #969C9E; --step3: #C8CBCA; --step4: #E6E7E5; }
 
-/* ---- styles/stat-boxes.css ---- */
-/* The accent band is a pseudo-element, not a border-top. As a border it met the
-   2px side borders at a mitre, so the yellow tapered diagonally at both top
-   corners and only touched the box's full width along its very outer edge.
-   Absolute positioning is relative to the padding box, so the -2px insets let
-   the band sit over the side borders and reach true edge to edge at a constant
-   8px. padding-top carries the 8px the border used to occupy, keeping the box
-   the same height as before. */
-.stat-box {
-  position: relative;
-  background: var(--ink);
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-2xl);
-  padding: 12px 4px 6px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  cursor: pointer;
-}
-
-.stat-box::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  height: 8px;
-  background: var(--accent);
-}
-
-.stat-num {
-  font-size: 29px;
-  font-weight: 700;
-  font-family: var(--font-title);
-  color: #fff;
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
+/* ---- styles/icon-buttons.css ---- */
+/* Round icon buttons (the + and the X), used across the app. */
 .icon-btn {
   width: 40px;
   height: 40px;
@@ -579,115 +526,6 @@ h1, h2, h3 {
   margin: 0;
 }
 
-.shoot-row {
-  background: var(--surface);
-  border: 3px solid var(--ink);
-  border-radius: var(--radius-xl);
-  /* No padding of its own — the thumb and the new accent strip both go flush
-     to their respective edges, same as before; the gap below is what
-     separates them from the text in between. */
-  display: flex;
-  align-items: stretch;
-  gap: 8px;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.shoot-row .shoot-thumb {
-  width: 96px;
-  height: auto;
-  align-self: stretch;
-  position: relative;
-  border-radius: 0;
-  border: none;
-}
-
-.shoot-row-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 8px 8px 8px 0;
-}
-
-/* Every shoot bubble on every page (Overview, Shoots, Archive, Stats) reserves
-   the same floor — calibrated to the realistic common case (1-line title,
-   shot date, due date, status pill — no badge), not the rare compound case
-   that also stacks a 2-line pending badge on top. That rarer combination
-   only occurs for a non-archived captured shoot with no reflection recorded,
-   surfaced through the Stats/Archive detail popups — min-height is a floor,
-   not a ceiling, so those rows simply grow past 120px rather than clipping;
-   that's fine, since more content genuinely earning more room reads better
-   than every row padding out to match the rarest case. See .crop-stage,
-   which the crop tool matches to this same value so what you frame is what
-   shows. Measured against the common case; adjust both together if this
-   ever changes. */
-.shoot-row-body {
-  min-height: 120px;
-}
-
-/* Single line + ellipsis — the thumbnail took the width that used to let
-   this wrap to 2 lines, so a long title/talent name now truncates instead
-   of wrapping. */
-.shoot-row-title {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 16px;
-}
-
-.shoot-row-date-line {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.shoot-row-due {
-  color: var(--accent);
-}
-
-.shoot-row-due.overdue {
-  color: var(--red);
-}
-
-/* The status pill is the one line that always gets a background when it's
-   shown at all ("active planning", "early idea", etc.) — distinct from the
-   plain .badge line below it, which is reminders (Pending: X), not status. */
-.shoot-row-status-pill {
-  display: inline-block;
-  align-self: flex-start;
-  background: var(--accent);
-  color: var(--on-accent);
-  border-radius: var(--radius-sm);
-  padding: 2px 8px;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.shoot-row .badge {
-  /* Base .badge's surface-2 background is white — identical to the row's
-     own background, so on a regular (non-compact) row it read as bare gray
-     text with no visible box at all. Matches .shoot-row-compact .badge
-     (the Overview counter popups) so a "Pending: X" reminder looks the same
-     bubble everywhere it shows up, not just there. */
-  background: var(--accent);
-  color: var(--on-accent);
-  align-self: flex-start;
-}
-
-/* Full-height strip on the side opposite the thumbnail — the kebab now sits
-   inside it rather than floating on plain background. */
-.shoot-row-accent-strip {
-  flex-shrink: 0;
-  align-self: stretch;
-  width: 30px;
-  background: var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
 .row-options-btn {
   flex-shrink: 0;
@@ -5798,23 +5636,6 @@ h2.status-group-heading.heading-navy {
   display: none;
 }
 
-/* Monday brief: last week's numbers as the Overview's own tiles, then the
-   week's page of the Journal's weekly log, each inside the body's 20px
-   gutter (the body has none of its own, see .shoot-mode-body). The tiles
-   here are a read-out, not buttons, so they drop the tap look the
-   Overview's open a list with — the same way .log-card drops .card's. */
-.monday-brief-stats {
-  margin: 14px 20px;
-}
-
-.monday-brief-stats .stat-box {
-  cursor: default;
-}
-
-.monday-brief-stats .stat-box:active {
-  opacity: 1;
-}
-
 .monday-brief-log {
   margin: 14px 20px;
 }
@@ -6008,8 +5829,11 @@ h2.status-group-heading.heading-navy {
   --radius-3xl: 12px;
   --radius-4xl: 14px;
   --radius-pill: 6px;
-  --dim: rgba(49, 61, 69, 0.74);
-  --line: #d6dadd;
+  /* DESIGN.md 4.1: captions and labels, the lines between rows, a part not in use, something late. */
+  --dim: #5C666D;
+  --line: #E1E1DC;
+  --off: #9AA3A8;
+  --crimson: #A1062A;
   --nb-top: max(var(--sa-top), 10px);
   --nb-bar: calc(58px + var(--sa-bottom));
   --book-shadow: 0 16px 34px rgba(60, 40, 20, 0.2), 0 3px 8px rgba(60, 40, 20, 0.14);
@@ -6243,19 +6067,7 @@ h2.status-group-heading.heading-navy {
 /* ---- Pages: titles, sections and rows ---- */
 .app-menu-btn { position: absolute; top: -6px; width: 44px; height: 44px; margin: 0; color: var(--text); }
 .app-menu-btn svg { width: 20px; height: 20px; }
-.stats-row { gap: 0; margin: 14px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.stat-box { background: none; border: none; border-left: 1px solid var(--line); border-radius: 0; padding: 9px 6px 10px; }
-.stat-box:first-child { border-left: none; }
-.stat-box::before { display: none; }
-.stat-num { font-family: var(--font-title); font-weight: 400; font-size: 28px; line-height: 1.1; color: var(--text); }
-.stat-label { font-family: var(--font-body); font-weight: 400; font-size: 11px; line-height: 1.2; color: var(--dim); text-transform: none; letter-spacing: 0; padding-top: 3px; }
 .section-block { margin-bottom: 0; }
-.section-block h2, .section-block h2.heading-yellow, .section-block h2.heading-navy {
-  background: none; color: var(--text); border: none; border-bottom: 1px solid var(--line); border-radius: 0;
-  font-family: var(--font-head); font-weight: 400; font-size: 19px; text-transform: none; letter-spacing: 0;
-  padding: 16px 0 5px; margin: 0;
-}
-.section-block h2 span { font-family: var(--font-body); font-size: 13px; color: var(--dim); }
 h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group-heading.heading-navy {
   display: flex; width: 100%; background: none; color: var(--text); border: none; border-bottom: 1px solid var(--line); border-radius: 0;
   font-family: var(--font-body); font-size: 12.5px; font-weight: 600; text-transform: none; letter-spacing: 0;
@@ -6266,14 +6078,10 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
   background: none; color: var(--dim); border: none; border-radius: 0; font-family: var(--font-body); font-size: 12.5px; font-weight: 400; text-transform: none; letter-spacing: 0; padding: 7px 0 1px; margin: 0;
 }
 .mini-list, .card-list { gap: 0; }
-.shoot-row, .shoot-row-compact { background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; padding: 8px 0; gap: 12px; align-items: center; overflow: visible; }
-.shoot-row .shoot-thumb { width: 64px; height: 64px; align-self: center; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--line); flex: none; }
-.shoot-row-body, .shoot-row-compact-body { min-height: 0; padding: 0; gap: 1px; }
-.shoot-row-title, .shoot-row-compact-title { font-family: var(--font-hand); font-size: 20px; line-height: 1.15; font-weight: 400; }
-.shoot-row-title strong { font-weight: 400; }
-.shoot-row-date-line, .shoot-row-due { font-size: 12.5px; font-weight: 400; color: var(--dim); }
-.shoot-row-status-pill, .shoot-row .badge, .badge { background: var(--accent); color: var(--on-accent); border-radius: 3px; padding: 1px 7px; font-size: 11px; font-weight: 600; line-height: 16px; text-transform: none; letter-spacing: 0; }
-.shoot-row-accent-strip { width: 30px; background: none; align-self: center; }
+.shoot-row-compact { background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; padding: 8px 0; gap: 12px; align-items: center; overflow: visible; }
+.shoot-row-compact-body { min-height: 0; padding: 0; gap: 1px; }
+.shoot-row-compact-title { font-family: var(--font-hand); font-size: 20px; line-height: 1.15; font-weight: 400; }
+.badge { background: var(--accent); color: var(--on-accent); border-radius: 3px; padding: 1px 7px; font-size: 11px; font-weight: 600; line-height: 16px; text-transform: none; letter-spacing: 0; }
 .row-options-btn { font-size: 20px; font-weight: 400; }
 .filter-toggle { display: block; width: 100%; background: none; color: var(--text); border-radius: 0; padding: 0; min-height: 44px; font-family: var(--font-body); font-size: 13px; font-weight: 600; text-transform: none; letter-spacing: 0; text-align: center; margin: 0; }
 .chip { color: var(--text); border-color: var(--text); font-size: 13px; line-height: 18px; padding: 6px 11px; }
@@ -6567,9 +6375,12 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 .archive-summary .archive-mode-value { border-bottom: 1px solid var(--line); box-sizing: content-box; }
 .archive-summary .archive-mode-final-images { padding: 0 0 8px; }
 
-/* One weight of handwriting: only headings are bold. */
-body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading) { font-weight: 400 !important; }
-h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading { text-shadow: 0 0 0.6px; }
+/* One weight of handwriting: only headings are bold. Not in the parts already
+   in the round 2 look, which use Figtree's own weights (the band, the section
+   bar, the Overview's cards and lists, the shoot rows); this goes once every
+   screen is. */
+body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, .tabbar *, #view-overview *, .shoot-row *) { font-weight: 400 !important; }
+:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, #view-overview *) { text-shadow: 0 0 0.6px; }
 
 /* The button in a page's top right corner that swaps a shoot and its summary. */
 .nb-corner-btn { position: absolute; z-index: 2; top: 6px; right: 8px; min-height: 0; height: auto; width: auto; padding: 4px 12px; border: none; border-radius: 3px; background: var(--text); color: #fff; font-family: var(--font-body); font-size: 14px; line-height: 20px; letter-spacing: 0; text-transform: none; }
@@ -6721,17 +6532,12 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
    headings elsewhere come up; the big text stays. Pages are packed from what's
    drawn, so this only means a little more turning. The Journal keeps its 28px
    ruled lines, so nothing there passes about 22px. */
-.stat-num { font-size: 31px; }
-.stat-label { font-size: 13.5px; }
-.section-block h2, .section-block h2.heading-yellow, .section-block h2.heading-navy { font-size: 22px; }
-.section-block h2 span { font-size: 15px; }
-.shoot-row-title, .shoot-row-compact-title { font-size: 22px; }
-.shoot-row-date-line, .shoot-row-due { font-size: 14.5px; }
-.shoot-row-status-pill, .shoot-row .badge, .badge { font-size: 13px; line-height: 18px; }
+.shoot-row-compact-title { font-size: 22px; }
+.badge { font-size: 13px; line-height: 18px; }
 .filter-toggle { font-size: 15.5px; }
 .chip { font-size: 15px; line-height: 20px; }
 h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group-heading.heading-navy { font-size: 17px; }
-.status-group-heading.archive-month-heading, .archive-month-heading.heading-yellow, .archive-month-heading.heading-navy, .upcoming-subheading { font-size: 15px; }
+.status-group-heading.archive-month-heading, .archive-month-heading.heading-yellow, .archive-month-heading.heading-navy { font-size: 15px; }
 .stats-legend-row { font-size: 15.5px; }
 #journalList h2.status-group-heading { font-size: 17px; }
 #journalList .log-week-heading { font-size: 15px; }
@@ -7031,14 +6837,15 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 :root {
   --head: "Kaisei Decol", "Klee One", Georgia, serif; /* headers, always in capitals */
   --font-head: var(--head);
-  --page-side: 20px;
+  --page-side: 16px; /* the side gutter (DESIGN.md 9) */
 }
 
 /* Headers: Kaisei Decol capitals, every one (the old per-screen rules set
    their own case, hence the !important). Names the user wrote (a shoot's,
    an entry's, a lighting setup's) stay in their handwriting, and so do the
-   team questions, which are questions. */
-:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .moodboard-label, .app-menu-header, .stats-region-heading, #shootModeReviewTitle, #mondayBriefTitle):not(#projectDetailTitle, #shootModeTitle, #journalViewTitle, .journal-entry-title, .shoot-mode-review-setup-name, .modal-title-jump-wrap) {
+   team questions, which are questions. Not in the parts already in the
+   round 2 look (the band, the Overview), whose titles are Figtree's. */
+:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .moodboard-label, .app-menu-header, .stats-region-heading, #shootModeReviewTitle, #mondayBriefTitle):not(#projectDetailTitle, #shootModeTitle, #journalViewTitle, .journal-entry-title, .shoot-mode-review-setup-name, .modal-title-jump-wrap, .band *, #view-overview *) {
   font-family: var(--head) !important; font-weight: 500; text-transform: uppercase !important; letter-spacing: .08em !important; text-shadow: none;
 }
 :is(#appMenuOverlay, #sunMenuOverlay) .opt-sheet-head .app-menu-header { font-family: var(--head); font-weight: 500; text-transform: uppercase; letter-spacing: .08em; text-shadow: none; }
@@ -7209,19 +7016,19 @@ body { font-family: var(--ui); }
 html:not(.df-suite) .band-books { display: none; }
 
 /* 2: headings on the page, and the titles of sheets. */
-:is(.section-block h2, .shoot-section-heading, .status-group-heading, .log-week-heading, .stats-page-title, .modal h2, .app-menu-header, .shoot-wizard-head h2, .shoot-mode-review h2):not(#df-x):not(#df-y), :is(#shootModeReviewTitle, #mondayBriefTitle):not(#df-x) {
+:is(.shoot-section-heading, .status-group-heading, .log-week-heading, .stats-page-title, .modal h2, .app-menu-header, .shoot-wizard-head h2, .shoot-mode-review h2):not(#df-x):not(#df-y), :is(#shootModeReviewTitle, #mondayBriefTitle):not(#df-x) {
   font-family: var(--display) !important; font-weight: 400 !important; font-size: 18px; line-height: 1.25; letter-spacing: .02em !important;
 }
 .shoot-wizard-head h2:not(#df-x):not(#df-y) { font-size: 22px; }
 /* Counts after a heading: in the body type, quieter. */
-.section-block h2 > span, .status-group-heading > span { font-family: var(--ui); font-weight: 500; font-size: 15px; letter-spacing: 0; color: var(--dim); }
+.status-group-heading > span { font-family: var(--ui); font-weight: 500; font-size: 15px; letter-spacing: 0; color: var(--dim); }
 
 /* 3: labels and sub-headings, in Inter's capitals, spaced. */
-:is(.upcoming-subheading, .subsection-heading, .moodboard-label, .log-section-label, .stats-region-heading, .shoot-mode-section-heading, h4, h5, h6, .nb-word, .modal h3, .opt-label):not(#df-x):not(#df-y) {
+:is(.subsection-heading, .moodboard-label, .log-section-label, .stats-region-heading, .shoot-mode-section-heading, h4, h5, h6, .nb-word, .modal h3, .opt-label):not(#df-x):not(#df-y) {
   text-transform: uppercase !important;
   font-family: var(--ui) !important; font-weight: 600 !important; font-size: 15px; line-height: 1.3; letter-spacing: .08em !important;
 }
-.upcoming-subheading, .opt-label { color: var(--dim); }
+.opt-label { color: var(--dim); }
 /* A month, under its year (Archive, Weekly), and a week under its month. */
 :is(.archive-month-heading, .status-group-heading.archive-month-heading).archive-month-heading:not(#df-x):not(#df-y) { font-family: var(--ui) !important; font-weight: 600 !important; font-size: 15px; letter-spacing: .08em !important; color: var(--dim); }
 .log-week-heading.log-week-heading:not(#df-x):not(#df-y) { font-size: 16px; }
@@ -7230,6 +7037,125 @@ html:not(.df-suite) .band-books { display: none; }
   font-family: var(--display); font-size: 16px; line-height: 24px; letter-spacing: .02em;
 }
 
-/* What you wrote: a shoot's name in its rows. */
-.shoot-row-title { font-family: var(--ui); font-weight: 600; font-size: 19px; line-height: 1.25; }
-.stat-num { font-family: var(--display); font-size: 27px; }
+
+/* ---- styles/section-titles.css ---- */
+/* A section's title on a list page (DESIGN.md 9): 13px 700 capitals in a 44px
+   row, its count after it in 500 dim; and the small dim label over a group
+   inside it (This week, Next week, Later). */
+#view-overview .section-block { margin: 0; }
+#view-overview .section-block > h2 {
+  display: flex; align-items: center; gap: 6px; min-height: 44px; margin: 24px 0 0; padding: 0;
+  background: none; border: 0; border-radius: 0; color: var(--text);
+  font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; cursor: default;
+}
+#view-overview .section-block > h2 > span { font-weight: 500; color: var(--dim); font-variant-numeric: tabular-nums; }
+/* Closer under the Today card; none at the top of the page. */
+#todayCard:not([hidden]) + .section-block > h2 { margin-top: 16px; }
+#todayCard[hidden] + .section-block:not([hidden]) > h2,
+#todayCard[hidden] + .section-block[hidden] + .section-block > h2 { margin-top: 0; }
+#view-overview .mini-list { display: block; }
+.mini-list .upcoming-subheading {
+  display: block; margin: 8px 0 0; padding: 0; background: none; border: 0;
+  font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim);
+}
+
+/* ---- styles/shoot-rows.css ---- */
+/* A shoot in a list (DESIGN.md 9): a portrait cover (44 by 56, radius 6), the
+   name in 18px light, one line of status and dates in small dim capitals
+   (crimson and bold once a deadline has gone by), and the flags for what it
+   still needs. The More button sits at the right on Shoots. */
+.shoot-row {
+  display: flex; align-items: center; gap: 14px; padding: 12px 0; margin: 0;
+  background: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; cursor: pointer; color: var(--text);
+}
+.shoot-row .shoot-thumb {
+  position: relative; flex: none; width: 44px; height: 56px; border: 0; border-radius: 6px; overflow: hidden;
+  background: #EFEFEA; box-shadow: none;
+}
+.shoot-row .shoot-thumb-empty { color: var(--off); opacity: 1; }
+.shoot-row .shoot-thumb-empty svg { width: 20px; height: 20px; }
+.shoot-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 0; min-height: 0; }
+.shoot-row-title {
+  font: 300 18px/22px var(--ui); letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.shoot-row-meta {
+  font: 500 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums;
+}
+.shoot-row-meta.overdue { color: var(--crimson); font-weight: 700; }
+.shoot-flags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.shoot-flags[hidden] { display: none; }
+.flag {
+  display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--text);
+  font: 700 10px/12px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--text); white-space: nowrap;
+}
+.row-more-btn {
+  display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; min-height: 0;
+  margin: 0 -12px 0 0; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text);
+}
+.row-more-btn svg { fill: currentColor; }
+
+/* ---- styles/today-card.css ---- */
+/* The Today card at the top of Overview: a white card (radius 12) with TODAY
+   and FULL REPORT, then each thing that needs you, between hairlines: a line
+   in 17px light (the shoot's name in 500) with its two answers, or a line to
+   tap with a chevron. A deadline gone by is crimson, and written out. */
+.today-card { background: #FFFFFF; border-radius: 12px; padding: 16px; color: var(--text); }
+.today-card[hidden] { display: none; }
+.today-card-head { display: flex; align-items: center; justify-content: space-between; }
+#view-overview .today-card-head h2 {
+  margin: 0; padding: 0; background: none; border: 0; color: var(--text);
+  font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+.today-report-btn {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 28px; height: auto; margin: 0 -4px 0 0; padding: 0 4px;
+  border: 0; border-radius: 0; background: none; color: var(--dim);
+  font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+.today-report-btn svg, .today-link svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.today-item { display: block; padding: 12px 0; border-top: 1px solid var(--line); }
+.today-item:first-child { padding-top: 10px; border-top: 0; }
+.today-link:first-child { border-top: 0; }
+.today-item:last-child { padding-bottom: 0; }
+.today-item p, .today-link > span { margin: 0; font: 300 17px/23px var(--ui); letter-spacing: 0; color: var(--text); text-align: left; }
+.today-item b { font-weight: 500; }
+.today-late { color: var(--crimson); font-weight: 500; }
+.today-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.today-btns button {
+  height: 40px; min-height: 0; margin: 0; padding: 0 14px; border: 0; border-radius: 8px;
+  font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+.today-btns .primary { background: var(--band); color: var(--band-small); }
+.today-btns .secondary { background: none; color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text); }
+.today-link {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 0; height: auto; margin: 0;
+  background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; color: var(--text); text-transform: none; letter-spacing: 0; cursor: pointer;
+}
+.today-link > span { flex: 1; }
+.today-link svg { color: var(--off); }
+
+/* ---- styles/next-shoot.css ---- */
+/* The Next shoot card on Overview: a white card (radius 12) with the shoot's
+   cover (96 by 128, radius 8) beside a notched tag in the notebook colour
+   (IN 8 DAYS), its name in 22px light, who's in it, and its status, day and
+   time in small dim capitals at the foot. */
+.next-shoot {
+  display: flex; gap: 16px; width: 100%; height: auto; min-height: 0; margin: 0; padding: 12px;
+  background: #FFFFFF; border: 0; border-radius: 12px; color: var(--text); text-align: left; text-transform: none; letter-spacing: 0; cursor: pointer;
+}
+.next-shoot-cover { flex: none; display: block; width: 96px; height: 128px; }
+.next-shoot-cover .shoot-thumb { position: relative; width: 96px; height: 128px; border: 0; border-radius: 8px; overflow: hidden; background: #EFEFEA; }
+.next-shoot-cover .shoot-thumb img { position: absolute; inset: 0; }
+.next-shoot-cover .shoot-thumb-empty { color: var(--off); opacity: 1; }
+.next-shoot-cover .shoot-thumb-empty svg { width: 28px; height: 28px; }
+.next-shoot-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding-top: 2px; }
+.next-shoot-tag {
+  align-self: flex-start; display: inline-flex; align-items: center; height: 24px; padding: 0 20px 0 9px;
+  background: var(--band); color: var(--band-small); border-radius: 3px 0 0 3px;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+  font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.next-shoot-name { margin-top: 6px; font: 300 22px/26px var(--ui); overflow-wrap: anywhere; }
+.next-shoot-with { font: 400 15px/20px var(--ui); }
+.next-shoot-meta { font: 500 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.next-shoot-status { margin-top: auto; }
+.next-shoot-status:empty { display: none; }

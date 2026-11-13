@@ -30,9 +30,9 @@ window.EyeParts.addTour = function addTour(ed) {
   eyeCards.addEventListener('click', (e) => { if (e.target === eyeCards && eyeCardsDim) eyeCardsDim(); });
 
   const eyeTourCards = () => [
-    ['Plan a shoot', 'Tap + New Shoot. Each shoot gets its own pages: basic info, logistics, team, direction, visuals and a shot list.'],
+    ['Plan a shoot', 'Tap + at the top of Overview. Each shoot gets its own pages: basic info, logistics, team, direction, visuals and a shot list.'],
     ['On the day, and after', 'Tick off the shot list as you go. Afterwards, write a reflection: what went right, what could be better, and lessons for next time.'],
-    ['Your week', 'Overview shows what’s coming up. Reflections keeps the week’s log, and Archive holds the shoots you’ve done.'],
+    ['Your week', 'Overview shows what needs you today and what’s coming up. Reflections keeps the week’s log, and Archive holds the shoots you’ve done.'],
     ...(window.DF_SUITE ? [['Mood boards from Ref', 'Send a board from Ref to a shoot and it shows on that shoot’s page, kept up to date until the shoot is captured.']] : []),
     ['Keep a copy', 'Everything is saved inside the app, on this phone. Now and then, back up all data in App options.'],
   ];

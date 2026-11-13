@@ -1,0 +1,19 @@
+/* A section's title on a list page (DESIGN.md 9): 13px 700 capitals in a 44px
+   row, its count after it in 500 dim; and the small dim label over a group
+   inside it (This week, Next week, Later). */
+#view-overview .section-block { margin: 0; }
+#view-overview .section-block > h2 {
+  display: flex; align-items: center; gap: 6px; min-height: 44px; margin: 24px 0 0; padding: 0;
+  background: none; border: 0; border-radius: 0; color: var(--text);
+  font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; cursor: default;
+}
+#view-overview .section-block > h2 > span { font-weight: 500; color: var(--dim); font-variant-numeric: tabular-nums; }
+/* Closer under the Today card; none at the top of the page. */
+#todayCard:not([hidden]) + .section-block > h2 { margin-top: 16px; }
+#todayCard[hidden] + .section-block:not([hidden]) > h2,
+#todayCard[hidden] + .section-block[hidden] + .section-block > h2 { margin-top: 0; }
+#view-overview .mini-list { display: block; }
+.mini-list .upcoming-subheading {
+  display: block; margin: 8px 0 0; padding: 0; background: none; border: 0;
+  font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim);
+}

@@ -31,13 +31,6 @@ window.EyeParts.addOverview = function addOverview(ed) {
     reflections: 'Pending reflections',
   }; ed.STAT_BOX_TITLES = STAT_BOX_TITLES;
 
-  document.getElementById('statsRow').addEventListener('click', (e) => {
-    const box = e.target.closest('.stat-box');
-    if (!box) return;
-    const key = box.dataset.stat;
-    openStatBoxDetail(STAT_BOX_FILTERS[key], STAT_BOX_TITLES[key], key);
-  });
-
   // Tracks which stat box's list is showing so closeShootModal can re-apply
   // the same filter — the popup stacks UNDER the shoot modal rather than
   // closing when a row's shoot is opened (see .stat-box-detail-overlay's
@@ -119,9 +112,6 @@ window.EyeParts.addOverview = function addOverview(ed) {
       lockBodyScroll();
     } else {
       unlockBodyScroll();
-      // A launch popup that had to wait for the screen to clear (see the
-      // Monday brief).
-      ed.runOwedLaunchPopups();
     }
   }
 

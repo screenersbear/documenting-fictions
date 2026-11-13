@@ -1,45 +1,22 @@
-// The Monday brief (last week, once a week on open).
+// The Monday brief (last week, looked back on, once a week), and the app
+// starting up: the photos read in, the page shown, and what opens first.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
-  Object.assign(ed, { runOwedLaunchPopups, maybeShowMondayBrief, leaveMondayBrief, launchPopups });
-  // ---------- Monday brief (last week, once a week on open) ----------
-  // The first time the app's opened on a Monday — from 5am, the same day
-  // boundary as the daily report (effectiveReportDateStr) — a look back at
-  // last week to take into the new one: the week laid out like a page of the
-  // weekly log (its shoots and the lessons learned from each), and a nudge
-  // for any shoot still without a reflection. No counts (11-12): only the
-  // lessons go into the new week. "Last week" is Monday
-  // to Sunday, the seven days up to yesterday: the same week as the weekly
-  // log's (see daysIntoWeek).
-  // It's the last launch popup before the daily report, which follows it
-  // once it's closed, so a Monday still gets both. It's checked when the app
-  // comes back from the background too (a home-screen app is rarely
-  // launched fresh), but only with nothing else on screen.
+  Object.assign(ed, { mondayBriefDue, maybeShowMondayBrief, leaveMondayBrief, launchPopups });
+  // ---------- Monday brief (last week, once a week) ----------
+  // On a Monday — from 5am, the same day boundary as the daily report
+  // (effectiveReportDateStr) — a look back at last week to take into the new
+  // one: the week laid out like a page of the weekly log (its shoots and the
+  // lessons learned from each), and a nudge for any shoot still without a
+  // reflection. No counts (11-12): only the lessons go into the new week.
+  // "Last week" is Monday to Sunday, the seven days up to yesterday: the same
+  // week as the weekly log's (see daysIntoWeek). It no longer opens on its
+  // own: the Today card offers it until it's been read.
   const MONDAY_BRIEF_SHOWN_KEY = 'dailies_monday_brief_shown_v1';
   // A brief on its way (it shows on the next tick, see maybeShowMondayBrief),
-  // so a second check meanwhile doesn't start another.
+  // so a second tap meanwhile doesn't start another.
   let mondayBriefPending = false;
-  // The end of the launch line-up (this brief, then the daily report) when
-  // it couldn't show: something else opened while the brief was on its way,
-  // or the brief was left for a shoot. It runs once nothing's open (see
-  // syncPopupScrollLock) rather than waiting for the next launch.
-  let launchTailOwed = false;
-
-  function runOwedLaunchPopups() {
-    if (!launchTailOwed) return;
-    launchTailOwed = false;
-    // After the tap that cleared the screen has finished, in case it opens
-    // something of its own (a tab intro, say).
-    setTimeout(() => {
-      if (document.documentElement.classList.contains('update-reloading')) return;
-      if (ed.anyPopupOpen()) { launchTailOwed = true; return; }
-      // The check-in first, as at launch: its OK brings the brief.
-      ed.checkDayAfterPrompt();
-      if (!document.getElementById('dayAfterPromptOverlay').hidden) return;
-      if (!maybeShowMondayBrief()) ed.checkDailyReportPrompt();
-    }, 0);
-  }
 
   // Today's date when it's a Monday whose brief hasn't shown yet, else null.
   function mondayBriefWaiting() {
@@ -72,10 +49,9 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
     return { today, label: ed.weekRangeLabel(start, end), week };
   }
 
-  // Shows this Monday's brief if one's due. True when it's on its way, so
-  // the launch leaves the daily report for after it. It shows on the next
-  // tick, after the rest of the launch: an entry being written when the app
-  // went away (restoreOpenJournalEntry) opens first, and the brief waits.
+  // Shows this Monday's brief if one's due (the Today card's line). True when
+  // it's on its way. It shows on the next tick, once the tap that asked for it
+  // is done.
   function maybeShowMondayBrief() {
     if (mondayBriefPending) return true;
     if (document.documentElement.classList.contains('update-reloading')) return false;
@@ -86,11 +62,13 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
       mondayBriefPending = false;
       // A page an update's about to replace never shows it.
       if (document.documentElement.classList.contains('update-reloading')) return;
-      // Something opened meanwhile (an entry being restored, a shoot from
-      // the list) keeps the screen; the brief waits until it's closed.
-      if (ed.anyPopupOpen()) { launchTailOwed = true; return; }
+      // Something opened meanwhile keeps the screen; the line stays on the
+      // Today card for later.
+      if (ed.anyPopupOpen()) return;
       try { localStorage.setItem(MONDAY_BRIEF_SHOWN_KEY, brief.today); } catch (e) { /* ignore */ }
       renderMondayBrief(brief);
+      // Read now, so its line leaves the Today card.
+      ed.renderTodayCard();
     });
     return true;
   }
@@ -151,23 +129,14 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
     document.getElementById('mondayBriefOverlay').hidden = false;
   }
 
-  // Left for somewhere else (a shoot, the Pending reflections list): the
-  // daily report it was holding back waits until that's closed too.
+  // Left for somewhere else (a shoot, the Pending reflections list).
   function leaveMondayBrief() {
-    const overlay = document.getElementById('mondayBriefOverlay');
-    if (overlay.hidden) return;
-    overlay.hidden = true;
-    launchTailOwed = true;
+    document.getElementById('mondayBriefOverlay').hidden = true;
   }
 
-  // OK and the X: done reading, so the daily report it held back comes next
-  // (it does nothing if that's already shown today). No backdrop dismiss,
-  // like the other launch popups.
+  // OK and the X: done reading. No backdrop dismiss, like the other notices.
   ['mondayBriefOkBtn', 'mondayBriefCloseBtn'].forEach(id => {
-    document.getElementById(id).addEventListener('click', () => {
-      document.getElementById('mondayBriefOverlay').hidden = true;
-      ed.checkDailyReportPrompt();
-    });
+    document.getElementById(id).addEventListener('click', leaveMondayBrief);
   });
 
   // Nothing used to flush pending edits when the app went away, so anything
@@ -193,19 +162,8 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
     // brought up to date straight away rather than at its next tick.
     if (!ed.shootModeOverlay.hidden) ed.renderShootModeClock();
     // Back from the background, which is how a home-screen app mostly
-    // "opens": Monday's brief, if it hasn't shown yet and nothing else is
-    // up. Not mid-launch, where the launch popups decide. The check-in goes
-    // first, as at launch, so a weekend shoot it asks about is in the brief
-    // once it's answered (its OK brings the brief).
-    if (!document.documentElement.classList.contains('booting') && mondayBriefWaiting()) {
-      if (!ed.anyPopupOpen()) {
-        ed.checkDayAfterPrompt();
-        if (document.getElementById('dayAfterPromptOverlay').hidden) maybeShowMondayBrief();
-      } else if (!document.getElementById('bookOverlay').hidden) {
-        // Shut notebook: it comes up as soon as the book is opened.
-        launchTailOwed = true;
-      }
-    }
+    // "opens": it may be a new day, with new things for the Today card.
+    if (!document.documentElement.classList.contains('booting')) ed.renderTodayCard();
   });
   window.addEventListener('pagehide', flushPendingEdits);
   window.addEventListener('pagehide', () => ed.saveLastPlace());
@@ -243,29 +201,14 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
     // the app's up, so it's ready before you get there.
     setTimeout(() => { if (!ed.archiveSlideshowLoaded) ed.loadArchiveSlideshow(); }, 400);
   }); ed.launchShown = launchShown;
-  // Introductions first: on a genuinely first run this is the welcome step, and
-  // the rest of the launch popups defer so they don't stack on top of it.
+  // What opens first. Introductions first: on a genuinely first run this is
+  // the welcome step. Then Shoot mode, if it's still switched on (you're
+  // mid-shoot and want the working view), else the Overview's tip the first
+  // time. Nothing else opens on its own: what needs you is on the Today card.
   function launchPopups() {
     ed.maybeShowPhotographerPrompt();
     if (!document.getElementById('photographerModalOverlay').hidden) return;
-    // Shoot mode outranks every launch popup. If it's still switched on you're
-    // mid-shoot and want the working view, not a report; and on a shoot day the
-    // offer to enter it is the most time-sensitive thing the app can say, so it
-    // goes ahead of the daily report rather than queueing behind it.
-    if (!ed.resumeShootModeIfActive()) {
-      ed.maybeShowShootModePrompt();
-      if (document.getElementById('shootModePromptOverlay').hidden) {
-        ed.showTabIntro('overview');
-        if (document.getElementById('tabIntroOverlay').hidden) {
-          ed.checkDayAfterPrompt();
-          if (document.getElementById('dayAfterPromptOverlay').hidden) {
-            // On a Monday, last week's brief goes first and the daily
-            // report follows once it's closed.
-            if (!maybeShowMondayBrief()) ed.checkDailyReportPrompt();
-          }
-        }
-      }
-    }
+    if (!ed.resumeShootModeIfActive()) ed.showTabIntro('overview');
   }
   // Inside Documenting Fictions, the first visit's cards come before all of
   // these; they follow once the cards (and the tour, if taken) are done

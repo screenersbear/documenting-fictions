@@ -4350,6 +4350,97 @@ window.EyeParts.addDates = function addDates(ed) {
 };
 ;
 
+// ---- components/row-words.js ----
+// The words on a shoot's row, the Next shoot card and the Today card: a date
+// as "Sat 28 Nov", how far away a day is, a deadline gone by, and the line
+// under a shoot's name. Plain words only (no page, no saved data), so they're
+// unit tested (tests/unit/the-eye/row-words.test.mjs). The rows write them in
+// capitals with CSS, so a screen reader still reads them as words.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addRowWords = function addRowWords(ed) {
+  Object.assign(ed, { daysBetween, rowDate, rowDateRange, daysAwayTag, setForWords, dueWords, overdueWords, pastDeadlineWords, metaLine });
+  const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  // "2026-11-28" as a local midnight.
+  function day(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  // Whole days from one date to another: 1 for tomorrow, -1 for yesterday.
+  // Rounded, so a clock change in between doesn't make it 0.96 of a day.
+  function daysBetween(from, to) {
+    return Math.round((day(to) - day(from)) / 86400000);
+  }
+
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+  // "Sat 28 Nov" with the weekday, "28 Nov" without; the year is added
+  // ("14 Aug 2025") when it isn't today's year.
+  function rowDate(dateStr, today, withWeekday) {
+    const d = day(dateStr);
+    const year = dateStr.slice(0, 4) === today.slice(0, 4) ? '' : ` ${d.getFullYear()}`;
+    return `${withWeekday ? `${WEEKDAYS[d.getDay()]} ` : ''}${d.getDate()} ${MONTHS[d.getMonth()]}${year}`;
+  }
+
+  // The days a project spans: "9 to 11 Dec", "28 Nov to 2 Dec", and both
+  // years spelled out when they differ. One day is just that day.
+  function rowDateRange(start, end, today) {
+    if (start === end) return rowDate(start, today, false);
+    const a = day(start);
+    // Each end against the other: the years differ, so each gets its own.
+    if (start.slice(0, 4) !== end.slice(0, 4)) return `${rowDate(start, end, false)} to ${rowDate(end, start, false)}`;
+    const startWords = start.slice(5, 7) === end.slice(5, 7) ? `${a.getDate()}` : rowDate(start, end, false);
+    return `${startWords} to ${rowDate(end, today, false)}`;
+  }
+
+  // The tag on the Next shoot card: "Today", "Tomorrow", "In 8 days".
+  // Nothing for a day already gone.
+  function daysAwayTag(dateStr, today) {
+    const n = daysBetween(today, dateStr);
+    if (n < 0) return '';
+    if (n === 0) return 'Today';
+    if (n === 1) return 'Tomorrow';
+    return `In ${n} days`;
+  }
+
+  // When a shoot was set for, from the Today card's "It was set for …":
+  // "yesterday", a weekday within the last week, else its date.
+  function setForWords(dateStr, today) {
+    const n = daysBetween(dateStr, today);
+    if (n === 1) return 'yesterday';
+    if (n >= 2 && n <= 6) return WEEKDAY_NAMES[day(dateStr).getDay()];
+    return rowDate(dateStr, today, false);
+  }
+
+  // A deadline still ahead: "Due today", "Due Fri 20 Nov" within the week,
+  // "Due 4 Dec" further off.
+  function dueWords(deadline, today) {
+    const n = daysBetween(today, deadline);
+    if (n === 0) return 'Due today';
+    return `Due ${rowDate(deadline, today, n >= 1 && n <= 7)}`;
+  }
+
+  // A deadline gone by, on a row: "Overdue by 3 days".
+  function overdueWords(deadline, today) {
+    return `Overdue by ${plural(daysBetween(deadline, today), 'day')}`;
+  }
+
+  // The same on the Today card: "3 days past" (its deadline).
+  function pastDeadlineWords(deadline, today) {
+    return `${plural(daysBetween(deadline, today), 'day')} past`;
+  }
+
+  // The line under a name: its parts that have something, with commas.
+  function metaLine(parts) {
+    return parts.filter(Boolean).join(', ');
+  }
+};
+;
+
 // ---- components/helpers.js ----
 // Small helpers: ids, shuffling, sort keys, escaping, and what a shoot is called and still needs.
 // (Loaded before app.js, which runs it in its turn.)
@@ -5668,12 +5759,14 @@ window.EyeParts.addSave = function addSave(ed) {
 ;
 
 // ---- components/shoot-row.js ----
-// A shoot as a row in a list, and the compact row.
+// A shoot as a row in a list (its cover, name, one line of status and dates,
+// and the flags for what it still needs), and the compact row.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootRow = function addShootRow(ed) {
-  Object.assign(ed, { shootThumbHtml, renderShootRow, renderCompactShootRow });
+  Object.assign(ed, { shootThumbHtml, shootDateWords, shootFlagWords, flagsHtml, moreBtnHtml, renderShootRow, renderCompactShootRow });
   const SHOOT_THUMB_EMPTY_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
+  const MORE_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';
 
   function shootThumbHtml(s) {
     return s.projectPhoto
@@ -5681,97 +5774,95 @@ window.EyeParts.addShootRow = function addShootRow(ed) {
       : `<div class="shoot-thumb shoot-thumb-empty">${SHOOT_THUMB_EMPTY_SVG}</div>`;
   }
 
-  function renderShootRow(container, s, opts) {
-    // Lets a section suppress the whole badge outright — e.g. Overview's
-    // Proofs pending and Upcoming deadlines sections are each already one
-    // homogeneous category, so re-stating "Pending: Proofs" or the status
-    // on every row there is redundant. Today/Upcoming shoots mix several
-    // statuses together, so the badge still earns its place there.
-    const showBadge = !opts || opts.showBadge !== false;
-    // Archive opts this in: a delivered shoot doesn't need its own status
-    // re-stated there (it's implied by being in Archive), but if it's
-    // missing final images that's worth flagging — resolved async below
-    // since it requires an IndexedDB lookup, unlike every other badge part.
-    const checkFinalImages = !!(showBadge && opts && opts.checkFinalImages && s.status === 'delivered' && !ed.isVideoShoot(s));
-    const statusLabel = (showBadge && opts && opts.showStatus && !checkFinalImages) ? (ed.STATUS_LABELS[s.status] || '') : '';
-    const pendingLabels = (showBadge && opts && opts.showPending) ? ed.shootPendingLabels(s) : [];
-    const pendingText = pendingLabels.length ? `Pending: ${ed.escapeHtml(pendingLabels.join(', '))}` : '';
-    // Proofs are only "pending" for the captured step itself — once a shoot
-    // moves to waiting_for_selects, proofs have already gone out. Video has
-    // no proofs step at all (after Captured it goes to Rough cut).
-    const proofsPendingText = (showBadge && s.status === 'captured' && !ed.isVideoShoot(s)) ? 'Pending: Proofs' : '';
-    // Once a shoot's captured there's a reflection worth writing eventually —
-    // flag it if that's never happened yet, same idea as missing final images.
-    // Applies on the Shoots page too, not just Archive, now that reflections
-    // are expected any time from captured onward rather than only once archived.
+  // The shoot's day, on its row: "Sat 28 Nov" ahead, "Today", "Shot 10 Nov"
+  // once it's shot, just "12 Nov" for a day gone by that isn't shot yet,
+  // "Was 12 Nov" for the date a postponed or canceled shoot was planned for.
+  function shootDateWords(s, today) {
+    if (!s.date) return 'Date not set';
+    if (ed.isOriginalPlanDate(s)) return `Was ${ed.rowDate(s.date, today, false)}`;
+    if (s.date === today) return 'Today';
+    if (s.date > today) return ed.rowDate(s.date, today, true);
+    return ed.POST_CAPTURE_STATUSES.includes(s.status) ? `Shot ${ed.rowDate(s.date, today, false)}` : ed.rowDate(s.date, today, false);
+  }
+
+  // What a shoot still needs, as small outlined flags (they took the place of
+  // the Overview's counter tiles): its team and mood board while it's being
+  // planned (shootPendingLabels), proofs once a photo shoot is captured, a
+  // reflection from then on. Final images are added later (see below).
+  function shootFlagWords(s) {
+    const flags = ed.shootPendingLabels(s).map(label => (label === 'Moodboard' ? 'Mood board' : label));
+    if (s.status === 'captured' && !ed.isVideoShoot(s)) flags.push('Proofs');
     const hasReflection = ed.hasText(s.whatWentRight) || ed.hasText(s.couldBeBetter) || ed.hasText(s.lessonsLearned);
-    const reflectionPendingText = (showBadge && ed.POST_CAPTURE_STATUSES.includes(s.status) && !hasReflection) ? 'Pending: Reflection' : '';
-    // Status now gets its own stacked line with a background pill (see
-    // .shoot-row-status-pill below) — everything else stays in the old
-    // <br>-joined badge, which keeps its existing hidden/shown logic and its
-    // async final-images top-up untouched, just moved to its own line under
-    // the stack instead of sharing a slot with status.
-    const badgeParts = [pendingText, proofsPendingText, reflectionPendingText].filter(Boolean);
-    const badgeHtml = badgeParts.join('<br>');
-    // Once delivered (or archived) there's nothing left to deliver, so the
-    // deadline no longer means anything — don't show it. Otherwise, an
-    // overdue deadline still shows, just in red.
-    const isOverdue = !!s.deadline && s.deadline < ed.todayStr();
-    const dueHtml = (s.deadline && !s.archived && s.status !== 'delivered')
-      ? `<span class="shoot-row-date-line shoot-row-due${isOverdue ? ' overdue' : ''}">Due: ${ed.prettyDateShort(s.deadline)}</span>`
-      : '';
-    const statusHtml = statusLabel
-      ? `<span class="shoot-row-status-pill">${ed.escapeHtml(statusLabel)}</span>`
-      : '';
-    // Opt-in (Today only): "Desert Western · Day 2 of 3" under the date for
-    // a shoot that's part of a project, in the date line's own style.
-    const rowProject = (opts && opts.showProjectLine && s.projectId) ? ed.findProject(s.projectId) : null;
-    const rowDayInfo = rowProject ? ed.projectDayInfo(s) : null;
-    const projectLineHtml = rowProject
-      ? `<span class="shoot-row-date-line">${ed.escapeHtml(rowProject.name)}${rowDayInfo ? ` · Day ${rowDayInfo.day} of ${rowDayInfo.total}` : ''}</span>`
-      : '';
+    if (ed.POST_CAPTURE_STATUSES.includes(s.status) && !hasReflection) flags.push('Reflection');
+    return flags;
+  }
+
+  function flagsHtml(flags) {
+    return flags.map(f => `<span class="flag">${ed.escapeHtml(f)}</span>`).join('');
+  }
+
+  function moreBtnHtml(name) {
+    return `<button type="button" class="row-more-btn" aria-label="More for ${ed.escapeHtml(name)}">${MORE_SVG}</button>`;
+  }
+
+  // opts: showStatus puts the status first on its line (lists that mix
+  // statuses); dueOnly leaves the shoot's day out (Upcoming deadlines);
+  // more adds the More button (Shoots); showBadge false leaves the flags off
+  // (Archive); switchToShootsTab and openArchiveMode change where a tap goes.
+  // A deadline gone by takes over the line in crimson, written out
+  // ("Overdue by 3 days"), never colour alone. Once delivered or archived
+  // there's nothing left to deliver, so the deadline isn't shown.
+  function renderShootRow(container, s, opts) {
+    const o = opts || {};
+    const today = ed.todayStr();
+    const name = ed.shootDisplayName(s);
+    const status = o.showStatus ? (ed.STATUS_LABELS[s.status] || '') : '';
+    const owes = ed.isUpcomingDeadline(s);
+    const overdue = owes && s.deadline < today;
+    const info = ed.projectDayInfo(s);
+    const meta = overdue
+      ? ed.metaLine([ed.overdueWords(s.deadline, today), status])
+      : ed.metaLine([status, o.dueOnly ? '' : shootDateWords(s, today), info ? `Day ${info.day} of ${info.total}` : '', owes ? ed.dueWords(s.deadline, today) : '']);
+    const showFlags = o.showBadge !== false;
+    const flags = showFlags ? shootFlagWords(s) : [];
     const div = document.createElement('div');
     div.className = 'shoot-row';
     div.innerHTML = `
       ${shootThumbHtml(s)}
       <div class="shoot-row-body">
-        <span class="shoot-row-title"><strong>${ed.escapeHtml(ed.shootDisplayName(s))}</strong></span>
-        <span class="shoot-row-date-line">${ed.shootDateLabel(s, ed.prettyDateShort)}</span>
-        ${projectLineHtml}
-        ${dueHtml}
-        ${statusHtml}
-        <span class="badge"${badgeHtml ? '' : ' hidden'}>${badgeHtml}</span>
+        <span class="shoot-row-title">${ed.escapeHtml(name)}</span>
+        <span class="shoot-row-meta${overdue ? ' overdue' : ''}">${ed.escapeHtml(meta)}</span>
+        <span class="shoot-flags"${flags.length ? '' : ' hidden'}>${flagsHtml(flags)}</span>
       </div>
-      <div class="shoot-row-accent-strip">
-        <button type="button" class="row-options-btn" aria-label="Options">&#8942;</button>
-      </div>
+      ${o.more ? moreBtnHtml(name) : ''}
     `;
     div.addEventListener('click', () => {
-      if (opts && opts.switchToShootsTab) document.querySelector('.tab[data-view="shoots"]').click();
-      if (opts && opts.openArchiveMode) { ed.openArchiveMode(s.id); return; }
+      if (o.switchToShootsTab) document.querySelector('.tab[data-view="shoots"]').click();
+      if (o.openArchiveMode) { ed.openArchiveMode(s.id); return; }
       ed.openShootModal(s.id);
     });
-    // The whole yellow strip opens the options, not just the ⋮ circle in it:
-    // the strip is what reads as the button, and a tap on it just beside the
-    // ⋮ used to open the shoot instead. The ⋮ stays the focusable control
-    // (keyboard, VoiceOver); its click bubbles up to here.
-    div.querySelector('.shoot-row-accent-strip').addEventListener('click', (e) => {
-      e.stopPropagation();
-      ed.openShootOptions(s.id);
-    });
-    if (checkFinalImages) {
+    const more = div.querySelector('.row-more-btn');
+    if (more) {
+      more.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ed.openShootOptions(s.id);
+      });
+    }
+    // A delivered photo shoot with no final images in yet: that needs a look
+    // in the photo store, so its flag comes in a moment after the row.
+    if (showFlags && s.status === 'delivered' && !ed.isVideoShoot(s)) {
       ed.idbGetImages(ed.finalImagesKey(s.id)).then(images => {
         if (images.length) return;
-        const badgeEl = div.querySelector('.badge');
-        badgeEl.innerHTML = [...badgeParts, 'Pending: Final images'].join('<br>');
-        badgeEl.hidden = false;
+        const flagsEl = div.querySelector('.shoot-flags');
+        flagsEl.insertAdjacentHTML('beforeend', flagsHtml(['Final images']));
+        flagsEl.hidden = false;
       }).catch(() => {});
     }
     container.appendChild(div);
   }
 
-  // A smaller, photo-free row for tight spaces (the Overview counter
-  // popups) — title, status, and shoot date, each on its own line, so
+  // A smaller, photo-free row for tight spaces (the lists that open from the
+  // Monday brief) — title, status, and shoot date, each on its own line, so
   // nothing is ever squeezed side-by-side against anything else.
   // opts.openArchiveMode (the project popup, for archived days) opens the
   // read-only Archive mode recap instead, same as a row on the Archive tab.
@@ -5896,76 +5987,72 @@ window.EyeParts.addProjectGroups = function addProjectGroups(ed) {
     return members.filter(ed.isUpcomingDeadline).map(s => s.deadline).sort()[0] || '';
   }
 
-  // One box standing in for a project's members in a list. It uses the same
-  // .shoot-row markup and classes as renderShootRow (same 96px thumb, accent
-  // strip and 120px body floor) but is filled from the project:
+  // The days a project's box spans, in its row's words: "9 to 11 Dec" while
+  // its last listed day is still ahead (or today), "Shot 9 to 11 Dec" once
+  // every listed day has passed, "Date not set" when none has a date.
+  // Postponed and canceled days are left out (their dates are only the
+  // original plan, see isOffScheduleShoot), unless every dated day is one:
+  // then it's the new dates they've been given since, if any (see
+  // isOriginalPlanDate), else "Was …" the span they were planned for.
+  function projectDateWords(members, today) {
+    const datesOf = list => list.map(s => s.date).filter(Boolean).sort();
+    let dates = datesOf(members.filter(ed.isProjectLiveShoot));
+    if (!dates.length) dates = datesOf(members.filter(s => ed.scheduledShootDate(s)));
+    if (!dates.length) {
+      const planned = datesOf(members);
+      return planned.length ? `Was ${ed.rowDateRange(planned[0], planned[planned.length - 1], today)}` : 'Date not set';
+    }
+    const range = ed.rowDateRange(dates[0], dates[dates.length - 1], today);
+    return dates[dates.length - 1] >= today ? range : `Shot ${range}`;
+  }
+
+  // One box standing in for a project's members in a list, in a shoot row's
+  // markup (renderShootRow) but filled from the project:
   // - its name, and its rep's cover (else the first member's that has one);
-  // - the date span of the members in THIS list;
-  // - a "N shoots" line in the date line's style. N counts every member,
-  //   archived ones included, so it reads the same in every list, plus
-  //   "· 2 of 3 shot" while the project is part-way through capture;
-  // - the earliest still-owed deadline, and the union of its listed members'
-  //   Pending labels.
-  // The same opts as renderShootRow switch the status pill and Pending line
-  // on or off. Title + date + count + due + one pill/badge line still fits
-  // inside the 120px min-height, so the box lines up with the shoot rows
-  // around it. Like a shoot row, it only grows when a long Pending line wraps
-  // on a narrow screen. Tapping the box, or its ⋮, opens the project popup,
-  // never one shoot; each day is reachable from there.
+  // - one line: its status (with opts.showStatus), "N shoots" (N counts every
+  //   member, archived ones included, so it reads the same in every list),
+  //   "2 of 3 shot" while it's part-way through capture, the date span of
+  //   the members in THIS list, and the earliest still-owed deadline
+  //   (crimson and written out once it's gone by);
+  // - the flags any of its listed days still has (team, mood board, proofs,
+  //   reflection), each once.
+  // Tapping the box, or its More, opens the project popup, never one shoot;
+  // each day is reachable from there.
   function renderProjectRow(container, item, opts) {
+    const o = opts || {};
     const { project, members, rep } = item;
+    const today = ed.todayStr();
+    const name = project.name || ed.UNTITLED_PROJECT_NAME;
     const allMembers = ed.projectMembers(project.id);
-    const showBadge = !opts || opts.showBadge !== false;
-    const statusKey = (showBadge && opts && opts.showStatus) ? ed.projectGroupStatusKey(members) : '';
-    const statusLabel = statusKey ? (ed.STATUS_LABELS[statusKey] || '') : '';
-    const pendingLabels = (showBadge && opts && opts.showPending)
-      ? [...new Set([].concat(...members.map(s => ed.shootPendingLabels(s))))]
-      : [];
-    const pendingText = pendingLabels.length ? `Pending: ${ed.escapeHtml(pendingLabels.join(', '))}` : '';
-    // The same per-day reminders a shoot row adds whenever its badge shows
-    // (proofs owed on a captured photo day, a reflection never written),
-    // said once for the box when any listed day has them.
-    const proofsPendingText = (showBadge && members.some(s => s.status === 'captured' && !ed.isVideoShoot(s))) ? 'Pending: Proofs' : '';
-    const reflectionPendingText = (showBadge && members.some(s => ed.POST_CAPTURE_STATUSES.includes(s.status)
-      && !ed.hasText(s.whatWentRight) && !ed.hasText(s.couldBeBetter) && !ed.hasText(s.lessonsLearned))) ? 'Pending: Reflection' : '';
-    const badgeHtml = [pendingText, proofsPendingText, reflectionPendingText].filter(Boolean).join('<br>');
-    // "· 2 of 3 shot" only while the project is part-way through capture
-    // (projectShotProgressLabel is the same test projectStatusLabel uses); a
-    // project entirely ahead or entirely shot already says so through its
-    // dates and the list it sits in.
-    const progress = ed.projectShotProgressLabel(allMembers);
-    const progressText = progress ? ` · ${progress}` : '';
-    const countText = `${allMembers.length} ${allMembers.length === 1 ? 'shoot' : 'shoots'}${progressText}`;
+    const statusKey = o.showStatus ? ed.projectGroupStatusKey(members) : '';
+    const status = statusKey ? (ed.STATUS_LABELS[statusKey] || '') : '';
+    const count = `${allMembers.length} ${allMembers.length === 1 ? 'shoot' : 'shoots'}`;
     const deadline = projectNextDeadline(members);
-    const isOverdue = !!deadline && deadline < ed.todayStr();
-    const dueHtml = deadline
-      ? `<span class="shoot-row-date-line shoot-row-due${isOverdue ? ' overdue' : ''}">Due: ${ed.prettyDateShort(deadline)}</span>`
-      : '';
-    const statusHtml = statusLabel
-      ? `<span class="shoot-row-status-pill">${ed.escapeHtml(statusLabel)}</span>`
-      : '';
+    const overdue = !!deadline && deadline < today;
+    const meta = overdue
+      ? ed.metaLine([ed.overdueWords(deadline, today), status, count])
+      : ed.metaLine([status, count, ed.projectShotProgressLabel(allMembers), o.dueOnly ? '' : projectDateWords(members, today), deadline ? ed.dueWords(deadline, today) : '']);
+    const flags = o.showBadge === false ? [] : [...new Set([].concat(...members.map(ed.shootFlagWords)))];
     const coverShoot = (rep && rep.projectPhoto) ? rep : allMembers.find(s => s.projectPhoto);
     const div = document.createElement('div');
     div.className = 'shoot-row';
     div.innerHTML = `
       ${ed.shootThumbHtml(coverShoot || {})}
       <div class="shoot-row-body">
-        <span class="shoot-row-title"><strong>${ed.escapeHtml(project.name || ed.UNTITLED_PROJECT_NAME)}</strong></span>
-        <span class="shoot-row-date-line">${ed.escapeHtml(projectDateRangeLabel(members))}</span>
-        <span class="shoot-row-date-line">${ed.escapeHtml(countText)}</span>
-        ${dueHtml}
-        ${statusHtml}
-        <span class="badge"${badgeHtml ? '' : ' hidden'}>${badgeHtml}</span>
+        <span class="shoot-row-title">${ed.escapeHtml(name)}</span>
+        <span class="shoot-row-meta${overdue ? ' overdue' : ''}">${ed.escapeHtml(meta)}</span>
+        <span class="shoot-flags"${flags.length ? '' : ' hidden'}>${ed.flagsHtml(flags)}</span>
       </div>
-      <div class="shoot-row-accent-strip">
-        <button type="button" class="row-options-btn" aria-label="Project options">&#8942;</button>
-      </div>
+      ${o.more ? ed.moreBtnHtml(name) : ''}
     `;
     div.addEventListener('click', () => ed.openProjectPopup(project.id));
-    div.querySelector('.row-options-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      ed.openProjectPopup(project.id);
-    });
+    const more = div.querySelector('.row-more-btn');
+    if (more) {
+      more.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ed.openProjectPopup(project.id);
+      });
+    }
     container.appendChild(div);
   }
 
@@ -7406,7 +7493,7 @@ window.EyeParts.addScreenPages = function addScreenPages(ed) {
   }
 
   const SCREEN_ATOMS = {
-    overview: root => listAtoms(root, '#newShootBtn, #statsRow, .section-block:not([hidden]) .shoot-row'),
+    overview: root => listAtoms(root, '#todayCard, .section-block:not([hidden]) :is(.next-shoot, .shoot-row)'),
     shoots: root => listAtoms(root, '#shootSortToggle, #shootSortOptions, #shootList .shoot-row, #shootEmpty'),
     archive: root => listAtoms(root, '#archiveSlideshow, #archiveFilterToggle, #archiveFilters, #archiveList .shoot-row, #archiveEmpty'),
     journal: journalAtoms,
@@ -7672,7 +7759,7 @@ window.EyeParts.addFirstTimeIntros = function addFirstTimeIntros(ed) {
   const TAB_INTROS = {
     overview: {
       title: 'Overview',
-      text: "this is your at-a-glance dashboard to see how many shoots are ready to go, still being planned, or waiting on a team or mood board, plus what's coming up next. tap '+ new shoot' anytime to start logging one.",
+      text: "this is your at-a-glance page. the Today card at the top shows only what needs you now, then comes your next shoot and everything after it, with small flags for what each shoot still needs. tap + at the top anytime to start a new shoot.",
     },
     shoots: {
       title: 'Shoots',
@@ -7689,20 +7776,6 @@ window.EyeParts.addFirstTimeIntros = function addFirstTimeIntros(ed) {
     stats: {
       title: 'Stats',
       text: 'swipe between breakdowns of your visual languages, categories, team members, statuses, and locations. tap any slice to see exactly which shoots are behind it.',
-    },
-    // Shown once, right after the first automatic daily report is dismissed —
-    // that's the moment the report exists in your head and "where did that go?"
-    // is the natural next question. Routed through showTabIntro so it reuses
-    // the same popup and seen-once bookkeeping as the tab intros.
-    // Shown once, right after shoot mode is declined — the moment the question
-    // "fine, but how do I get it back?" actually occurs to you.
-    'shootmode:where': {
-      title: 'Whenever you want it',
-      text: "no problem. Shoot mode is always one tap away: open the shoot and hit 'Shoot mode' in the bar at the bottom of the page.",
-    },
-    'report:bell': {
-      title: 'Find this again',
-      text: "that was your daily report. It turns up once a day with anything that needs attention. You can pull it back up whenever you like: tap the bell at the top of the Overview screen.",
     },
   };
 
@@ -7851,13 +7924,6 @@ window.EyeParts.addOverview = function addOverview(ed) {
     reflections: 'Pending reflections',
   }; ed.STAT_BOX_TITLES = STAT_BOX_TITLES;
 
-  document.getElementById('statsRow').addEventListener('click', (e) => {
-    const box = e.target.closest('.stat-box');
-    if (!box) return;
-    const key = box.dataset.stat;
-    openStatBoxDetail(STAT_BOX_FILTERS[key], STAT_BOX_TITLES[key], key);
-  });
-
   // Tracks which stat box's list is showing so closeShootModal can re-apply
   // the same filter — the popup stacks UNDER the shoot modal rather than
   // closing when a row's shoot is opened (see .stat-box-detail-overlay's
@@ -7939,9 +8005,6 @@ window.EyeParts.addOverview = function addOverview(ed) {
       lockBodyScroll();
     } else {
       unlockBodyScroll();
-      // A launch popup that had to wait for the screen to clear (see the
-      // Monday brief).
-      ed.runOwedLaunchPopups();
     }
   }
 
@@ -8242,7 +8305,8 @@ window.EyeParts.addProjectsProjectPopup = function addProjectsProjectPopup(ed) {
 ;
 
 // ---- pages/overview/draw-overview.js ----
-// Drawing the Overview tab.
+// Drawing the Overview tab: the Today card, the next shoot, and the lists
+// under it (upcoming shoots, proofs pending, upcoming deadlines).
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addOverviewDrawOverview = function addOverviewDrawOverview(ed) {
@@ -8251,91 +8315,184 @@ window.EyeParts.addOverviewDrawOverview = function addOverviewDrawOverview(ed) {
     drawOverview();
     ed.repaginate('overview');
   }
+
+  // A section's count, after its title, in the quieter type.
+  function setCount(id, n) {
+    document.getElementById(id).textContent = String(n);
+  }
+
   function drawOverview() {
-    const todayShoots = ed.state.shoots.filter(ed.isToday)
-      .sort((a, b) => ed.dateTimeSortKey(a).localeCompare(ed.dateTimeSortKey(b)));
-    const upcomingShoots = ed.state.shoots.filter(ed.isUpcoming)
-      .sort((a, b) => ed.dateTimeSortKey(a).localeCompare(ed.dateTimeSortKey(b)));
+    ed.renderTodayCard();
+    const byDate = (a, b) => ed.dateTimeSortKey(a).localeCompare(ed.dateTimeSortKey(b));
+    // Today's shoots and the ones after: the first is the Next shoot card,
+    // the rest are Upcoming shoots.
+    const comingShoots = ed.state.shoots.filter(s => ed.isToday(s) || ed.isUpcoming(s)).sort(byDate);
+    const next = comingShoots[0] || null;
+    ed.renderNextShoot(next);
+    const upcomingShoots = comingShoots.slice(1);
     const deadlineShoots = ed.state.shoots.filter(ed.isUpcomingDeadline)
       .filter(s => ed.weekBucket(s.deadline) === 'this_week' || ed.weekBucket(s.deadline) === 'next_week')
       .sort((a, b) => ed.dateSortKey(a.deadline).localeCompare(ed.dateSortKey(b.deadline)));
     // Video has no proofs step, so a captured video shoot isn't listed here.
-    const proofsPendingShoots = ed.state.shoots.filter(s => !s.archived && s.status === 'captured' && !ed.isVideoShoot(s))
-      .sort((a, b) => ed.dateTimeSortKey(a).localeCompare(ed.dateTimeSortKey(b)));
+    const proofsPendingShoots = ed.state.shoots.filter(s => !s.archived && s.status === 'captured' && !ed.isVideoShoot(s)).sort(byDate);
 
     // A project's members collapse into one box per list (collapseProjects),
-    // so every list below and each counter's number counts a project once —
-    // a tile's number always matches the rows its popup shows. Today is the
-    // one exception: a project day happening today is listed as itself.
+    // so every list below and its count counts a project once.
     const upcomingItems = ed.collapseProjects(upcomingShoots);
     const proofsPendingItems = ed.collapseProjects(proofsPendingShoots);
     const deadlineItems = ed.collapseProjects(deadlineShoots);
 
-    const pendingTeamMoodboardCount = ed.collapseProjects(ed.state.shoots.filter(ed.STAT_BOX_FILTERS.pending)).length;
-    const inTheEditCount = ed.collapseProjects(ed.state.shoots.filter(ed.STAT_BOX_FILTERS.editing)).length;
-    const pendingReflectionsCount = ed.collapseProjects(ed.state.shoots.filter(ed.STAT_BOX_FILTERS.reflections)).length;
-
-    // "REFLECTIONS" is wider than a tile on most phones, which stretched its
-    // column past the other two: the soft hyphen lets it break as
-    // "REFLEC-TIONS" only where it doesn't fit, so the tiles stay equal.
-
-    document.getElementById('statsRow').innerHTML = `
-      <div class="stat-box" data-stat="pending">
-        <span class="stat-num">${pendingTeamMoodboardCount}</span>
-        <span class="stat-label">Teams + mood boards pending</span>
-      </div>
-      <div class="stat-box" data-stat="editing">
-        <span class="stat-num">${inTheEditCount}</span>
-        <span class="stat-label">In the edit</span>
-      </div>
-      <div class="stat-box" data-stat="reflections">
-        <span class="stat-num">${pendingReflectionsCount}</span>
-        <span class="stat-label">Pending reflec&shy;tions</span>
-      </div>
-    `;
-
-    document.getElementById('todaySection').hidden = todayShoots.length === 0;
-    document.getElementById('todayCount').textContent = `[${todayShoots.length}]`;
-    const todayList = document.getElementById('todayShootsList');
-    todayList.innerHTML = '';
-    // Today lists each shoot day as itself (a project's other days are still
-    // one box under Upcoming), so a project day says which project it's from.
-    todayShoots.forEach(s => ed.renderShootRow(todayList, s, { showStatus: true, showProjectLine: true }));
-
     // A section with nothing in it isn't on the page at all.
     document.getElementById('upcomingSection').hidden = !upcomingItems.length;
-    document.getElementById('upcomingCount').textContent = `[${upcomingItems.length}]`;
+    setCount('upcomingCount', upcomingItems.length);
     const upList = document.getElementById('upcomingShootsList');
     upList.innerHTML = '';
     if (upcomingItems.length) ed.renderBucketedShoots(upList, upcomingItems, ['this_week', 'next_week', 'later'], 'date', { showStatus: true });
 
     document.getElementById('proofsPendingSection').hidden = !proofsPendingItems.length;
-    document.getElementById('proofsPendingCount').textContent = `[${proofsPendingItems.length}]`;
+    setCount('proofsPendingCount', proofsPendingItems.length);
     const proofsList = document.getElementById('proofsPendingShootsList');
     proofsList.innerHTML = '';
-    proofsPendingItems.forEach(item => ed.renderListItem(proofsList, item, { showBadge: false }));
+    proofsPendingItems.forEach(item => ed.renderListItem(proofsList, item, { showStatus: true }));
 
     document.getElementById('upcomingDeadlinesSection').hidden = !deadlineItems.length;
-    document.getElementById('upcomingDeadlinesCount').textContent = `[${deadlineItems.length}]`;
+    setCount('upcomingDeadlinesCount', deadlineItems.length);
     const deadlineList = document.getElementById('upcomingDeadlinesShootsList');
     deadlineList.innerHTML = '';
-    if (deadlineItems.length) ed.renderBucketedShoots(deadlineList, deadlineItems, ['this_week', 'next_week'], 'deadline', { showBadge: false });
-
-    // Section heading colors alternate dynamically, always starting with
-    // yellow — Today drops out of the page entirely when nothing's due
-    // today, so whichever section actually lands first (Today or Upcoming)
-    // gets yellow, not a section tied to a fixed color.
-    const overviewSectionIds = ['todaySection', 'upcomingSection', 'proofsPendingSection', 'upcomingDeadlinesSection'];
-    let nextIsYellow = true;
-    overviewSectionIds.forEach(id => {
-      const section = document.getElementById(id);
-      if (section.hidden) return;
-      const heading = section.querySelector('h2');
-      heading.classList.toggle('heading-yellow', nextIsYellow);
-      heading.classList.toggle('heading-navy', !nextIsYellow);
-      nextIsYellow = !nextIsYellow;
-    });
+    if (deadlineItems.length) ed.renderBucketedShoots(deadlineList, deadlineItems, ['this_week', 'next_week'], 'deadline', { showStatus: true, dueOnly: true });
   }
+};
+;
+
+// ---- pages/overview/today-card.js ----
+// The Today card at the top of Overview: only what needs you now, in place of
+// the pop-ups that used to open on launch. A shoot ready to shoot today (with
+// Shoot mode), a shoot whose day has gone by without an answer ("Did it
+// happen?"), deadlines gone by, and Monday's look back at last week. Hidden
+// when there's nothing. Full report (and the bell) open the daily report.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addOverviewTodayCard = function addOverviewTodayCard(ed) {
+  Object.assign(ed, { renderTodayCard });
+  const card = document.getElementById('todayCard');
+  const items = document.getElementById('todayCardItems');
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
+  const byDate = (a, b) => ed.dateTimeSortKey(a).localeCompare(ed.dateTimeSortKey(b));
+  const b = text => `<b>${ed.escapeHtml(text)}</b>`;
+
+  // A line you tap to go somewhere.
+  const linkItem = (act, id, html) => `<button type="button" class="today-item today-link" data-act="${act}" data-id="${ed.escapeHtml(id)}"><span>${html}</span>${CHEVRON}</button>`;
+  // A question with its two answers.
+  const askItem = (id, html, yes, no) => `<div class="today-item"><p>${html}</p><div class="today-btns">${yes}${no}</div></div>`;
+  const btn = (act, id, label, primary) => `<button type="button" class="${primary ? 'primary' : 'secondary'}" data-act="${act}" data-id="${ed.escapeHtml(id)}">${label}</button>`;
+
+  function renderTodayCard() {
+    // The day starts at 5am, as the daily report's does (effectiveReportDateStr):
+    // a shoot that ran late last night isn't "yesterday's" yet at 1am.
+    const day = ed.effectiveReportDateStr();
+    const today = ed.todayStr();
+    const html = [];
+
+    // Shoot day: only once it's Shoot ready, since that's when Shoot mode works.
+    if (!ed.shootModeOverlay || ed.shootModeOverlay.hidden) {
+      ed.state.shoots.filter(s => !s.archived && s.status === 'waiting_to_shoot' && s.date === day).sort(byDate).forEach((s) => {
+        html.push(askItem(s.id, `You're shooting ${b(ed.shootDisplayName(s))} today.`, btn('shoot-mode', s.id, 'Shoot mode', true), ''));
+      });
+    }
+
+    // Any shoot whose day has gone by and isn't marked shot yet, oldest
+    // first, however many days ago (so a few days away from the app don't
+    // lose one). A postponed or canceled shoot's kept date already has its
+    // answer; a new date it's been given since is asked about like any
+    // other (isOriginalPlanDate).
+    ed.state.shoots.filter(s => !s.archived && !ed.POST_CAPTURE_STATUSES.includes(s.status) && !ed.isOriginalPlanDate(s) && s.date && s.date < day)
+      .sort(byDate).forEach((s) => {
+        const info = ed.projectDayInfo(s);
+        const name = `${b(ed.shootDisplayName(s))}${info ? ` (day ${info.day})` : ''}`;
+        html.push(askItem(s.id, `Did ${name} happen? It was set for ${ed.escapeHtml(ed.setForWords(s.date, day))}.`,
+          btn('happened', s.id, 'Yes, it happened', true), btn('move', s.id, 'Move the date', false)));
+      });
+
+    // Deadlines gone by: once per project, whose days share one.
+    const overdue = ed.state.shoots.filter(s => ed.isUpcomingDeadline(s) && s.deadline < today);
+    ed.collapseProjects(overdue).forEach((item) => {
+      const isProject = item.kind === 'project';
+      const deadline = isProject ? item.members.map(s => s.deadline).sort()[0] : item.shoot.deadline;
+      const name = isProject ? (item.project.name || ed.UNTITLED_PROJECT_NAME) : ed.shootDisplayName(item.shoot);
+      html.push(linkItem(isProject ? 'project' : 'shoot', isProject ? item.project.id : item.shoot.id,
+        `${b(name)} is <span class="today-late">${ed.pastDeadlineWords(deadline, today)}</span> its deadline.`));
+    });
+
+    // On a Monday: last week, looked back on, until it's been read.
+    if (ed.mondayBriefDue()) html.push(linkItem('brief', '', `${b('Last week')}: your shoots and what you took from them.`));
+
+    items.innerHTML = html.join('');
+    card.hidden = !html.length;
+  }
+
+  items.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    const id = el.dataset.id;
+    switch (el.dataset.act) {
+      case 'shoot-mode': ed.openShootMode(id); break;
+      // As the old day-after check-in did: the status changes on the spot
+      // (applyStatusChange saves and redraws, which takes the line away),
+      // without the follow-up questions a status change usually brings.
+      case 'happened': ed.applyStatusChange(id, 'captured', { followUps: false }); break;
+      // Postponed (its date kept as the original plan), then its page, to
+      // give it the new one.
+      case 'move':
+        if (ed.applyStatusChange(id, 'rescheduled', { followUps: false }) !== null) ed.openShootModal(id);
+        break;
+      case 'shoot': ed.openShootModal(id); break;
+      case 'project': ed.openProjectPopup(id); break;
+      case 'brief': ed.maybeShowMondayBrief(); break;
+      default: break;
+    }
+  });
+
+  document.getElementById('todayReportBtn').addEventListener('click', () => ed.openNotificationsBell());
+};
+;
+
+// ---- pages/overview/next-shoot.js ----
+// The Next shoot card on Overview: the next shoot coming up (today's first),
+// with its cover, how many days off it is, who's in it, its status, and its
+// day and time. Tap it to open the shoot. Hidden when nothing's coming up.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addOverviewNextShoot = function addOverviewNextShoot(ed) {
+  Object.assign(ed, { renderNextShoot });
+  const section = document.getElementById('nextShootSection');
+  const holder = document.getElementById('nextShootCard');
+  let shownId = null;
+
+  function renderNextShoot(s) {
+    section.hidden = !s;
+    holder.innerHTML = '';
+    shownId = s ? s.id : null;
+    if (!s) return;
+    const today = ed.todayStr();
+    const names = (s.talents || []).map(t => t.name).filter(ed.hasText);
+    const info = ed.projectDayInfo(s);
+    const when = ed.metaLine([ed.rowDate(s.date, today, true), s.time ? ed.prettyTime(s.time) : '']);
+    holder.innerHTML = `
+      <button type="button" class="next-shoot">
+        <span class="next-shoot-cover">${ed.shootThumbHtml(s)}</span>
+        <span class="next-shoot-body">
+          <span class="next-shoot-tag">${ed.escapeHtml(ed.daysAwayTag(s.date, today))}</span>
+          <span class="next-shoot-name">${ed.escapeHtml(ed.shootDisplayName(s))}</span>
+          ${names.length ? `<span class="next-shoot-with">With ${ed.escapeHtml(ed.joinWithAnd(names))}</span>` : ''}
+          <span class="next-shoot-meta next-shoot-status">${ed.escapeHtml(ed.metaLine([ed.STATUS_LABELS[s.status] || '', info ? `Day ${info.day} of ${info.total}` : '']))}</span>
+          <span class="next-shoot-meta">${ed.escapeHtml(when)}</span>
+        </span>
+      </button>`;
+  }
+
+  holder.addEventListener('click', (e) => {
+    if (shownId && e.target.closest('.next-shoot')) ed.openShootModal(shownId);
+  });
 };
 ;
 
@@ -8456,7 +8613,7 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
 
     const rowsWrap = document.createElement('div');
     rowsWrap.className = 'shoot-status-rows';
-    items.forEach(item => ed.renderListItem(rowsWrap, item, { showPending: true }));
+    items.forEach(item => ed.renderListItem(rowsWrap, item, { more: true }));
 
     groupEl.appendChild(heading);
     groupEl.appendChild(rowsWrap);
@@ -18725,9 +18882,9 @@ window.EyeParts.addTour = function addTour(ed) {
   eyeCards.addEventListener('click', (e) => { if (e.target === eyeCards && eyeCardsDim) eyeCardsDim(); });
 
   const eyeTourCards = () => [
-    ['Plan a shoot', 'Tap + New Shoot. Each shoot gets its own pages: basic info, logistics, team, direction, visuals and a shot list.'],
+    ['Plan a shoot', 'Tap + at the top of Overview. Each shoot gets its own pages: basic info, logistics, team, direction, visuals and a shot list.'],
     ['On the day, and after', 'Tick off the shot list as you go. Afterwards, write a reflection: what went right, what could be better, and lessons for next time.'],
-    ['Your week', 'Overview shows what’s coming up. Reflections keeps the week’s log, and Archive holds the shoots you’ve done.'],
+    ['Your week', 'Overview shows what needs you today and what’s coming up. Reflections keeps the week’s log, and Archive holds the shoots you’ve done.'],
     ...(window.DF_SUITE ? [['Mood boards from Ref', 'Send a board from Ref to a shoot and it shows on that shoot’s page, kept up to date until the shoot is captured.']] : []),
     ['Keep a copy', 'Everything is saved inside the app, on this phone. Now and then, back up all data in App options.'],
   ];
@@ -19922,19 +20079,17 @@ window.EyeParts.addRenderAll = function addRenderAll(ed) {
 };
 ;
 
-// ---- pages/notices/day-after.js ----
-// The check-in the day after a shoot.
+// ---- pages/notices/report-day.js ----
+// When the app's day starts (5am, not midnight), and "a, b and c" from a list
+// of names: for the Today card, the daily report and the Monday brief.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
-window.EyeParts.addNoticesDayAfter = function addNoticesDayAfter(ed) {
+window.EyeParts.addNoticesReportDay = function addNoticesReportDay(ed) {
   Object.assign(ed, { effectiveReportDateStr, joinWithAnd });
-  // ---------- Day-after shoot check-in ----------
-  const DAY_AFTER_PROMPT_KEY = 'dailies_day_after_prompt_shown_v1'; ed.DAY_AFTER_PROMPT_KEY = DAY_AFTER_PROMPT_KEY;
-
-  // The once-per-day popups (day-after check-in, daily report) treat the
-  // "day" as not rolling over until 5am, not midnight — a user still awake
-  // at 1am is still mentally in the previous day, and shouldn't get a new
-  // day's check-in (or have last night's shoot already counted as
+  // The app's day (the Today card, the daily report, Shoot mode left on)
+  // doesn't roll over until 5am, not midnight — a user still awake
+  // at 1am is still mentally in the previous day, and shouldn't be asked
+  // about a new day's shoots (or have last night's shoot already counted as
   // "yesterday") just because the clock ticked past 12.
   function effectiveReportDateStr() {
     const d = new Date();
@@ -19961,7 +20116,6 @@ window.EyeParts.addShootModeShotList = function addShootModeShotList(ed) {
   // mode rather than a screen — once switched on it survives closing the app and
   // comes straight back on the next launch, until it's explicitly ended.
   const SHOOT_MODE_KEY = 'dailies_shoot_mode_shoot_v1';
-  const SHOOT_MODE_ASKED_KEY = 'dailies_shoot_mode_asked_v1'; ed.SHOOT_MODE_ASKED_KEY = SHOOT_MODE_ASKED_KEY;
   const shootModeOverlay = document.getElementById('shootModeOverlay'); ed.shootModeOverlay = shootModeOverlay;
 
   function getShootModeShootId() {
@@ -21681,11 +21835,13 @@ window.EyeParts.addShootModeWildCard = function addShootModeWildCard(ed) {
 ;
 
 // ---- pages/notices/shoot-day.js ----
-// On the day: picking Shoot mode up again, the prompt to start it, and the day-after check-in.
+// On the day: picking Shoot mode up again when the app opens mid-shoot.
+// (Starting it, and asking about a shoot whose day has gone by, are on the
+// Overview's Today card: pages/overview/today-card.js.)
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addNoticesShootDay = function addNoticesShootDay(ed) {
-  Object.assign(ed, { resumeShootModeIfActive, maybeShowShootModePrompt, checkDayAfterPrompt });
+  Object.assign(ed, { resumeShootModeIfActive });
   function resumeShootModeIfActive() {
     const id = ed.getShootModeShootId();
     if (!id) return false;
@@ -21702,123 +21858,6 @@ window.EyeParts.addNoticesShootDay = function addNoticesShootDay(ed) {
     }
     return ed.openShootMode(id);
   }
-
-  document.getElementById('shootModeStartBtn').addEventListener('click', () => {
-    const id = document.getElementById('shootModePromptOverlay').dataset.shootId;
-    document.getElementById('shootModePromptOverlay').hidden = true;
-    if (id) ed.openShootMode(id);
-  });
-
-  document.getElementById('shootModeSkipBtn').addEventListener('click', () => {
-    document.getElementById('shootModePromptOverlay').hidden = true;
-    // Answers the obvious follow-up — "so where did that go?" — once, rather
-    // than re-asking on every shoot day forever.
-    ed.showTabIntro('shootmode:where');
-  });
-
-  function maybeShowShootModePrompt() {
-    if (!ed.shootModeOverlay.hidden) return;
-    // Not before 5am: a shoot dated today isn't "today" yet at 1am, so this
-    // uses the same 5am-rollover day as the other once-a-day prompts. A
-    // late-night open the evening before, or a 2am open on the day itself,
-    // stays quiet until the day really starts.
-    const today = ed.effectiveReportDateStr();
-    let asked;
-    try { asked = localStorage.getItem(ed.SHOOT_MODE_ASKED_KEY); } catch (e) { asked = null; }
-    if (asked === today) return;
-
-    const shoot = ed.state.shoots.find(x => !x.archived && !ed.POST_CAPTURE_STATUSES.includes(x.status) && x.status !== 'rescheduled' && x.status !== 'canceled' && x.date === today);
-    if (!shoot) return;
-    try { localStorage.setItem(ed.SHOOT_MODE_ASKED_KEY, today); } catch (e) { /* ignore */ }
-
-    const overlay = document.getElementById('shootModePromptOverlay');
-    overlay.dataset.shootId = shoot.id;
-    document.getElementById('shootModePromptText').textContent =
-      `you're shooting ${ed.shootDisplayName(shoot)} today. Shoot mode strips the app back to just your shot list and your ${ed.moodboardTerm(shoot.category).toLowerCase()}, so you can tick shots off as you go without digging through the planner. It stays on until you end it.`;
-    overlay.hidden = false;
-  }
-
-  // The next-day check-in answers itself: a row per shoot, each with its two
-  // likely answers as buttons — "Postponed" and "Shot it" (Captured) — that
-  // update that shoot on the spot through the usual status path
-  // (applyStatusChange), and then show what it was set to. The reflection
-  // and deadline prompts stay out of it (one per row would stack over the
-  // list); the daily report's reflection reminder and the rows' "Pending:
-  // Reflection" pick a shot shoot up from there. The button under the list
-  // closes it whenever: "Not yet" while any row's still unanswered (those
-  // are asked again the next day), "Done" once they all are.
-  function checkDayAfterPrompt() {
-    const today = ed.effectiveReportDateStr();
-    let lastShown;
-    try { lastShown = localStorage.getItem(ed.DAY_AFTER_PROMPT_KEY); } catch (e) { lastShown = null; }
-    if (lastShown === today) return;
-
-    // Any shoot whose date has passed and hasn't been marked post-capture
-    // yet — not just ones from exactly yesterday, so skipping a day (or
-    // several) of opening the app doesn't silently drop the check-in for
-    // good. It still only asks once a day (the lastShown guard above), so
-    // whichever day you next open the app is the day it catches up.
-    // Postponed/canceled shoots keep their original date now, but already
-    // have their answer; a new date one's been given since is asked about
-    // like any other once it's passed (see isOriginalPlanDate).
-    const pendingShoots = ed.state.shoots.filter(s => !s.archived && !ed.POST_CAPTURE_STATUSES.includes(s.status) && !ed.isOriginalPlanDate(s) && s.date && s.date < today);
-    if (!pendingShoots.length) return;
-
-    try { localStorage.setItem(ed.DAY_AFTER_PROMPT_KEY, today); } catch (e) { /* ignore */ }
-
-    // Oldest first, each named with its date — and its day number on a
-    // multi-day project, whose days all share one name — so rows that would
-    // otherwise read the same can be told apart. Written once, here: an
-    // answer never rewrites a row's name (a day set to Postponed stops
-    // counting as a project day, which would renumber the others).
-    pendingShoots.sort((a, b) => ed.dateTimeSortKey(a).localeCompare(ed.dateTimeSortKey(b)));
-    const rowLabel = s => {
-      const info = ed.projectDayInfo(s);
-      return `${ed.shootDisplayName(s)} · ${ed.prettyDateShort(s.date)}${info ? ` · Day ${info.day}` : ''}`;
-    };
-    const plural = pendingShoots.length > 1;
-    document.getElementById('dayAfterPromptText').textContent = `Did ${plural ? 'these shoots' : 'this shoot'} happen?`;
-    document.getElementById('dayAfterList').innerHTML = pendingShoots.map(s => `
-      <div class="day-after-row" data-shoot-id="${ed.escapeHtml(s.id)}">
-        <span class="day-after-name">${ed.escapeHtml(rowLabel(s))}</span>
-        <div class="modal-actions fit-pair">
-          <button type="button" class="secondary" data-status="rescheduled">${ed.escapeHtml(ed.STATUS_LABELS.rescheduled)}</button>
-          <button type="button" class="primary" data-status="captured">Shot it</button>
-        </div>
-        <span class="day-after-result" hidden></span>
-      </div>
-    `).join('');
-    updateDayAfterCloseBtn();
-    document.getElementById('dayAfterPromptOverlay').hidden = false;
-    document.querySelectorAll('#dayAfterList .modal-actions').forEach(ed.fitButtonPair);
-  }
-
-  function updateDayAfterCloseBtn() {
-    const allAnswered = [...document.querySelectorAll('#dayAfterList .day-after-result')].every(el => !el.hidden);
-    const btn = document.getElementById('dayAfterOkBtn');
-    btn.textContent = allAnswered ? 'Done' : 'Not yet';
-    btn.className = allAnswered ? 'primary' : 'secondary';
-  }
-
-  document.getElementById('dayAfterList').addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-status]');
-    if (!btn) return;
-    const row = btn.closest('.day-after-row');
-    const status = btn.dataset.status;
-    if (ed.applyStatusChange(row.dataset.shootId, status, { followUps: false }) === null) return;
-    row.querySelector('.modal-actions').hidden = true;
-    const result = row.querySelector('.day-after-result');
-    result.textContent = `Status: ${ed.STATUS_LABELS[status]}`;
-    result.hidden = false;
-    updateDayAfterCloseBtn();
-  });
-
-  document.getElementById('dayAfterOkBtn').addEventListener('click', () => {
-    document.getElementById('dayAfterPromptOverlay').hidden = true;
-    // On a Monday the check-in holds back last week's brief, which then
-    // counts a weekend shoot just answered "Shot it".
-    ed.maybeShowMondayBrief();
-  });
 };
 ;
 
@@ -21840,7 +21879,6 @@ window.EyeParts.addNoticesDailyReport = function addNoticesDailyReport(ed) {
   // reflection asked again every 3 days, the weekly "How's editing going?",
   // delivered shoots missing final images, team and mood board nudges for
   // every shoot, and the stat of the day.
-  const DAILY_REPORT_SHOWN_KEY = 'dailies_daily_report_shown_v1'; ed.DAILY_REPORT_SHOWN_KEY = DAILY_REPORT_SHOWN_KEY;
   const DAILY_REPORT_ALL_KEY = 'dailies_daily_report_everything_v1';
   function dailyReportEverything() {
     try { return localStorage.getItem(DAILY_REPORT_ALL_KEY) === '1'; } catch (e) { return false; }
@@ -22143,7 +22181,7 @@ window.EyeParts.addNoticesFunFacts = function addNoticesFunFacts(ed) {
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(ed) {
-  Object.assign(ed, { checkDailyReportPrompt, openNotificationsBell });
+  Object.assign(ed, { openNotificationsBell });
   // A general nudge about outstanding pending items — separate from the
   // scheduled, once-per-shoot items in computeDailyReportItems() above.
   // Recomputed fresh every time the report shows (like the fun fact), so it
@@ -22321,8 +22359,8 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
       list.appendChild(row);
     }
 
-    // Only reachable via the on-demand bell — the automatic popup never
-    // calls this when everything's empty (see checkDailyReportPrompt).
+    // It only opens when asked for (the bell, Full report), so it always
+    // says something.
     if (!items.length && !nudge && !fact) {
       const row = document.createElement('div');
       row.className = 'daily-report-item daily-report-fact';
@@ -22333,88 +22371,40 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
     document.getElementById('dailyReportOverlay').hidden = false;
   }
 
-  // Distinguishes the once-a-day automatic popup from an explicit bell tap, so
-  // the follow-up "here's where to find this again" hint only fires for the
-  // former (see the close handler).
-  let dailyReportWasAutomatic = false;
-
-  function checkDailyReportPrompt() {
-    const today = ed.effectiveReportDateStr();
-    let lastShown;
-    try { lastShown = localStorage.getItem(ed.DAILY_REPORT_SHOWN_KEY); } catch (e) { lastShown = null; }
-    if (lastShown === today) return;
-
-    getTodaysDailyReportContent().then(content => {
-      // Always show once a day — if nothing is pending, it's just the fact.
-      // Only truly skip if there's none of the three (a brand-new, empty app).
-      if (!content.items.length && !content.nudge && !content.fact) return;
-      try { localStorage.setItem(ed.DAILY_REPORT_SHOWN_KEY, today); } catch (e) { /* ignore */ }
-      dailyReportWasAutomatic = true;
-      renderDailyReportOverlay(content);
-    });
-  }
-
-  // Notifications bell — same content as the Daily report, shown on demand
-  // instead of gated to once a day. Unlike the automatic popup, this always
-  // shows something (a "nothing to report" line if today's report is
-  // genuinely empty), since it's an explicit tap rather than a background check.
+  // The bell and the Today card's Full report: the daily report, shown when
+  // asked for (it used to open once a day on its own; the Today card took
+  // that over). It always shows something (a "nothing to report" line if
+  // today's report is genuinely empty).
   function openNotificationsBell() {
-    dailyReportWasAutomatic = false;
     getTodaysDailyReportContent().then(renderDailyReportOverlay);
   }
 
   document.getElementById('dailyReportCloseBtn').addEventListener('click', () => {
     document.getElementById('dailyReportOverlay').hidden = true;
-    // Only after the report showed up on its own. Pointing out the bell to
-    // someone who just tapped the bell would be telling them what they know.
-    if (dailyReportWasAutomatic) ed.showTabIntro('report:bell');
   });
 };
 ;
 
 // ---- pages/notices/monday-brief.js ----
-// The Monday brief (last week, once a week on open).
+// The Monday brief (last week, looked back on, once a week), and the app
+// starting up: the photos read in, the page shown, and what opens first.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
-  Object.assign(ed, { runOwedLaunchPopups, maybeShowMondayBrief, leaveMondayBrief, launchPopups });
-  // ---------- Monday brief (last week, once a week on open) ----------
-  // The first time the app's opened on a Monday — from 5am, the same day
-  // boundary as the daily report (effectiveReportDateStr) — a look back at
-  // last week to take into the new one: the week laid out like a page of the
-  // weekly log (its shoots and the lessons learned from each), and a nudge
-  // for any shoot still without a reflection. No counts (11-12): only the
-  // lessons go into the new week. "Last week" is Monday
-  // to Sunday, the seven days up to yesterday: the same week as the weekly
-  // log's (see daysIntoWeek).
-  // It's the last launch popup before the daily report, which follows it
-  // once it's closed, so a Monday still gets both. It's checked when the app
-  // comes back from the background too (a home-screen app is rarely
-  // launched fresh), but only with nothing else on screen.
+  Object.assign(ed, { mondayBriefDue, maybeShowMondayBrief, leaveMondayBrief, launchPopups });
+  // ---------- Monday brief (last week, once a week) ----------
+  // On a Monday — from 5am, the same day boundary as the daily report
+  // (effectiveReportDateStr) — a look back at last week to take into the new
+  // one: the week laid out like a page of the weekly log (its shoots and the
+  // lessons learned from each), and a nudge for any shoot still without a
+  // reflection. No counts (11-12): only the lessons go into the new week.
+  // "Last week" is Monday to Sunday, the seven days up to yesterday: the same
+  // week as the weekly log's (see daysIntoWeek). It no longer opens on its
+  // own: the Today card offers it until it's been read.
   const MONDAY_BRIEF_SHOWN_KEY = 'dailies_monday_brief_shown_v1';
   // A brief on its way (it shows on the next tick, see maybeShowMondayBrief),
-  // so a second check meanwhile doesn't start another.
+  // so a second tap meanwhile doesn't start another.
   let mondayBriefPending = false;
-  // The end of the launch line-up (this brief, then the daily report) when
-  // it couldn't show: something else opened while the brief was on its way,
-  // or the brief was left for a shoot. It runs once nothing's open (see
-  // syncPopupScrollLock) rather than waiting for the next launch.
-  let launchTailOwed = false;
-
-  function runOwedLaunchPopups() {
-    if (!launchTailOwed) return;
-    launchTailOwed = false;
-    // After the tap that cleared the screen has finished, in case it opens
-    // something of its own (a tab intro, say).
-    setTimeout(() => {
-      if (document.documentElement.classList.contains('update-reloading')) return;
-      if (ed.anyPopupOpen()) { launchTailOwed = true; return; }
-      // The check-in first, as at launch: its OK brings the brief.
-      ed.checkDayAfterPrompt();
-      if (!document.getElementById('dayAfterPromptOverlay').hidden) return;
-      if (!maybeShowMondayBrief()) ed.checkDailyReportPrompt();
-    }, 0);
-  }
 
   // Today's date when it's a Monday whose brief hasn't shown yet, else null.
   function mondayBriefWaiting() {
@@ -22447,10 +22437,9 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
     return { today, label: ed.weekRangeLabel(start, end), week };
   }
 
-  // Shows this Monday's brief if one's due. True when it's on its way, so
-  // the launch leaves the daily report for after it. It shows on the next
-  // tick, after the rest of the launch: an entry being written when the app
-  // went away (restoreOpenJournalEntry) opens first, and the brief waits.
+  // Shows this Monday's brief if one's due (the Today card's line). True when
+  // it's on its way. It shows on the next tick, once the tap that asked for it
+  // is done.
   function maybeShowMondayBrief() {
     if (mondayBriefPending) return true;
     if (document.documentElement.classList.contains('update-reloading')) return false;
@@ -22461,11 +22450,13 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
       mondayBriefPending = false;
       // A page an update's about to replace never shows it.
       if (document.documentElement.classList.contains('update-reloading')) return;
-      // Something opened meanwhile (an entry being restored, a shoot from
-      // the list) keeps the screen; the brief waits until it's closed.
-      if (ed.anyPopupOpen()) { launchTailOwed = true; return; }
+      // Something opened meanwhile keeps the screen; the line stays on the
+      // Today card for later.
+      if (ed.anyPopupOpen()) return;
       try { localStorage.setItem(MONDAY_BRIEF_SHOWN_KEY, brief.today); } catch (e) { /* ignore */ }
       renderMondayBrief(brief);
+      // Read now, so its line leaves the Today card.
+      ed.renderTodayCard();
     });
     return true;
   }
@@ -22526,23 +22517,14 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
     document.getElementById('mondayBriefOverlay').hidden = false;
   }
 
-  // Left for somewhere else (a shoot, the Pending reflections list): the
-  // daily report it was holding back waits until that's closed too.
+  // Left for somewhere else (a shoot, the Pending reflections list).
   function leaveMondayBrief() {
-    const overlay = document.getElementById('mondayBriefOverlay');
-    if (overlay.hidden) return;
-    overlay.hidden = true;
-    launchTailOwed = true;
+    document.getElementById('mondayBriefOverlay').hidden = true;
   }
 
-  // OK and the X: done reading, so the daily report it held back comes next
-  // (it does nothing if that's already shown today). No backdrop dismiss,
-  // like the other launch popups.
+  // OK and the X: done reading. No backdrop dismiss, like the other notices.
   ['mondayBriefOkBtn', 'mondayBriefCloseBtn'].forEach(id => {
-    document.getElementById(id).addEventListener('click', () => {
-      document.getElementById('mondayBriefOverlay').hidden = true;
-      ed.checkDailyReportPrompt();
-    });
+    document.getElementById(id).addEventListener('click', leaveMondayBrief);
   });
 
   // Nothing used to flush pending edits when the app went away, so anything
@@ -22568,19 +22550,8 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
     // brought up to date straight away rather than at its next tick.
     if (!ed.shootModeOverlay.hidden) ed.renderShootModeClock();
     // Back from the background, which is how a home-screen app mostly
-    // "opens": Monday's brief, if it hasn't shown yet and nothing else is
-    // up. Not mid-launch, where the launch popups decide. The check-in goes
-    // first, as at launch, so a weekend shoot it asks about is in the brief
-    // once it's answered (its OK brings the brief).
-    if (!document.documentElement.classList.contains('booting') && mondayBriefWaiting()) {
-      if (!ed.anyPopupOpen()) {
-        ed.checkDayAfterPrompt();
-        if (document.getElementById('dayAfterPromptOverlay').hidden) maybeShowMondayBrief();
-      } else if (!document.getElementById('bookOverlay').hidden) {
-        // Shut notebook: it comes up as soon as the book is opened.
-        launchTailOwed = true;
-      }
-    }
+    // "opens": it may be a new day, with new things for the Today card.
+    if (!document.documentElement.classList.contains('booting')) ed.renderTodayCard();
   });
   window.addEventListener('pagehide', flushPendingEdits);
   window.addEventListener('pagehide', () => ed.saveLastPlace());
@@ -22618,29 +22589,14 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
     // the app's up, so it's ready before you get there.
     setTimeout(() => { if (!ed.archiveSlideshowLoaded) ed.loadArchiveSlideshow(); }, 400);
   }); ed.launchShown = launchShown;
-  // Introductions first: on a genuinely first run this is the welcome step, and
-  // the rest of the launch popups defer so they don't stack on top of it.
+  // What opens first. Introductions first: on a genuinely first run this is
+  // the welcome step. Then Shoot mode, if it's still switched on (you're
+  // mid-shoot and want the working view), else the Overview's tip the first
+  // time. Nothing else opens on its own: what needs you is on the Today card.
   function launchPopups() {
     ed.maybeShowPhotographerPrompt();
     if (!document.getElementById('photographerModalOverlay').hidden) return;
-    // Shoot mode outranks every launch popup. If it's still switched on you're
-    // mid-shoot and want the working view, not a report; and on a shoot day the
-    // offer to enter it is the most time-sensitive thing the app can say, so it
-    // goes ahead of the daily report rather than queueing behind it.
-    if (!ed.resumeShootModeIfActive()) {
-      ed.maybeShowShootModePrompt();
-      if (document.getElementById('shootModePromptOverlay').hidden) {
-        ed.showTabIntro('overview');
-        if (document.getElementById('tabIntroOverlay').hidden) {
-          ed.checkDayAfterPrompt();
-          if (document.getElementById('dayAfterPromptOverlay').hidden) {
-            // On a Monday, last week's brief goes first and the daily
-            // report follows once it's closed.
-            if (!maybeShowMondayBrief()) ed.checkDailyReportPrompt();
-          }
-        }
-      }
-    }
+    if (!ed.resumeShootModeIfActive()) ed.showTabIntro('overview');
   }
   // Inside Documenting Fictions, the first visit's cards come before all of
   // these; they follow once the cards (and the tour, if taken) are done
@@ -24692,6 +24648,7 @@ window.EyeParts.addBand = function addBand(ed) {
   Object.assign(ed, { lookTagsOn, applyLookTags });
   // Needed from the start (only functions and fixed values, so they can run first):
   window.EyeParts.addDates(ed);
+  window.EyeParts.addRowWords(ed);
   window.EyeParts.addHelpers(ed);
   // iOS Safari only computes :active styles on elements it thinks have a
   // touch listener — this no-op unlocks tap-flash feedback app-wide.
@@ -24742,6 +24699,8 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addOverview(ed);
   window.EyeParts.addProjectsProjectPopup(ed);
   window.EyeParts.addOverviewDrawOverview(ed);
+  window.EyeParts.addOverviewTodayCard(ed);
+  window.EyeParts.addOverviewNextShoot(ed);
   window.EyeParts.addShootsShootLog(ed);
   window.EyeParts.addArchive(ed);
   window.EyeParts.addJournal(ed);
@@ -24828,7 +24787,7 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addStatsRegionsMap(ed);
   window.EyeParts.addStatsPages(ed);
   window.EyeParts.addRenderAll(ed);
-  window.EyeParts.addNoticesDayAfter(ed);
+  window.EyeParts.addNoticesReportDay(ed);
   window.EyeParts.addShootModeShotList(ed);
   window.EyeParts.addShootMode(ed);
   window.EyeParts.addShootModePages(ed);

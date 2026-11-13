@@ -21,8 +21,11 @@
   --radius-3xl: 12px;
   --radius-4xl: 14px;
   --radius-pill: 6px;
-  --dim: rgba(49, 61, 69, 0.74);
-  --line: #d6dadd;
+  /* DESIGN.md 4.1: captions and labels, the lines between rows, a part not in use, something late. */
+  --dim: #5C666D;
+  --line: #E1E1DC;
+  --off: #9AA3A8;
+  --crimson: #A1062A;
   --nb-top: max(var(--sa-top), 10px);
   --nb-bar: calc(58px + var(--sa-bottom));
   --book-shadow: 0 16px 34px rgba(60, 40, 20, 0.2), 0 3px 8px rgba(60, 40, 20, 0.14);

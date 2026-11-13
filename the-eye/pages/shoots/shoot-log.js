@@ -114,7 +114,7 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
 
     const rowsWrap = document.createElement('div');
     rowsWrap.className = 'shoot-status-rows';
-    items.forEach(item => ed.renderListItem(rowsWrap, item, { showPending: true }));
+    items.forEach(item => ed.renderListItem(rowsWrap, item, { more: true }));
 
     groupEl.appendChild(heading);
     groupEl.appendChild(rowsWrap);

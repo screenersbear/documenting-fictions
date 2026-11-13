@@ -2,7 +2,7 @@
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(ed) {
-  Object.assign(ed, { checkDailyReportPrompt, openNotificationsBell });
+  Object.assign(ed, { openNotificationsBell });
   // A general nudge about outstanding pending items — separate from the
   // scheduled, once-per-shoot items in computeDailyReportItems() above.
   // Recomputed fresh every time the report shows (like the fun fact), so it
@@ -180,8 +180,8 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
       list.appendChild(row);
     }
 
-    // Only reachable via the on-demand bell — the automatic popup never
-    // calls this when everything's empty (see checkDailyReportPrompt).
+    // It only opens when asked for (the bell, Full report), so it always
+    // says something.
     if (!items.length && !nudge && !fact) {
       const row = document.createElement('div');
       row.className = 'daily-report-item daily-report-fact';
@@ -192,40 +192,15 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
     document.getElementById('dailyReportOverlay').hidden = false;
   }
 
-  // Distinguishes the once-a-day automatic popup from an explicit bell tap, so
-  // the follow-up "here's where to find this again" hint only fires for the
-  // former (see the close handler).
-  let dailyReportWasAutomatic = false;
-
-  function checkDailyReportPrompt() {
-    const today = ed.effectiveReportDateStr();
-    let lastShown;
-    try { lastShown = localStorage.getItem(ed.DAILY_REPORT_SHOWN_KEY); } catch (e) { lastShown = null; }
-    if (lastShown === today) return;
-
-    getTodaysDailyReportContent().then(content => {
-      // Always show once a day — if nothing is pending, it's just the fact.
-      // Only truly skip if there's none of the three (a brand-new, empty app).
-      if (!content.items.length && !content.nudge && !content.fact) return;
-      try { localStorage.setItem(ed.DAILY_REPORT_SHOWN_KEY, today); } catch (e) { /* ignore */ }
-      dailyReportWasAutomatic = true;
-      renderDailyReportOverlay(content);
-    });
-  }
-
-  // Notifications bell — same content as the Daily report, shown on demand
-  // instead of gated to once a day. Unlike the automatic popup, this always
-  // shows something (a "nothing to report" line if today's report is
-  // genuinely empty), since it's an explicit tap rather than a background check.
+  // The bell and the Today card's Full report: the daily report, shown when
+  // asked for (it used to open once a day on its own; the Today card took
+  // that over). It always shows something (a "nothing to report" line if
+  // today's report is genuinely empty).
   function openNotificationsBell() {
-    dailyReportWasAutomatic = false;
     getTodaysDailyReportContent().then(renderDailyReportOverlay);
   }
 
   document.getElementById('dailyReportCloseBtn').addEventListener('click', () => {
     document.getElementById('dailyReportOverlay').hidden = true;
-    // Only after the report showed up on its own. Pointing out the bell to
-    // someone who just tapped the bell would be telling them what they know.
-    if (dailyReportWasAutomatic) ed.showTabIntro('report:bell');
   });
 };

@@ -108,7 +108,6 @@ button,
 .card,
 .shoot-row,
 .pie-slice,
-.stat-box,
 .daily-report-item {
   transition: opacity 0.1s ease;
 }
@@ -117,7 +116,6 @@ button:active,
 .card:active,
 .shoot-row:active,
 .pie-slice:active,
-.stat-box:active,
 .daily-report-item:not(.daily-report-fact):active {
   opacity: 0.55;
 }
@@ -196,9 +194,3 @@ h1, h2, h3 {
   100% { transform: translateX(260%) skewX(-20deg); }
 }
 
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 24px;
-}

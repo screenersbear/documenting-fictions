@@ -125,7 +125,7 @@ window.EyeParts.addScreenPages = function addScreenPages(ed) {
   }
 
   const SCREEN_ATOMS = {
-    overview: root => listAtoms(root, '#newShootBtn, #statsRow, .section-block:not([hidden]) .shoot-row'),
+    overview: root => listAtoms(root, '#todayCard, .section-block:not([hidden]) :is(.next-shoot, .shoot-row)'),
     shoots: root => listAtoms(root, '#shootSortToggle, #shootSortOptions, #shootList .shoot-row, #shootEmpty'),
     archive: root => listAtoms(root, '#archiveSlideshow, #archiveFilterToggle, #archiveFilters, #archiveList .shoot-row, #archiveEmpty'),
     journal: journalAtoms,

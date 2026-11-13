@@ -113,17 +113,12 @@
    headings elsewhere come up; the big text stays. Pages are packed from what's
    drawn, so this only means a little more turning. The Journal keeps its 28px
    ruled lines, so nothing there passes about 22px. */
-.stat-num { font-size: 31px; }
-.stat-label { font-size: 13.5px; }
-.section-block h2, .section-block h2.heading-yellow, .section-block h2.heading-navy { font-size: 22px; }
-.section-block h2 span { font-size: 15px; }
-.shoot-row-title, .shoot-row-compact-title { font-size: 22px; }
-.shoot-row-date-line, .shoot-row-due { font-size: 14.5px; }
-.shoot-row-status-pill, .shoot-row .badge, .badge { font-size: 13px; line-height: 18px; }
+.shoot-row-compact-title { font-size: 22px; }
+.badge { font-size: 13px; line-height: 18px; }
 .filter-toggle { font-size: 15.5px; }
 .chip { font-size: 15px; line-height: 20px; }
 h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group-heading.heading-navy { font-size: 17px; }
-.status-group-heading.archive-month-heading, .archive-month-heading.heading-yellow, .archive-month-heading.heading-navy, .upcoming-subheading { font-size: 15px; }
+.status-group-heading.archive-month-heading, .archive-month-heading.heading-yellow, .archive-month-heading.heading-navy { font-size: 15px; }
 .stats-legend-row { font-size: 15.5px; }
 #journalList h2.status-group-heading { font-size: 17px; }
 #journalList .log-week-heading { font-size: 15px; }

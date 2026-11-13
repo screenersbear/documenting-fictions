@@ -93,76 +93,72 @@ window.EyeParts.addProjectGroups = function addProjectGroups(ed) {
     return members.filter(ed.isUpcomingDeadline).map(s => s.deadline).sort()[0] || '';
   }
 
-  // One box standing in for a project's members in a list. It uses the same
-  // .shoot-row markup and classes as renderShootRow (same 96px thumb, accent
-  // strip and 120px body floor) but is filled from the project:
+  // The days a project's box spans, in its row's words: "9 to 11 Dec" while
+  // its last listed day is still ahead (or today), "Shot 9 to 11 Dec" once
+  // every listed day has passed, "Date not set" when none has a date.
+  // Postponed and canceled days are left out (their dates are only the
+  // original plan, see isOffScheduleShoot), unless every dated day is one:
+  // then it's the new dates they've been given since, if any (see
+  // isOriginalPlanDate), else "Was …" the span they were planned for.
+  function projectDateWords(members, today) {
+    const datesOf = list => list.map(s => s.date).filter(Boolean).sort();
+    let dates = datesOf(members.filter(ed.isProjectLiveShoot));
+    if (!dates.length) dates = datesOf(members.filter(s => ed.scheduledShootDate(s)));
+    if (!dates.length) {
+      const planned = datesOf(members);
+      return planned.length ? `Was ${ed.rowDateRange(planned[0], planned[planned.length - 1], today)}` : 'Date not set';
+    }
+    const range = ed.rowDateRange(dates[0], dates[dates.length - 1], today);
+    return dates[dates.length - 1] >= today ? range : `Shot ${range}`;
+  }
+
+  // One box standing in for a project's members in a list, in a shoot row's
+  // markup (renderShootRow) but filled from the project:
   // - its name, and its rep's cover (else the first member's that has one);
-  // - the date span of the members in THIS list;
-  // - a "N shoots" line in the date line's style. N counts every member,
-  //   archived ones included, so it reads the same in every list, plus
-  //   "· 2 of 3 shot" while the project is part-way through capture;
-  // - the earliest still-owed deadline, and the union of its listed members'
-  //   Pending labels.
-  // The same opts as renderShootRow switch the status pill and Pending line
-  // on or off. Title + date + count + due + one pill/badge line still fits
-  // inside the 120px min-height, so the box lines up with the shoot rows
-  // around it. Like a shoot row, it only grows when a long Pending line wraps
-  // on a narrow screen. Tapping the box, or its ⋮, opens the project popup,
-  // never one shoot; each day is reachable from there.
+  // - one line: its status (with opts.showStatus), "N shoots" (N counts every
+  //   member, archived ones included, so it reads the same in every list),
+  //   "2 of 3 shot" while it's part-way through capture, the date span of
+  //   the members in THIS list, and the earliest still-owed deadline
+  //   (crimson and written out once it's gone by);
+  // - the flags any of its listed days still has (team, mood board, proofs,
+  //   reflection), each once.
+  // Tapping the box, or its More, opens the project popup, never one shoot;
+  // each day is reachable from there.
   function renderProjectRow(container, item, opts) {
+    const o = opts || {};
     const { project, members, rep } = item;
+    const today = ed.todayStr();
+    const name = project.name || ed.UNTITLED_PROJECT_NAME;
     const allMembers = ed.projectMembers(project.id);
-    const showBadge = !opts || opts.showBadge !== false;
-    const statusKey = (showBadge && opts && opts.showStatus) ? ed.projectGroupStatusKey(members) : '';
-    const statusLabel = statusKey ? (ed.STATUS_LABELS[statusKey] || '') : '';
-    const pendingLabels = (showBadge && opts && opts.showPending)
-      ? [...new Set([].concat(...members.map(s => ed.shootPendingLabels(s))))]
-      : [];
-    const pendingText = pendingLabels.length ? `Pending: ${ed.escapeHtml(pendingLabels.join(', '))}` : '';
-    // The same per-day reminders a shoot row adds whenever its badge shows
-    // (proofs owed on a captured photo day, a reflection never written),
-    // said once for the box when any listed day has them.
-    const proofsPendingText = (showBadge && members.some(s => s.status === 'captured' && !ed.isVideoShoot(s))) ? 'Pending: Proofs' : '';
-    const reflectionPendingText = (showBadge && members.some(s => ed.POST_CAPTURE_STATUSES.includes(s.status)
-      && !ed.hasText(s.whatWentRight) && !ed.hasText(s.couldBeBetter) && !ed.hasText(s.lessonsLearned))) ? 'Pending: Reflection' : '';
-    const badgeHtml = [pendingText, proofsPendingText, reflectionPendingText].filter(Boolean).join('<br>');
-    // "· 2 of 3 shot" only while the project is part-way through capture
-    // (projectShotProgressLabel is the same test projectStatusLabel uses); a
-    // project entirely ahead or entirely shot already says so through its
-    // dates and the list it sits in.
-    const progress = ed.projectShotProgressLabel(allMembers);
-    const progressText = progress ? ` · ${progress}` : '';
-    const countText = `${allMembers.length} ${allMembers.length === 1 ? 'shoot' : 'shoots'}${progressText}`;
+    const statusKey = o.showStatus ? ed.projectGroupStatusKey(members) : '';
+    const status = statusKey ? (ed.STATUS_LABELS[statusKey] || '') : '';
+    const count = `${allMembers.length} ${allMembers.length === 1 ? 'shoot' : 'shoots'}`;
     const deadline = projectNextDeadline(members);
-    const isOverdue = !!deadline && deadline < ed.todayStr();
-    const dueHtml = deadline
-      ? `<span class="shoot-row-date-line shoot-row-due${isOverdue ? ' overdue' : ''}">Due: ${ed.prettyDateShort(deadline)}</span>`
-      : '';
-    const statusHtml = statusLabel
-      ? `<span class="shoot-row-status-pill">${ed.escapeHtml(statusLabel)}</span>`
-      : '';
+    const overdue = !!deadline && deadline < today;
+    const meta = overdue
+      ? ed.metaLine([ed.overdueWords(deadline, today), status, count])
+      : ed.metaLine([status, count, ed.projectShotProgressLabel(allMembers), o.dueOnly ? '' : projectDateWords(members, today), deadline ? ed.dueWords(deadline, today) : '']);
+    const flags = o.showBadge === false ? [] : [...new Set([].concat(...members.map(ed.shootFlagWords)))];
     const coverShoot = (rep && rep.projectPhoto) ? rep : allMembers.find(s => s.projectPhoto);
     const div = document.createElement('div');
     div.className = 'shoot-row';
     div.innerHTML = `
       ${ed.shootThumbHtml(coverShoot || {})}
       <div class="shoot-row-body">
-        <span class="shoot-row-title"><strong>${ed.escapeHtml(project.name || ed.UNTITLED_PROJECT_NAME)}</strong></span>
-        <span class="shoot-row-date-line">${ed.escapeHtml(projectDateRangeLabel(members))}</span>
-        <span class="shoot-row-date-line">${ed.escapeHtml(countText)}</span>
-        ${dueHtml}
-        ${statusHtml}
-        <span class="badge"${badgeHtml ? '' : ' hidden'}>${badgeHtml}</span>
+        <span class="shoot-row-title">${ed.escapeHtml(name)}</span>
+        <span class="shoot-row-meta${overdue ? ' overdue' : ''}">${ed.escapeHtml(meta)}</span>
+        <span class="shoot-flags"${flags.length ? '' : ' hidden'}>${ed.flagsHtml(flags)}</span>
       </div>
-      <div class="shoot-row-accent-strip">
-        <button type="button" class="row-options-btn" aria-label="Project options">&#8942;</button>
-      </div>
+      ${o.more ? ed.moreBtnHtml(name) : ''}
     `;
     div.addEventListener('click', () => ed.openProjectPopup(project.id));
-    div.querySelector('.row-options-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      ed.openProjectPopup(project.id);
-    });
+    const more = div.querySelector('.row-more-btn');
+    if (more) {
+      more.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ed.openProjectPopup(project.id);
+      });
+    }
     container.appendChild(div);
   }
 

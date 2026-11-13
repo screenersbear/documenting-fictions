@@ -15,7 +15,6 @@ window.EyeParts.addNoticesDailyReport = function addNoticesDailyReport(ed) {
   // reflection asked again every 3 days, the weekly "How's editing going?",
   // delivered shoots missing final images, team and mood board nudges for
   // every shoot, and the stat of the day.
-  const DAILY_REPORT_SHOWN_KEY = 'dailies_daily_report_shown_v1'; ed.DAILY_REPORT_SHOWN_KEY = DAILY_REPORT_SHOWN_KEY;
   const DAILY_REPORT_ALL_KEY = 'dailies_daily_report_everything_v1';
   function dailyReportEverything() {
     try { return localStorage.getItem(DAILY_REPORT_ALL_KEY) === '1'; } catch (e) { return false; }
