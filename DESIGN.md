@@ -65,17 +65,29 @@ The originals are in `~/Documents/ref, do something/art/graphic design/app desig
 ### 4.2 The notebook colours
 
 Each notebook has an app colour, picked in its Options. Starky decided (D3) to **retune them toward the reference board**.
-The new values are Proposed until Starky has seen them side by side (mockup).
 
-| Name | Live now | Proposed retune | From | Text on the new one |
+**Each colour leads, with a partner in support (Decided, 2026-11-13).** Starky: the black is "a real pair for the yellow, not a
+pair for a bunch of other colors". So the notebook's colour fills the band, the way berry blade black does for The Eye today,
+and each colour gets its own partner to play the support part: the title, the buttons, the line and the mark.
+
+- The partner must be at least 3:1 on the band colour (big title, buttons, marks).
+- Small text (the label line) uses the partner only when it is at least 4.5:1; otherwise white or berry blade black, whichever
+  passes.
+
+The values below are Proposed until Starky has seen them side by side (canvas board "Seven pairs").
+
+| Name | Live now | Band colour (proposed) | Partner | Small text |
 |---|---|---|---|---|
-| `orange` | `#EC701E` | `#F05A1A` vermilion orange | refs 1, 5 | white, big text only (3.4:1); no small text on it |
-| `mango` | `#FFD100` | `#FFD100`, unchanged (already the card's yellow) | ref 1 | berry blade black |
-| `berry` | `#BF0B83` | `#CC2E8A` orchid pink | ref 2 | white (4.9:1) |
-| `fern` | `#2E7A55` | `#13803F` print green | refs 5, 6 | white |
-| `ocean` | `#245CAA` | `#0A4FD6` cobalt | refs 2, 7 | white |
-| `leaf` | `#2F9A55` | `#14BFA0` teal | refs 2, 3 | berry blade black (4.8:1); white fails |
-| `ink` | `#313D45` | `#313D45`, unchanged (berry blade black) | — | white or mango |
+| `orange` | `#EC701E` | `#FF8A3D` tangerine (the darker vermilion `#F05A1A` could carry no small text at all) | berry blade black, 4.8:1 | berry blade black |
+| `mango` | `#FFD100` | `#FFD100`, unchanged | berry blade black, 7.6:1 | berry blade black |
+| `berry` | `#BF0B83` | `#CC2E8A` orchid pink | chartreuse `#E2E600`, 3.6:1 | white, 4.9:1 |
+| `fern` | `#2E7A55` | `#13803F` print green | mango `#FFD100`, 3.4:1 | white, 5.0:1 |
+| `ocean` | `#245CAA` | `#0A4FD6` cobalt | salmon `#FFAFAB`, 3.9:1 (ref 7) | white, 6.8:1 |
+| `leaf` | `#2F9A55` | `#14BFA0` teal | crimson `#A1062A`, 3.5:1 | berry blade black, 4.8:1 |
+| `ink` | `#313D45` | `#313D45`, unchanged | mango `#FFD100`, 7.6:1 | paper |
+
+With this rule, The Eye's band depends on its colour. Mango, its default, gives a mango band with berry blade black. Ink gives
+today's berry blade black band with a mango title.
 
 Note: each notebook's cover and edge on the shelf are pictures made per colour (`<app>/art/<colour>-cover.webp` and
 `-block.webp`). New colours need new pictures for all four notebooks.
@@ -83,7 +95,7 @@ Note: each notebook's cover and edge on the shelf are pictures made per colour (
 ### 4.3 Mark colours (Live for marks once built)
 
 Marks, patterns and illustrations may also use these, taken from the board. Chrome (bands, buttons) uses only the notebook
-colours.
+colours and their partners (4.2).
 
 | Brights | Hex | | Tints | Hex |
 |---|---|---|---|---|
@@ -167,7 +179,7 @@ Building rules:
 - At most one dark shape (berry blade black, forest or cobalt) per mark.
 - Corners stay consistent within a mark: all square, or all at radius 2.
 
-## 7. Marks (Decided: everywhere; the designs are Proposed until the mockup)
+## 7. Marks (Decided: everywhere, and the designs below, 11-13: "the marks look great")
 
 Starky chose marks for all four places (D8):
 
@@ -178,7 +190,7 @@ Starky chose marks for all four places (D8):
 | Empty screens | the section's mark, big, with one line under it |
 | Loading and progress | a progression: bars or dots filling in order, like ref 4 |
 
-Starting ideas for the app marks, to be mocked up:
+The app marks (drawn on the canvas board "App marks and icons"):
 
 | App | Idea |
 |---|---|
@@ -201,9 +213,17 @@ Starting ideas for the app marks, to be mocked up:
 ## 9. Layout
 
 - **Phone first.** 16px side gutter. Nothing scrolls sideways.
-- **The band (Live):** a band of colour across the top. The Eye's is berry blade black with a mango title; the others are in
-  their app colour with a white title (berry blade black on light colours). Its title moves to the **left** (Decided, D10).
-  Its **shape** is Proposed: straight, or notched tags and frames like ref 7. Starky asked to see both (D11).
+- **The band.** Live today, it's a band of colour across the top. The Eye's is berry blade black with a mango title; the
+  others are in their app colour with a white title (berry blade black on light colours).
+  - **Colour (Decided, 11-13):** the notebook's colour fills the band and its partner carries everything on it (4.2).
+  - **Title:** on the left (Decided, D10).
+  - **Layout (Proposed, the direction Starky picked from the canvas, "Band, take two"):**
+    - a solid band, then four flat steps of the band colour fading into the paper (each step shorter than the one before);
+    - a big light title in capitals;
+    - the buttons in thin rings;
+    - a label line with a tiny mark, the app's name, a hairline and the date;
+    - the notebook's mark rising from the band's bottom edge at the lower right, only its top half showing.
+  - **What Starky said about the tries:** stripped-down versions looked generic, and the busier ones looked designed.
 - **Specimen grid (Decided with the marks):** a list of things shown as objects is a grid of equal tiles: object, a label,
   then the name, all left-aligned (refs 2, 3, 4).
 - **Plain pages once a notebook is open (Live):** no paper lines, stitching or ruled paper. The warm paper ground (D1) is a
@@ -254,8 +274,11 @@ Starting ideas for the app marks, to be mocked up:
 | D8 | Marks | Everywhere: app icons + shelf, section tabs, empty screens, loading + progress |
 | D9 | Handwriting | Retire Klee One |
 | D10 | Band titles | Left-aligned |
-| D11 | Band shape | Show both (straight and notched) before deciding |
+| D11 | Band shape | Neither tag nor frame. The "take two" band (9) is the direction |
+| — | Band colour | The notebook colour leads, and a partner colour supports it (4.2) |
 | — | App mark ideas | Mock them up before settling |
 
-Still open: the band shape (D11), the app marks (section 7), the retuned colour values (4.2) and the exact type sizes (5.1).
-All four are on the mockup canvas "STKY look mockups" (https://claude.ai/artifact/YDz11YGa9iKqPgNNNcoWrP), waiting on Starky.
+Starky likes the app marks in section 7 ("the marks look great").
+
+Still open: the colour pairs (4.2), the band layout details (9) and the exact type sizes (5.1). They're on the mockup canvas
+"STKY look mockups" (https://claude.ai/artifact/YDz11YGa9iKqPgNNNcoWrP), waiting on Starky.
