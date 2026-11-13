@@ -4,8 +4,8 @@
   "description": "Four notebooks for a photographer: ref, do something, The Eye, Contact Sheet and Overthoughts.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#FAFAF7",
+  "theme_color": "#FAFAF7",
   "orientation": "portrait",
   "icons": [
     { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },

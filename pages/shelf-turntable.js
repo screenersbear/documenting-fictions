@@ -92,6 +92,7 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
     // Which book is in front of which, 1 to 4: that only changes as two of
     // them pass, so the shelf is restacked then and not on every frame of a turn.
     order.map((o, i) => i).sort((a, b) => order[a] - order[b]).forEach((i, r) => { if (ed.near !== i) stack(i, String(r + 1)); });
+    if (ed.caption) ed.caption(); // the name under the shelf (pages/shelf-caption.js)
   }
   // A finger moving the books: drawn once a frame, however often it reports.
   let soon = 0;

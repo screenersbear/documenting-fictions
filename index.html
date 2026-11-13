@@ -6,7 +6,7 @@
 <title>Documenting Fictions</title>
 
 <link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#ffffff" />
+<meta name="theme-color" content="#FAFAF7" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <!-- Kept as it was: changing it on the installed app means installing it again, which loses its data. -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -35,10 +35,15 @@
 </head>
 <body>
 <main class="shelf" id="shelf" aria-label="Your notebooks">
+  <h1 class="shelf-title">Documenting Fictions</h1>
   <div class="stage" id="stage"></div>
-  <!-- The bar under the books: the film roll, which brings the notebook in front up close with its colour, its stickers (components/stickers.js) and Back up all four (components/backup-sheet.js). -->
+  <!-- Under the books (pages/shelf-caption.js): the name of the one in front, a line about it, a dot for each,
+       and Options, which brings it up close with its colour, its stickers (components/stickers.js) and Back up all four (components/backup-sheet.js). -->
   <div class="shelf-bar" id="shelfBar">
-    <button type="button" class="logo-btn" id="logoBtn"></button>
+    <p class="front-name" id="frontName"></p>
+    <p class="front-line" id="frontLine"></p>
+    <div class="front-dots" id="frontDots" aria-hidden="true"></div>
+    <button type="button" class="ring-btn" id="optionsBtn"></button>
   </div>
 </main>
 <!-- What it does: the scripts listed in files.txt, joined in order into one file. -->

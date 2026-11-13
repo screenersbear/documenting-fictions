@@ -1,22 +1,25 @@
-/* Up close (the film roll): the book in front on its own, the others gone. */
+/* Up close (Options): the book in front on its own, the others gone. */
 .slot.nearing { transition: transform 560ms cubic-bezier(.4, 0, .2, 1); }
 .stage.near .slot:not(.near) :is(.face, .spine, .top, .edge, .tab, .lip, .ground, .sticker-flap) { opacity: 0 !important; transition: opacity .3s; }
 .stage.unnear .slot :is(.face, .spine, .top, .edge, .tab, .lip, .ground, .sticker-flap) { transition: opacity .3s; }
 
-/* The bar under the books: a roll of film, which brings the notebook in
-   front up close with its options (colour, stickers, Back up all four). Its icon's middle sits where an
-   iPhone's home button used to be (user, 11-12): the bottom safe area + 6px,
-   30px at least, above the screen's edge, the same in all four notebooks. */
-.shelf-bar { position: absolute; left: 50%; bottom: max(8px, calc(var(--safe-b) - 16px)); display: flex; align-items: center; transform: translateX(-50%); touch-action: none; user-select: none; -webkit-user-select: none; transition: opacity .3s; }
-.logo-btn { width: 44px; height: 44px; border: 0; padding: 10px; background: none; color: #334045; cursor: pointer; }
-.logo-btn svg { display: block; width: 100%; height: 100%; }
+/* Under the books (pages/shelf-caption.js): the front book's name and a line
+   about it, a dot for each notebook, and the Options ring button, over the
+   bottom safe area (DESIGN.md 9.8). */
+.shelf-bar { position: absolute; left: 16px; right: 16px; bottom: max(16px, var(--safe-b)); display: flex; flex-direction: column; align-items: center; text-align: center; pointer-events: none; user-select: none; -webkit-user-select: none; transition: opacity .3s; } /* a swipe over the words still turns the shelf */
+.front-name { min-height: 16px; margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .14em; line-height: 16px; text-transform: uppercase; } /* min-heights: app.js places the books from the bar before the words are in */
+.front-line { min-height: 22px; margin: 4px 0 0; font-size: 17px; font-weight: 300; line-height: 22px; color: var(--dim); }
+.front-dots { display: flex; gap: 8px; margin-top: 28px; }
+.front-dots span { width: 6px; height: 6px; border-radius: 3px; background: #D6DADD; transition: width .2s, background-color .2s; }
+.front-dots span.on { width: 18px; background: var(--text); }
+.shelf-bar .ring-btn { margin-top: 48px; pointer-events: auto; }
 .shelf.away .shelf-bar { opacity: 0; pointer-events: none; }
 /* The iPhone home-screen app (components/screen-fit.js): for a moment the page is
    taller than the screen, so iOS measures itself again. If it stays short,
-   the bar comes down by that much less: its icon then sits as in the notebooks. */
+   the bar comes down by that much less. */
 html.ios-nudge, html.ios-hold { overflow-x: clip; overflow-y: visible; }
 html.ios-nudge body, html.ios-hold body { height: auto; min-height: calc(var(--screen-h, 100vh) + 160px); overflow-x: clip; overflow-y: visible; }
-html.is-short .shelf-bar { bottom: max(8px, calc(var(--safe-b) - 16px - var(--short-by, 0px))); }
+html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by, 0px))); }
 /* Installed, the bar shows once iOS has its height right (components/screen-fit.js
    adds .settled), so it never shows high and then drops. */
 @media (display-mode: standalone) { html:not(.settled) .shelf-bar { opacity: 0; pointer-events: none; } }

@@ -1,9 +1,10 @@
-/* The sheet's words and buttons. */
-.sheet h2 { margin: 0 0 8px; font-size: 21px; font-weight: 600; }
+/* The sheet's words and buttons: the title in section type, buttons in
+   button type (DESIGN.md 5.1, 9.5). */
+.sheet h2 { margin: 0 0 8px; font-size: 13px; font-weight: 700; letter-spacing: .12em; line-height: 16px; text-transform: uppercase; }
 .sheet p { margin: 0 0 16px; font-size: 15px; line-height: 1.45; }
 .sheet .sheet-note { margin: 12px 0 0; text-align: center; }
-.sheet-btn { display: block; width: 100%; margin-top: 10px; padding: 13px; border: 1.5px solid #334045; border-radius: 12px; background: #fff; color: #334045; font: inherit; font-size: 16px; cursor: pointer; }
-.sheet-btn.primary { background: #334045; color: #fff; }
-.sheet-btn.danger { background: #b3261e; border-color: #b3261e; }
-.sheet-btn.plain { border-color: transparent; }
+.sheet-btn { display: block; width: 100%; height: 48px; margin-top: 8px; padding: 0 12px; border: 0; border-radius: 8px; background: none; box-shadow: inset 0 0 0 1.5px var(--text); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+.sheet-btn.primary { background: var(--text); box-shadow: none; color: var(--paper); }
+.sheet-btn.danger { background: #A1062A; }
+.sheet-btn.plain { box-shadow: none; }
 .sheet-btn:disabled { opacity: .6; }

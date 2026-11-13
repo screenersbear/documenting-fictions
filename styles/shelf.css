@@ -1,18 +1,22 @@
-/* Documenting Fictions: the shelf. The four notebooks float shut on white on a
+/* Documenting Fictions: the shelf. The four notebooks float shut on paper on a
    turntable; swipe to bring one round, tap it to open it. */
-@font-face { font-family: "Klee One"; src: url("../ref/fonts/klee-one-latin.woff") format("woff"); font-display: block; }
 
 :root {
   --text: #313d45; /* berry blade black */
+  --paper: #FAFAF7;
+  --dim: #5C666D;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: #fff; color: var(--text); overflow: hidden; overscroll-behavior: none; }
-body { font-family: "Klee One", "Bradley Hand", "Noteworthy", cursive; }
+html, body { margin: 0; height: 100%; background: var(--paper); color: var(--text); overflow: hidden; overscroll-behavior: none; }
+body { font-family: "Figtree", "Helvetica Neue", Arial, sans-serif; }
 button { font: inherit; color: inherit; }
 
-.shelf { position: fixed; inset: 0; overflow: hidden; background: #fff; padding-top: var(--safe-t); } /* (the padding only tells app.js where the top is) */
+.shelf { position: fixed; inset: 0; overflow: hidden; background: var(--paper); padding-top: var(--safe-t); } /* (the padding only tells app.js where the top is) */
+/* The quiet title, top left. */
+.shelf-title { position: absolute; left: 16px; top: max(16px, calc(var(--safe-t) + 7px)); margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .16em; line-height: 16px; text-transform: uppercase; pointer-events: none; transition: opacity .3s; }
+.shelf.away .shelf-title { opacity: 0; }
 .stage {
   --W: 242px; --H: calc(var(--W) * 1.36); --T: calc(var(--W) * 0.19); --y: 60%;
   position: absolute; inset: 0; perspective: 1100px; perspective-origin: 50% 40%;
@@ -41,14 +45,14 @@ button { font: inherit; color: inherit; }
 .spine::after { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, .22); }
 /* The first page, under the cover: the notebook's own page art, white inside a rim of the cover. */
 .page { background: #fff var(--block) center / 100% 100% no-repeat; transform: translateZ(calc(var(--T) / 2 - 1px)); }
-.tab { left: calc(var(--W) * .975); border-radius: 0 calc(var(--W) * .03) calc(var(--W) * .03) 0; display: flex; align-items: center; justify-content: center; }
-.tab span { writing-mode: vertical-rl; font-size: calc(var(--W) * .043); white-space: nowrap; transform: translateX(calc(var(--W) * .006)); letter-spacing: .01em; pointer-events: none; }
+.tab { left: calc(var(--W) * .975); border-radius: 0 calc(var(--W) * .03) calc(var(--W) * .03) 0; display: flex; align-items: center; justify-content: center; background: var(--text); color: var(--paper); }
+.tab.light { background: var(--c25); color: var(--text); } /* the light step of the book's colour (components/colors.js) */
+.tab span { writing-mode: vertical-rl; font-size: calc(var(--W) * .04); font-weight: 600; white-space: nowrap; transform: translateX(calc(var(--W) * .006)); letter-spacing: .02em; pointer-events: none; }
 
 /* The cover swings open on the spine. */
 .leaf { left: 0; top: 0; width: 100%; height: 100%; transform-style: preserve-3d; transform-origin: 0 50%; transform: translateZ(calc(var(--T) / 2)) rotateY(0deg); }
 .slot.opening .leaf { transition: transform var(--open-ms, 900ms) cubic-bezier(.45, .05, .3, 1); }
 .slot.open .leaf { transform: translateZ(calc(var(--T) / 2)) rotateY(-178deg); }
-.front { background: var(--c) var(--cover) center / 100% 100% no-repeat; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .inside { background: #fff; border-radius: calc(var(--W) * .035) 0 0 calc(var(--W) * .035); transform: rotateY(180deg) translateZ(.5px); backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: inset 0 0 0 calc(var(--W) * .012) var(--c); }
 .fog { background: #fff; transform: translateZ(.6px); pointer-events: none; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .lip { top: calc(var(--W) * .035); height: calc(var(--H) - var(--W) * .07); width: calc(var(--W) * .012); left: calc(var(--W) * .994); transform: translateZ(calc(var(--W) * -.006)) rotateY(90deg); background: var(--c); filter: brightness(.82); }

@@ -3,13 +3,15 @@
 window.ShelfParts = window.ShelfParts || {};
 window.ShelfParts.addOptions = function addOptions(ed) {
   'use strict';
-  Object.assign(ed, { paintStickers, paint });
-  // The film roll (user, 11-12): the notebook in front comes up close, on its
-  // own, the way each notebook floated when it was its own app, with its
-  // options under it: its colour (the book changes as you pick) and stickers
-  // for its cover. Back up all four is there too.
-  ed.logoBtn.setAttribute('aria-label', 'Options for the notebook in front');
+  Object.assign(ed, { paintStickers });
+  // Options (the ring button under the shelf): the notebook in front comes up
+  // close, on its own, with its options under it: its colour (the book
+  // changes as you pick) and stickers for its cover. Back up all four is
+  // there too.
   const NEAR_MS = 560;
+  const glyph = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const CLOSE = glyph('<path d="M6 6l12 12M18 6L6 18"/>');
+  const TRASH = glyph('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>');
   const nearSlot = () => ed.slots[ed.near];
   // As big as fits above `bottom` (px down the screen), in the middle of the
   // room there, no wider than the notebooks were on their own.
@@ -60,7 +62,7 @@ window.ShelfParts.addOptions = function addOptions(ed) {
     const St = window.DFStickers;
     const dim = document.createElement('div');
     dim.className = 'sheet-dim near';
-    dim.innerHTML = `<div class="sheet opts" role="dialog" aria-modal="true" aria-label="${b.short} options"></div>`;
+    dim.innerHTML = `<div class="sheet opts" role="dialog" aria-modal="true" aria-label="Options for ${b.short}"></div>`;
     const sheet = dim.firstElementChild;
     let shown = 'main';
     const drawMain = () => {
@@ -68,15 +70,16 @@ window.ShelfParts.addOptions = function addOptions(ed) {
       const now = ed.colorOf(b);
       const mine = St ? St.list(b.id) : [];
       sheet.innerHTML = `
-        <span class="opt-label">App color</span>
-        <div class="opt-colors" style="--n:${b.colors.length}">${b.colors.map(([k, name]) => `<button type="button" class="opt-color" data-color="${k}" aria-pressed="${k === now}"><span class="opt-book" style="background-image:url('${b.cover(k)}')"></span><span>${name}</span></button>`).join('')}</div>
-        ${St ? `<span class="opt-label">Stickers</span>
+        <div class="sheet-head"><h2>${b.short}</h2><button type="button" class="ring-btn" data-close aria-label="Close"><span>${CLOSE}</span></button></div>
+        <span class="opt-label" id="optColorLabel">Notebook color</span>
+        <div class="opt-colors" role="radiogroup" aria-labelledby="optColorLabel">${b.colors.map((k) => `<button type="button" class="opt-color" role="radio" data-color="${k}" aria-checked="${k === now}" style="--sw:${ed.COLORS[k].band};--sp:${ed.COLORS[k].partner}"><span class="opt-swatch"></span><span>${ed.COLORS[k].name}</span></button>`).join('')}</div>
+        ${St ? `<span class="opt-label">Add a sticker</span>
         <div class="sticker-kinds">
           <button type="button" class="sticker-kind" data-shape="circle"><span class="shape circle"></span><span>Circle</span></button>
           <button type="button" class="sticker-kind" data-shape="square"><span class="shape square"></span><span>Square</span></button>
           <button type="button" class="sticker-kind" data-shape="rect"><span class="shape rect"></span><span>Rectangle</span></button>
         </div>
-        ${mine.length ? '<button type="button" class="sheet-btn" data-remove>Remove a sticker</button>' : ''}` : ''}
+        ${mine.length ? `<button type="button" class="text-btn" data-remove>${TRASH}Remove a sticker</button>` : ''}` : ''}
         <div class="opt-foot"><button type="button" class="sheet-btn" data-backup>Back up all four</button><button type="button" class="sheet-btn primary" data-close>Done</button></div>`;
     };
     const drawRemove = () => {
@@ -84,6 +87,7 @@ window.ShelfParts.addOptions = function addOptions(ed) {
       const mine = St.list(b.id);
       if (!mine.length) { drawMain(); return; }
       sheet.innerHTML = `
+        <div class="sheet-head"><h2>Remove a sticker</h2></div>
         <span class="opt-label opt-hint">Tap one to take it off</span>
         <div class="sticker-list">${[...mine].reverse().map((s) => `<button type="button" class="sticker-pick ${s.shape}" style="--r:${St.ratioOf(s)}" data-id="${s.id}" aria-label="Remove this sticker"><img src="${St.thumb(s)}" alt="" /></button>`).join('')}</div>
         <div class="opt-foot one"><button type="button" class="sheet-btn primary" data-back>Done</button></div>`;
@@ -107,7 +111,7 @@ window.ShelfParts.addOptions = function addOptions(ed) {
       const c = e.target.closest('[data-color]');
       if (c) {
         setColor(i, c.dataset.color);
-        sheet.querySelectorAll('[data-color]').forEach((x) => x.setAttribute('aria-pressed', String(x === c)));
+        sheet.querySelectorAll('[data-color]').forEach((x) => x.setAttribute('aria-checked', String(x === c)));
         return;
       }
       if (e.target.closest('[data-remove]')) { drawRemove(); nearFit(sheet.offsetTop); nearMove(); return; }
@@ -146,7 +150,7 @@ window.ShelfParts.addOptions = function addOptions(ed) {
       }
     });
   }
-  ed.logoBtn.addEventListener('click', openNear);
+  ed.optionsBtn.addEventListener('click', openNear);
 
   // A notebook's colour, picked on the shelf: kept where that notebook reads
   // it, and its book here repainted. The Eye keeps its colour with the rest of
@@ -165,12 +169,6 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         }
       } catch (e) { /* it keeps its own colour */ }
     }
-    paint(i);
-  }
-  function paint(i) {
-    const b = ed.BOOKS[i], c = ed.colorOf(b);
-    ed.slots[i].style.setProperty('--c', ed.COLORS[c]);
-    ed.slots[i].style.setProperty('--cover', ed.artUrl(b.cover(c)));
-    ed.slots[i].style.setProperty('--block', ed.artUrl(b.block(c)));
+    ed.paint(i);
   }
 };
