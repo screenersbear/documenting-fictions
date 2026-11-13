@@ -3850,12 +3850,6 @@ h2.status-group-heading.heading-navy {
   display: none;
 }
 
-/* "Leave the guide?" — the two answers stacked full width, so "Go to shoot
-   page" reads on one line instead of wrapping inside a half-width button. */
-#shootWizardLeaveActions {
-  flex-direction: column;
-}
-
 /* ---- styles/concept-helper.css ---- */
 /* ---- Concept helper ("Need to think it through?") ---- */
 .concept-helper-modal #conceptHelperText {
@@ -6320,8 +6314,8 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
    in the round 2 look, which use Figtree's own weights (the band, the section
    bar, Overview, Shoots, the Archive, Reflections, the shoot rows, a
    shoot's front page); this goes once every screen is. */
-body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, .tabbar *, #view-overview *, .shoot-row *, #view-shoots *, #view-archive *, #view-journal *, .log-card *, .shoot-band *, #shootFront *, #shootNext *) { font-weight: 400 !important; }
-:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, #view-overview *, #view-shoots *, #view-archive *, #view-journal *, .log-card *, .shoot-band *, #shootFront *, #shootNext *) { text-shadow: 0 0 0.6px; }
+body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, .tabbar *, #view-overview *, .shoot-row *, #view-shoots *, #view-archive *, #view-journal *, .log-card *, .shoot-band *, #shootFront *, #shootNext *, .guide-chrome *, #shootForm > .shoot-section-heading, #postShootContent > .shoot-section-heading) { font-weight: 400 !important; }
+:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, #view-overview *, #view-shoots *, #view-archive *, #view-journal *, .log-card *, .shoot-band *, #shootFront *, #shootNext *, .guide-chrome *, #shootForm > .shoot-section-heading, #postShootContent > .shoot-section-heading) { text-shadow: 0 0 0.6px; }
 
 /* The button in a page's top right corner that swaps a shoot and its summary. */
 .nb-corner-btn { position: absolute; z-index: 2; top: 6px; right: 8px; min-height: 0; height: auto; width: auto; padding: 4px 12px; border: none; border-radius: 3px; background: var(--text); color: #fff; font-family: var(--font-body); font-size: 14px; line-height: 20px; letter-spacing: 0; text-transform: none; }
@@ -6786,7 +6780,7 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
    team questions, which are questions. Not in the parts already in the
    round 2 look (the band, Overview, Shoots, the Archive, Reflections), whose
    titles are Figtree's. */
-:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .moodboard-label, .app-menu-header, .stats-region-heading, #shootModeReviewTitle, #mondayBriefTitle):not(#projectDetailTitle, #shootModeTitle, #journalViewTitle, .journal-entry-title, .shoot-mode-review-setup-name, .modal-title-jump-wrap, .band *, #view-overview *, #view-shoots *, #view-archive *, #view-journal *, .log-card *, .shoot-band *, #shootFront *, #shootNext *) {
+:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .moodboard-label, .app-menu-header, .stats-region-heading, #shootModeReviewTitle, #mondayBriefTitle):not(#projectDetailTitle, #shootModeTitle, #journalViewTitle, .journal-entry-title, .shoot-mode-review-setup-name, .modal-title-jump-wrap, .band *, #view-overview *, #view-shoots *, #view-archive *, #view-journal *, .log-card *, .shoot-band *, #shootFront *, #shootNext *, .guide-chrome *, #shootForm > .shoot-section-heading, #postShootContent > .shoot-section-heading) {
   font-family: var(--head) !important; font-weight: 500; text-transform: uppercase !important; letter-spacing: .08em !important; text-shadow: none;
 }
 :is(#appMenuOverlay, #sunMenuOverlay) .opt-sheet-head .app-menu-header { font-family: var(--head); font-weight: 500; text-transform: uppercase; letter-spacing: .08em; text-shadow: none; }
@@ -6958,7 +6952,7 @@ html:not(.df-suite) .band-books { display: none; }
 
 /* 2: headings on the page, and the titles of sheets (not on the screens
    already in the round 2 look: styles/list-head.css, reflections.css). */
-:is(.shoot-section-heading, .status-group-heading, .log-week-heading, .stats-page-title, .modal h2, .app-menu-header, .shoot-wizard-head h2, .shoot-mode-review h2):not(#df-x):not(#df-y):not(#view-shoots *, #view-archive *, #view-journal *, .log-card *, #shootFront *), :is(#shootModeReviewTitle, #mondayBriefTitle):not(#df-x) {
+:is(.shoot-section-heading, .status-group-heading, .log-week-heading, .stats-page-title, .modal h2, .app-menu-header, .shoot-wizard-head h2, .shoot-mode-review h2):not(#df-x):not(#df-y):not(#view-shoots *, #view-archive *, #view-journal *, .log-card *, #shootFront *, .guide-chrome *, #shootForm > .shoot-section-heading, #postShootContent > .shoot-section-heading), :is(#shootModeReviewTitle, #mondayBriefTitle):not(#df-x) {
   font-family: var(--display) !important; font-weight: 400 !important; font-size: 18px; line-height: 1.25; letter-spacing: .02em !important;
 }
 .shoot-wizard-head h2:not(#df-x):not(#df-y) { font-size: 22px; }
@@ -7404,3 +7398,115 @@ button.front-card { cursor: pointer; }
 .report-thumb { display: block; width: 100%; height: auto; min-height: 0; aspect-ratio: 4 / 5; margin: 0; padding: 0; border: 0; border-radius: 8px; overflow: hidden; background: #EFEFEA; cursor: zoom-in; }
 .report-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .report-finals .front-see-all { width: auto; min-height: 0; margin: 8px 4px 0; padding: 0; border: 0; background: none; color: var(--text); cursor: pointer; }
+
+/* ---- styles/guide-page.css ---- */
+/* The new shoot guide as a page of its own (round 2, 09-guide-team): the
+   compact band with Back and Skip, the seven chapter marks, the chapter's
+   title and question, its fields, and Done for now / Next at the foot.
+   After new-shoot-wizard.css, which it reframes; the fields keep the page's
+   own styles. */
+#shootWizard {
+  display: block; padding: 0; background: var(--paper); touch-action: auto;
+}
+#shootWizard[hidden] { display: none; }
+#shootWizardCard {
+  --shoot-side: max(var(--page-side, 16px), calc(50% - 280px));
+  display: flex; flex-direction: column; width: 100%; max-width: none; height: 100%; max-height: none;
+  box-sizing: border-box; padding: 0; border: 0; border-radius: 0; background: var(--paper); overflow: hidden; animation: none;
+}
+
+/* The band: Back at the left, Skip at the right. */
+#shootModalOverlay #shootWizardCard .guide-band { margin: 0 0 18px; }
+#shootWizardBackBtn { left: 8px; }
+.guide-skip {
+  position: absolute; right: 8px; top: calc(var(--nb-top) + 6px); width: auto; height: 44px; min-height: 0; margin: 0; padding: 0 12px;
+  border: 0; background: none; color: var(--partner); font: 700 12px/16px var(--ui); letter-spacing: .14em; text-transform: uppercase; cursor: pointer;
+}
+.guide-skip[hidden] { display: none; }
+
+.guide-scroll {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  padding: 14px var(--shoot-side) 32px;
+}
+
+/* Chapter marks: done = solid 14px, this one = 22px with a mango dot, still
+   to come = open 13px ring. The line is ink up to this chapter. */
+.guide-marks { display: flex; align-items: center; margin: 0 0 22px; }
+.guide-mark { flex: none; box-sizing: border-box; width: 13px; height: 13px; border: 1.5px solid #9AA3A8; border-radius: 50%; }
+.guide-mark.done { width: 14px; height: 14px; border: 0; background: #313D45; }
+.guide-mark.now { position: relative; width: 22px; height: 22px; border: 0; background: #313D45; }
+.guide-mark.now::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: var(--accent); }
+.guide-line { flex: 1 1 auto; height: 1px; background: var(--line); }
+.guide-line.inked { height: 1.5px; background: #313D45; }
+
+/* The chapter's own words. */
+#shootWizardCard .shoot-wizard-head { text-align: left; }
+#shootWizardCard .guide-chapter { margin: 0 0 6px; font: 700 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+#shootWizardCard .shoot-wizard-head h2 {
+  margin: 0 0 8px; font: 300 30px/36px var(--ui) !important; letter-spacing: 0; text-transform: none; color: var(--text); text-shadow: none;
+}
+#shootWizardCard .shoot-wizard-head #shootWizardHint { margin: 0 0 22px; font: 400 17px/24px var(--ui); color: var(--dim); }
+#shootWizardBody { flex: none; min-height: 0; overflow: visible; margin: 0 -3px; }
+.guide-part-head { margin: 10px 0 -4px; }
+#shootWizardBody .guide-part-head:first-child { margin-top: 0; }
+.guide-part-head .guide-part-title { margin: 0; font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.guide-part-head .guide-part-hint { margin: 4px 0 0; font: 400 15px/21px var(--ui); color: var(--dim); }
+#shootWizardCard #shootWizardDontShowBtn { margin: 24px 0 0; }
+
+/* Done for now (outline) and Next (mango), always at the foot. */
+#shootWizardCard .guide-bar {
+  flex: none; display: flex; gap: 10px; margin: 0; padding: 10px var(--shoot-side) calc(12px + var(--sa-bottom, env(safe-area-inset-bottom)));
+  border-top: 1px solid var(--line); background: var(--paper);
+}
+#shootWizardCard .guide-bar button {
+  flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 48px; min-height: 0; margin: 0; padding: 0 12px;
+  border-radius: 8px; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; cursor: pointer;
+}
+#shootWizardCard .guide-bar button[hidden] { display: none; }
+#shootWizardCard #shootWizardExitBtn { border: 2px solid var(--text); background: none; color: var(--text); }
+#shootWizardCard .guide-next { flex-grow: 1.3; border: 0; background: var(--band); color: var(--band-small); }
+.guide-next svg { flex: none; }
+
+/* The page's fields keep their boxes; their names take the guide's type. */
+#shootForm #shootWizardBody label:not(.checkbox-row, .tag-check),
+#shootForm #shootWizardBody :is(.status-swatch-label, .talents-section > .team-question, .aspect-ratio-field-label) {
+  font: 700 12px/16px var(--ui) !important; letter-spacing: .12em; text-transform: uppercase; color: var(--text); text-shadow: none;
+}
+
+/* ---- styles/not-sure.css ---- */
+/* The honest answers (pages/shoot/not-sure.js): "Date not set" and
+   "Location to be decided" under their fields, and the team's third choice.
+   On the page the team's choices are chips; in the guide they're cards with
+   a line under each name (09-guide-team). */
+#shootForm .not-sure-chip { align-self: flex-start; margin-top: -6px; }
+#shootForm .not-sure-chip[hidden] { display: none; }
+.team-yesno-row .choice-sub { display: none; }
+/* Three choices on the page: each as wide as its name, wrapping if need be. */
+#shootForm .team-yesno-row { flex-wrap: wrap; gap: 10px; }
+#shootForm .team-yesno-row .chip { flex: none; white-space: nowrap; }
+
+/* In the guide: one card per choice, a ring at its left; the picked one has
+   an ink ring round the card and a mango dot in its own. */
+#shootWizardBody .team-question { display: none; }
+#shootWizardBody .team-yesno-row { display: flex; flex-direction: column; gap: 10px; }
+#shootForm #shootWizardBody .team-yesno-row .chip {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; height: auto; min-height: 0;
+  margin: 0; padding: 14px 16px 14px 58px; border: 2px solid transparent; border-radius: 12px; background: #FFFFFF;
+  color: var(--text); text-align: left; text-transform: none; letter-spacing: 0; box-shadow: none;
+}
+#shootForm #shootWizardBody .team-yesno-row .chip::before {
+  content: ''; position: absolute; left: 18px; top: 50%; width: 22px; height: 22px; margin-top: -11px; box-sizing: border-box;
+  border: 2px solid var(--text); border-radius: 50%; background: #FFFFFF;
+}
+#shootForm #shootWizardBody .team-yesno-row .chip.active { border-color: var(--text); }
+#shootForm #shootWizardBody .team-yesno-row .chip.active::before { background: radial-gradient(circle, var(--accent) 0 4.5px, var(--text) 5px); }
+#shootWizardBody .team-yesno-row .choice-name { font: 400 18px/24px var(--ui); }
+#shootWizardBody .team-yesno-row .choice-sub { display: block; font: 400 14px/19px var(--ui); color: var(--dim); }
+
+/* The chip itself, in the round 2 look: a soft pill, ink when picked. */
+#shootForm .not-sure-chip {
+  height: 32px; min-height: 0; padding: 0 14px; border: 0; border-radius: 16px; background: #EFEFEA; color: var(--text);
+  font: 400 14px/32px var(--ui); letter-spacing: 0; text-transform: none; box-shadow: none;
+}
+#shootForm .not-sure-chip.active { background: #313D45; color: #FFFFFF; }
+#shootForm .not-sure-chip.active::before { content: '\2713'; margin-right: 6px; }

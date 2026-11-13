@@ -195,9 +195,3 @@
 #postShootPromptWalkBtn[hidden] {
   display: none;
 }
-
-/* "Leave the guide?" — the two answers stacked full width, so "Go to shoot
-   page" reads on one line instead of wrapping inside a half-width button. */
-#shootWizardLeaveActions {
-  flex-direction: column;
-}

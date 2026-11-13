@@ -4461,18 +4461,30 @@ window.EyeParts.addShootStage = function addShootStage(ed) {
     { key: 'shotList', label: 'Shot list', inWords: 'shot list', leftWords: 'shot list', add: 'Add the shot list', page: 'shotListHeading' },
     { key: 'deadline', label: 'Deadline', inWords: 'deadline', leftWords: 'a deadline', add: 'Add a deadline', page: 'logisticsHeading' },
   ];
-  Object.assign(ed, { SETUP_CHAPTERS, setupChapters, setupWords, listWords, hasReflection, nextStep, readyToComplete });
+  // The honest answers the guide takes ("Date not set", "Location to be
+  // decided", "Not sure yet" about the team), saved on the shoot in
+  // `notSure`. Each counts as answered until the real thing is filled in.
+  const NOT_SURE = ['date', 'location', 'team'];
+  Object.assign(ed, { SETUP_CHAPTERS, NOT_SURE, setupChapters, setupWords, notSureWords, stillNotSure, listWords, hasReflection, nextStep, readyToComplete });
 
   const has = v => typeof v === 'string' && v.trim() !== '';
   const hasPlace = loc => !!loc && ['name', 'street', 'city'].some(k => has(loc[k]));
   const DIRECTION_FIELDS = ['shootGoals', 'premise', 'character', 'worldNotes', 'elevatorPitch', 'deliverables'];
+  const notSure = (s, key) => Array.isArray(s.notSure) && s.notSure.includes(key);
+  const hasTeam = s => s.teamRequired === 'no' || (s.teamMembers || []).length > 0;
+  // Filled in for real, so "not sure" no longer applies.
+  const ANSWERED = {
+    date: s => has(s.date),
+    location: s => hasPlace(s.location),
+    team: s => hasTeam(s) || s.teamRequired === 'yes',
+  };
 
   // Whether each part is in. `counts` holds what lives outside the shoot:
   // { moodboard: photos, boards: boards from Ref }.
   const DONE = {
     basics: s => has(s.title) || (Array.isArray(s.talents) && s.talents.some(t => has(t.name))),
-    logistics: s => has(s.date) && hasPlace(s.location),
-    team: s => s.teamRequired === 'no' || (s.teamMembers || []).length > 0,
+    logistics: s => (has(s.date) || notSure(s, 'date')) && (hasPlace(s.location) || notSure(s, 'location')),
+    team: s => hasTeam(s) || notSure(s, 'team'),
     direction: s => DIRECTION_FIELDS.some(k => has(s[k])),
     visuals: (s, counts) => counts.moodboard > 0 || counts.boards > 0
       || (s.references || []).length > 0 || (s.lightingSetups || []).length > 0,
@@ -4500,6 +4512,18 @@ window.EyeParts.addShootStage = function addShootStage(ed) {
     if (done.length) parts.push(`${capital(listWords(done))} ${done.length === 1 && done[0] !== 'basics' && done[0] !== 'logistics' ? 'is' : 'are'} in.`);
     if (left.length) parts.push(`Still to add: ${listWords(left)}.`);
     return parts.join(' ');
+  }
+
+  // The honest answers that still stand: once the real thing is in, it goes.
+  function stillNotSure(shoot) {
+    return NOT_SURE.filter(key => notSure(shoot, key) && !ANSWERED[key](shoot));
+  }
+
+  // "Not sure yet: the date and the team." (what's still unsure, for the
+  // Getting ready card, where it stays until it's filled in).
+  function notSureWords(shoot) {
+    const left = stillNotSure(shoot);
+    return left.length ? `Not sure yet: ${listWords(left.map(key => `the ${key}`))}.` : '';
   }
 
   function hasReflection(shoot) {
@@ -13252,13 +13276,17 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
   }
 
   const SHOOT_WIZARD_STEPS = [
+    // The status is the tag on the shoot's page, so the guide doesn't ask it.
     {
       key: 'basics',
       title: 'The basics',
       blocks: () => [
-        shootWizardBlock('shootStatus', '.status-swatch-wrap'),
         shootWizardBlock('shootTitle', 'label'),
         shootWizardBlock('shootCategory', 'label'),
+        shootWizardBlock('shootDate', 'label'),
+        shootWizardBlock('dateNotSetBtn'),
+        shootWizardBlock('multiDayRow'),
+        shootWizardBlock('multiDayLastDayLabel'),
       ],
     },
     {
@@ -13269,12 +13297,10 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
     },
     {
       key: 'when',
-      title: 'Date & time',
-      // Last day and the video call times keep showing/hiding themselves.
+      title: 'Time',
+      hint: 'When it starts and wraps.',
+      // The video call times keep showing/hiding themselves.
       blocks: () => [
-        shootWizardBlock('shootDate', 'label'),
-        shootWizardBlock('multiDayRow'),
-        shootWizardBlock('multiDayLastDayLabel'),
         shootWizardBlock('shootStartTime', '.time-range-row'),
         shootWizardBlock('videoCallTimesRow'),
       ],
@@ -13285,6 +13311,7 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
       hint: "Where it's happening, and anything people need to know to find it.",
       blocks: () => [
         shootWizardBlock('shootLocationBtn', 'label'),
+        shootWizardBlock('locationNotSetBtn'),
         shootWizardBlock('shootLocationDirections', 'label'),
       ],
     },
@@ -13400,36 +13427,90 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
       hint: "When everything's due, if there's a date to hit.",
       blocks: () => [shootWizardBlock('shootDeadline', 'label')],
     },
-    {
-      key: 'finish',
-      title: 'All set',
-      hint: 'Everything you filled in is already on the shoot page. Add to it or change it there anytime.',
-      blocks: () => [],
-    },
   ]; ed.SHOOT_WIZARD_STEPS = SHOOT_WIZARD_STEPS;
 };
 ;
 
+// ---- pages/new-shoot/guide-chapters.js ----
+// The new shoot guide's seven chapters, the same as a shoot's parts
+// (components/shoot-stage.js): which of the guide's steps (wizard-steps.js)
+// each one asks, and the chapter marks along its top.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addNewShootGuideChapters = function addNewShootGuideChapters(ed) {
+  Object.assign(ed, { guideChapter, guideChapterParts, drawGuideMarks, addGuidePartHead, clearGuidePartHeads, guidePartIsChapter });
+
+  // title comes from the shoot's parts; question is the line under it.
+  const GUIDE_CHAPTERS = [
+    { key: 'basics', parts: ['basics', 'talent'], question: "What's the shoot, when is it, and who's in it?" },
+    { key: 'logistics', parts: ['when', 'location'], question: 'When it starts, and where it happens.' },
+    { key: 'team', parts: ['team'], question: "Who's working with you on this one?" },
+    { key: 'direction', parts: ['goals', 'idea', 'story'], question: "What it's for, and the idea behind it." },
+    { key: 'visuals', parts: ['moodboard', 'references', 'lighting'], question: 'How it should look.' },
+    { key: 'shotList', parts: ['shotList', 'directions'], question: 'Every shot you want to come away with.' },
+    { key: 'deadline', parts: ['deadline'], question: "When everything's due, if there's a date to hit." },
+  ].map(ch => ({ ...ch, title: ed.SETUP_CHAPTERS.find(c => c.key === ch.key).label }));
+  ed.GUIDE_CHAPTERS = GUIDE_CHAPTERS;
+
+  function guideChapter(key) {
+    return GUIDE_CHAPTERS.find(ch => ch.key === key) || null;
+  }
+
+  // The steps of a chapter that apply to this shoot (the story, say, only
+  // to a narrative one).
+  function guideChapterParts(chapter) {
+    return chapter.parts.map(key => ed.SHOOT_WIZARD_STEPS.find(step => step.key === key))
+      .filter(step => step && (!step.when || step.when()));
+  }
+
+  // Seven marks on a hairline: done ones solid, this one larger with a mango
+  // dot, the rest open rings. The line is ink up to this chapter.
+  function drawGuideMarks(at, doneKeys) {
+    document.getElementById('shootWizardMarks').innerHTML = GUIDE_CHAPTERS.map((ch, i) => {
+      const cls = i === at ? 'now' : doneKeys.includes(ch.key) ? 'done' : '';
+      const line = i ? `<span class="guide-line${i <= at ? ' inked' : ''}"></span>` : '';
+      return `${line}<span class="guide-mark ${cls}"></span>`;
+    }).join('');
+  }
+
+  // A step named the same as its chapter ("The basics" in Basics) doesn't
+  // say it again.
+  function guidePartIsChapter(step, chapter) {
+    const title = typeof step.title === 'function' ? step.title() : step.title;
+    return title.replace(/^the /i, '').toLowerCase() === chapter.title.toLowerCase();
+  }
+
+  // A chapter of several steps names each one above its fields.
+  function addGuidePartHead(step, body) {
+    const head = document.createElement('div');
+    head.className = 'guide-part-head guide-chrome';
+    const title = typeof step.title === 'function' ? step.title() : step.title;
+    const hint = (typeof step.hint === 'function' ? step.hint() : step.hint) || '';
+    head.innerHTML = `<h3 class="guide-part-title">${ed.escapeHtml(title)}</h3>${hint ? `<p class="guide-part-hint">${ed.escapeHtml(hint)}</p>` : ''}`;
+    body.appendChild(head);
+  }
+  function clearGuidePartHeads(body) {
+    body.querySelectorAll(':scope > .guide-part-head').forEach(el => el.remove());
+  }
+};
+;
+
 // ---- pages/new-shoot/wizard.js ----
-// The new-shoot guide: going through its steps.
+// The new shoot guide: going through its chapters (guide-chapters.js), each
+// showing its steps' fields from the page.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addNewShootWizard = function addNewShootWizard(ed) {
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
   Object.assign(ed, { adjacentShootWizardStep, blurShootWizardFocus, restoreShootWizardBlocks, refreshShootWizard, showShootWizardStep, syncShootWizardViewport, setShootPageInert, startShootWizard, queueShootWizard, startQueuedShootWizard });
-  // The slides that currently apply (the one on screen always counts, so the
-  // "Step x of y" line can never lose its own place).
-  function shootWizardStepsInPlay() {
-    return ed.SHOOT_WIZARD_STEPS.filter(step => step.key === ed.shootWizardStepKey || !step.when || step.when());
-  }
-
-  // The nearest slide that applies before (-1) or after (+1) the current
-  // one, or null at either end. Re-evaluated every time, since slide 1's
-  // category decides whether The story applies at all.
+  // The chapter before (-1) or after (+1) this one, or null at either end,
+  // or when the guide was opened for just this one chapter.
   function adjacentShootWizardStep(direction) {
-    const from = ed.SHOOT_WIZARD_STEPS.findIndex(step => step.key === ed.shootWizardStepKey);
-    for (let i = from + direction; i >= 0 && i < ed.SHOOT_WIZARD_STEPS.length; i += direction) {
-      const step = ed.SHOOT_WIZARD_STEPS[i];
-      if (!step.when || step.when()) return step;
+    if (ed.shootWizardOnly) return null;
+    const chapters = ed.GUIDE_CHAPTERS;
+    const from = chapters.findIndex(ch => ch.key === ed.shootWizardStepKey);
+    for (let i = from + direction; i >= 0 && i < chapters.length; i += direction) {
+      if (ed.guideChapterParts(chapters[i]).length) return chapters[i];
     }
     return null;
   }
@@ -13469,35 +13550,30 @@ window.EyeParts.addNewShootWizard = function addNewShootWizard(ed) {
       if (placeholder.parentNode) placeholder.replaceWith(el);
     });
     ed.shootWizardMoved = [];
-    const step = ed.SHOOT_WIZARD_STEPS.find(s => s.key === ed.shootWizardStepKey);
-    if (step && step.leave) step.leave();
+    ed.clearGuidePartHeads(document.getElementById('shootWizardBody'));
+    (ed.shootWizardParts || []).forEach((step) => { if (step.leave) step.leave(); });
+    ed.shootWizardParts = [];
   }
 
   function renderShootWizardChrome() {
-    const step = ed.SHOOT_WIZARD_STEPS.find(s => s.key === ed.shootWizardStepKey);
-    if (!step) return;
-    const inPlay = shootWizardStepsInPlay();
-    const isLast = !adjacentShootWizardStep(1);
-    document.getElementById('shootWizardStep').textContent = `Step ${inPlay.indexOf(step) + 1} of ${inPlay.length}`;
-    document.getElementById('shootWizardTitle').textContent = typeof step.title === 'function' ? step.title() : step.title;
-    const hintEl = document.getElementById('shootWizardHint');
-    hintEl.textContent = (typeof step.hint === 'function' ? step.hint() : step.hint) || '';
-    // A slide without a hint doesn't keep an empty line's spacing.
-    hintEl.hidden = !hintEl.textContent;
-    // No Back on the first slide, nor on the last: that one is just the
-    // confirm button (see below).
-    document.getElementById('shootWizardBackBtn').hidden = isLast || !adjacentShootWizardStep(-1);
-    // Small "Don't show again" link, on the first slide only, and not when
-    // the guide was asked for from the ⋯ menu.
-    document.getElementById('shootWizardDontShowBtn').hidden = inPlay.indexOf(step) !== 0 || ed.shootWizardAgain;
-    // Forward is always possible, filled in or not. On the last slide the
-    // forward button is the shoot page's own Save — same varying text as the
-    // page's button (picked when the shoot opened) — and the separate "Skip
-    // to shoot page" row, on every other slide, steps aside.
+    const chapter = ed.guideChapter(ed.shootWizardStepKey);
+    if (!chapter) return;
+    const at = ed.GUIDE_CHAPTERS.indexOf(chapter);
+    const next = adjacentShootWizardStep(1);
+    const done = ed.setupChapters(ed.frontShoot(), ed.lastFrontCounts() || {}).filter(ch => ch.done).map(ch => ch.key);
+    ed.drawGuideMarks(at, done);
+    document.getElementById('shootWizardStep').textContent = `Chapter ${at + 1} of ${ed.GUIDE_CHAPTERS.length}`;
+    document.getElementById('shootWizardTitle').textContent = chapter.title;
+    document.getElementById('shootWizardHint').textContent = chapter.question;
+    document.getElementById('shootWizardPlace').textContent = ed.shootWizardAgain ? ed.shootDisplayName(ed.frontShoot()) : 'New shoot';
+    // Next names the chapter it goes to; on the last (or the only) one it's
+    // Done, and Done for now and Skip step aside.
     const nextBtn = document.getElementById('shootWizardNextBtn');
-    nextBtn.textContent = isLast ? document.getElementById('saveShootBtn').textContent : 'Next';
-    nextBtn.classList.toggle('shoot-wizard-save', isLast);
-    document.getElementById('shootWizardExitRow').hidden = isLast;
+    nextBtn.innerHTML = next ? `Next: ${ed.escapeHtml(next.title)} ${CHEVRON}` : 'Done';
+    document.getElementById('shootWizardExitBtn').hidden = !next;
+    document.getElementById('shootWizardSkipBtn').hidden = !next;
+    // "Don't show the guide again", on a new shoot's first chapter only.
+    document.getElementById('shootWizardDontShowBtn').hidden = at !== 0 || ed.shootWizardAgain;
   }
 
   // Run from scheduleShootAutosave on every change while the wizard's up.
@@ -13514,15 +13590,20 @@ window.EyeParts.addNewShootWizard = function addNewShootWizard(ed) {
   }
 
   function showShootWizardStep(key) {
-    const step = ed.SHOOT_WIZARD_STEPS.find(s => s.key === key);
-    if (!step) return;
+    const chapter = ed.guideChapter(key);
+    if (!chapter) return;
     blurShootWizardFocus();
     restoreShootWizardBlocks();
     ed.shootWizardStepKey = key;
     const body = document.getElementById('shootWizardBody');
-    step.blocks().forEach(block => moveBlockIntoShootWizard(block, body));
-    if (step.enter) step.enter();
-    body.scrollTop = 0;
+    const parts = ed.guideChapterParts(chapter);
+    ed.shootWizardParts = parts;
+    parts.forEach((step) => {
+      if (parts.length > 1 && !ed.guidePartIsChapter(step, chapter)) ed.addGuidePartHead(step, body);
+      step.blocks().forEach(block => moveBlockIntoShootWizard(block, body));
+      if (step.enter) step.enter();
+    });
+    document.getElementById('shootWizardScroll').scrollTop = 0;
     renderShootWizardChrome();
     // Measured now, at the card's width, with the wizard already visible — a
     // hidden one would measure zero and leave every box at its rows default.
@@ -13566,15 +13647,14 @@ window.EyeParts.addNewShootWizard = function addNewShootWizard(ed) {
     });
   }
 
-  // opts.from: the step to start on (Continue setup on the shoot's page
-  // starts on the first part still missing), else the first one.
+  // opts.from: the chapter to start on (Continue setup on the shoot's page
+  // starts on the first part still missing), else the first one. opts.only:
+  // just that chapter (the next step, or an empty part of the page).
   function startShootWizard(opts) {
-    const shown = step => !step.when || step.when();
-    const from = opts && opts.from ? ed.SHOOT_WIZARD_STEPS.find(step => step.key === opts.from && shown(step)) : null;
-    const first = from || ed.SHOOT_WIZARD_STEPS.find(shown);
-    if (!first) return;
+    const first = (opts && opts.from && ed.guideChapter(opts.from)) || ed.GUIDE_CHAPTERS[0];
     ed.shootWizardActive = true;
     ed.shootWizardAgain = !!(opts && opts.again);
+    ed.shootWizardOnly = !!(opts && opts.only && opts.from);
     ed.shootWizardStepKey = null;
     ed.shootWizardViewportMaxH = 0;
     // Slide 1 explains the status button itself, so the one-time intro that
@@ -13626,20 +13706,20 @@ window.EyeParts.addNewShootWizard = function addNewShootWizard(ed) {
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addNewShootWizardEnd = function addNewShootWizardEnd(ed) {
   Object.assign(ed, { endShootWizard, isNewShootGuideOn, setNewShootGuideOn });
-  // Every way out: Done, "Skip to shoot page", the post-shoot prompt's Yes,
-  // closeShootModal and openShootModal. Idempotent. `closing` skips the
+  // Every way out: Done, Done for now, Back from the first chapter, the
+  // post-shoot prompt's Yes, closeShootModal and openShootModal. Idempotent. `closing` skips the
   // landing-on-the-page work, since a close/reopen does its own next.
   function endShootWizard(opts) {
     const closing = !!(opts && opts.closing);
     ed.shootWizardPendingId = null;
     clearTimeout(ed.shootWizardStartTimer);
     if (!ed.shootWizardActive) return;
-    closeLeaveShootWizardPrompt();
     ed.closeConceptHelper();
     ed.blurShootWizardFocus();
     ed.restoreShootWizardBlocks();
     ed.shootWizardActive = false;
     ed.shootWizardAgain = false;
+    ed.shootWizardOnly = false;
     ed.shootWizardStepKey = null;
     const wizard = document.getElementById('shootWizard');
     wizard.hidden = true;
@@ -13665,52 +13745,28 @@ window.EyeParts.addNewShootWizardEnd = function addNewShootWizardEnd(ed) {
 
   document.getElementById('shootWizardBackBtn').addEventListener('click', () => {
     if (!ed.shootWizardActive) return;
+    // Back from the first chapter (or the only one) leaves, like Done for now.
     const prev = ed.adjacentShootWizardStep(-1);
     if (prev) ed.showShootWizardStep(prev.key);
+    else endShootWizard();
   });
 
   document.getElementById('shootWizardNextBtn').addEventListener('click', () => {
     if (!ed.shootWizardActive) return;
     const next = ed.adjacentShootWizardStep(1);
     if (next) ed.showShootWizardStep(next.key);
-    // The last slide's button is Save: save and close, like the page's.
-    else ed.closeShootModal();
+    // Done, on the last chapter: the shoot's page, with what's filled in.
+    else endShootWizard();
   });
 
-  // Leaving early always asks first — from "Skip to shoot page" or a tap on
-  // the dim around the card. (Finishing on the last slide, or "Don't show
-  // again", don't: those say what they do.)
-  function askLeaveShootWizard() {
+  // Done for now: what's filled in is already on the page, which opens.
+  document.getElementById('shootWizardExitBtn').addEventListener('click', () => endShootWizard());
+  // Skip: on to the next chapter without answering this one.
+  document.getElementById('shootWizardSkipBtn').addEventListener('click', () => {
     if (!ed.shootWizardActive) return;
-    document.getElementById('shootWizardLeaveOverlay').hidden = false;
-  }
-
-  function closeLeaveShootWizardPrompt() {
-    document.getElementById('shootWizardLeaveOverlay').hidden = true;
-  }
-
-  document.getElementById('shootWizardExitBtn').addEventListener('click', askLeaveShootWizard);
-
-  // Only a tap that both starts and ends on the dim: with a mouse, a text
-  // selection dragged out past the card's edge also "clicks" the backdrop.
-  let shootWizardPressOnBackdrop = false;
-  document.getElementById('shootWizard').addEventListener('pointerdown', (e) => {
-    shootWizardPressOnBackdrop = e.target === e.currentTarget;
-  });
-  document.getElementById('shootWizard').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget && shootWizardPressOnBackdrop) askLeaveShootWizard();
-    shootWizardPressOnBackdrop = false;
-  });
-
-  document.getElementById('shootWizardLeaveStayBtn').addEventListener('click', closeLeaveShootWizardPrompt);
-
-  document.getElementById('shootWizardLeaveGoBtn').addEventListener('click', () => {
-    closeLeaveShootWizardPrompt();
-    endShootWizard();
-  });
-
-  document.getElementById('shootWizardLeaveOverlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeLeaveShootWizardPrompt();
+    const next = ed.adjacentShootWizardStep(1);
+    if (next) ed.showShootWizardStep(next.key);
+    else endShootWizard();
   });
 
   // On/off for the whole guide, remembered on this device. Turned off from
@@ -14743,6 +14799,8 @@ window.EyeParts.addShootOpen = function addShootOpen(ed) {
     document.getElementById('shootTeamFinalized').checked = s ? !!s.teamFinalized : false;
     ed.currentTeamMembers = s && s.teamMembers ? s.teamMembers.map(tm => ({ ...tm })) : [];
     ed.renderTeamMembers();
+    // "Date not set", "Location to be decided", "Not sure yet" (not-sure.js).
+    ed.loadNotSure(s);
 
     ed.renderShootFrameworkTags(s);
     ed.renderShootNotes(s ? s.id : null);
@@ -15585,7 +15643,7 @@ window.EyeParts.addShootSave = function addShootSave(ed) {
 
     const teamRequired = ed.getTeamRequiredChoice();
 
-    return {
+    const data = {
       title: document.getElementById('shootTitle').value.trim(),
       status: document.getElementById('shootStatus').value,
       date: document.getElementById('shootDate').value,
@@ -15639,6 +15697,9 @@ window.EyeParts.addShootSave = function addShootSave(ed) {
       // in autosaveShoot() keep whatever the shoot already had.
       ...(ed.pendingProjectPhoto ? { projectPhoto: ed.pendingProjectPhoto } : {}),
     };
+    // The honest answers that still stand (not-sure.js).
+    data.notSure = ed.notSureNow(data);
+    return data;
   }
 
   // A brand-new, never-touched shoot draft shouldn't get written to state
@@ -15742,6 +15803,73 @@ window.EyeParts.addShootSave = function addShootSave(ed) {
   // Commit as soon as focus leaves a field, so the pending-debounce window is
   // only ever open while you're actually still in a field typing.
   ed.shootForm.addEventListener('focusout', saveShootNow);
+};
+;
+
+// ---- pages/shoot/not-sure.js ----
+// The honest answers on a shoot's page and in the guide: "Date not set" and
+// "Location to be decided" (shown while those are empty) and "Not sure yet"
+// about the team. Each counts as answered (components/shoot-stage.js) and is
+// saved in the shoot's notSure list until the real thing is filled in.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addShootNotSure = function addShootNotSure(ed) {
+  Object.assign(ed, { loadNotSure, syncNotSure, notSureNow });
+  const picked = new Set();
+  const CHIPS = { date: 'dateNotSetBtn', location: 'locationNotSetBtn', team: 'teamNotSureBtn' };
+  const hasPlace = () => ['name', 'street', 'city'].some(k => ed.hasText(ed.currentShootLocation[k]));
+
+  // As the shoot was saved, when it opens.
+  function loadNotSure(shoot) {
+    picked.clear();
+    ((shoot && shoot.notSure) || []).forEach(key => picked.add(key));
+    syncNotSure();
+  }
+
+  // The list to save: the ones still standing.
+  function notSureNow(data) {
+    return ed.stillNotSure({ ...data, notSure: [...picked] });
+  }
+
+  // Each chip shows whether it's picked; the date's and the place's step
+  // aside once there's a real one.
+  function syncNotSure() {
+    Object.entries(CHIPS).forEach(([key, id]) => {
+      const chip = document.getElementById(id);
+      const on = picked.has(key) && (key !== 'team' || !ed.getTeamRequiredChoice());
+      chip.classList.toggle('active', on);
+      chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    document.getElementById('dateNotSetBtn').hidden = ed.hasText(document.getElementById('shootDate').value);
+    document.getElementById('locationNotSetBtn').hidden = hasPlace();
+  }
+
+  function toggle(key) {
+    if (picked.has(key)) picked.delete(key);
+    else picked.add(key);
+    syncNotSure();
+    ed.scheduleShootAutosave();
+  }
+  document.getElementById('dateNotSetBtn').addEventListener('click', () => toggle('date'));
+  document.getElementById('locationNotSetBtn').addEventListener('click', () => toggle('location'));
+
+  // "Not sure yet" takes the place of Just me or With a team, and they of it.
+  document.getElementById('teamNotSureBtn').addEventListener('click', () => {
+    if (picked.has('team') && !ed.getTeamRequiredChoice()) return;
+    picked.add('team');
+    ed.setTeamRequiredChoice('');
+    syncNotSure();
+    ed.scheduleShootAutosave();
+  });
+  ['teamRequiredNoBtn', 'teamRequiredYesBtn'].forEach(id => document.getElementById(id).addEventListener('click', () => {
+    picked.delete('team');
+    syncNotSure();
+  }));
+
+  // A date typed or a place picked puts its chip away.
+  document.getElementById('shootDate').addEventListener('input', syncNotSure);
+  document.getElementById('shootDate').addEventListener('change', syncNotSure);
+  new MutationObserver(syncNotSure).observe(document.getElementById('shootLocationBtn'), { childList: true, characterData: true, subtree: true });
 };
 ;
 
@@ -16681,7 +16809,7 @@ window.EyeParts.addShootOptionsAddToProject = function addShootOptionsAddToProje
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootFront = function addShootFront(ed) {
-  Object.assign(ed, { frontShoot, frontCounts, showShootFront, showShootDetail, drawShootFront });
+  Object.assign(ed, { frontShoot, frontCounts, showShootFront, showShootDetail, drawShootFront, lastFrontCounts: () => lastCounts });
   ed.shootOnFront = true;
   const front = document.getElementById('shootFront');
   const modal = ed.shootModalOverlay.querySelector('.modal');
@@ -16781,6 +16909,8 @@ window.EyeParts.addShootFront = function addShootFront(ed) {
   // ---------- The details ----------
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
   const shot = s => ed.isPostCaptureStatus(s.status);
+  // An honest answer's words, while it stands.
+  const unsure = (s, key, words) => (ed.stillNotSure(s).includes(key) ? words : '');
   // The first board from Ref: live, frozen on the day it was shot, or imported.
   function boardWords(c) {
     const l = c.boardList && c.boardList[0] && c.boardList[0].link;
@@ -16804,8 +16934,8 @@ window.EyeParts.addShootFront = function addShootFront(ed) {
   }
   const ROWS = {
     talent: { label: 'Talent', page: 'basicInfoHeading', words: s => (s.talents || []).map(t => t.name).filter(has).join(', ') },
-    logistics: { label: 'Logistics', page: 'logisticsHeading', words: s => ed.metaLine([s.date ? ed.rowDate(s.date, ed.todayStr(), true) : '', placeWords(s.location)]) },
-    team: { label: 'Team', page: 'teamHeading', words: s => (s.teamRequired === 'no' ? 'Just me' : (s.teamMembers || []).map(m => m.name).filter(has).join(', ')) },
+    logistics: { label: 'Logistics', page: 'logisticsHeading', words: s => ed.metaLine([s.date ? ed.rowDate(s.date, ed.todayStr(), true) : unsure(s, 'date', 'Date not set'), placeWords(s.location) || unsure(s, 'location', 'Location to be decided')]) },
+    team: { label: 'Team', page: 'teamHeading', words: s => (s.teamRequired === 'no' ? 'Just me' : (s.teamMembers || []).map(m => m.name).filter(has).join(', ') || unsure(s, 'team', 'Not sure yet')) },
     direction: { label: 'Direction', page: 'directionHeading', words: s => ['premise', 'shootGoals', 'elevatorPitch', 'character', 'worldNotes', 'deliverables'].map(k => s[k]).find(has) || '' },
     // Once it's shot, the mood board is what it was on the day.
     visuals: { label: s => (shot(s) ? ed.moodboardTerm(s.category || '') : 'Visuals'), page: 'visualsHeading', words: (s, c) => ed.metaLine([boardWords(c), c.boards > 1 ? plural(c.boards, 'board') : '', c.moodboard ? plural(c.moodboard, 'photo') : '', (s.references || []).length ? plural(s.references.length, 'link') : '', (s.lightingSetups || []).length ? plural(s.lightingSetups.length, 'lighting setup') : '']) },
@@ -16827,10 +16957,14 @@ window.EyeParts.addShootFront = function addShootFront(ed) {
 
   function drawDetailRows(s, c, onFront) {
     const box = document.getElementById('shootDetailRows');
+    // Before it's shot, an empty part opens its chapter of the guide.
+    const planning = !ed.isPostCaptureStatus(s.status) && !s.archived;
     const rows = rowKeys(s, c, onFront).map((key) => {
       const row = ROWS[key];
       const words = row.words(s, c);
-      return `<button type="button" class="detail-row" data-page="${row.page}">
+      const chapter = key === 'talent' ? 'basics' : key;
+      const toGuide = planning && !words && ed.SETUP_CHAPTERS.some(ch => ch.key === chapter);
+      return `<button type="button" class="detail-row" data-page="${row.page}"${toGuide ? ` data-chapter="${chapter}"` : ''}>
         <span class="detail-dot${words ? ' filled' : ''}" aria-hidden="true"></span>
         <span class="detail-words"><span class="detail-label">${ed.escapeHtml(typeof row.label === 'function' ? row.label(s) : row.label)}</span><span class="detail-sum">${ed.escapeHtml(words || row.empty || 'Not added yet')}</span></span>
         ${CHEVRON}</button>`;
@@ -16844,7 +16978,9 @@ window.EyeParts.addShootFront = function addShootFront(ed) {
   }
   document.getElementById('shootDetailRows').addEventListener('click', (e) => {
     const row = e.target.closest('button.detail-row');
-    if (row) ed.showShootPage(row.dataset.page);
+    if (!row) return;
+    if (row.dataset.chapter) ed.openShootPart(row.dataset.chapter, row.dataset.page);
+    else ed.showShootPage(row.dataset.page);
   });
 
   // Everything on the front page, from the shoot as it stands. The photos
@@ -16890,8 +17026,6 @@ window.EyeParts.addShootFrontCards = function addShootFrontCards(ed) {
   const has = v => ed.hasText(v);
   const esc = v => ed.escapeHtml(v);
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-  // The guide's first step for each part (pages/new-shoot/wizard-steps.js).
-  const GUIDE_FROM = { basics: 'basics', logistics: 'when', team: 'team', direction: 'goals', visuals: 'moodboard', shotList: 'shotList', deadline: 'deadline' };
 
   // A section title on the front page, with words at its right.
   function frontTitle(text, right) {
@@ -16902,17 +17036,23 @@ window.EyeParts.addShootFrontCards = function addShootFrontCards(ed) {
     return `<button type="button" class="${cls}" data-page="${page}">${inner}</button>`;
   }
 
+  // The chapter an honest answer belongs to (the date is asked in Basics).
+  const NOT_SURE_CHAPTER = { date: 'basics', location: 'logistics', team: 'team' };
+
+  // Stays while a part is missing or an answer is still "not sure yet".
   function gettingReady(s, c) {
     const chapters = ed.setupChapters(s, c);
+    const unsure = ed.stillNotSure(s).map(key => NOT_SURE_CHAPTER[key]);
     const left = chapters.filter(ch => !ch.done);
-    if (!left.length) return '';
+    const from = left[0] || chapters.find(ch => unsure.includes(ch.key));
+    if (!from) return '';
     const bars = chapters.map(ch => `<span class="${ch.done ? 'done' : ''}"></span>`).join('');
     return `<div class="front-card getting-ready">
       <div class="front-card-head"><span class="front-card-title">Getting ready</span><span class="front-card-meta">${chapters.length - left.length} of ${chapters.length}</span></div>
       <div class="ready-bars" aria-hidden="true">${bars}</div>
-      <p class="front-card-text">${esc(ed.setupWords(chapters))}</p>
-      <button type="button" class="outline-btn" data-guide="${GUIDE_FROM[left[0].key]}">Continue setup ${CHEVRON}</button>
-      <p class="front-card-note">The whole guide, from ${esc(left[0].label.toLowerCase())} on</p>
+      <p class="front-card-text">${esc([ed.setupWords(chapters), ed.notSureWords(s)].filter(Boolean).join(' '))}</p>
+      <button type="button" class="outline-btn" data-guide="${from.key}">Continue setup ${CHEVRON}</button>
+      <p class="front-card-note">The whole guide, from ${esc(from.label.toLowerCase())} on</p>
     </div>`;
   }
 
@@ -17200,7 +17340,7 @@ window.EyeParts.addShootReportCards = function addShootReportCards(ed) {
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootNextStep = function addShootNextStep(ed) {
-  Object.assign(ed, { drawNextStep, runNextStep, setShootStatusOnPage });
+  Object.assign(ed, { drawNextStep, runNextStep, setShootStatusOnPage, openShootPart });
   const bar = document.getElementById('shootNext');
   const btn = document.getElementById('shootNextBtn');
   const hint = document.getElementById('shootNextHint');
@@ -17226,10 +17366,17 @@ window.EyeParts.addShootNextStep = function addShootNextStep(ed) {
     ed.drawShootFront();
   }
 
+  // A part still to add opens its chapter of the guide, unless the guide's
+  // turned off (New shoot guide: On the page); then its page.
+  function openShootPart(chapter, page) {
+    if (ed.isNewShootGuideOn()) ed.startShootWizard({ again: true, from: chapter, only: true });
+    else ed.showShootPage(page);
+  }
+
   function runNextStep(next) {
     const go = page => ed.showShootPage(page);
     switch (next.key) {
-      case 'chapter': go(ed.SETUP_CHAPTERS.find(c => c.key === next.chapter).page); break;
+      case 'chapter': ed.openShootPart(next.chapter, ed.SETUP_CHAPTERS.find(c => c.key === next.chapter).page); break;
       case 'status': setShootStatusOnPage(next.to); break;
       case 'shootMode': document.getElementById('enterShootModeBtn').click(); break;
       case 'reflect': go('postShootHeading'); document.getElementById('reflectHelperBtn').click(); break;
@@ -25085,6 +25232,7 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addShootChapterPages(ed);
   window.EyeParts.addShootChapter(ed);
   window.EyeParts.addNewShootWizardSteps(ed);
+  window.EyeParts.addNewShootGuideChapters(ed);
   window.EyeParts.addNewShootWizard(ed);
   window.EyeParts.addNewShootWizardEnd(ed);
   window.EyeParts.addConceptHelperHelper(ed);
@@ -25098,6 +25246,7 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addImageViewerTouch(ed);
   window.EyeParts.addShootFinalImages(ed);
   window.EyeParts.addShootSave(ed);
+  window.EyeParts.addShootNotSure(ed);
   window.EyeParts.addShootMultiDay(ed);
   window.EyeParts.addShootMultiDayPrompt(ed);
   window.EyeParts.addShootClose(ed);

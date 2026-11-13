@@ -96,6 +96,7 @@
   window.EyeParts.addShootChapterPages(ed);
   window.EyeParts.addShootChapter(ed);
   window.EyeParts.addNewShootWizardSteps(ed);
+  window.EyeParts.addNewShootGuideChapters(ed);
   window.EyeParts.addNewShootWizard(ed);
   window.EyeParts.addNewShootWizardEnd(ed);
   window.EyeParts.addConceptHelperHelper(ed);
@@ -109,6 +110,7 @@
   window.EyeParts.addImageViewerTouch(ed);
   window.EyeParts.addShootFinalImages(ed);
   window.EyeParts.addShootSave(ed);
+  window.EyeParts.addShootNotSure(ed);
   window.EyeParts.addShootMultiDay(ed);
   window.EyeParts.addShootMultiDayPrompt(ed);
   window.EyeParts.addShootClose(ed);

@@ -5,7 +5,7 @@
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootNextStep = function addShootNextStep(ed) {
-  Object.assign(ed, { drawNextStep, runNextStep, setShootStatusOnPage });
+  Object.assign(ed, { drawNextStep, runNextStep, setShootStatusOnPage, openShootPart });
   const bar = document.getElementById('shootNext');
   const btn = document.getElementById('shootNextBtn');
   const hint = document.getElementById('shootNextHint');
@@ -31,10 +31,17 @@ window.EyeParts.addShootNextStep = function addShootNextStep(ed) {
     ed.drawShootFront();
   }
 
+  // A part still to add opens its chapter of the guide, unless the guide's
+  // turned off (New shoot guide: On the page); then its page.
+  function openShootPart(chapter, page) {
+    if (ed.isNewShootGuideOn()) ed.startShootWizard({ again: true, from: chapter, only: true });
+    else ed.showShootPage(page);
+  }
+
   function runNextStep(next) {
     const go = page => ed.showShootPage(page);
     switch (next.key) {
-      case 'chapter': go(ed.SETUP_CHAPTERS.find(c => c.key === next.chapter).page); break;
+      case 'chapter': ed.openShootPart(next.chapter, ed.SETUP_CHAPTERS.find(c => c.key === next.chapter).page); break;
       case 'status': setShootStatusOnPage(next.to); break;
       case 'shootMode': document.getElementById('enterShootModeBtn').click(); break;
       case 'reflect': go('postShootHeading'); document.getElementById('reflectHelperBtn').click(); break;

@@ -12,8 +12,6 @@ window.EyeParts.addShootFrontCards = function addShootFrontCards(ed) {
   const has = v => ed.hasText(v);
   const esc = v => ed.escapeHtml(v);
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-  // The guide's first step for each part (pages/new-shoot/wizard-steps.js).
-  const GUIDE_FROM = { basics: 'basics', logistics: 'when', team: 'team', direction: 'goals', visuals: 'moodboard', shotList: 'shotList', deadline: 'deadline' };
 
   // A section title on the front page, with words at its right.
   function frontTitle(text, right) {
@@ -24,17 +22,23 @@ window.EyeParts.addShootFrontCards = function addShootFrontCards(ed) {
     return `<button type="button" class="${cls}" data-page="${page}">${inner}</button>`;
   }
 
+  // The chapter an honest answer belongs to (the date is asked in Basics).
+  const NOT_SURE_CHAPTER = { date: 'basics', location: 'logistics', team: 'team' };
+
+  // Stays while a part is missing or an answer is still "not sure yet".
   function gettingReady(s, c) {
     const chapters = ed.setupChapters(s, c);
+    const unsure = ed.stillNotSure(s).map(key => NOT_SURE_CHAPTER[key]);
     const left = chapters.filter(ch => !ch.done);
-    if (!left.length) return '';
+    const from = left[0] || chapters.find(ch => unsure.includes(ch.key));
+    if (!from) return '';
     const bars = chapters.map(ch => `<span class="${ch.done ? 'done' : ''}"></span>`).join('');
     return `<div class="front-card getting-ready">
       <div class="front-card-head"><span class="front-card-title">Getting ready</span><span class="front-card-meta">${chapters.length - left.length} of ${chapters.length}</span></div>
       <div class="ready-bars" aria-hidden="true">${bars}</div>
-      <p class="front-card-text">${esc(ed.setupWords(chapters))}</p>
-      <button type="button" class="outline-btn" data-guide="${GUIDE_FROM[left[0].key]}">Continue setup ${CHEVRON}</button>
-      <p class="front-card-note">The whole guide, from ${esc(left[0].label.toLowerCase())} on</p>
+      <p class="front-card-text">${esc([ed.setupWords(chapters), ed.notSureWords(s)].filter(Boolean).join(' '))}</p>
+      <button type="button" class="outline-btn" data-guide="${from.key}">Continue setup ${CHEVRON}</button>
+      <p class="front-card-note">The whole guide, from ${esc(from.label.toLowerCase())} on</p>
     </div>`;
   }
 

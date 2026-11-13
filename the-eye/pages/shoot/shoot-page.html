@@ -103,6 +103,9 @@
         <label>Shoot date
           <input type="date" id="shootDate" />
         </label>
+        <!-- Honest answers (pages/shoot/not-sure.js): shown while the date or
+             the place is empty, and counted as answered. -->
+        <button type="button" class="chip not-sure-chip" id="dateNotSetBtn" aria-pressed="false">Date not set</button>
         <label class="checkbox-row" id="multiDayRow"><input type="checkbox" id="shootMultiDay" /> <span id="multiDayLabel">Multi-day shoot</span></label>
         <label id="multiDayLastDayLabel" hidden>Last day
           <input type="date" id="shootLastDay" />
@@ -129,6 +132,7 @@
         <label>Location
           <button type="button" id="shootLocationBtn" class="location-field-btn">Tap to add location</button>
         </label>
+        <button type="button" class="chip not-sure-chip" id="locationNotSetBtn" aria-pressed="false">Location to be decided</button>
         <label>Location directions
           <textarea id="shootLocationDirections" rows="3" maxlength="1000" placeholder="What floor the studio is on, where to park, etc." readonly></textarea>
         </label>
@@ -138,11 +142,14 @@
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="teamHeading">Team</h3>
       <div id="teamBody">
         <p class="team-question">Requires team?</p>
-        <!-- Two named choices in the app's chip look (the picked one filled);
-             saved as teamRequired 'no'/'yes' — see setTeamRequiredChoice. -->
+        <!-- Named choices in the app's chip look (the picked one filled);
+             saved as teamRequired 'no'/'yes' (see setTeamRequiredChoice), or
+             "Not sure yet" in notSure (pages/shoot/not-sure.js). In the guide
+             they're cards, with the line under each name. -->
         <div class="team-yesno-row">
-          <button type="button" class="chip" id="teamRequiredNoBtn" aria-pressed="false">Just me</button>
-          <button type="button" class="chip" id="teamRequiredYesBtn" aria-pressed="false">With a team</button>
+          <button type="button" class="chip" id="teamRequiredNoBtn" aria-pressed="false"><span class="choice-name">Just me</span><span class="choice-sub">No team for this shoot.</span></button>
+          <button type="button" class="chip" id="teamRequiredYesBtn" aria-pressed="false"><span class="choice-name">With a team</span><span class="choice-sub">Add people now or later.</span></button>
+          <button type="button" class="chip" id="teamNotSureBtn" aria-pressed="false"><span class="choice-name">Not sure yet</span><span class="choice-sub">Counts as answered. It stays on Getting ready.</span></button>
         </div>
         <p class="field-hint team-finalized-note" id="teamFinalizedNote" hidden>Team finalized</p>
         <div id="teamDetailsBlock" hidden>

@@ -9,7 +9,7 @@ window.EyeParts.addShootSave = function addShootSave(ed) {
 
     const teamRequired = ed.getTeamRequiredChoice();
 
-    return {
+    const data = {
       title: document.getElementById('shootTitle').value.trim(),
       status: document.getElementById('shootStatus').value,
       date: document.getElementById('shootDate').value,
@@ -63,6 +63,9 @@ window.EyeParts.addShootSave = function addShootSave(ed) {
       // in autosaveShoot() keep whatever the shoot already had.
       ...(ed.pendingProjectPhoto ? { projectPhoto: ed.pendingProjectPhoto } : {}),
     };
+    // The honest answers that still stand (not-sure.js).
+    data.notSure = ed.notSureNow(data);
+    return data;
   }
 
   // A brand-new, never-touched shoot draft shouldn't get written to state

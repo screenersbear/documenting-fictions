@@ -17,18 +17,30 @@ window.EyeParts.addShootStage = function addShootStage(ed) {
     { key: 'shotList', label: 'Shot list', inWords: 'shot list', leftWords: 'shot list', add: 'Add the shot list', page: 'shotListHeading' },
     { key: 'deadline', label: 'Deadline', inWords: 'deadline', leftWords: 'a deadline', add: 'Add a deadline', page: 'logisticsHeading' },
   ];
-  Object.assign(ed, { SETUP_CHAPTERS, setupChapters, setupWords, listWords, hasReflection, nextStep, readyToComplete });
+  // The honest answers the guide takes ("Date not set", "Location to be
+  // decided", "Not sure yet" about the team), saved on the shoot in
+  // `notSure`. Each counts as answered until the real thing is filled in.
+  const NOT_SURE = ['date', 'location', 'team'];
+  Object.assign(ed, { SETUP_CHAPTERS, NOT_SURE, setupChapters, setupWords, notSureWords, stillNotSure, listWords, hasReflection, nextStep, readyToComplete });
 
   const has = v => typeof v === 'string' && v.trim() !== '';
   const hasPlace = loc => !!loc && ['name', 'street', 'city'].some(k => has(loc[k]));
   const DIRECTION_FIELDS = ['shootGoals', 'premise', 'character', 'worldNotes', 'elevatorPitch', 'deliverables'];
+  const notSure = (s, key) => Array.isArray(s.notSure) && s.notSure.includes(key);
+  const hasTeam = s => s.teamRequired === 'no' || (s.teamMembers || []).length > 0;
+  // Filled in for real, so "not sure" no longer applies.
+  const ANSWERED = {
+    date: s => has(s.date),
+    location: s => hasPlace(s.location),
+    team: s => hasTeam(s) || s.teamRequired === 'yes',
+  };
 
   // Whether each part is in. `counts` holds what lives outside the shoot:
   // { moodboard: photos, boards: boards from Ref }.
   const DONE = {
     basics: s => has(s.title) || (Array.isArray(s.talents) && s.talents.some(t => has(t.name))),
-    logistics: s => has(s.date) && hasPlace(s.location),
-    team: s => s.teamRequired === 'no' || (s.teamMembers || []).length > 0,
+    logistics: s => (has(s.date) || notSure(s, 'date')) && (hasPlace(s.location) || notSure(s, 'location')),
+    team: s => hasTeam(s) || notSure(s, 'team'),
     direction: s => DIRECTION_FIELDS.some(k => has(s[k])),
     visuals: (s, counts) => counts.moodboard > 0 || counts.boards > 0
       || (s.references || []).length > 0 || (s.lightingSetups || []).length > 0,
@@ -56,6 +68,18 @@ window.EyeParts.addShootStage = function addShootStage(ed) {
     if (done.length) parts.push(`${capital(listWords(done))} ${done.length === 1 && done[0] !== 'basics' && done[0] !== 'logistics' ? 'is' : 'are'} in.`);
     if (left.length) parts.push(`Still to add: ${listWords(left)}.`);
     return parts.join(' ');
+  }
+
+  // The honest answers that still stand: once the real thing is in, it goes.
+  function stillNotSure(shoot) {
+    return NOT_SURE.filter(key => notSure(shoot, key) && !ANSWERED[key](shoot));
+  }
+
+  // "Not sure yet: the date and the team." (what's still unsure, for the
+  // Getting ready card, where it stays until it's filled in).
+  function notSureWords(shoot) {
+    const left = stillNotSure(shoot);
+    return left.length ? `Not sure yet: ${listWords(left.map(key => `the ${key}`))}.` : '';
   }
 
   function hasReflection(shoot) {

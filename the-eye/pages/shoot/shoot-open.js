@@ -173,6 +173,8 @@ window.EyeParts.addShootOpen = function addShootOpen(ed) {
     document.getElementById('shootTeamFinalized').checked = s ? !!s.teamFinalized : false;
     ed.currentTeamMembers = s && s.teamMembers ? s.teamMembers.map(tm => ({ ...tm })) : [];
     ed.renderTeamMembers();
+    // "Date not set", "Location to be decided", "Not sure yet" (not-sure.js).
+    ed.loadNotSure(s);
 
     ed.renderShootFrameworkTags(s);
     ed.renderShootNotes(s ? s.id : null);

@@ -1,0 +1,36 @@
+/* The honest answers (pages/shoot/not-sure.js): "Date not set" and
+   "Location to be decided" under their fields, and the team's third choice.
+   On the page the team's choices are chips; in the guide they're cards with
+   a line under each name (09-guide-team). */
+#shootForm .not-sure-chip { align-self: flex-start; margin-top: -6px; }
+#shootForm .not-sure-chip[hidden] { display: none; }
+.team-yesno-row .choice-sub { display: none; }
+/* Three choices on the page: each as wide as its name, wrapping if need be. */
+#shootForm .team-yesno-row { flex-wrap: wrap; gap: 10px; }
+#shootForm .team-yesno-row .chip { flex: none; white-space: nowrap; }
+
+/* In the guide: one card per choice, a ring at its left; the picked one has
+   an ink ring round the card and a mango dot in its own. */
+#shootWizardBody .team-question { display: none; }
+#shootWizardBody .team-yesno-row { display: flex; flex-direction: column; gap: 10px; }
+#shootForm #shootWizardBody .team-yesno-row .chip {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; height: auto; min-height: 0;
+  margin: 0; padding: 14px 16px 14px 58px; border: 2px solid transparent; border-radius: 12px; background: #FFFFFF;
+  color: var(--text); text-align: left; text-transform: none; letter-spacing: 0; box-shadow: none;
+}
+#shootForm #shootWizardBody .team-yesno-row .chip::before {
+  content: ''; position: absolute; left: 18px; top: 50%; width: 22px; height: 22px; margin-top: -11px; box-sizing: border-box;
+  border: 2px solid var(--text); border-radius: 50%; background: #FFFFFF;
+}
+#shootForm #shootWizardBody .team-yesno-row .chip.active { border-color: var(--text); }
+#shootForm #shootWizardBody .team-yesno-row .chip.active::before { background: radial-gradient(circle, var(--accent) 0 4.5px, var(--text) 5px); }
+#shootWizardBody .team-yesno-row .choice-name { font: 400 18px/24px var(--ui); }
+#shootWizardBody .team-yesno-row .choice-sub { display: block; font: 400 14px/19px var(--ui); color: var(--dim); }
+
+/* The chip itself, in the round 2 look: a soft pill, ink when picked. */
+#shootForm .not-sure-chip {
+  height: 32px; min-height: 0; padding: 0 14px; border: 0; border-radius: 16px; background: #EFEFEA; color: var(--text);
+  font: 400 14px/32px var(--ui); letter-spacing: 0; text-transform: none; box-shadow: none;
+}
+#shootForm .not-sure-chip.active { background: #313D45; color: #FFFFFF; }
+#shootForm .not-sure-chip.active::before { content: '\2713'; margin-right: 6px; }

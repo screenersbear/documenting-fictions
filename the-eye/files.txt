@@ -89,6 +89,8 @@ built/app.css
   styles/shoot-band.css
   styles/shoot-front.css
   styles/shoot-report.css
+  styles/guide-page.css
+  styles/not-sure.css
 
 # The screens and popups, in the order they sit in the page. Each piece starts
 # with a line saying what it is, which isn't joined.
@@ -114,7 +116,6 @@ built/markup.js
   pages/sun-menu/sun-menu.html
   pages/app-menu/app-menu.html
   pages/app-menu/delete-all.html
-  pages/new-shoot/leave-guide.html
   pages/concept-helper/helper.html
   pages/reflection-helper/helper.html
   pages/shoot/multi-day-notice.html
@@ -232,6 +233,7 @@ built/app.js
   pages/shoot/chapter-pages.js
   pages/shoot/chapter.js
   pages/new-shoot/wizard-steps.js
+  pages/new-shoot/guide-chapters.js
   pages/new-shoot/wizard.js
   pages/new-shoot/wizard-end.js
   pages/concept-helper/helper.js
@@ -245,6 +247,7 @@ built/app.js
   components/image-viewer-touch.js
   pages/shoot/final-images.js
   pages/shoot/shoot-save.js
+  pages/shoot/not-sure.js
   pages/shoot/multi-day.js
   pages/shoot/multi-day-prompt.js
   pages/shoot/shoot-close.js

@@ -5,7 +5,7 @@
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootFront = function addShootFront(ed) {
-  Object.assign(ed, { frontShoot, frontCounts, showShootFront, showShootDetail, drawShootFront });
+  Object.assign(ed, { frontShoot, frontCounts, showShootFront, showShootDetail, drawShootFront, lastFrontCounts: () => lastCounts });
   ed.shootOnFront = true;
   const front = document.getElementById('shootFront');
   const modal = ed.shootModalOverlay.querySelector('.modal');
@@ -105,6 +105,8 @@ window.EyeParts.addShootFront = function addShootFront(ed) {
   // ---------- The details ----------
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
   const shot = s => ed.isPostCaptureStatus(s.status);
+  // An honest answer's words, while it stands.
+  const unsure = (s, key, words) => (ed.stillNotSure(s).includes(key) ? words : '');
   // The first board from Ref: live, frozen on the day it was shot, or imported.
   function boardWords(c) {
     const l = c.boardList && c.boardList[0] && c.boardList[0].link;
@@ -128,8 +130,8 @@ window.EyeParts.addShootFront = function addShootFront(ed) {
   }
   const ROWS = {
     talent: { label: 'Talent', page: 'basicInfoHeading', words: s => (s.talents || []).map(t => t.name).filter(has).join(', ') },
-    logistics: { label: 'Logistics', page: 'logisticsHeading', words: s => ed.metaLine([s.date ? ed.rowDate(s.date, ed.todayStr(), true) : '', placeWords(s.location)]) },
-    team: { label: 'Team', page: 'teamHeading', words: s => (s.teamRequired === 'no' ? 'Just me' : (s.teamMembers || []).map(m => m.name).filter(has).join(', ')) },
+    logistics: { label: 'Logistics', page: 'logisticsHeading', words: s => ed.metaLine([s.date ? ed.rowDate(s.date, ed.todayStr(), true) : unsure(s, 'date', 'Date not set'), placeWords(s.location) || unsure(s, 'location', 'Location to be decided')]) },
+    team: { label: 'Team', page: 'teamHeading', words: s => (s.teamRequired === 'no' ? 'Just me' : (s.teamMembers || []).map(m => m.name).filter(has).join(', ') || unsure(s, 'team', 'Not sure yet')) },
     direction: { label: 'Direction', page: 'directionHeading', words: s => ['premise', 'shootGoals', 'elevatorPitch', 'character', 'worldNotes', 'deliverables'].map(k => s[k]).find(has) || '' },
     // Once it's shot, the mood board is what it was on the day.
     visuals: { label: s => (shot(s) ? ed.moodboardTerm(s.category || '') : 'Visuals'), page: 'visualsHeading', words: (s, c) => ed.metaLine([boardWords(c), c.boards > 1 ? plural(c.boards, 'board') : '', c.moodboard ? plural(c.moodboard, 'photo') : '', (s.references || []).length ? plural(s.references.length, 'link') : '', (s.lightingSetups || []).length ? plural(s.lightingSetups.length, 'lighting setup') : '']) },
@@ -151,10 +153,14 @@ window.EyeParts.addShootFront = function addShootFront(ed) {
 
   function drawDetailRows(s, c, onFront) {
     const box = document.getElementById('shootDetailRows');
+    // Before it's shot, an empty part opens its chapter of the guide.
+    const planning = !ed.isPostCaptureStatus(s.status) && !s.archived;
     const rows = rowKeys(s, c, onFront).map((key) => {
       const row = ROWS[key];
       const words = row.words(s, c);
-      return `<button type="button" class="detail-row" data-page="${row.page}">
+      const chapter = key === 'talent' ? 'basics' : key;
+      const toGuide = planning && !words && ed.SETUP_CHAPTERS.some(ch => ch.key === chapter);
+      return `<button type="button" class="detail-row" data-page="${row.page}"${toGuide ? ` data-chapter="${chapter}"` : ''}>
         <span class="detail-dot${words ? ' filled' : ''}" aria-hidden="true"></span>
         <span class="detail-words"><span class="detail-label">${ed.escapeHtml(typeof row.label === 'function' ? row.label(s) : row.label)}</span><span class="detail-sum">${ed.escapeHtml(words || row.empty || 'Not added yet')}</span></span>
         ${CHEVRON}</button>`;
@@ -168,7 +174,9 @@ window.EyeParts.addShootFront = function addShootFront(ed) {
   }
   document.getElementById('shootDetailRows').addEventListener('click', (e) => {
     const row = e.target.closest('button.detail-row');
-    if (row) ed.showShootPage(row.dataset.page);
+    if (!row) return;
+    if (row.dataset.chapter) ed.openShootPart(row.dataset.chapter, row.dataset.page);
+    else ed.showShootPage(row.dataset.page);
   });
 
   // Everything on the front page, from the shoot as it stands. The photos

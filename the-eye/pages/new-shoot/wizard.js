@@ -1,22 +1,18 @@
-// The new-shoot guide: going through its steps.
+// The new shoot guide: going through its chapters (guide-chapters.js), each
+// showing its steps' fields from the page.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addNewShootWizard = function addNewShootWizard(ed) {
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
   Object.assign(ed, { adjacentShootWizardStep, blurShootWizardFocus, restoreShootWizardBlocks, refreshShootWizard, showShootWizardStep, syncShootWizardViewport, setShootPageInert, startShootWizard, queueShootWizard, startQueuedShootWizard });
-  // The slides that currently apply (the one on screen always counts, so the
-  // "Step x of y" line can never lose its own place).
-  function shootWizardStepsInPlay() {
-    return ed.SHOOT_WIZARD_STEPS.filter(step => step.key === ed.shootWizardStepKey || !step.when || step.when());
-  }
-
-  // The nearest slide that applies before (-1) or after (+1) the current
-  // one, or null at either end. Re-evaluated every time, since slide 1's
-  // category decides whether The story applies at all.
+  // The chapter before (-1) or after (+1) this one, or null at either end,
+  // or when the guide was opened for just this one chapter.
   function adjacentShootWizardStep(direction) {
-    const from = ed.SHOOT_WIZARD_STEPS.findIndex(step => step.key === ed.shootWizardStepKey);
-    for (let i = from + direction; i >= 0 && i < ed.SHOOT_WIZARD_STEPS.length; i += direction) {
-      const step = ed.SHOOT_WIZARD_STEPS[i];
-      if (!step.when || step.when()) return step;
+    if (ed.shootWizardOnly) return null;
+    const chapters = ed.GUIDE_CHAPTERS;
+    const from = chapters.findIndex(ch => ch.key === ed.shootWizardStepKey);
+    for (let i = from + direction; i >= 0 && i < chapters.length; i += direction) {
+      if (ed.guideChapterParts(chapters[i]).length) return chapters[i];
     }
     return null;
   }
@@ -56,35 +52,30 @@ window.EyeParts.addNewShootWizard = function addNewShootWizard(ed) {
       if (placeholder.parentNode) placeholder.replaceWith(el);
     });
     ed.shootWizardMoved = [];
-    const step = ed.SHOOT_WIZARD_STEPS.find(s => s.key === ed.shootWizardStepKey);
-    if (step && step.leave) step.leave();
+    ed.clearGuidePartHeads(document.getElementById('shootWizardBody'));
+    (ed.shootWizardParts || []).forEach((step) => { if (step.leave) step.leave(); });
+    ed.shootWizardParts = [];
   }
 
   function renderShootWizardChrome() {
-    const step = ed.SHOOT_WIZARD_STEPS.find(s => s.key === ed.shootWizardStepKey);
-    if (!step) return;
-    const inPlay = shootWizardStepsInPlay();
-    const isLast = !adjacentShootWizardStep(1);
-    document.getElementById('shootWizardStep').textContent = `Step ${inPlay.indexOf(step) + 1} of ${inPlay.length}`;
-    document.getElementById('shootWizardTitle').textContent = typeof step.title === 'function' ? step.title() : step.title;
-    const hintEl = document.getElementById('shootWizardHint');
-    hintEl.textContent = (typeof step.hint === 'function' ? step.hint() : step.hint) || '';
-    // A slide without a hint doesn't keep an empty line's spacing.
-    hintEl.hidden = !hintEl.textContent;
-    // No Back on the first slide, nor on the last: that one is just the
-    // confirm button (see below).
-    document.getElementById('shootWizardBackBtn').hidden = isLast || !adjacentShootWizardStep(-1);
-    // Small "Don't show again" link, on the first slide only, and not when
-    // the guide was asked for from the ⋯ menu.
-    document.getElementById('shootWizardDontShowBtn').hidden = inPlay.indexOf(step) !== 0 || ed.shootWizardAgain;
-    // Forward is always possible, filled in or not. On the last slide the
-    // forward button is the shoot page's own Save — same varying text as the
-    // page's button (picked when the shoot opened) — and the separate "Skip
-    // to shoot page" row, on every other slide, steps aside.
+    const chapter = ed.guideChapter(ed.shootWizardStepKey);
+    if (!chapter) return;
+    const at = ed.GUIDE_CHAPTERS.indexOf(chapter);
+    const next = adjacentShootWizardStep(1);
+    const done = ed.setupChapters(ed.frontShoot(), ed.lastFrontCounts() || {}).filter(ch => ch.done).map(ch => ch.key);
+    ed.drawGuideMarks(at, done);
+    document.getElementById('shootWizardStep').textContent = `Chapter ${at + 1} of ${ed.GUIDE_CHAPTERS.length}`;
+    document.getElementById('shootWizardTitle').textContent = chapter.title;
+    document.getElementById('shootWizardHint').textContent = chapter.question;
+    document.getElementById('shootWizardPlace').textContent = ed.shootWizardAgain ? ed.shootDisplayName(ed.frontShoot()) : 'New shoot';
+    // Next names the chapter it goes to; on the last (or the only) one it's
+    // Done, and Done for now and Skip step aside.
     const nextBtn = document.getElementById('shootWizardNextBtn');
-    nextBtn.textContent = isLast ? document.getElementById('saveShootBtn').textContent : 'Next';
-    nextBtn.classList.toggle('shoot-wizard-save', isLast);
-    document.getElementById('shootWizardExitRow').hidden = isLast;
+    nextBtn.innerHTML = next ? `Next: ${ed.escapeHtml(next.title)} ${CHEVRON}` : 'Done';
+    document.getElementById('shootWizardExitBtn').hidden = !next;
+    document.getElementById('shootWizardSkipBtn').hidden = !next;
+    // "Don't show the guide again", on a new shoot's first chapter only.
+    document.getElementById('shootWizardDontShowBtn').hidden = at !== 0 || ed.shootWizardAgain;
   }
 
   // Run from scheduleShootAutosave on every change while the wizard's up.
@@ -101,15 +92,20 @@ window.EyeParts.addNewShootWizard = function addNewShootWizard(ed) {
   }
 
   function showShootWizardStep(key) {
-    const step = ed.SHOOT_WIZARD_STEPS.find(s => s.key === key);
-    if (!step) return;
+    const chapter = ed.guideChapter(key);
+    if (!chapter) return;
     blurShootWizardFocus();
     restoreShootWizardBlocks();
     ed.shootWizardStepKey = key;
     const body = document.getElementById('shootWizardBody');
-    step.blocks().forEach(block => moveBlockIntoShootWizard(block, body));
-    if (step.enter) step.enter();
-    body.scrollTop = 0;
+    const parts = ed.guideChapterParts(chapter);
+    ed.shootWizardParts = parts;
+    parts.forEach((step) => {
+      if (parts.length > 1 && !ed.guidePartIsChapter(step, chapter)) ed.addGuidePartHead(step, body);
+      step.blocks().forEach(block => moveBlockIntoShootWizard(block, body));
+      if (step.enter) step.enter();
+    });
+    document.getElementById('shootWizardScroll').scrollTop = 0;
     renderShootWizardChrome();
     // Measured now, at the card's width, with the wizard already visible — a
     // hidden one would measure zero and leave every box at its rows default.
@@ -153,15 +149,14 @@ window.EyeParts.addNewShootWizard = function addNewShootWizard(ed) {
     });
   }
 
-  // opts.from: the step to start on (Continue setup on the shoot's page
-  // starts on the first part still missing), else the first one.
+  // opts.from: the chapter to start on (Continue setup on the shoot's page
+  // starts on the first part still missing), else the first one. opts.only:
+  // just that chapter (the next step, or an empty part of the page).
   function startShootWizard(opts) {
-    const shown = step => !step.when || step.when();
-    const from = opts && opts.from ? ed.SHOOT_WIZARD_STEPS.find(step => step.key === opts.from && shown(step)) : null;
-    const first = from || ed.SHOOT_WIZARD_STEPS.find(shown);
-    if (!first) return;
+    const first = (opts && opts.from && ed.guideChapter(opts.from)) || ed.GUIDE_CHAPTERS[0];
     ed.shootWizardActive = true;
     ed.shootWizardAgain = !!(opts && opts.again);
+    ed.shootWizardOnly = !!(opts && opts.only && opts.from);
     ed.shootWizardStepKey = null;
     ed.shootWizardViewportMaxH = 0;
     // Slide 1 explains the status button itself, so the one-time intro that

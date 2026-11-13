@@ -23,7 +23,7 @@ const doneKeys = (shoot, counts) => ed.setupChapters(shoot, counts).filter(c => 
 
 describe('addShootStage', () => {
   it('adds the stage helpers and nothing else', () => {
-    expect(Object.keys(ed)).toEqual(['SETUP_CHAPTERS', 'setupChapters', 'setupWords', 'listWords', 'hasReflection', 'nextStep', 'readyToComplete']);
+    expect(Object.keys(ed)).toEqual(['SETUP_CHAPTERS', 'NOT_SURE', 'setupChapters', 'setupWords', 'notSureWords', 'stillNotSure', 'listWords', 'hasReflection', 'nextStep', 'readyToComplete']);
   });
   it('keeps the parts already on window.EyeParts', async () => {
     window.EyeParts.other = 1;
@@ -67,6 +67,19 @@ describe('setupChapters', () => {
     expect(doneKeys({ date: '2026-11-21' })).not.toContain('logistics');
     expect(doneKeys({ location: { name: 'Roof' } })).not.toContain('logistics');
     expect(doneKeys({ date: '2026-11-21', location: null })).not.toContain('logistics');
+  });
+  it('counts "Date not set" and "Location to be decided" as answered', () => {
+    expect(doneKeys({ notSure: ['date'], location: { name: 'Roof' } })).toContain('logistics');
+    expect(doneKeys({ date: '2026-11-21', notSure: ['location'] })).toContain('logistics');
+    expect(doneKeys({ notSure: ['date', 'location'] })).toContain('logistics');
+    expect(doneKeys({ notSure: ['date'] })).not.toContain('logistics');
+    expect(doneKeys({ notSure: ['location'] })).not.toContain('logistics');
+    expect(doneKeys({ notSure: 'date location' })).not.toContain('logistics');
+  });
+  it('counts "Not sure yet" about the team as answered', () => {
+    expect(doneKeys({ notSure: ['team'] })).toContain('team');
+    expect(doneKeys({ notSure: ['date'] })).not.toContain('team');
+    expect(doneKeys({ notSure: [] })).not.toContain('team');
   });
   it('counts "just me" or anyone on the team', () => {
     expect(doneKeys({ teamRequired: 'no' })).toContain('team');
@@ -132,6 +145,45 @@ describe('setupWords', () => {
   });
   it('is empty with no parts', () => {
     expect(ed.setupWords([])).toBe('');
+  });
+});
+
+describe('stillNotSure', () => {
+  it('keeps the honest answers that still stand, in the guide order', () => {
+    expect(ed.stillNotSure({ notSure: ['team', 'date', 'location'] })).toEqual(['date', 'location', 'team']);
+  });
+  it('drops one once it is filled in for real', () => {
+    expect(ed.stillNotSure({ notSure: ['date', 'team'], date: '2026-11-21' })).toEqual(['team']);
+    expect(ed.stillNotSure({ notSure: ['location'], location: { name: 'Roof' } })).toEqual([]);
+    expect(ed.stillNotSure({ notSure: ['team'], teamRequired: 'no' })).toEqual([]);
+  });
+  it('drops anything that is not an honest answer, and copes with no list', () => {
+    expect(ed.stillNotSure({ notSure: ['deadline', 'date', 'date'] })).toEqual(['date']);
+    expect(ed.stillNotSure({})).toEqual([]);
+    expect(ed.stillNotSure({ notSure: null })).toEqual([]);
+  });
+});
+
+describe('notSureWords', () => {
+  it('names what was answered "not sure yet", in the guide order', () => {
+    expect(ed.notSureWords({ notSure: ['team', 'date'] })).toBe('Not sure yet: the date and the team.');
+    expect(ed.notSureWords({ notSure: ['location', 'team', 'date'] })).toBe('Not sure yet: the date, the location and the team.');
+    expect(ed.notSureWords({ notSure: ['location'] })).toBe('Not sure yet: the location.');
+  });
+  it('leaves out an answer that has since been filled in', () => {
+    expect(ed.notSureWords({ notSure: ['date', 'location'], date: '2026-11-21' })).toBe('Not sure yet: the location.');
+    expect(ed.notSureWords({ notSure: ['location'], location: { city: 'Newark' } })).toBe('');
+    expect(ed.notSureWords({ notSure: ['team'], teamRequired: 'yes' })).toBe('');
+    expect(ed.notSureWords({ notSure: ['team'], teamMembers: [{ name: 'Ana' }] })).toBe('');
+  });
+  it('is empty with nothing unsure, or anything else in the list', () => {
+    expect(ed.notSureWords({})).toBe('');
+    expect(ed.notSureWords({ notSure: [] })).toBe('');
+    expect(ed.notSureWords({ notSure: ['deadline', 7] })).toBe('');
+    expect(ed.notSureWords({ notSure: 'team' })).toBe('');
+  });
+  it('lists the three honest answers', () => {
+    expect(ed.NOT_SURE).toEqual(['date', 'location', 'team']);
   });
 });
 

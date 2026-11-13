@@ -53,13 +53,17 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
   }
 
   const SHOOT_WIZARD_STEPS = [
+    // The status is the tag on the shoot's page, so the guide doesn't ask it.
     {
       key: 'basics',
       title: 'The basics',
       blocks: () => [
-        shootWizardBlock('shootStatus', '.status-swatch-wrap'),
         shootWizardBlock('shootTitle', 'label'),
         shootWizardBlock('shootCategory', 'label'),
+        shootWizardBlock('shootDate', 'label'),
+        shootWizardBlock('dateNotSetBtn'),
+        shootWizardBlock('multiDayRow'),
+        shootWizardBlock('multiDayLastDayLabel'),
       ],
     },
     {
@@ -70,12 +74,10 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
     },
     {
       key: 'when',
-      title: 'Date & time',
-      // Last day and the video call times keep showing/hiding themselves.
+      title: 'Time',
+      hint: 'When it starts and wraps.',
+      // The video call times keep showing/hiding themselves.
       blocks: () => [
-        shootWizardBlock('shootDate', 'label'),
-        shootWizardBlock('multiDayRow'),
-        shootWizardBlock('multiDayLastDayLabel'),
         shootWizardBlock('shootStartTime', '.time-range-row'),
         shootWizardBlock('videoCallTimesRow'),
       ],
@@ -86,6 +88,7 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
       hint: "Where it's happening, and anything people need to know to find it.",
       blocks: () => [
         shootWizardBlock('shootLocationBtn', 'label'),
+        shootWizardBlock('locationNotSetBtn'),
         shootWizardBlock('shootLocationDirections', 'label'),
       ],
     },
@@ -200,12 +203,6 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
       title: 'Deadline',
       hint: "When everything's due, if there's a date to hit.",
       blocks: () => [shootWizardBlock('shootDeadline', 'label')],
-    },
-    {
-      key: 'finish',
-      title: 'All set',
-      hint: 'Everything you filled in is already on the shoot page. Add to it or change it there anytime.',
-      blocks: () => [],
     },
   ]; ed.SHOOT_WIZARD_STEPS = SHOOT_WIZARD_STEPS;
 };

@@ -308,6 +308,9 @@
         <label>Shoot date
           <input type="date" id="shootDate" />
         </label>
+        <!-- Honest answers (pages/shoot/not-sure.js): shown while the date or
+             the place is empty, and counted as answered. -->
+        <button type="button" class="chip not-sure-chip" id="dateNotSetBtn" aria-pressed="false">Date not set</button>
         <label class="checkbox-row" id="multiDayRow"><input type="checkbox" id="shootMultiDay" /> <span id="multiDayLabel">Multi-day shoot</span></label>
         <label id="multiDayLastDayLabel" hidden>Last day
           <input type="date" id="shootLastDay" />
@@ -334,6 +337,7 @@
         <label>Location
           <button type="button" id="shootLocationBtn" class="location-field-btn">Tap to add location</button>
         </label>
+        <button type="button" class="chip not-sure-chip" id="locationNotSetBtn" aria-pressed="false">Location to be decided</button>
         <label>Location directions
           <textarea id="shootLocationDirections" rows="3" maxlength="1000" placeholder="What floor the studio is on, where to park, etc." readonly></textarea>
         </label>
@@ -343,11 +347,14 @@
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="teamHeading">Team</h3>
       <div id="teamBody">
         <p class="team-question">Requires team?</p>
-        <!-- Two named choices in the app's chip look (the picked one filled);
-             saved as teamRequired 'no'/'yes' — see setTeamRequiredChoice. -->
+        <!-- Named choices in the app's chip look (the picked one filled);
+             saved as teamRequired 'no'/'yes' (see setTeamRequiredChoice), or
+             "Not sure yet" in notSure (pages/shoot/not-sure.js). In the guide
+             they're cards, with the line under each name. -->
         <div class="team-yesno-row">
-          <button type="button" class="chip" id="teamRequiredNoBtn" aria-pressed="false">Just me</button>
-          <button type="button" class="chip" id="teamRequiredYesBtn" aria-pressed="false">With a team</button>
+          <button type="button" class="chip" id="teamRequiredNoBtn" aria-pressed="false"><span class="choice-name">Just me</span><span class="choice-sub">No team for this shoot.</span></button>
+          <button type="button" class="chip" id="teamRequiredYesBtn" aria-pressed="false"><span class="choice-name">With a team</span><span class="choice-sub">Add people now or later.</span></button>
+          <button type="button" class="chip" id="teamNotSureBtn" aria-pressed="false"><span class="choice-name">Not sure yet</span><span class="choice-sub">Counts as answered. It stays on Getting ready.</span></button>
         </div>
         <p class="field-hint team-finalized-note" id="teamFinalizedNote" hidden>Team finalized</p>
         <div id="teamDetailsBlock" hidden>
@@ -491,31 +498,36 @@
         <button type="button" class="complete-shoot-btn" id="completeShootBtn" hidden>Complete Shoot</button>
       </div>
 
-      <!-- New-shoot planning wizard. Inside the form on purpose: each slide
-           borrows the real field blocks from the page above (see
-           SHOOT_WIZARD_STEPS in app.js), so the form's autosave listeners and
-           #shootForm field styles keep working on them. Last in the form so
-           first-match lookups (the Save bar's .modal-actions) still find the
+      <!-- The new shoot guide, a page of its own over the shoot: seven
+           chapters, the same as the shoot's parts (pages/new-shoot/
+           guide-chapters.js). Inside the form on purpose: each chapter
+           borrows the real field blocks from the page above, so the form's
+           autosave listeners and #shootForm field styles keep working on
+           them. Last in the form so first-match lookups still find the
            page's own elements first. Every button is type="button": a
            submit-type one would be "clicked" by Enter in any text field. -->
       <div id="shootWizard" hidden>
         <div id="shootWizardCard" role="dialog" aria-modal="true" aria-labelledby="shootWizardTitle" tabindex="-1">
-          <div class="shoot-wizard-head">
-            <p class="mi-sub" id="shootWizardStep"></p>
-            <h2 id="shootWizardTitle"></h2>
-            <p id="shootWizardHint"></p>
+          <header class="band shoot-band guide-band">
+            <button type="button" class="ring-btn" id="shootWizardBackBtn" aria-label="Back"><span><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></span></button>
+            <p class="band-line shoot-band-line"><b id="shootWizardPlace">New shoot</b><span class="band-rule"></span></p>
+            <button type="button" class="guide-skip" id="shootWizardSkipBtn">Skip</button>
+          </header>
+          <div class="guide-scroll" id="shootWizardScroll">
+            <div class="guide-marks" id="shootWizardMarks" aria-hidden="true"></div>
+            <div class="shoot-wizard-head guide-chrome">
+              <p class="guide-chapter" id="shootWizardStep"></p>
+              <h2 id="shootWizardTitle"></h2>
+              <p id="shootWizardHint"></p>
+            </div>
+            <div id="shootWizardBody"></div>
+            <!-- A new shoot's first chapter only (see renderShootWizardChrome). -->
+            <button type="button" class="manage-link" id="shootWizardDontShowBtn" hidden>Don't show the guide again</button>
           </div>
-          <div id="shootWizardBody"></div>
-          <div class="shoot-wizard-actions">
-            <button type="button" class="secondary" id="shootWizardBackBtn">Back</button>
-            <button type="button" class="primary" id="shootWizardNextBtn">Next</button>
+          <div class="shoot-wizard-actions guide-bar guide-chrome">
+            <button type="button" class="outline-btn" id="shootWizardExitBtn">Done for now</button>
+            <button type="button" class="guide-next" id="shootWizardNextBtn">Next</button>
           </div>
-          <div class="shoot-tour-skip-row" id="shootWizardExitRow">
-            <button type="button" class="secondary journal-block-btn" id="shootWizardExitBtn">Skip to shoot page</button>
-          </div>
-          <!-- First slide only (see renderShootWizardChrome); the same small
-               underlined link look as the Visuals "Manage" link. -->
-          <button type="button" class="manage-link" id="shootWizardDontShowBtn" hidden>Don't show again</button>
         </div>
       </div>
     </form>
@@ -1281,18 +1293,6 @@
       <button type="button" class="danger" id="deleteAllConfirmYesBtn">Yes, delete all shoots</button>
     </div>
     <button type="button" class="primary" id="deleteAllConfirmOkBtn" hidden>OK</button>
-  </div>
-</div>
-
-<!-- ============ LEAVE THE NEW SHOOT GUIDE? ============ -->
-<div id="shootWizardLeaveOverlay" class="modal-overlay intro-overlay" hidden>
-  <div class="modal intro-modal">
-    <h2>Leave the guide?</h2>
-    <p>Everything you've filled in so far is already on the shoot page, and you can keep adding to it there.</p>
-    <div class="modal-actions" id="shootWizardLeaveActions">
-      <button type="button" class="primary" id="shootWizardLeaveStayBtn">Keep going</button>
-      <button type="button" class="secondary" id="shootWizardLeaveGoBtn">Go to shoot page</button>
-    </div>
   </div>
 </div>
 
