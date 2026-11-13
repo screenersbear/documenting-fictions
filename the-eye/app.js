@@ -6,6 +6,7 @@
   // Needed from the start (only functions and fixed values, so they can run first):
   window.EyeParts.addDates(ed);
   window.EyeParts.addRowWords(ed);
+  window.EyeParts.addShootStage(ed);
   window.EyeParts.addHelpers(ed);
   // iOS Safari only computes :active styles on elements it thinks have a
   // touch listener — this no-op unlocks tap-flash feedback app-wide.
@@ -117,6 +118,12 @@
   window.EyeParts.addShootOptionsChangeDeadline(ed);
   window.EyeParts.addShootOptionsChangeStatus(ed);
   window.EyeParts.addShootOptionsAddToProject(ed);
+  // The shoot's page in the round 2 look: front page, cards, next step, status.
+  window.EyeParts.addShootFront(ed);
+  window.EyeParts.addShootFrontCards(ed);
+  window.EyeParts.addShootStageCards(ed);
+  window.EyeParts.addShootNextStep(ed);
+  window.EyeParts.addShootStatusSheet(ed);
   window.EyeParts.addToast(ed);
   window.EyeParts.addConfirm(ed);
   window.EyeParts.addLoadLib(ed);

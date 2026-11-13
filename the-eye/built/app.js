@@ -4441,6 +4441,119 @@ window.EyeParts.addRowWords = function addRowWords(ed) {
 };
 ;
 
+// ---- components/shoot-stage.js ----
+// What a shoot still needs at its stage: the seven parts the guide asks
+// about (the Getting ready card), the words for them, the next step button
+// at the foot of its page, and when it's complete. A shoot and a few counts
+// in, plain words out (no page, no saved data), so it's unit tested
+// (tests/unit/the-eye/shoot-stage.test.mjs).
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addShootStage = function addShootStage(ed) {
+  // The seven parts, in the guide's order. `page` is the part of the shoot
+  // page that holds it; `inWords` and `leftWords` go in the card's sentence.
+  const SETUP_CHAPTERS = [
+    { key: 'basics', label: 'Basics', inWords: 'basics', leftWords: 'the basics', add: 'Add the basics', page: 'basicInfoHeading' },
+    { key: 'logistics', label: 'Logistics', inWords: 'logistics', leftWords: 'logistics', add: 'Add the logistics', page: 'logisticsHeading' },
+    { key: 'team', label: 'Team', inWords: 'team', leftWords: 'the team', add: 'Add the team', page: 'teamHeading' },
+    { key: 'direction', label: 'Direction', inWords: 'direction', leftWords: 'direction', add: 'Add the direction', page: 'directionHeading' },
+    { key: 'visuals', label: 'Visuals', inWords: 'visuals', leftWords: 'visuals', add: 'Add the visuals', page: 'visualsHeading' },
+    { key: 'shotList', label: 'Shot list', inWords: 'shot list', leftWords: 'shot list', add: 'Add the shot list', page: 'shotListHeading' },
+    { key: 'deadline', label: 'Deadline', inWords: 'deadline', leftWords: 'a deadline', add: 'Add a deadline', page: 'logisticsHeading' },
+  ];
+  Object.assign(ed, { SETUP_CHAPTERS, setupChapters, setupWords, listWords, hasReflection, nextStep, readyToComplete });
+
+  const has = v => typeof v === 'string' && v.trim() !== '';
+  const hasPlace = loc => !!loc && ['name', 'street', 'city'].some(k => has(loc[k]));
+  const DIRECTION_FIELDS = ['shootGoals', 'premise', 'character', 'worldNotes', 'elevatorPitch', 'deliverables'];
+
+  // Whether each part is in. `counts` holds what lives outside the shoot:
+  // { moodboard: photos, boards: boards from Ref }.
+  const DONE = {
+    basics: s => has(s.title) || (Array.isArray(s.talents) && s.talents.some(t => has(t.name))),
+    logistics: s => has(s.date) && hasPlace(s.location),
+    team: s => s.teamRequired === 'no' || (s.teamMembers || []).length > 0,
+    direction: s => DIRECTION_FIELDS.some(k => has(s[k])),
+    visuals: (s, counts) => counts.moodboard > 0 || counts.boards > 0
+      || (s.references || []).length > 0 || (s.lightingSetups || []).length > 0,
+    shotList: s => Array.isArray(s.shotList) && s.shotList.some(item => has(item.text)),
+    deadline: s => has(s.deadline),
+  };
+
+  function setupChapters(shoot, counts) {
+    return SETUP_CHAPTERS.map(c => ({ ...c, done: DONE[c.key](shoot, counts || {}) }));
+  }
+
+  // "a, b and c".
+  function listWords(words) {
+    if (words.length < 2) return words[0] || '';
+    return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
+  }
+  const capital = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // "Basics, logistics and team are in. Still to add: direction, visuals,
+  // shot list and a deadline."
+  function setupWords(chapters) {
+    const done = chapters.filter(c => c.done).map(c => c.inWords);
+    const left = chapters.filter(c => !c.done).map(c => c.leftWords);
+    const parts = [];
+    if (done.length) parts.push(`${capital(listWords(done))} ${done.length === 1 && done[0] !== 'basics' && done[0] !== 'logistics' ? 'is' : 'are'} in.`);
+    if (left.length) parts.push(`Still to add: ${listWords(left)}.`);
+    return parts.join(' ');
+  }
+
+  function hasReflection(shoot) {
+    return ['whatWentRight', 'couldBeBetter', 'lessonsLearned'].some(k => has(shoot[k]));
+  }
+
+  // The one thing a shoot needs next, for the button at the foot of its
+  // page: { key, label, hint, to, chapter }, or null when there's nothing.
+  // `counts` adds { finalImages, video } to setupChapters' counts.
+  //   chapter      the first part still to add (its key in `chapter`)
+  //   status       move it on to `to`
+  //   shootMode, reflect, finalImages, complete, unarchive, date
+  function nextStep(shoot, counts) {
+    const c = counts || {};
+    if (shoot.archived) return { key: 'unarchive', label: 'Unarchive', hint: '' };
+    const reflected = hasReflection(shoot);
+    const needsImages = !c.video && !(c.finalImages > 0);
+    switch (shoot.status) {
+      case 'prospect':
+      case 'planning': {
+        const left = setupChapters(shoot, c).filter(ch => !ch.done);
+        if (!left.length) return { key: 'status', to: 'waiting_to_shoot', label: 'Mark shoot ready', hint: '' };
+        return { key: 'chapter', chapter: left[0].key, label: left[0].add, hint: left.length === 1 ? 'Next step, then the shoot is ready' : '' };
+      }
+      case 'waiting_to_shoot':
+        return { key: 'shootMode', label: 'Shoot mode', hint: '' };
+      case 'captured':
+        if (!reflected) return { key: 'reflect', label: 'Reflect now', hint: '' };
+        return c.video
+          ? { key: 'status', to: 'rough_cut', label: 'Start the rough cut', hint: '' }
+          : { key: 'status', to: 'waiting_for_selects', label: 'Mark proofs sent', hint: '' };
+      case 'delivered':
+        if (!reflected) return { key: 'reflect', label: 'Reflect now', hint: needsImages ? '' : 'Then the shoot is complete' };
+        if (needsImages) return { key: 'finalImages', label: 'Add final images', hint: 'Then the shoot is complete' };
+        return { key: 'complete', label: 'Complete', hint: '' };
+      case 'rescheduled':
+        return { key: 'date', label: 'Set a new date', hint: '' };
+      case 'canceled':
+        return null;
+      default: // in the edit: waiting for selects, editing, and video's steps
+        if (needsImages) return { key: 'finalImages', label: 'Add final images', hint: '' };
+        return { key: 'status', to: 'delivered', label: 'Mark delivered', hint: '' };
+    }
+  }
+
+  // Complete on its own: delivered, with its final images (video has none)
+  // and its reflection, and not in the archive already.
+  function readyToComplete(shoot, counts) {
+    const c = counts || {};
+    return shoot.status === 'delivered' && !shoot.archived && hasReflection(shoot) && (!!c.video || c.finalImages > 0);
+  }
+};
+;
+
 // ---- components/helpers.js ----
 // Small helpers: ids, shuffling, sort keys, escaping, and what a shoot is called and still needs.
 // (Loaded before app.js, which runs it in its turn.)
@@ -7286,7 +7399,7 @@ window.EyeParts.addLastPlace = function addLastPlace(ed) {
         archiveFilter: ed.archiveFilter,
         journalFilter: ed.journalFilter,
         statsYearFilter: ed.statsYearFilter,
-        shoot: shootOpen ? { id: ed.currentShootId, page: { id: ed.shootPageId, sub: ed.shootSub } } : null,
+        shoot: shootOpen ? { id: ed.currentShootId, page: ed.shootOnFront ? { id: 'front', sub: 0 } : { id: ed.shootPageId, sub: ed.shootSub } } : null,
         archive: archiveOpen ? { id: ed.archiveModeShootId, at: ed.archiveAt } : null,
         shootMode: !ed.shootModeOverlay.hidden && ed.getShootModeShootId() ? { id: ed.getShootModeShootId(), at: ed.shootModeAt } : null,
       }));
@@ -13001,7 +13114,7 @@ window.EyeParts.addShootChapterPages = function addShootChapterPages(ed) {
 ;
 
 // ---- pages/shoot/chapter.js ----
-// A shoot as a chapter: showing a page, and the bar and menus under it.
+// A shoot as a chapter: showing a page, and its More menu.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootChapter = function addShootChapter(ed) {
@@ -13025,57 +13138,27 @@ window.EyeParts.addShootChapter = function addShootChapter(ed) {
     });
   }
 
-  // Scrolls to a section (the first one is the top of the page). opts.turn:
-  // asked for by a tap, so it glides there.
+  // 'front' is the front page (pages/shoot/shoot-front.js); any other id
+  // is that part of the form, on a page of its own. A part that isn't there
+  // (the reflection before the shoot) gives the front page with opts.orFirst.
   function showShootPage(id, opts = {}) {
+    if (id === 'front') { ed.showShootFront(); return; }
     const pages = ed.availableShootPages();
     if (!pages.some(p => p.id === id)) {
-      if (!opts.orFirst) return;
-      id = pages[0].id;
+      if (opts.orFirst) ed.showShootFront();
+      return;
     }
     ed.shootWanted = null;
     ed.shootPageId = id;
     ed.shootSub = 0;
     if (ed.currentShootId) ed.shootPageMemory[ed.currentShootId] = { id, sub: 0 };
     ed.shootPageEls.forEach(({ el }) => el.classList.remove('nb-off'));
+    ed.showShootDetail(id);
     ed.drawShootSub();
     ed.drawShootPageNumber();
     ed.updateShootRunningHead();
-    // Boxes that were out of sight may have measured nothing.
-    ed.autoSizeAllListTextareas();
-    ed.syncAllShootFormFields();
-    const modal = ed.shootModalOverlay.querySelector('.modal');
-    const head = document.getElementById(id);
-    const top = id === pages[0].id || !head ? 0
-      : modal.scrollTop + head.getBoundingClientRect().top - modal.getBoundingClientRect().top - parseFloat(getComputedStyle(modal).paddingTop);
-    modal.scrollTo({ top: Math.max(0, top), behavior: opts.turn && ed.motionOk() ? 'smooth' : 'auto' });
     if (ed.shootBreakWatch) ed.shootBreakWatch.takeRecords();
   }
-
-  // Scrolled by hand: the section at the top of the page is the one it's on.
-  (function followShootScroll() {
-    const modal = ed.shootModalOverlay.querySelector('.modal');
-    let due = false;
-    modal.addEventListener('scroll', () => {
-      if (due) return;
-      due = true;
-      setTimeout(() => {
-        due = false;
-        if (ed.shootModalOverlay.hidden || ed.shootWizardActive || ed.shootWizardPendingId) return;
-        const line = modal.getBoundingClientRect().top + modal.clientHeight / 3;
-        let on = null;
-        ed.availableShootPages().forEach(({ id }) => {
-          const head = document.getElementById(id);
-          if (head && head.getBoundingClientRect().top <= line) on = id;
-        });
-        on = on || ed.availableShootPages()[0].id;
-        if (on === ed.shootPageId) return;
-        ed.shootPageId = on;
-        if (ed.currentShootId) ed.shootPageMemory[ed.currentShootId] = { id: on, sub: 0 };
-        ed.drawShootPageNumber();
-      }, 120);
-    }, { passive: true });
-  })();
 
   ed.shootForm.addEventListener('input', (e) => { if (e.target.id === 'shootTitle') ed.updateShootRunningHead(); });
   // Anything that adds to a page or takes from it breaks the pages again.
@@ -13093,34 +13176,19 @@ window.EyeParts.addShootChapter = function addShootChapter(ed) {
   // page is the open one when it goes, the book falls back to the first page.
   new MutationObserver(() => {
     if (ed.shootModalOverlay.hidden) return;
-    if (document.getElementById('postShootContent').hidden && ed.shootPageId === 'postShootHeading') showShootPage('basicInfoHeading');
+    if (document.getElementById('postShootContent').hidden && !ed.shootOnFront && ed.shootPageId === 'postShootHeading') showShootPage('front');
     else { ed.queueShootBreak(); ed.drawShootPageNumber(); }
   }).observe(document.getElementById('postShootContent'), { attributes: true, attributeFilter: ['hidden'] });
 
-  // The bottom bar stands in for the buttons that used to sit on the page.
-  // They're still there (hidden) and still decide when they apply, so each
-  // bar button simply follows its original.
-  [
-    ['nbBarShootMode', 'enterShootModeBtn'],
-    ['nbBarComplete', 'completeShootBtn'],
-    ['nbBarUnarchive', 'unarchiveShootBtn'],
-  ].forEach(([barId, realId]) => {
-    const barBtn = document.getElementById(barId);
-    const real = document.getElementById(realId);
-    const follow = () => { barBtn.hidden = real.hidden; };
-    follow();
-    new MutationObserver(follow).observe(real, { attributes: true, attributeFilter: ['hidden'] });
-    barBtn.addEventListener('click', () => real.click());
-  });
-  document.getElementById('nbBarBack').addEventListener('click', () => {
-    ed.shootModalOverlay.querySelector('[data-close="shoot"]').click();
-  });
+  // The buttons that used to sit on the page are still there (hidden) and
+  // still decide when they apply: the next step button (next-step.js)
+  // presses them. More is the band's right button.
   (function setupShootMoreMenu() {
     const overlay = document.getElementById('shootMoreOverlay');
     const close = () => { overlay.hidden = true; };
     const share = document.getElementById('shareShootBtn');
     const del = document.getElementById('deleteShootBtn');
-    document.getElementById('nbBarMore').addEventListener('click', () => {
+    document.getElementById('shootBandMore').addEventListener('click', () => {
       document.getElementById('shootMoreShareBtn').hidden = share.hidden;
       document.getElementById('shootMoreShareDivider').hidden = share.hidden;
       document.getElementById('shootMoreDeleteBtn').hidden = del.hidden;
@@ -13509,8 +13577,12 @@ window.EyeParts.addNewShootWizard = function addNewShootWizard(ed) {
     });
   }
 
+  // opts.from: the step to start on (Continue setup on the shoot's page
+  // starts on the first part still missing), else the first one.
   function startShootWizard(opts) {
-    const first = ed.SHOOT_WIZARD_STEPS.find(step => !step.when || step.when());
+    const shown = step => !step.when || step.when();
+    const from = opts && opts.from ? ed.SHOOT_WIZARD_STEPS.find(step => step.key === opts.from && shown(step)) : null;
+    const first = from || ed.SHOOT_WIZARD_STEPS.find(shown);
     if (!first) return;
     ed.shootWizardActive = true;
     ed.shootWizardAgain = !!(opts && opts.again);
@@ -13598,6 +13670,8 @@ window.EyeParts.addNewShootWizardEnd = function addNewShootWizardEnd(ed) {
     modalEl.scrollTop = 0;
     ed.updateShootModalTitleFromScroll();
     ed.breakShootPages();
+    // Done (or Skip): the shoot's front page, with what was filled in.
+    ed.showShootPage('front');
   }
 
   document.getElementById('shootWizardBackBtn').addEventListener('click', () => {
@@ -14707,8 +14781,10 @@ window.EyeParts.addShootOpen = function addShootOpen(ed) {
     if (!id && ed.isNewShootGuideOn()) ed.queueShootWizard();
     else if (!s) ed.maybeShowStatusSwatchIntro();
 
-    // Back to the page this shoot was last open on, at its top.
-    const remembered = ed.shootPageMemory[ed.currentShootId] || { id: 'basicInfoHeading', sub: 0 };
+    // The front page, or the page it was on when the app was last closed
+    // (ed.shootOpenAt, set by the place it comes back to, offline.js).
+    const remembered = ed.shootOpenAt || { id: 'front', sub: 0 };
+    ed.shootOpenAt = null;
     ed.shootFlows = null;
     ed.shootSub = 0;
     ed.shootBreakChanged = [];
@@ -16605,6 +16681,569 @@ window.EyeParts.addShootOptionsAddToProject = function addShootOptionsAddToProje
   ed.shootOptionsOverlay.addEventListener('click', (e) => {
     if (e.target === ed.shootOptionsOverlay) ed.closeShootOptions();
   });
+};
+;
+
+// ---- pages/shoot/shoot-front.js ----
+// A shoot's page in the round 2 look: the front page (its status, name, when
+// and where, the cards for what this stage needs, then The details), and
+// each part of the form below on a page of its own, one tap deeper. The
+// form itself is unchanged: it's only shown a part at a time.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addShootFront = function addShootFront(ed) {
+  Object.assign(ed, { frontShoot, frontCounts, showShootFront, showShootDetail, drawShootFront });
+  ed.shootOnFront = true;
+  const front = document.getElementById('shootFront');
+  const modal = ed.shootModalOverlay.querySelector('.modal');
+  const PLACES = { overview: 'Overview', shoots: 'Shoots', journal: 'Reflections', archive: 'Archive', stats: 'Stats' };
+  const CLOCK = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>';
+  const PIN = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
+
+  // The shoot as it stands on the page: what's saved, with what's typed.
+  function frontShoot() {
+    const saved = ed.state.shoots.find(s => s.id === ed.currentShootId) || {};
+    return { ...saved, ...ed.gatherShootFormData(), id: ed.currentShootId, archived: !!saved.archived };
+  }
+
+  // What lives outside the shoot, for the cards and the next step: how many
+  // mood board photos and final images, its boards from Ref, whether it's video.
+  function frontCounts(shootId) {
+    const video = document.getElementById('shootCategory').value === 'video';
+    const urls = [];
+    return Promise.all([
+      ed.idbGetImages(shootId).catch(() => []),
+      ed.idbGetImages(ed.finalImagesKey(shootId)).catch(() => []),
+      ed.refBoardsFor(shootId, urls).catch(() => []),
+    ]).then(([photos, finals, boards]) => ({
+      moodboard: photos.length, photos, finalImages: finals.length, finals, boards: boards.length, boardList: boards, urls, video,
+    }));
+  }
+
+  // Only the part of the form that's open shows: the rest is put away
+  // (styles/shoot-front.css). A block the guide has borrowed isn't the
+  // form's own child while it's out, so it shows wherever the guide is.
+  function showPart(pageId) {
+    ed.shootPageEls.forEach(({ el, page }) => el.classList.toggle('shoot-off', page !== pageId));
+    ed.shootForm.classList.toggle('shoot-form-off', !pageId);
+  }
+
+  function placeName() {
+    return PLACES[ed.currentScreen()] || 'Shoots';
+  }
+
+  function showShootFront() {
+    ed.shootOnFront = true;
+    ed.shootModalOverlay.classList.add('on-front');
+    front.hidden = false;
+    showPart(null);
+    document.getElementById('shootBandPlace').textContent = placeName();
+    if (ed.currentShootId) ed.shootPageMemory[ed.currentShootId] = { id: 'front', sub: 0 };
+    modal.scrollTop = 0;
+    drawShootFront();
+    ed.queueLastPlace();
+  }
+
+  function showShootDetail(pageId) {
+    ed.shootOnFront = false;
+    ed.shootModalOverlay.classList.remove('on-front');
+    front.hidden = true;
+    showPart(pageId);
+    document.getElementById('shootBandPlace').textContent = ed.shootDisplayName(frontShoot());
+    // Boxes that were put away measured nothing.
+    ed.autoSizeAllListTextareas();
+    ed.syncAllShootFormFields();
+    modal.scrollTop = 0;
+    ed.drawNextStep(frontShoot(), lastCounts);
+    ed.queueLastPlace();
+  }
+
+  const has = v => ed.hasText(v);
+
+  // "4:30 to 7:00 PM": one AM or PM when both ends share it.
+  function timeWords(start, end) {
+    if (!start) return 'time not set';
+    const a = ed.prettyTime(start);
+    if (!end) return a;
+    const b = ed.prettyTime(end);
+    const sameHalf = a.slice(-2) === b.slice(-2);
+    return `${sameHalf ? a.slice(0, -3) : a} to ${b}`;
+  }
+  const placeWords = loc => (loc ? [loc.name, loc.city].filter(has).map(v => v.trim()).join(', ') || ed.formatLocationDisplayNoCountry(loc) : '');
+
+  function drawHead(s) {
+    document.getElementById('shootStatusTagText').textContent = ed.STATUS_LABELS[s.status] || 'Prospect';
+    document.getElementById('shootFrontTitle').textContent = ed.shootDisplayName(s);
+    const today = ed.todayStr();
+    const when = document.getElementById('shootFrontWhen');
+    const where = placeWords(s.location);
+    if (ed.isPostCaptureStatus(s.status)) {
+      when.className = 'shoot-front-when shoot-front-shot';
+      when.textContent = ed.metaLine([s.date ? `Shot ${ed.rowDate(s.date, today, true)}` : '', where]);
+      return;
+    }
+    when.className = 'shoot-front-when';
+    const day = s.date ? `${ed.rowDate(s.date, today, true)}, ${timeWords(s.startTime, s.endTime)}` : 'Date not set';
+    when.innerHTML = `<span>${CLOCK}<span>${ed.escapeHtml(day)}</span></span>
+      <span class="${where ? '' : 'shoot-front-dim'}">${PIN}<span>${ed.escapeHtml(where || 'Location to be decided')}</span></span>`;
+  }
+
+  // ---------- The details ----------
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const shot = s => ed.isPostCaptureStatus(s.status);
+  // The first board from Ref: live, frozen on the day it was shot, or imported.
+  function boardWords(c) {
+    const l = c.boardList && c.boardList[0] && c.boardList[0].link;
+    if (!l) return '';
+    if (l.importedAt) return 'Imported from Ref';
+    if (!l.frozenAt) return 'Live from Ref';
+    return `Board as of ${ed.rowDate(ed.formatDate(new Date(l.frozenAt)), ed.todayStr(), false)}, frozen from Ref`;
+  }
+  // "4 shots, 2 must-haves"; once it's shot, how many got done: "3 of 4, both must-haves".
+  function shotListWords(s) {
+    const shots = (s.shotList || []).filter(i => has(i.text));
+    if (!shots.length) return '';
+    const stars = shots.filter(i => i.starred);
+    if (!shot(s)) return ed.metaLine([plural(shots.length, 'shot'), stars.length ? plural(stars.length, 'must-have') : '']);
+    const done = shots.filter(i => i.checked).length;
+    const starsDone = stars.filter(i => i.checked).length;
+    let musts = '';
+    if (stars.length && starsDone === stars.length) musts = stars.length === 1 ? 'the must-have' : stars.length === 2 ? 'both must-haves' : `all ${stars.length} must-haves`;
+    else if (stars.length) musts = `${starsDone} of ${stars.length} must-haves`;
+    return ed.metaLine([`${done} of ${shots.length}`, musts]);
+  }
+  const ROWS = {
+    talent: { label: 'Talent', page: 'basicInfoHeading', words: s => (s.talents || []).map(t => t.name).filter(has).join(', ') },
+    logistics: { label: 'Logistics', page: 'logisticsHeading', words: s => ed.metaLine([s.date ? ed.rowDate(s.date, ed.todayStr(), true) : '', placeWords(s.location)]) },
+    team: { label: 'Team', page: 'teamHeading', words: s => (s.teamRequired === 'no' ? 'Just me' : (s.teamMembers || []).map(m => m.name).filter(has).join(', ')) },
+    direction: { label: 'Direction', page: 'directionHeading', words: s => ['premise', 'shootGoals', 'elevatorPitch', 'character', 'worldNotes', 'deliverables'].map(k => s[k]).find(has) || '' },
+    // Once it's shot, the mood board is what it was on the day.
+    visuals: { label: s => (shot(s) ? ed.moodboardTerm(s.category || '') : 'Visuals'), page: 'visualsHeading', words: (s, c) => ed.metaLine([boardWords(c), c.boards > 1 ? plural(c.boards, 'board') : '', c.moodboard ? plural(c.moodboard, 'photo') : '', (s.references || []).length ? plural(s.references.length, 'link') : '', (s.lightingSetups || []).length ? plural(s.lightingSetups.length, 'lighting setup') : '']) },
+    shotList: { label: 'Shot list', page: 'shotListHeading', words: shotListWords },
+    deadline: { label: 'Deadline', page: 'logisticsHeading', empty: 'Not set', words: s => (s.deadline ? `Due ${ed.rowDate(s.deadline, ed.todayStr(), false)}` : '') },
+    notes: { label: 'Notes in Overthoughts', page: 'basicInfoHeading', words: () => { const first = document.querySelector('#shootNotes .past-lesson-head'); return first ? first.textContent.trim() : ''; } },
+    reflection: { label: 'Reflection', page: 'postShootHeading', empty: 'Not written yet', words: s => ['lessonsLearned', 'whatWentRight', 'couldBeBetter'].map(k => s[k]).find(has) || '' },
+    finalImages: { label: 'Final images', page: 'postShootHeading', empty: 'None yet', words: (s, c) => (c.finalImages ? plural(c.finalImages, 'final image') : '') },
+  };
+
+  // Which rows, by stage. A part already on the front page isn't repeated.
+  function rowKeys(s, c, onFront) {
+    const notes = !document.getElementById('shootNotes').hidden ? ['notes'] : [];
+    let keys;
+    if (!ed.isPostCaptureStatus(s.status)) keys = ['logistics', 'team', 'direction', 'visuals', 'shotList', 'deadline', ...notes];
+    else keys = ['shotList', 'visuals', 'talent', 'team', 'logistics', 'direction', ...notes, ...(c.video ? [] : ['finalImages']), 'reflection'];
+    return keys.filter(k => !onFront.includes(k));
+  }
+
+  function drawDetailRows(s, c, onFront) {
+    const box = document.getElementById('shootDetailRows');
+    const rows = rowKeys(s, c, onFront).map((key) => {
+      const row = ROWS[key];
+      const words = row.words(s, c);
+      return `<button type="button" class="detail-row" data-page="${row.page}">
+        <span class="detail-dot${words ? ' filled' : ''}" aria-hidden="true"></span>
+        <span class="detail-words"><span class="detail-label">${ed.escapeHtml(typeof row.label === 'function' ? row.label(s) : row.label)}</span><span class="detail-sum">${ed.escapeHtml(words || row.empty || 'Not added yet')}</span></span>
+        ${CHEVRON}</button>`;
+    });
+    // Before it's shot, the reflection waits: shown, but not a way in yet.
+    if (!ed.isPostCaptureStatus(s.status)) {
+      rows.push(`<div class="detail-row detail-row-closed"><span class="detail-dot" aria-hidden="true"></span>
+        <span class="detail-words"><span class="detail-label">Reflection</span><span class="detail-sum">Opens once the shoot is captured</span></span></div>`);
+    }
+    box.innerHTML = rows.join('');
+  }
+  document.getElementById('shootDetailRows').addEventListener('click', (e) => {
+    const row = e.target.closest('button.detail-row');
+    if (row) ed.showShootPage(row.dataset.page);
+  });
+
+  // Everything on the front page, from the shoot as it stands. The photos
+  // and boards come in after; a newer draw wins.
+  let drawing = 0;
+  let boardUrls = [];
+  let lastCounts = null;
+  function drawShootFront() {
+    if (ed.shootModalOverlay.hidden || !ed.shootOnFront) return Promise.resolve();
+    const s = frontShoot();
+    drawHead(s);
+    const draw = ++drawing;
+    return frontCounts(s.id).then((c) => {
+      if (draw !== drawing) { c.urls.forEach(u => URL.revokeObjectURL(u)); return; }
+      boardUrls.forEach(u => URL.revokeObjectURL(u));
+      boardUrls = c.urls;
+      lastCounts = c;
+      const onFront = ed.drawFrontCards(s, c);
+      drawDetailRows(s, c, onFront);
+      ed.drawNextStep(s, c);
+    });
+  }
+
+  document.getElementById('shootBandBack').addEventListener('click', () => {
+    if (ed.shootOnFront) ed.shootModalOverlay.querySelector('[data-close="shoot"]').click();
+    else { ed.saveShootNow(); showShootFront(); }
+  });
+};
+;
+
+// ---- pages/shoot/front-cards.js ----
+// The cards on a shoot's front page before it's shot: Getting ready (the
+// seven parts the guide asks about, components/shoot-stage.js), Talent, the
+// mood board and the first shots. After the shoot, stage-cards.js has its
+// own. Each card opens the part of the page it's about.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addShootFrontCards = function addShootFrontCards(ed) {
+  Object.assign(ed, { drawFrontCards, frontBlock, frontTitle });
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
+  const STAR = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8Z"/></svg>';
+  const EMPTY_BOARD = '<span class="front-board-empty" aria-hidden="true"><span></span><span></span><span></span><span></span></span>';
+  const has = v => ed.hasText(v);
+  const esc = v => ed.escapeHtml(v);
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  // The guide's first step for each part (pages/new-shoot/wizard-steps.js).
+  const GUIDE_FROM = { basics: 'basics', logistics: 'when', team: 'team', direction: 'goals', visuals: 'moodboard', shotList: 'shotList', deadline: 'deadline' };
+
+  // A section title on the front page, with words at its right.
+  function frontTitle(text, right) {
+    return `<div class="front-title-row"><h2 class="front-title">${esc(text)}</h2>${right ? `<span class="front-title-meta">${esc(right)}</span>` : ''}</div>`;
+  }
+  // A block that opens a part of the page.
+  function frontBlock(cls, page, inner) {
+    return `<button type="button" class="${cls}" data-page="${page}">${inner}</button>`;
+  }
+
+  function gettingReady(s, c) {
+    const chapters = ed.setupChapters(s, c);
+    const left = chapters.filter(ch => !ch.done);
+    if (!left.length) return '';
+    const bars = chapters.map(ch => `<span class="${ch.done ? 'done' : ''}"></span>`).join('');
+    return `<div class="front-card getting-ready">
+      <div class="front-card-head"><span class="front-card-title">Getting ready</span><span class="front-card-meta">${chapters.length - left.length} of ${chapters.length}</span></div>
+      <div class="ready-bars" aria-hidden="true">${bars}</div>
+      <p class="front-card-text">${esc(ed.setupWords(chapters))}</p>
+      <button type="button" class="outline-btn" data-guide="${GUIDE_FROM[left[0].key]}">Continue setup ${CHEVRON}</button>
+      <p class="front-card-note">The whole guide, from ${esc(left[0].label.toLowerCase())} on</p>
+    </div>`;
+  }
+
+  // Who's in it: their photo, name, and whether they've been in a shoot before.
+  function talentBlock(s) {
+    const talents = (s.talents || []).filter(t => has(t.name));
+    const others = ed.state.shoots.filter(x => x.id !== s.id);
+    const returning = t => others.some(x => (x.talents || []).some(o => has(o.name) && o.name.trim().toLowerCase() === t.name.trim().toLowerCase()));
+    const rows = talents.map((t) => {
+      const handle = (t.socialHandles || []).map(h => h.handle || h.value || '').find(has);
+      const meta = ed.metaLine([returning(t) ? 'Returning talent' : '', handle ? `@${handle.replace(/^@/, '')}` : '']);
+      return `<span class="front-talent">
+        <span class="front-talent-photo">${t.photo ? `<img src="${t.photo}" alt="" />` : ''}</span>
+        <span class="front-talent-words"><span class="front-talent-name">${esc(t.name)}</span>${meta ? `<span class="front-talent-meta">${esc(meta)}</span>` : ''}</span>
+      </span>`;
+    }).join('');
+    return frontTitle('Talent') + frontBlock('front-talents', 'basicInfoHeading', rows
+      || '<span class="front-empty"><span class="front-empty-big">No talent yet.</span><span>Add who it\'s with.</span></span>');
+  }
+
+  // The first board from Ref, else the shoot's own photos, else how to add one.
+  function moodboardBlock(s, c) {
+    const term = ed.moodboardTerm(s.category || '');
+    const board = c.boardList[0];
+    let inner;
+    if (board) {
+      const l = board.link;
+      const state = l.importedAt ? 'Imported' : l.frozenAt ? 'Frozen from Ref' : 'Live from Ref';
+      const pics = [board.cover, ...board.pages].filter(Boolean).slice(0, 3);
+      inner = `${collage(pics)}<span class="front-board-words"><span class="front-board-state">${esc(state)}</span>
+        <span class="front-board-name">${esc(l.name || term)}</span><span class="front-board-meta">${esc(plural(l.photoCount || 0, 'image'))}</span></span>${CHEVRON}`;
+    } else if (c.moodboard) {
+      inner = `${collage(c.photos.slice(0, 3).map(p => p.src))}<span class="front-board-words"><span class="front-board-name">${esc(term)}</span>
+        <span class="front-board-meta">${esc(plural(c.moodboard, 'photo'))}</span></span>${CHEVRON}`;
+    } else {
+      inner = `${EMPTY_BOARD}<span class="front-board-words"><span class="front-empty-big">No ${esc(term.toLowerCase())} yet.</span><span>Send one from Ref, or import photos.</span></span>`;
+    }
+    return frontTitle(term) + frontBlock('front-card front-board', 'visualsHeading', inner);
+  }
+  function collage(srcs) {
+    return `<span class="front-collage n${srcs.length}" aria-hidden="true">${srcs.map(src => `<img src="${src}" alt="" />`).join('')}</span>`;
+  }
+
+  // The first three shots, and the way to the rest.
+  function shotListBlock(s) {
+    const shots = (s.shotList || []).filter(i => has(i.text));
+    if (!shots.length) return '';
+    const stars = shots.filter(i => i.starred).length;
+    const rows = shots.slice(0, 3).map(i => `<span class="front-shot"><span class="front-shot-ring" aria-hidden="true"></span>
+      <span class="front-shot-text">${esc(i.text)}</span><span class="front-shot-star${i.starred ? ' starred' : ''}" aria-label="${i.starred ? 'Must-have' : ''}">${STAR}</span></span>`).join('');
+    return frontTitle('Shot list', ed.metaLine([plural(shots.length, 'shot'), stars ? plural(stars, 'must-have') : '']))
+      + frontBlock('front-shots', 'shotListHeading', `${rows}<span class="front-see-all">See all ${shots.length} ${CHEVRON}</span>`);
+  }
+
+  // Draws this stage's cards; returns the parts they cover, which The
+  // details then leaves out.
+  function drawFrontCards(s, c) {
+    const box = document.getElementById('shootFrontCards');
+    let html = '';
+    let onFront = [];
+    if (ed.isPostCaptureStatus(s.status) || s.archived) {
+      const drawn = ed.drawStageCards(s, c);
+      html = drawn.html;
+      onFront = drawn.onFront;
+    } else if (s.status === 'waiting_to_shoot') {
+      html = moodboardBlock(s, c) + shotListBlock(s) + talentBlock(s);
+      onFront = ['shotList'];
+    } else {
+      html = gettingReady(s, c) + talentBlock(s) + moodboardBlock(s, c) + shotListBlock(s);
+      onFront = ['shotList'];
+    }
+    box.innerHTML = html;
+    // An empty shot list isn't on the front page, so it stays a row.
+    if (!box.querySelector('[data-page="shotListHeading"]')) onFront = onFront.filter(k => k !== 'shotList');
+    return onFront;
+  }
+
+  document.getElementById('shootFrontCards').addEventListener('click', (e) => {
+    const guide = e.target.closest('[data-guide]');
+    if (guide) { ed.startShootWizard({ again: true, from: guide.dataset.guide }); return; }
+    const part = e.target.closest('[data-page]');
+    if (part) ed.showShootPage(part.dataset.page);
+  });
+};
+;
+
+// ---- pages/shoot/stage-cards.js ----
+// The cards on a shoot's front page once it's shot: the reflection while
+// it's fresh (with Walk me through it and Later), the proofs and the
+// deadline, what happened on set, and the final images. Each opens the
+// part of the page it's about. Before the shoot, front-cards.js has its own.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addShootStageCards = function addShootStageCards(ed) {
+  Object.assign(ed, { drawStageCards });
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
+  // The Reflections mark (pages/tabs.html), as the card's picture.
+  const MARK = '<svg class="front-reflect-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22"/><path d="M24 2a22 22 0 0 1 22 22H24Z"/></svg>';
+  const IN_THE_EDIT = ['waiting_for_selects', 'editing', 'rough_cut', 'client_review', 'revisions'];
+  const esc = v => ed.escapeHtml(v);
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  // Later puts the reflection card away for as long as the app's open.
+  const later = new Set();
+
+  function reflectionCard(s) {
+    if (ed.hasReflection(s) || later.has(s.id)) return '';
+    return `<div class="front-card front-reflect">${MARK}<div class="front-reflect-words">
+      <span class="front-card-title">Reflection</span>
+      <p class="front-card-text front-card-big">While it's fresh: what went right, what could've gone better, and one lesson for next time.</p>
+      <div class="front-card-btns"><button type="button" class="text-act" data-act="reflect">Walk me through it</button><button type="button" class="text-act text-act-quiet" data-act="later">Later</button></div>
+    </div></div>`;
+  }
+
+  // "Due Fri 20 Nov", "Overdue by 3 days" (crimson), or "Add a deadline".
+  function deadlineLine(s) {
+    const today = ed.todayStr();
+    if (!s.deadline) return { words: 'Add a deadline', late: false };
+    if (s.deadline < today) return { words: ed.overdueWords(s.deadline, today), late: true };
+    return { words: ed.dueWords(s.deadline, today), late: false };
+  }
+  function deadlineRow(s) {
+    const d = deadlineLine(s);
+    return `<button type="button" class="front-deadline" data-page="logisticsHeading"><span class="front-deadline-label">Deadline</span>
+      <span class="front-deadline-words${d.late ? ' late' : ''}">${esc(d.words)} ${CHEVRON}</span></button>`;
+  }
+
+  // "Shot today", "Shot yesterday", "Shot 3 days ago".
+  function shotAgo(s) {
+    if (!s.date) return '';
+    const n = ed.daysBetween(s.date, ed.todayStr());
+    if (n <= 0) return 'Shot today';
+    if (n === 1) return 'Shot yesterday';
+    return `Shot ${n} days ago`;
+  }
+  function proofsCard(s, c) {
+    if (c.video) return `<div class="front-card">${deadlineRow(s)}</div>`;
+    const first = (s.talents || []).map(t => (t.name || '').trim().split(/\s+/)[0]).find(Boolean);
+    return `<div class="front-card front-proofs">
+      <div class="front-card-head"><span class="front-card-title">Proofs</span><span class="front-card-meta">${esc(shotAgo(s))}</span></div>
+      <p class="front-card-text">Send ${esc(first || 'your talent')} the proofs. Marking them sent moves the shoot to Waiting for selects.</p>
+      <button type="button" class="outline-btn" data-act="proofs">Mark proofs sent</button>
+      ${deadlineRow(s)}
+    </div>`;
+  }
+
+  // Shots done, wild cards tried, and how far past the wrap time it was
+  // marked shot (when that was the shoot's own day).
+  function wrapWords(s) {
+    if (!s.capturedAt || !s.date || !s.endTime) return '';
+    const done = new Date(s.capturedAt);
+    if (Number.isNaN(done.getTime()) || ed.formatDate(done) !== s.date) return '';
+    const [h, m] = s.endTime.split(':').map(Number);
+    const wrap = new Date(done);
+    wrap.setHours(h, m, 0, 0);
+    const over = Math.round((done - wrap) / 60000);
+    if (over <= 0) return 'On time';
+    return over < 60 ? `${over}m` : `${Math.floor(over / 60)}h${over % 60 ? ` ${over % 60}m` : ''}`;
+  }
+  function onSet(s) {
+    const shots = (s.shotList || []).filter(i => ed.hasText(i.text));
+    const ticked = shots.filter(i => i.checked).length;
+    const cards = Array.isArray(s.triedWildCards) ? s.triedWildCards.length : 0;
+    const wrap = wrapWords(s);
+    if (!ticked && !cards && !wrap) return '';
+    const stat = (big, label) => `<span class="on-set-stat"><span class="on-set-big">${esc(big)}</span><span class="on-set-label">${esc(label)}</span></span>`;
+    return `${ed.frontTitle('On set')}<div class="on-set">
+      ${shots.length ? stat(`${ticked}/${shots.length}`, 'Shots') : ''}
+      ${stat(String(cards), plural(cards, 'wild card').replace(/^\d+ /, '') + ' tried')}
+      ${wrap ? stat(wrap, wrap === 'On time' ? 'Wrap' : 'Over wrap') : ''}
+    </div>`;
+  }
+
+  // In the edit: the deadline (its row says so), then the final images.
+  function deadlineCard(s) {
+    return `<div class="front-card">${deadlineRow(s)}</div>`;
+  }
+  function finalImagesCard(s, c) {
+    if (c.video) return '';
+    const thumbs = c.finals.slice(0, 4).map(img => `<img src="${img.src}" alt="" />`).join('');
+    const inner = c.finalImages
+      ? `<span class="front-finals">${thumbs}</span><span class="front-board-words"><span class="front-board-name">${esc(plural(c.finalImages, 'final image'))}</span></span>${CHEVRON}`
+      : '<span class="front-empty"><span class="front-empty-big">No final images yet.</span><span>Add them once they\'re edited.</span></span>';
+    return ed.frontTitle('Final images') + ed.frontBlock('front-card front-board', 'postShootHeading', inner);
+  }
+
+  // This stage's cards, and the parts they cover (left out of The details).
+  function drawStageCards(s, c) {
+    const reflect = reflectionCard(s);
+    const covered = reflect ? ['reflection'] : [];
+    if (s.status === 'captured') return { html: reflect + proofsCard(s, c) + onSet(s), onFront: covered };
+    if (IN_THE_EDIT.includes(s.status)) return { html: reflect + deadlineCard(s) + finalImagesCard(s, c), onFront: [...covered, 'finalImages'] };
+    return { html: reflect + finalImagesCard(s, c) + onSet(s), onFront: [...covered, 'finalImages'] };
+  }
+
+  document.getElementById('shootFrontCards').addEventListener('click', (e) => {
+    const act = e.target.closest('[data-act]');
+    if (!act) return;
+    if (act.dataset.act === 'later') { later.add(ed.currentShootId); ed.drawShootFront(); return; }
+    if (act.dataset.act === 'reflect') { ed.runNextStep({ key: 'reflect' }); return; }
+    if (act.dataset.act === 'proofs') ed.runNextStep({ key: 'status', to: 'waiting_for_selects' });
+  });
+};
+;
+
+// ---- pages/shoot/next-step.js ----
+// The button at the foot of a shoot's page: always the next thing the shoot
+// needs at its stage (components/shoot-stage.js), with a line above it when
+// that helps. And Complete on its own: once a shoot is Delivered, has its
+// final images (a video has none) and its reflection, it goes to the Archive.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addShootNextStep = function addShootNextStep(ed) {
+  Object.assign(ed, { drawNextStep, runNextStep, setShootStatusOnPage });
+  const bar = document.getElementById('shootNext');
+  const btn = document.getElementById('shootNextBtn');
+  const hint = document.getElementById('shootNextHint');
+  let step = null;
+
+  function drawNextStep(s, counts) {
+    step = ed.nextStep(s, counts || {});
+    bar.hidden = !step;
+    if (!step) return;
+    btn.textContent = step.label;
+    hint.textContent = step.hint || '';
+    hint.hidden = !step.hint;
+  }
+
+  // As if the status were picked on the page: its own change listener asks
+  // what comes next (deadline-prompt.js), and the form saves.
+  function setShootStatusOnPage(to) {
+    const select = document.getElementById('shootStatus');
+    if (![...select.options].some(o => o.value === to)) return;
+    select.value = to;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    ed.saveShootNow();
+    ed.drawShootFront();
+  }
+
+  function runNextStep(next) {
+    const go = page => ed.showShootPage(page);
+    switch (next.key) {
+      case 'chapter': go(ed.SETUP_CHAPTERS.find(c => c.key === next.chapter).page); break;
+      case 'status': setShootStatusOnPage(next.to); break;
+      case 'shootMode': document.getElementById('enterShootModeBtn').click(); break;
+      case 'reflect': go('postShootHeading'); document.getElementById('reflectHelperBtn').click(); break;
+      case 'finalImages': go('postShootHeading'); document.getElementById('addFinalPhotos').click(); break;
+      case 'complete': document.getElementById('completeShootBtn').click(); break;
+      case 'unarchive': document.getElementById('unarchiveShootBtn').click(); break;
+      case 'date': go('logisticsHeading'); break;
+      default: break;
+    }
+  }
+  btn.addEventListener('click', () => { if (step) runNextStep(step); });
+
+  // Complete on its own, when a change made now leaves the shoot ready (a
+  // shoot that was ready when it opened keeps its Complete button instead
+  // of vanishing on the way in). It says so, the same as Complete did.
+  let readyAtOpen = { id: null, ready: false };
+  let checking = false;
+  function completeIfReady() {
+    if (checking || ed.shootModalOverlay.hidden || !ed.currentShootId || ed.shootWizardActive || ed.shootOpening) return;
+    const id = ed.currentShootId;
+    checking = true;
+    ed.frontCounts(id).then((c) => {
+      c.urls.forEach(u => URL.revokeObjectURL(u));
+      if (ed.shootModalOverlay.hidden || ed.currentShootId !== id) return;
+      const ready = ed.readyToComplete(ed.frontShoot(), c);
+      if (readyAtOpen.id !== id) { readyAtOpen = { id, ready }; return; }
+      if (ready && !readyAtOpen.ready) document.getElementById('completeShootPromptConfirmBtn').click();
+      readyAtOpen.ready = ready;
+    }).finally(() => { checking = false; });
+  }
+
+  // Every save passes through saveState, and photos change their grids: the
+  // front page follows, and the shoot may be complete now.
+  let redraw = 0;
+  function follow() {
+    if (ed.shootModalOverlay.hidden) return;
+    clearTimeout(redraw);
+    redraw = setTimeout(() => { ed.drawShootFront(); completeIfReady(); }, 120);
+  }
+  const saveState = ed.saveState;
+  ed.saveState = function saveStateAndFollow(...args) {
+    const out = saveState.apply(this, args);
+    follow();
+    return out;
+  };
+  ['finalImagesGrid', 'moodboardGrid', 'refBoards'].forEach(id => new MutationObserver(follow).observe(document.getElementById(id), { childList: true }));
+  // A shoot that's just opened sets where it starts from.
+  new MutationObserver(() => { if (!ed.shootModalOverlay.hidden) { readyAtOpen = { id: null, ready: false }; follow(); } })
+    .observe(ed.shootModalOverlay, { attributes: true, attributeFilter: ['hidden'] });
+};
+;
+
+// ---- pages/shoot/status-sheet.js ----
+// Change status, from the status tag on a shoot's page: the statuses its
+// status field offers (video has its own edit steps), the one it's at
+// marked. Picking one is the same as picking it in that field, so the form
+// saves and asks what comes next (deadline-prompt.js) as it always has.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addShootStatusSheet = function addShootStatusSheet(ed) {
+  const overlay = document.getElementById('shootStatusSheetOverlay');
+  const list = document.getElementById('shootStatusSheetList');
+  const select = document.getElementById('shootStatus');
+  const close = () => { overlay.hidden = true; };
+
+  document.getElementById('shootStatusTag').addEventListener('click', () => {
+    list.innerHTML = [...select.options].map(o => `
+      <button type="button" class="options-item choice-item${o.value === select.value ? ' active' : ''}" data-status="${ed.escapeHtml(o.value)}"${o.value === select.value ? ' aria-current="true"' : ''}>${ed.escapeHtml(o.textContent)}</button>`).join('');
+    overlay.hidden = false;
+  });
+  list.addEventListener('click', (e) => {
+    const pick = e.target.closest('[data-status]');
+    if (!pick) return;
+    close();
+    if (pick.dataset.status !== select.value) ed.setShootStatusOnPage(pick.dataset.status);
+  });
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.getElementById('shootStatusSheetCancelBtn').addEventListener('click', close);
 };
 ;
 
@@ -24070,8 +24709,8 @@ window.EyeParts.addOffline = function addOffline(ed) {
         const clear = ed.shootModalOverlay.hidden && ed.archiveModeOverlay.hidden;
         if (clear && shoot && kept(shoot.id)) {
           const page = shoot.page;
-          if (page && ed.SHOOT_MODAL_SECTIONS.some(sec => sec.id === page.id) && Number.isInteger(page.sub) && page.sub >= 0) {
-            ed.shootPageMemory[shoot.id] = { id: page.id, sub: page.sub };
+          if (page && (page.id === 'front' || ed.SHOOT_MODAL_SECTIONS.some(sec => sec.id === page.id)) && Number.isInteger(page.sub) && page.sub >= 0) {
+            ed.shootOpenAt = { id: page.id, sub: page.sub };
           }
           ed.openShootModal(shoot.id);
         } else if (clear && archive && kept(archive.id)) {
@@ -24536,7 +25175,7 @@ window.EyeParts.addNavigator = function addNavigator(ed) {
       const tab = e.target.closest('[data-view]');
       if (!tab) return;
       if (!ed.archiveModeOverlay.hidden) ed.exitArchiveMode();
-      else document.getElementById('nbBarBack').click();
+      else ed.shootModalOverlay.querySelector('[data-close="shoot"]').click();
       // Whatever the shoot was opened from goes too: it belongs to the old section.
       if (ed.activeStatBoxKey) ed.closeStatBoxDetail();
       ed.closeProjectPopup();
@@ -24581,6 +25220,7 @@ window.EyeParts.addBand = function addBand(ed) {
   // Needed from the start (only functions and fixed values, so they can run first):
   window.EyeParts.addDates(ed);
   window.EyeParts.addRowWords(ed);
+  window.EyeParts.addShootStage(ed);
   window.EyeParts.addHelpers(ed);
   // iOS Safari only computes :active styles on elements it thinks have a
   // touch listener — this no-op unlocks tap-flash feedback app-wide.
@@ -24692,6 +25332,12 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addShootOptionsChangeDeadline(ed);
   window.EyeParts.addShootOptionsChangeStatus(ed);
   window.EyeParts.addShootOptionsAddToProject(ed);
+  // The shoot's page in the round 2 look: front page, cards, next step, status.
+  window.EyeParts.addShootFront(ed);
+  window.EyeParts.addShootFrontCards(ed);
+  window.EyeParts.addShootStageCards(ed);
+  window.EyeParts.addShootNextStep(ed);
+  window.EyeParts.addShootStatusSheet(ed);
   window.EyeParts.addToast(ed);
   window.EyeParts.addConfirm(ed);
   window.EyeParts.addLoadLib(ed);

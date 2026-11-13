@@ -34,7 +34,7 @@ window.EyeParts.addLastPlace = function addLastPlace(ed) {
         archiveFilter: ed.archiveFilter,
         journalFilter: ed.journalFilter,
         statsYearFilter: ed.statsYearFilter,
-        shoot: shootOpen ? { id: ed.currentShootId, page: { id: ed.shootPageId, sub: ed.shootSub } } : null,
+        shoot: shootOpen ? { id: ed.currentShootId, page: ed.shootOnFront ? { id: 'front', sub: 0 } : { id: ed.shootPageId, sub: ed.shootSub } } : null,
         archive: archiveOpen ? { id: ed.archiveModeShootId, at: ed.archiveAt } : null,
         shootMode: !ed.shootModeOverlay.hidden && ed.getShootModeShootId() ? { id: ed.getShootModeShootId(), at: ed.shootModeAt } : null,
       }));

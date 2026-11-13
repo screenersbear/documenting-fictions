@@ -235,6 +235,20 @@
     </div>
     <button type="button" class="enter-shoot-mode-btn shine-sweep" id="enterShootModeBtn" hidden>shoot mode</button>
     <button type="button" class="nb-corner-btn" id="enterArchiveModeBtn" hidden>archive mode</button>
+    <!-- The shoot's page in the round 2 look (styles/shoot-band.css, shoot-front.css). The compact band: Back, where it was opened from (or, on a part of the page, the shoot's name) and More. Then the front page (pages/shoot/shoot-front.js): the status as a tag that opens Change status, the name, when and where, the cards for what this stage needs, and The details: a row for each part of the form below, which opens that part on a page of its own. -->
+    <header class="band shoot-band">
+      <button type="button" class="ring-btn" id="shootBandBack" aria-label="Back"><span><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></span></button>
+      <p class="band-line shoot-band-line"><b id="shootBandPlace">Shoots</b><span class="band-rule"></span></p>
+      <button type="button" class="ring-btn" id="shootBandMore" aria-label="More"><span><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></span></button>
+    </header>
+    <div class="shoot-front" id="shootFront">
+      <button type="button" class="status-tag-btn" id="shootStatusTag" aria-haspopup="dialog"><span class="status-tag"><span id="shootStatusTagText">Prospect</span> <span aria-hidden="true">&#9662;</span></span></button>
+      <h1 class="shoot-front-title" id="shootFrontTitle"></h1>
+      <div class="shoot-front-when" id="shootFrontWhen"></div>
+      <div class="shoot-front-cards" id="shootFrontCards"></div>
+      <h2 class="front-title">The details</h2>
+      <div class="detail-rows" id="shootDetailRows"></div>
+    </div>
     <form id="shootForm">
       <svg class="folder-tab-deco tab-fill-yellow" viewBox="0 -90 400 120" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,-90 L0,-90 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
       <h3 class="shoot-section-heading status-group-heading heading-yellow" id="basicInfoHeading">Basic Info</h3>
@@ -514,13 +528,11 @@
     <button type="button" class="nb-page-step" id="nbPageNext" aria-label="Next page"></button>
   </div>
   <div class="nb-screen-tabs nb-screen-tabs-shoot"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Reflections</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></div>
-  <nav class="nb-shoot-bar" aria-label="This shoot">
-    <button type="button" class="nb-tool" id="nbBarBack" aria-label="Back"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <button type="button" class="nb-tool" id="nbBarShootMode" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Shoot mode</span></button>
-    <button type="button" class="nb-tool" id="nbBarComplete" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Complete</span></button>
-    <button type="button" class="nb-tool" id="nbBarUnarchive" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span>Unarchive</span></button>
-    <button type="button" class="nb-tool" id="nbBarMore" aria-label="More"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
-  </nav>
+  <!-- The next step (pages/shoot/next-step.js): always the next thing this shoot needs at its stage, with a line above it when that helps. -->
+  <div class="nb-shoot-bar shoot-next" id="shootNext">
+    <p class="shoot-next-hint" id="shootNextHint" hidden></p>
+    <button type="button" class="shoot-next-btn" id="shootNextBtn"></button>
+  </div>
 </div>
 
 <!-- What a shoot's More button offers. -->
@@ -548,6 +560,13 @@
   </div>
 </div>
 
+<div id="shootStatusSheetOverlay" class="modal-overlay options-overlay" hidden>
+  <div class="modal options-modal rounded-modal" role="dialog" aria-modal="true" aria-labelledby="shootStatusSheetTitle">
+    <h2 class="sheet-title" id="shootStatusSheetTitle">Change status</h2>
+    <div id="shootStatusSheetList"></div>
+    <button type="button" class="options-item options-cancel" id="shootStatusSheetCancelBtn">Cancel</button>
+  </div>
+</div>
 <!-- ============ LOCATION MODAL ============ -->
 <!-- ============ PHOTOGRAPHER INFORMATION ============ -->
 <!-- One editor serving two entry points: the first-run prompt (which shows the

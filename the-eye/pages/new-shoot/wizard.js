@@ -153,8 +153,12 @@ window.EyeParts.addNewShootWizard = function addNewShootWizard(ed) {
     });
   }
 
+  // opts.from: the step to start on (Continue setup on the shoot's page
+  // starts on the first part still missing), else the first one.
   function startShootWizard(opts) {
-    const first = ed.SHOOT_WIZARD_STEPS.find(step => !step.when || step.when());
+    const shown = step => !step.when || step.when();
+    const from = opts && opts.from ? ed.SHOOT_WIZARD_STEPS.find(step => step.key === opts.from && shown(step)) : null;
+    const first = from || ed.SHOOT_WIZARD_STEPS.find(shown);
     if (!first) return;
     ed.shootWizardActive = true;
     ed.shootWizardAgain = !!(opts && opts.again);

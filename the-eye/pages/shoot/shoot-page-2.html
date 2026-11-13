@@ -169,12 +169,10 @@
     <button type="button" class="nb-page-step" id="nbPageNext" aria-label="Next page"></button>
   </div>
   <div class="nb-screen-tabs nb-screen-tabs-shoot"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Reflections</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></div>
-  <nav class="nb-shoot-bar" aria-label="This shoot">
-    <button type="button" class="nb-tool" id="nbBarBack" aria-label="Back"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <button type="button" class="nb-tool" id="nbBarShootMode" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Shoot mode</span></button>
-    <button type="button" class="nb-tool" id="nbBarComplete" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Complete</span></button>
-    <button type="button" class="nb-tool" id="nbBarUnarchive" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span>Unarchive</span></button>
-    <button type="button" class="nb-tool" id="nbBarMore" aria-label="More"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
-  </nav>
+  <!-- The next step (pages/shoot/next-step.js): always the next thing this shoot needs at its stage, with a line above it when that helps. -->
+  <div class="nb-shoot-bar shoot-next" id="shootNext">
+    <p class="shoot-next-hint" id="shootNextHint" hidden></p>
+    <button type="button" class="shoot-next-btn" id="shootNextBtn"></button>
+  </div>
 </div>
 

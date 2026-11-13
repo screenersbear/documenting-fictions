@@ -36,6 +36,8 @@ window.EyeParts.addNewShootWizardEnd = function addNewShootWizardEnd(ed) {
     modalEl.scrollTop = 0;
     ed.updateShootModalTitleFromScroll();
     ed.breakShootPages();
+    // Done (or Skip): the shoot's front page, with what was filled in.
+    ed.showShootPage('front');
   }
 
   document.getElementById('shootWizardBackBtn').addEventListener('click', () => {

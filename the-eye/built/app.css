@@ -6377,10 +6377,10 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 
 /* One weight of handwriting: only headings are bold. Not in the parts already
    in the round 2 look, which use Figtree's own weights (the band, the section
-   bar, Overview, Shoots, the Archive, Reflections, the shoot rows); this
-   goes once every screen is. */
-body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, .tabbar *, #view-overview *, .shoot-row *, #view-shoots *, #view-archive *, #view-journal *, .log-card *) { font-weight: 400 !important; }
-:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, #view-overview *, #view-shoots *, #view-archive *, #view-journal *, .log-card *) { text-shadow: 0 0 0.6px; }
+   bar, Overview, Shoots, the Archive, Reflections, the shoot rows, a
+   shoot's front page); this goes once every screen is. */
+body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, .tabbar *, #view-overview *, .shoot-row *, #view-shoots *, #view-archive *, #view-journal *, .log-card *, .shoot-band *, #shootFront *, #shootNext *) { font-weight: 400 !important; }
+:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, #view-overview *, #view-shoots *, #view-archive *, #view-journal *, .log-card *, .shoot-band *, #shootFront *, #shootNext *) { text-shadow: 0 0 0.6px; }
 
 /* The button in a page's top right corner that swaps a shoot and its summary. */
 .nb-corner-btn { position: absolute; z-index: 2; top: 6px; right: 8px; min-height: 0; height: auto; width: auto; padding: 4px 12px; border: none; border-radius: 3px; background: var(--text); color: #fff; font-family: var(--font-body); font-size: 14px; line-height: 20px; letter-spacing: 0; text-transform: none; }
@@ -6846,7 +6846,7 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
    team questions, which are questions. Not in the parts already in the
    round 2 look (the band, Overview, Shoots, the Archive, Reflections), whose
    titles are Figtree's. */
-:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .moodboard-label, .app-menu-header, .stats-region-heading, #shootModeReviewTitle, #mondayBriefTitle):not(#projectDetailTitle, #shootModeTitle, #journalViewTitle, .journal-entry-title, .shoot-mode-review-setup-name, .modal-title-jump-wrap, .band *, #view-overview *, #view-shoots *, #view-archive *, #view-journal *, .log-card *) {
+:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .moodboard-label, .app-menu-header, .stats-region-heading, #shootModeReviewTitle, #mondayBriefTitle):not(#projectDetailTitle, #shootModeTitle, #journalViewTitle, .journal-entry-title, .shoot-mode-review-setup-name, .modal-title-jump-wrap, .band *, #view-overview *, #view-shoots *, #view-archive *, #view-journal *, .log-card *, .shoot-band *, #shootFront *, #shootNext *) {
   font-family: var(--head) !important; font-weight: 500; text-transform: uppercase !important; letter-spacing: .08em !important; text-shadow: none;
 }
 :is(#appMenuOverlay, #sunMenuOverlay) .opt-sheet-head .app-menu-header { font-family: var(--head); font-weight: 500; text-transform: uppercase; letter-spacing: .08em; text-shadow: none; }
@@ -7018,7 +7018,7 @@ html:not(.df-suite) .band-books { display: none; }
 
 /* 2: headings on the page, and the titles of sheets (not on the screens
    already in the round 2 look: styles/list-head.css, reflections.css). */
-:is(.shoot-section-heading, .status-group-heading, .log-week-heading, .stats-page-title, .modal h2, .app-menu-header, .shoot-wizard-head h2, .shoot-mode-review h2):not(#df-x):not(#df-y):not(#view-shoots *, #view-archive *, #view-journal *, .log-card *), :is(#shootModeReviewTitle, #mondayBriefTitle):not(#df-x) {
+:is(.shoot-section-heading, .status-group-heading, .log-week-heading, .stats-page-title, .modal h2, .app-menu-header, .shoot-wizard-head h2, .shoot-mode-review h2):not(#df-x):not(#df-y):not(#view-shoots *, #view-archive *, #view-journal *, .log-card *, #shootFront *), :is(#shootModeReviewTitle, #mondayBriefTitle):not(#df-x) {
   font-family: var(--display) !important; font-weight: 400 !important; font-size: 18px; line-height: 1.25; letter-spacing: .02em !important;
 }
 .shoot-wizard-head h2:not(#df-x):not(#df-y) { font-size: 22px; }
@@ -7280,3 +7280,171 @@ html:not(.df-suite) .band-books { display: none; }
 .journal-entry-actions { display: flex; gap: 8px; margin: 4px 0 -6px -8px; }
 .journal-entry-act { height: 44px; margin: 0; padding: 0 8px; gap: 6px; font-size: 13px; line-height: 16px; }
 .journal-entry-act-quiet { color: var(--dim); }
+
+/* ---- styles/shoot-band.css ---- */
+/* A shoot's page (DESIGN.md 9): the compact band (the notebook colour from
+   the top of the screen, 56px under the safe area, two steps), with Back,
+   where it was opened from and More; and the next step bar pinned at the
+   foot. The old page's own header, corner buttons, page number and section
+   tabs make way for them (they're still there for the code that uses them). */
+/* The page runs from the top of the screen to the bottom, on the paper; its
+   foot stays clear of the next step bar. */
+#shootModalOverlay { background: var(--paper); }
+#shootModalOverlay > .modal:not(#df-x) {
+  --shoot-side: max(var(--page-side), calc(50% - 280px));
+  top: 0; bottom: 0; height: auto; max-height: none; border: 0; border-radius: 0; box-shadow: none;
+  padding: 0 var(--shoot-side) calc(130px + env(safe-area-inset-bottom)); background: var(--paper);
+}
+#shootModalOverlay .shoot-band {
+  position: relative; display: block; flex: none; box-sizing: border-box; height: calc(var(--nb-top) + 56px);
+  margin: 0 calc(-1 * var(--shoot-side, 16px)) 38px; padding: 0;
+  background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal; color: var(--partner);
+}
+#shootModalOverlay .shoot-band::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 18px; pointer-events: none;
+  background: linear-gradient(var(--step1) 0 10px, var(--step3) 10px 18px); }
+#shootModalOverlay .shoot-band .ring-btn { position: absolute; top: calc(var(--nb-top) + 6px); }
+#shootBandBack { left: 8px; }
+#shootBandMore { right: 8px; }
+#shootModalOverlay .shoot-band-line { left: 64px; right: 64px; top: calc(var(--nb-top) + 21px); }
+.shoot-band-line b { overflow: hidden; text-overflow: ellipsis; }
+
+#shootModalOverlay :is(.shoot-modal-header, .nb-run, #enterShootModeBtn, #enterArchiveModeBtn, .nb-page-foot, .nb-screen-tabs-shoot, .folder-tab-deco) { display: none !important; }
+
+#shootModalOverlay .shoot-next {
+  top: auto; bottom: 0; height: auto; display: block; box-sizing: border-box; padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--paper); border-top: 1px solid var(--line); box-shadow: none;
+}
+#shootModalOverlay .shoot-next[hidden] { display: none; }
+.shoot-next-hint { margin: 0 0 8px; text-align: center; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.shoot-next-hint[hidden] { display: none; }
+.shoot-next-btn {
+  display: block; width: 100%; height: 48px; min-height: 0; margin: 0; padding: 0 16px; border: 0; border-radius: 8px;
+  background: var(--band); color: var(--band-small); font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+
+/* ---- styles/shoot-front.css ---- */
+/* A shoot's front page (DESIGN.md 9): the status as a notched tag that
+   opens Change status, the name in 30px light, when and where (or, once
+   it's shot, one line in small dim capitals), the cards for this stage on
+   white (radius 12), section titles in 13px capitals, and The details: rows
+   under an ink rule, each a dot (filled when it has something), its label
+   in small capitals, a line of what's in it, and a chevron. A part of the
+   page opened from there shows on its own, its title in 30px light. */
+#shootForm > .shoot-off, #shootFront[hidden] { display: none !important; }
+#shootModalOverlay #basicInfoBody > .status-swatch-wrap { display: none; }
+
+.status-tag-btn { display: inline-flex; height: auto; min-height: 0; margin: 0; padding: 0; border: 0; background: none; cursor: pointer; }
+.status-tag {
+  display: inline-flex; align-items: center; height: 26px; padding: 0 21px 0 9px; border-radius: 3px 0 0 3px;
+  background: var(--band); color: var(--band-small); clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%);
+  font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
+}
+.status-tag > span[aria-hidden] { margin-left: .5em; }
+#shootModalOverlay #shootFront .shoot-front-title { margin: 12px 0 0; padding: 0; border: 0; background: none; font: 300 30px/36px var(--ui) !important; letter-spacing: 0 !important; text-transform: none !important; color: var(--text); text-align: left; overflow-wrap: anywhere; }
+.shoot-front-when { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font: 400 16px/22px var(--ui); color: var(--text); }
+.shoot-front-when > span { display: flex; align-items: center; gap: 10px; }
+.shoot-front-when svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.shoot-front-dim { color: var(--dim); }
+.shoot-front-when.shoot-front-shot { display: block; margin-top: 8px; font: 500 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.shoot-front-cards { margin-top: 20px; }
+
+.front-title-row { display: flex; align-items: center; justify-content: space-between; min-height: 44px; margin-top: 16px; }
+#shootModalOverlay #shootFront .front-title { margin: 0; padding: 0; border: 0; background: none; color: var(--text); text-shadow: none; text-align: left;
+  font: 700 13px/16px var(--ui) !important; letter-spacing: .12em !important; text-transform: uppercase !important; }
+.front-title-meta { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+#shootFront > .front-title { display: flex; align-items: center; min-height: 44px; margin-top: 16px; }
+
+.front-card { display: block; box-sizing: border-box; width: 100%; height: auto; min-height: 0; margin: 0 0 12px; padding: 16px; border: 0; border-radius: 12px; background: #FFFFFF; color: var(--text); text-align: left; text-transform: none; letter-spacing: 0; }
+button.front-card { cursor: pointer; }
+.front-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.front-card-title { font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.front-card-meta { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.front-card-text { margin: 8px 0 0; font: 400 16px/22px var(--ui); color: var(--text); }
+.front-card-big { font: 300 18px/26px var(--ui); margin-top: 2px; }
+.front-card-note { margin: 10px 0 0; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.ready-bars { display: flex; gap: 3px; margin: 10px 0 6px; }
+.ready-bars > span { flex: 1; height: 6px; border-radius: 3px; background: #D6DADD; }
+.ready-bars > span.done { background: var(--text); }
+.outline-btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 44px; min-height: 0; margin: 14px 0 0; padding: 0 18px; border: 0; border-radius: 8px;
+  background: none; box-shadow: inset 0 0 0 1.5px var(--text); color: var(--text); font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+.outline-btn svg, .front-card svg, .front-see-all svg, .detail-row svg, .front-deadline svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.front-talents, .front-shots { display: flex; flex-direction: column; width: 100%; height: auto; min-height: 0; margin: 0; padding: 0; border: 0; background: none; color: var(--text); text-align: left; text-transform: none; letter-spacing: 0; cursor: pointer; }
+.front-talent { display: flex; align-items: center; gap: 12px; min-height: 56px; }
+.front-talent-photo { position: relative; flex: none; width: 40px; height: 52px; border-radius: 6px; overflow: hidden; background: #EFEFEA; }
+.front-talent-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.front-talent-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.front-talent-name { font: 300 18px/22px var(--ui); }
+.front-talent-meta { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.front-empty { display: flex; flex-direction: column; gap: 2px; font: 400 15px/20px var(--ui); color: var(--dim); }
+.front-empty-big { font: 400 18px/24px var(--ui); color: var(--text); }
+
+.front-board { display: flex; align-items: center; gap: 14px; padding: 10px; }
+.front-board > svg { color: var(--off); }
+.front-collage { flex: none; display: grid; width: 96px; height: 96px; gap: 2px; border-radius: 6px; overflow: hidden; background: #EFEFEA; }
+.front-collage img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.front-collage.n2 { grid-template-columns: 56px 38px; }
+.front-collage.n3 { grid-template-columns: 56px 38px; grid-template-rows: 47px 47px; }
+.front-collage.n3 img:first-child { grid-row: 1 / 3; }
+.front-board-empty { flex: none; display: grid; grid-template-columns: 1fr 1fr; width: 56px; height: 56px; margin: 6px 4px; border-radius: 50%; overflow: hidden; }
+.front-board-empty > span:nth-child(1), .front-board-empty > span:nth-child(4) { background: #D6DADD; }
+.front-board-empty > span:nth-child(2), .front-board-empty > span:nth-child(3) { background: #9AA3A8; }
+.front-board-words { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.front-board-state { font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.front-board-name { font: 300 18px/22px var(--ui); }
+.front-board-meta { font: 500 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.front-finals { flex: none; display: flex; gap: 4px; }
+.front-finals img { width: 44px; height: 56px; object-fit: cover; border-radius: 6px; }
+
+.front-shot { display: flex; align-items: center; gap: 12px; min-height: 48px; border-bottom: 1px solid var(--line); }
+.front-shot-ring { flex: none; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--text); }
+.front-shot-text { flex: 1; min-width: 0; font: 400 17px/22px var(--ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.front-shot-star { display: flex; color: var(--off); }
+.front-shot-star svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.front-shot-star.starred { color: var(--text); }
+.front-shot-star.starred svg { fill: var(--band); }
+.front-see-all { display: inline-flex; align-items: center; gap: 4px; height: 44px; font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+
+.front-reflect { display: flex; gap: 16px; }
+.front-reflect-mark { flex: none; width: 52px; height: 52px; }
+.front-reflect-mark circle { fill: var(--text); }
+.front-reflect-mark path { fill: var(--band); }
+.front-reflect-words { flex: 1; min-width: 0; }
+.front-card-btns { display: flex; gap: 8px; margin: 10px 0 -10px -8px; }
+.text-act { height: 44px; min-height: 0; margin: 0; padding: 0 8px; border: 0; border-radius: 0; background: none; color: var(--text); font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.text-act-quiet { color: var(--dim); }
+.front-deadline {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; height: auto; min-height: 48px; margin: 16px 0 -8px; padding: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0;
+  background: none; color: var(--text); text-transform: none; letter-spacing: 0; cursor: pointer;
+}
+.front-card > .front-deadline:first-child { margin: -8px 0; border-top: 0; }
+.front-deadline-label { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.front-deadline-words { display: inline-flex; align-items: center; gap: 4px; font: 400 16px/22px var(--ui); }
+.front-deadline-words.late { color: var(--crimson); font-weight: 700; }
+.on-set { display: flex; }
+.on-set-stat { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 12px 12px 0 0; margin-right: 12px; border-top: 1px solid var(--line); }
+.on-set-stat:last-child { margin-right: 0; }
+.on-set-big { font: 300 30px/36px var(--ui); font-variant-numeric: tabular-nums; }
+.on-set-label { font: 500 11px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+
+.detail-rows { border-top: 1px solid var(--text); }
+.detail-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; height: auto; min-height: 60px; margin: 0; padding: 8px 0; box-sizing: border-box;
+  border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; color: var(--text); text-align: left; text-transform: none; letter-spacing: 0; cursor: pointer;
+}
+.detail-row > svg { color: var(--off); }
+.detail-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--text); }
+.detail-dot.filled { background: var(--text); }
+.detail-words { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.detail-label { font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.detail-sum { font: 400 15px/20px var(--ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.detail-row-closed { cursor: default; }
+.detail-row-closed .detail-sum { color: var(--dim); }
+
+/* A part of the page on its own: its heading is the page's title. */
+#shootModalOverlay:not(.on-front) #shootForm > .shoot-section-heading {
+  margin: 0 0 12px; padding: 0; border: 0; background: none; color: var(--text); text-shadow: none; text-align: left;
+  font: 300 30px/36px var(--ui) !important; letter-spacing: 0 !important; text-transform: none !important;
+}

@@ -216,8 +216,8 @@ window.EyeParts.addOffline = function addOffline(ed) {
         const clear = ed.shootModalOverlay.hidden && ed.archiveModeOverlay.hidden;
         if (clear && shoot && kept(shoot.id)) {
           const page = shoot.page;
-          if (page && ed.SHOOT_MODAL_SECTIONS.some(sec => sec.id === page.id) && Number.isInteger(page.sub) && page.sub >= 0) {
-            ed.shootPageMemory[shoot.id] = { id: page.id, sub: page.sub };
+          if (page && (page.id === 'front' || ed.SHOOT_MODAL_SECTIONS.some(sec => sec.id === page.id)) && Number.isInteger(page.sub) && page.sub >= 0) {
+            ed.shootOpenAt = { id: page.id, sub: page.sub };
           }
           ed.openShootModal(shoot.id);
         } else if (clear && archive && kept(archive.id)) {

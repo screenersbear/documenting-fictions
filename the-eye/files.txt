@@ -86,6 +86,8 @@ built/app.css
   styles/list-head.css
   styles/archive-list.css
   styles/reflections.css
+  styles/shoot-band.css
+  styles/shoot-front.css
 
 # The screens and popups, in the order they sit in the page. Each piece starts
 # with a line saying what it is, which isn't joined.
@@ -95,6 +97,7 @@ built/markup.js
   pages/shoot/shoot-page.html
   pages/shoot/shoot-page-2.html
   pages/shoot/shoot-more.html
+  pages/shoot/status-sheet.html
   pages/app-menu/photographer.html
   pages/shoot/people.html
   pages/shoot/location.html
@@ -159,6 +162,7 @@ built/app.js
   pages/journal/prompts-2.js
   components/dates.js
   components/row-words.js
+  components/shoot-stage.js
   components/helpers.js
   components/held-upright.js
   components/shoot-kinds.js
@@ -250,6 +254,11 @@ built/app.js
   pages/shoot-options/change-deadline.js
   pages/shoot-options/change-status.js
   pages/shoot-options/add-to-project.js
+  pages/shoot/shoot-front.js
+  pages/shoot/front-cards.js
+  pages/shoot/stage-cards.js
+  pages/shoot/next-step.js
+  pages/shoot/status-sheet.js
   components/toast.js
   components/confirm.js
   components/load-lib.js
