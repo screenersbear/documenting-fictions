@@ -47,3 +47,12 @@ html:not(.df-suite) [data-books] { display: none; }
 .screen.has-band > .scroll { padding: 0 16px 24px; }
 .screen.has-band > .scroll > .band { margin: 0 -16px 53px; }
 .screen.has-band .note { font: 400 17px/24px var(--ui); color: var(--dim); }
+
+/* The short band on a page inside a section (a tag): 56px under the safe
+   area, back and the ... menu as rings, the name on the hairline between
+   them, then two steps. The page starts 8px under them. */
+.band.band-short { height: 56px; justify-content: space-between; padding: 6px 8px 0; }
+.band-short::after { height: 18px; background: linear-gradient(var(--step1) 0 10px, var(--step3) 10px); }
+.band-short .band-line { left: 64px; right: 64px; top: 21px; }
+.screen.in-tag { padding: 0 16px; }
+.screen.in-tag > .band-short { flex: none; margin: 0 -16px 26px; }

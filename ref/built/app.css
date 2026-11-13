@@ -583,6 +583,15 @@ html:not(.df-suite) [data-books] { display: none; }
 .screen.has-band > .scroll > .band { margin: 0 -16px 53px; }
 .screen.has-band .note { font: 400 17px/24px var(--ui); color: var(--dim); }
 
+/* The short band on a page inside a section (a tag): 56px under the safe
+   area, back and the ... menu as rings, the name on the hairline between
+   them, then two steps. The page starts 8px under them. */
+.band.band-short { height: 56px; justify-content: space-between; padding: 6px 8px 0; }
+.band-short::after { height: 18px; background: linear-gradient(var(--step1) 0 10px, var(--step3) 10px); }
+.band-short .band-line { left: 64px; right: 64px; top: 21px; }
+.screen.in-tag { padding: 0 16px; }
+.screen.in-tag > .band-short { flex: none; margin: 0 -16px 26px; }
+
 /* ---- styles/section-bar.css ---- */
 /* The section bar (DESIGN.md 9.4), as The Eye's: on paper, a 1px line on
    top, each section's mark (28px) over its name (10px capitals). The one
@@ -644,3 +653,91 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .chevron { flex: none; width: 16px; height: 16px; fill: none; stroke: #9AA3A8; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .tag-mine-head { margin-top: 20px; }
 .tag-new { margin-top: 8px; }
+
+/* ---- styles/folder-grid.css ---- */
+/* Inside a tag (round 2, 04-inside-incoming): under the short band, how
+   many and how they're sorted on one line with Sort, Undo and SELECT; the
+   chips in a row of their own; while photos are read, a line saying so with
+   a small bar; then the photos, three across, square. Picking them (SELECT)
+   rings each in the notebook's colour, and the bar at the foot says how
+   many and what to do with them. */
+.in-tag .bar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 4px; margin: 4px 0 0; padding: 0; }
+.bar .count { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 15px/20px var(--ui); color: var(--dim); font-variant-numeric: tabular-nums; }
+.bar-btns { flex: none; display: flex; }
+.bar-icon { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: var(--text); }
+.bar-icon svg { width: 18px; height: 18px; stroke-width: 2; }
+.bar-text { height: 44px; padding: 0 8px; margin-right: -8px; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.in-tag .chips { gap: 8px; margin: 4px -16px 0; padding: 0 16px; -webkit-mask-image: none; mask-image: none; }
+.in-tag .chip { flex: none; height: 32px; padding: 0 12px; border: 0; border-radius: 16px; background: #EFEFEA; color: var(--text); font: 400 13px/16px var(--ui); white-space: nowrap; }
+.in-tag .chip.on { background: var(--ink); color: var(--on-ink); }
+/* Reading the photos: the words in small capitals, a 60px bar of how far. */
+.in-tag .scan { flex: none; margin: 12px 0 0; padding: 0; }
+.scan-line { display: flex; align-items: center; gap: 10px; margin: 0; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.scan-bar { flex: 0 0 60px; height: 4px; border-radius: 2px; background: #EFEFEA; overflow: hidden; }
+.scan-bar > span { display: block; height: 100%; background: var(--ink); }
+.in-tag .scan-btn { font: 500 15px/20px var(--ui); color: var(--ink); text-decoration: underline; }
+.in-tag > .scroll.photos { margin: 12px -16px 0; padding: 0 16px 24px; }
+.in-tag .grid { gap: 3px; padding-bottom: 0; }
+.in-tag .tile { aspect-ratio: 1; border-radius: 4px; background: #EFEFEA; }
+.in-tag .tile.add { flex-direction: column; gap: 6px; border: 0; box-shadow: inset 0 0 0 1.5px var(--ink); background: none; color: var(--ink);
+  font: 700 11px/14px var(--ui); letter-spacing: .08em; text-transform: uppercase; text-align: center; }
+.in-tag .tile.add svg { width: 22px; height: 22px; stroke-width: 2; }
+.in-tag .fav { width: 16px; height: 16px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .4)); }
+.in-tag .tile.sel::after { border: 0; border-radius: 4px; box-shadow: inset 0 0 0 3px var(--ink); background: none; }
+.tile-tick { position: absolute; z-index: 1; top: 6px; right: 6px; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--on-ink); }
+.tile-tick svg { width: 13px; height: 13px; stroke-width: 3; }
+/* Nothing in Incoming yet: the one big way in. */
+.in-tag .open-phone { border: 0; border-radius: 10px; box-shadow: inset 0 0 0 1.5px var(--ink); color: var(--ink); }
+.in-tag .open-phone .big-words { font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.in-tag .open-phone .row-meta { font: 400 15px/20px var(--ui); color: var(--dim); }
+/* Picking: how many, then Tag these, Favorite and Delete, labelled. */
+.in-tag .tools { justify-content: space-between; gap: 4px; padding: 8px 12px var(--nb-foot); background: var(--paper); box-shadow: none; border-top: 1px solid #E1E1DC; }
+.in-tag .sel-count { flex: 1; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.in-tag .tools .tool { flex-direction: column; gap: 4px; width: auto; min-width: 64px; height: 48px; padding: 0 6px; font: 700 10px/12px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--text); }
+.in-tag .tools .tool svg { width: 22px; height: 22px; stroke-width: 1.8; }
+.in-tag .tile:not(.sel) .tile-tick { display: none; }
+
+/* ---- styles/sheets.css ---- */
+/* Sheets in the round 2 look (05-tag-sheet, DESIGN.md 9.5): white, rising
+   from the bottom, the title in small capitals and a ring to close it;
+   rows 52px with a hairline; ticks as 24px boxes in the notebook's colour
+   (a dash for "some of them"); the buttons 48px, radius 8, in button type:
+   the main one in the notebook's colour, the other outlined, Delete in
+   crimson. Every sheet (components/sheet.js) wears it. */
+.sheet-overlay { background: rgba(49, 61, 69, .5); }
+.sheet { border-radius: 20px 20px 0 0; color: var(--text); font-family: var(--ui); }
+.sheet-header { padding: 25px 8px 0 16px; border-bottom: 0; }
+.sheet-header h2 { font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.sheet .close-btn { position: relative; width: 44px; height: 44px; color: var(--text); }
+.sheet .close-btn::before { content: ''; position: absolute; inset: 2px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
+.sheet .x-icon { width: 18px; height: 18px; stroke-width: 2; }
+.sheet-body { padding: 8px 16px calc(24px + var(--safe-b)); }
+.sheet-message { font: 400 17px/24px var(--ui); }
+.sheet-message b { font-weight: 700; }
+.sheet-actions { gap: 8px; margin-top: 20px; }
+.btn { height: 48px; padding: 0 20px; border: 0; border-radius: 8px; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.btn.primary { background: var(--ink); color: var(--on-ink); }
+.btn.secondary { border: 0; box-shadow: inset 0 0 0 1.5px var(--text); background: none; color: var(--text); }
+.btn.danger { background: #A1062A; color: #FFFFFF; }
+/* Choices (a ... menu, Sort by): rows, the one in use bold, Delete in crimson. */
+.choice { min-height: 52px; padding: 6px 0; border-bottom: 1px solid #E1E1DC; color: var(--text); }
+.choice-label { font: 400 17px/22px var(--ui); }
+.choice.current .choice-label { font-weight: 700; text-decoration: none; }
+.choice.is-danger { color: #A1062A; }
+.choice-detail { font: 400 13px/18px var(--ui); color: var(--dim); }
+.field-label, .label, .choice-heading { font: 500 11px/14px var(--ui); letter-spacing: .12em; color: var(--dim); }
+/* Tick lists (Tag these). */
+.tick { gap: 14px; min-height: 52px; border-bottom: 1px solid #E1E1DC; font: 400 17px/22px var(--ui); color: var(--text); }
+.tick input { -webkit-appearance: none; appearance: none; flex: none; width: 24px; height: 24px; margin: 0; border-radius: 6px; box-shadow: inset 0 0 0 2px var(--text); background: none no-repeat center / 14px; }
+.tick input:checked { box-shadow: none; background-color: var(--ink); background-image: var(--tick-img); }
+.tick input:indeterminate { box-shadow: none; background-color: var(--ink); background-image: var(--dash-img); background-size: 12px 3px; }
+.tick.add { gap: 14px; color: var(--ink); font-weight: 500; }
+:root {
+  --tick-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='5 12.5 10 17 19 7'/%3E%3C/svg%3E");
+  --dash-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 3'%3E%3Crect width='12' height='3' rx='1.5' fill='%23fff'/%3E%3C/svg%3E");
+}
+/* On the light notebook colours the tick is berry blade black. */
+:root:is([data-book="mango"], [data-book="orange"], [data-book="leaf"]) {
+  --tick-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23313D45' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='5 12.5 10 17 19 7'/%3E%3C/svg%3E");
+  --dash-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 3'%3E%3Crect width='12' height='3' rx='1.5' fill='%23313D45'/%3E%3C/svg%3E");
+}

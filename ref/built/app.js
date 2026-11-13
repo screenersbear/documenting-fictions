@@ -2169,7 +2169,7 @@ const ICONS = {
 const ring = (label, attr, svg) => `<button type="button" class="ring-btn" ${attr} aria-label="${label}"><span>${svg}</span></button>`;
 const line = (d) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const BOOKS = "<svg viewBox=\"0 0 24 24\" width=\"19\" height=\"19\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"5\" width=\"4.5\" height=\"14\" rx=\"1\"/><rect x=\"9.5\" y=\"3\" width=\"4.5\" height=\"16\" rx=\"1\"/><path d=\"M16 6.2l3.6-1 3 12.6-3.6 1z\"/></svg>";
-const PLUS = line("<line x1=\"12\" y1=\"5\" x2=\"12\" y2=\"19\"/><line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/>");
+const PLUS$1 = line("<line x1=\"12\" y1=\"5\" x2=\"12\" y2=\"19\"/><line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/>");
 const MENU = line("<line x1=\"4\" y1=\"7\" x2=\"20\" y2=\"7\"/><line x1=\"4\" y1=\"12\" x2=\"20\" y2=\"12\"/><line x1=\"4\" y1=\"17\" x2=\"20\" y2=\"17\"/>");
 const MARK = "<svg class=\"band-mark\" viewBox=\"0 0 40 40\" aria-hidden=\"true\"><rect width=\"20\" height=\"20\" class=\"mk-p\"/><rect x=\"20\" width=\"20\" height=\"20\" class=\"mk-w\"/><rect y=\"20\" width=\"20\" height=\"20\" class=\"mk-w\"/><rect x=\"20\" y=\"20\" width=\"20\" height=\"20\" class=\"mk-p\"/></svg>";
 const bandDate = (d = new Date()) => d.toLocaleDateString("en-GB", {
@@ -2181,7 +2181,7 @@ function bandHtml({ title, place, add }) {
 	return `
     <header class="band">
       <h1 class="band-title">${esc(title)}</h1>
-      <div class="band-btns">${ring("Back to your notebooks", "data-books", BOOKS)}${ring(add, "data-band-add", PLUS)}${ring("Options", "data-app-menu", MENU)}</div>
+      <div class="band-btns">${ring("Back to your notebooks", "data-books", BOOKS)}${ring(add, "data-band-add", PLUS$1)}${ring("Options", "data-app-menu", MENU)}</div>
       ${MARK}
       <p class="band-line"><b>${esc(place)}</b><span class="band-rule"></span><span class="band-date">${bandDate()}</span></p>
     </header>`;
@@ -2191,6 +2191,16 @@ function wireBand(view, onAdd) {
 		location.hash = "#/";
 	});
 	view.querySelector("[data-band-add]")?.addEventListener("click", onAdd);
+}
+const BACK = line("<polyline points=\"15 5 8 12 15 19\"/>");
+const MORE = "<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" aria-hidden=\"true\"><circle cx=\"5\" cy=\"12\" r=\"1.6\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.6\" fill=\"currentColor\"/><circle cx=\"19\" cy=\"12\" r=\"1.6\" fill=\"currentColor\"/></svg>";
+function shortBandHtml({ name, back, backLabel = "Back", more = "" }) {
+	return `
+    <header class="band band-short">
+      <a class="ring-btn" href="${back}" aria-label="${esc(backLabel)}"><span>${BACK}</span></a>
+      <p class="band-line"><b>${esc(name)}</b><span class="band-rule"></span></p>
+      ${more ? ring(more, "data-band-more", MORE) : "<span class=\"ring-btn\" aria-hidden=\"true\"></span>"}
+    </header>`;
 }
 
 // pages/boards.js
@@ -2291,6 +2301,7 @@ async function boardsScreen(view) {
 }
 
 // components/filing.js
+const PLUS = "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><line x1=\"12\" y1=\"5\" x2=\"12\" y2=\"19\"/><line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/></svg>";
 async function newFolder() {
 	const name = await promptSheet({
 		title: "New tag",
@@ -2338,9 +2349,9 @@ function fileSheet(ids) {
 				const on = changes.has(f.id) ? changes.get(f.id) : inCount(f.id) === photos.length;
 				return `<label class="tick" data-name="${esc(f.name.toLowerCase())}"><input type="checkbox" value="${esc(f.id)}"${on ? " checked" : ""} /><span>${esc(f.name)}</span></label>`;
 			}).join("")}
-          <button type="button" class="tick add" data-new>+ New tag</button>
+          <button type="button" class="tick add" data-new>${PLUS}New tag</button>
         </div>
-        <div class="sheet-actions"><button type="button" class="btn secondary" data-close>Cancel</button><button type="button" class="btn primary" data-save>Save</button></div>`;
+        <div class="sheet-actions one"><button type="button" class="btn primary" data-save>Done</button></div>`;
 			s.body.querySelectorAll(".tick input").forEach((box) => {
 				const n = inCount(box.value);
 				box.indeterminate = !changes.has(box.value) && n > 0 && n < photos.length;
@@ -2848,6 +2859,8 @@ function openColorPage(hex, onBack) {
 }
 
 // pages/folder.js
+const SORT_ICON = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><line x1=\"4\" y1=\"7\" x2=\"20\" y2=\"7\"/><line x1=\"7\" y1=\"12\" x2=\"17\" y2=\"12\"/><line x1=\"10\" y1=\"17\" x2=\"14\" y2=\"17\"/></svg>";
+const TICK = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polyline points=\"5 12.5 10 17 19 7\"/></svg>";
 const filterMemory = {};
 let stopListening = null;
 function folderScreen(view, id) {
@@ -2874,10 +2887,7 @@ function folderScreen(view, id) {
 		carryOn();
 	}
 	const openPhone = () => pickFiles().then(bringIn);
-	const chipsHtml = () => {
-		const chips = chipsFor(photosIn(id), on(), id);
-		return `<button type="button" class="chip${on().length ? "" : " on"}" data-filter="">All</button>${chips.map((c) => `<button type="button" class="chip kind-${c.kind}${on().includes(c.key) ? " on" : ""}" data-filter="${esc(c.key)}">${esc(c.label)}</button>`).join("")}`;
-	};
+	const chipsHtml = () => chipsFor(photosIn(id), on(), id).map((c) => `<button type="button" class="chip kind-${c.kind}${on().includes(c.key) ? " on" : ""}" data-filter="${esc(c.key)}">${esc(c.label)}</button>`).join("");
 	const gridHtml = () => {
 		const total = photosIn(id).length;
 		if (!total && incoming) return `
@@ -2889,19 +2899,21 @@ function folderScreen(view, id) {
       ${isIOS() && !isStandalone() ? "<p class=\"note\">Add this to your Home Screen to keep your photos safe. Safari can clear what sites have saved if they go unused.</p>" : ""}`;
 		if (!total) return `<p class="note center">${id === "favorites" ? "Tap the heart on a photo to keep it here." : "Nothing here yet. File photos in from Incoming."}</p>`;
 		return `<div class="grid">
-      ${incoming && !selecting ? `<button type="button" class="tile add" data-phone aria-label="Add from your phone">${ICONS.plus}</button>` : ""}
-      ${current.map((p, i) => `<button type="button" class="tile${sel.has(p.id) ? " sel" : ""}" data-i="${i}" aria-label="${esc(p.name)}"><img src="${thumbUrl(p)}" alt="" decoding="async" draggable="false" />${p.favorite ? `<span class="fav">${ICONS.heartOn}</span>` : ""}</button>`).join("")}
+      ${incoming && !selecting ? `<button type="button" class="tile add" data-phone aria-label="Add from your phone">${ICONS.plus}<span>Add from<br />your phone</span></button>` : ""}
+      ${current.map((p, i) => `<button type="button" class="tile${sel.has(p.id) ? " sel" : ""}" data-i="${i}" aria-label="${esc(p.name)}"><img src="${thumbUrl(p)}" alt="" decoding="async" draggable="false" />${p.favorite ? `<span class="fav">${ICONS.heartOn}</span>` : ""}${selecting ? `<span class="tile-tick">${TICK}</span>` : ""}</button>`).join("")}
     </div>`;
 	};
 	const countText = () => {
 		const total = photosIn(id).length;
-		return current.length === total ? `${total}` : `${current.length} of ${total}`;
+		const sort = SORTS.find((s) => s.key === sortOf(id)).label;
+		return `${current.length === total ? "" : `${current.length} of `}${total} ${total === 1 ? "photo" : "photos"} · ${sort}`;
 	};
 	const scanHtml = () => {
 		if (!photosIn(id).length) return "";
 		if (scan.state === "failed") return "<button type=\"button\" class=\"scan-btn\" data-scan>This phone couldn't read them. Try again</button>";
-		if (scan.state === "loading") return `<span class="scan-text">Getting ready, ${scan.pct}%</span>`;
-		if (scan.state === "working") return `<span class="scan-text">Looking at your photos, ${scan.done} of ${scan.total}</span>`;
+		const line = (pct, words) => `<p class="scan-line"><span class="scan-bar" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>${words}</p>`;
+		if (scan.state === "loading") return line(scan.pct, `Getting ready, ${scan.pct}%`);
+		if (scan.state === "working") return line(scan.total ? scan.done / scan.total * 100 : 0, `Looking at your photos, ${scan.done} of ${scan.total}`);
 		return "";
 	};
 	function paintList() {
@@ -2938,30 +2950,32 @@ function folderScreen(view, id) {
 		const stay = view.querySelector(".screen")?.dataset.folder === id;
 		current = shown();
 		const empty = !photosIn(id).length;
-		const sortLabel = SORTS.find((s) => s.key === sortOf(id)).label;
 		view.innerHTML = `
-      <div class="screen${stay ? " still" : ""}" data-folder="${esc(id)}">
-        <header class="folder-head">
-          <a class="icon-btn" href="#/folders" aria-label="Back to tags">${ICONS.back}</a>
-          <h1><span class="under">${esc(folder.name)}</span></h1>
-          ${isSpecial(id) ? "<span class=\"icon-btn\" aria-hidden=\"true\"></span>" : `<button type="button" class="icon-btn" data-folder-more aria-label="Folder options">${ICONS.more}</button>`}
-        </header>
+      <div class="screen in-tag${stay ? " still" : ""}" data-folder="${esc(id)}">
+        ${shortBandHtml({
+			name: folder.name,
+			back: "#/folders",
+			backLabel: "Back to tags",
+			more: isSpecial(id) ? "" : "Tag options"
+		})}
         ${empty ? "" : `
           <div class="bar">
-            <button type="button" class="label-btn" data-sort>${esc(sortLabel)}</button>
-            <button type="button" class="label-btn" data-select>${selecting ? "Done" : "Select"}</button>
-            <button type="button" class="undo-btn" data-undo aria-label="Undo"${canUndo() ? "" : " disabled"}>${ICONS.undo}</button>
             <span class="count">${countText()}</span>
+            <span class="bar-btns">
+              <button type="button" class="bar-icon" data-sort aria-label="Sort">${SORT_ICON}</button>
+              <button type="button" class="bar-icon" data-undo aria-label="Undo"${canUndo() ? "" : " disabled"}>${ICONS.undo}</button>
+              <button type="button" class="bar-text" data-select>${selecting ? "Done" : "Select"}</button>
+            </span>
           </div>
           <div class="chips">${chipsHtml()}</div>`}
         <div class="scan"${scanHtml() ? "" : " hidden"}>${scanHtml()}</div>
-        <div class="scroll">${gridHtml()}</div>
+        <div class="scroll photos">${gridHtml()}</div>
         ${selecting ? `
           <nav class="tools" aria-label="Selection">
             <span class="sel-count">${sel.size} picked</span>
-            <button type="button" class="tool" data-act="file" aria-label="Tag these"${sel.size ? "" : " disabled"}>${ICONS.file}</button>
-            <button type="button" class="tool" data-act="fav" aria-label="Favorite"${sel.size ? "" : " disabled"}>${ICONS.heart}</button>
-            <button type="button" class="tool" data-act="delete" aria-label="Delete"${sel.size ? "" : " disabled"}>${ICONS.trash}</button>
+            <button type="button" class="tool" data-act="file"${sel.size ? "" : " disabled"}>${ICONS.file}<span>Tag</span></button>
+            <button type="button" class="tool" data-act="fav"${sel.size ? "" : " disabled"}>${ICONS.heart}<span>Favorite</span></button>
+            <button type="button" class="tool" data-act="delete"${sel.size ? "" : " disabled"}>${ICONS.trash}<span>Delete</span></button>
           </nav>` : ""}
       </div>`;
 		const sc = view.querySelector(".scroll");
@@ -3053,7 +3067,7 @@ function folderScreen(view, id) {
 			sel.clear();
 			draw();
 		}));
-		view.querySelector("[data-folder-more]")?.addEventListener("click", async () => {
+		view.querySelector("[data-band-more]")?.addEventListener("click", async () => {
 			const key = await choiceSheet({
 				title: folder.name,
 				options: [{
