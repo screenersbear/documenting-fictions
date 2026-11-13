@@ -1,0 +1,13 @@
+/* A delivered or archived shoot's front page as its report
+   (pages/shoot/report-cards.js): label-over-words cards and the final
+   images three to a row. */
+.report-card { display: flex; flex-direction: column; gap: 14px; }
+.report-field { display: flex; flex-direction: column; gap: 4px; }
+.report-field + .report-field { padding-top: 14px; border-top: 1px solid var(--line); }
+.report-label { font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.report-value { font: 400 16px/23px var(--ui); color: var(--text); white-space: pre-line; }
+.report-finals { padding: 12px; }
+.report-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.report-thumb { display: block; width: 100%; height: auto; min-height: 0; aspect-ratio: 4 / 5; margin: 0; padding: 0; border: 0; border-radius: 8px; overflow: hidden; background: #EFEFEA; cursor: zoom-in; }
+.report-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.report-finals .front-see-all { width: auto; min-height: 0; margin: 8px 4px 0; padding: 0; border: 0; background: none; color: var(--text); cursor: pointer; }

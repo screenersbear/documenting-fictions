@@ -167,13 +167,10 @@ window.EyeParts.addArchive = function addArchive(ed) {
     if (!img) return;
     const shoot = ed.state.shoots.find(s => s.id === img.dataset.shootId);
     if (!shoot) return;
-    // An archived shoot's photo opens its Archive mode recap, same as its
-    // row in the list below (its "shoot details" button goes on to the
-    // page). The slideshow also shows final images from shoots that aren't
-    // archived yet, which have no Archive mode, so those still open the
-    // page on the Shoots tab.
-    if (shoot.archived) { ed.openArchiveMode(shoot.id); return; }
-    document.querySelector(`.tab[data-view="${shoot.archived ? 'archive' : 'shoots'}"]`).click();
+    // An archived shoot's photo opens its page here, same as its row in the
+    // list below. The slideshow also shows final images from shoots that
+    // aren't archived yet, and those open on the Shoots tab.
+    if (!shoot.archived) document.querySelector('.tab[data-view="shoots"]').click();
     ed.openShootModal(shoot.id);
   });
 

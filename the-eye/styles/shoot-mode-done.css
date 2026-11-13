@@ -128,25 +128,6 @@
   color: var(--text);
 }
 
-/* Archive mode's read-only counterpart to .shoot-mode-review-field above —
-   same label-over-value block and divider, but a plain div rather than a
-   button: nothing in Archive mode is tappable, so no cursor or :active
-   state, just typed text laid out like a report. Reuses
-   .shoot-mode-review-label/-value as-is for the text itself. */
-.archive-mode-field {
-  width: 100%;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.archive-mode-field:last-child {
-  border-bottom: 0;
-}
-
-.archive-mode-final-images {
-  padding: 4px 20px 14px;
-}
-
 /* Lighting setups inside the review popup: one group per setup, its name as
    a heading followed by whichever of Characteristics/Description are
    filled in (see .shoot-mode-review-field above) — the group's own

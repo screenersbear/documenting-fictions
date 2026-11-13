@@ -5921,7 +5921,7 @@ window.EyeParts.addShootRow = function addShootRow(ed) {
   // opts: showStatus puts the status first on its line (lists that mix
   // statuses); dueOnly leaves the shoot's day out (Upcoming deadlines);
   // more adds the More button (Shoots); showBadge false leaves the flags off
-  // (Archive); switchToShootsTab and openArchiveMode change where a tap goes.
+  // (Archive); switchToShootsTab opens the shoot on the Shoots tab.
   // A deadline gone by takes over the line in crimson, written out
   // ("Overdue by 3 days"), never colour alone. Once delivered or archived
   // there's nothing left to deliver, so the deadline isn't shown.
@@ -5951,7 +5951,6 @@ window.EyeParts.addShootRow = function addShootRow(ed) {
     `;
     div.addEventListener('click', () => {
       if (o.switchToShootsTab) document.querySelector('.tab[data-view="shoots"]').click();
-      if (o.openArchiveMode) { ed.openArchiveMode(s.id); return; }
       ed.openShootModal(s.id);
     });
     const more = div.querySelector('.row-more-btn');
@@ -5977,9 +5976,7 @@ window.EyeParts.addShootRow = function addShootRow(ed) {
   // A smaller, photo-free row for tight spaces (the lists that open from the
   // Monday brief) — title, status, and shoot date, each on its own line, so
   // nothing is ever squeezed side-by-side against anything else.
-  // opts.openArchiveMode (the project popup, for archived days) opens the
-  // read-only Archive mode recap instead, same as a row on the Archive tab.
-  function renderCompactShootRow(container, s, opts) {
+  function renderCompactShootRow(container, s) {
     const statusLabel = ed.STATUS_LABELS[s.status] || '';
     const div = document.createElement('div');
     div.className = 'shoot-row-compact';
@@ -5992,7 +5989,6 @@ window.EyeParts.addShootRow = function addShootRow(ed) {
       <button type="button" class="row-options-btn" aria-label="Options">&#8942;</button>
     `;
     div.addEventListener('click', () => {
-      if (opts && opts.openArchiveMode) { ed.openArchiveMode(s.id); return; }
       ed.openShootModal(s.id);
     });
     div.querySelector('.row-options-btn').addEventListener('click', (e) => {
@@ -7390,7 +7386,6 @@ window.EyeParts.addLastPlace = function addLastPlace(ed) {
     if (!ed.lastPlaceArmed) return;
     try {
       const shootOpen = !ed.shootModalOverlay.hidden && ed.currentShootId;
-      const archiveOpen = !ed.archiveModeOverlay.hidden && ed.archiveModeShootId;
       localStorage.setItem(LAST_PLACE_KEY, JSON.stringify({
         book: document.getElementById('bookOverlay').hidden ? 'open' : 'shut',
         view: ed.currentScreen(),
@@ -7400,7 +7395,6 @@ window.EyeParts.addLastPlace = function addLastPlace(ed) {
         journalFilter: ed.journalFilter,
         statsYearFilter: ed.statsYearFilter,
         shoot: shootOpen ? { id: ed.currentShootId, page: ed.shootOnFront ? { id: 'front', sub: 0 } : { id: ed.shootPageId, sub: ed.shootSub } } : null,
-        archive: archiveOpen ? { id: ed.archiveModeShootId, at: ed.archiveAt } : null,
         shootMode: !ed.shootModeOverlay.hidden && ed.getShootModeShootId() ? { id: ed.getShootModeShootId(), at: ed.shootModeAt } : null,
       }));
     } catch (e) { /* storage unavailable: it just opens where the sun menu's fallback says */ }
@@ -8163,9 +8157,8 @@ window.EyeParts.addProjectsProjectPopup = function addProjectsProjectPopup(ed) {
     members.forEach(s => {
       // The stock compact row, so its tap (opens the shoot modal, which
       // stacks above this popup) and its ⋮ (normal shoot options) work
-      // here unchanged; only the title gets its "Day N" prefix. An archived
-      // day opens its Archive mode recap instead, like on the Archive tab.
-      ed.renderCompactShootRow(list, s, { openArchiveMode: !!s.archived });
+      // here unchanged; only the title gets its "Day N" prefix.
+      ed.renderCompactShootRow(list, s);
       const info = ed.projectDayInfo(s);
       if (!info) return;
       const titleEl = list.lastElementChild && list.lastElementChild.querySelector('.shoot-row-compact-title');
@@ -8938,13 +8931,10 @@ window.EyeParts.addArchive = function addArchive(ed) {
     if (!img) return;
     const shoot = ed.state.shoots.find(s => s.id === img.dataset.shootId);
     if (!shoot) return;
-    // An archived shoot's photo opens its Archive mode recap, same as its
-    // row in the list below (its "shoot details" button goes on to the
-    // page). The slideshow also shows final images from shoots that aren't
-    // archived yet, which have no Archive mode, so those still open the
-    // page on the Shoots tab.
-    if (shoot.archived) { ed.openArchiveMode(shoot.id); return; }
-    document.querySelector(`.tab[data-view="${shoot.archived ? 'archive' : 'shoots'}"]`).click();
+    // An archived shoot's photo opens its page here, same as its row in the
+    // list below. The slideshow also shows final images from shoots that
+    // aren't archived yet, and those open on the Shoots tab.
+    if (!shoot.archived) document.querySelector('.tab[data-view="shoots"]').click();
     ed.openShootModal(shoot.id);
   });
 
@@ -8975,7 +8965,7 @@ window.EyeParts.addArchiveList = function addArchiveList(ed) {
   Object.assign(ed, { renderArchive });
   // The months showing their shoots, for as long as the app's open.
   const openMonths = new Set();
-  const ROW_OPTS = { showBadge: false, openArchiveMode: true };
+  const ROW_OPTS = { showBadge: false };
 
   // A project box stands for several shoots.
   const shootCount = items => items.reduce((n, item) => n + (item.kind === 'project' ? item.members.length : 1), 0);
@@ -12757,7 +12747,6 @@ window.EyeParts.addShootDeadlinePrompt = function addShootDeadlinePrompt(ed) {
     const shoot = ed.editingShootId ? ed.state.shoots.find(s => s.id === ed.editingShootId) : null;
     const isArchived = !!(shoot && shoot.archived);
     document.getElementById('enterShootModeBtn').hidden = !ed.editingShootId || isArchived || status !== 'waiting_to_shoot';
-    document.getElementById('enterArchiveModeBtn').hidden = !ed.editingShootId || !isArchived;
   }
 
   document.getElementById('shootStatus').addEventListener('change', (e) => {
@@ -17014,22 +17003,24 @@ window.EyeParts.addShootFrontCards = function addShootFrontCards(ed) {
 // The cards on a shoot's front page once it's shot: the reflection while
 // it's fresh (with Walk me through it and Later), the proofs and the
 // deadline, what happened on set, and the final images. Each opens the
-// part of the page it's about. Before the shoot, front-cards.js has its own.
+// part of the page it's about. Before the shoot, front-cards.js has its own;
+// once it's delivered, report-cards.js.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootStageCards = function addShootStageCards(ed) {
-  Object.assign(ed, { drawStageCards });
+  Object.assign(ed, { drawStageCards, onSetHtml: onSet });
   const CHEVRON = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
   // The Reflections mark (pages/tabs.html), as the card's picture.
   const MARK = '<svg class="front-reflect-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22"/><path d="M24 2a22 22 0 0 1 22 22H24Z"/></svg>';
   const IN_THE_EDIT = ['waiting_for_selects', 'editing', 'rough_cut', 'client_review', 'revisions'];
   const esc = v => ed.escapeHtml(v);
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-  // Later puts the reflection card away for as long as the app's open.
+  // Later puts the reflection card away for as long as the app's open. An
+  // archived shoot isn't fresh any more: its reflection is a row below.
   const later = new Set();
 
   function reflectionCard(s) {
-    if (ed.hasReflection(s) || later.has(s.id)) return '';
+    if (s.archived || ed.hasReflection(s) || later.has(s.id)) return '';
     return `<div class="front-card front-reflect">${MARK}<div class="front-reflect-words">
       <span class="front-card-title">Reflection</span>
       <p class="front-card-text front-card-big">While it's fresh: what went right, what could've gone better, and one lesson for next time.</p>
@@ -17115,7 +17106,8 @@ window.EyeParts.addShootStageCards = function addShootStageCards(ed) {
     const covered = reflect ? ['reflection'] : [];
     if (s.status === 'captured') return { html: reflect + proofsCard(s, c) + onSet(s), onFront: covered };
     if (IN_THE_EDIT.includes(s.status)) return { html: reflect + deadlineCard(s) + finalImagesCard(s, c), onFront: [...covered, 'finalImages'] };
-    return { html: reflect + finalImagesCard(s, c) + onSet(s), onFront: [...covered, 'finalImages'] };
+    // Delivered or archived: its report (report-cards.js).
+    return ed.drawReportCards(s, c, reflect);
   }
 
   document.getElementById('shootFrontCards').addEventListener('click', (e) => {
@@ -17124,6 +17116,78 @@ window.EyeParts.addShootStageCards = function addShootStageCards(ed) {
     if (act.dataset.act === 'later') { later.add(ed.currentShootId); ed.drawShootFront(); return; }
     if (act.dataset.act === 'reflect') { ed.runNextStep({ key: 'reflect' }); return; }
     if (act.dataset.act === 'proofs') ed.runNextStep({ key: 'status', to: 'waiting_for_selects' });
+  });
+};
+;
+
+// ---- pages/shoot/report-cards.js ----
+// A delivered or archived shoot's front page reads as its report (it was
+// Archive mode): the reflection in full, the final images (a video's
+// deliverables instead), what happened on set, the idea, and the shooting
+// notes. Each part opens on its own page to change it, like the rest.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addShootReportCards = function addShootReportCards(ed) {
+  Object.assign(ed, { drawReportCards });
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
+  const esc = v => ed.escapeHtml(v);
+  const has = v => ed.hasText(v);
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  let finals = [];
+
+  // Label-over-words pairs in one card, opening the part they come from.
+  function fieldsCard(page, fields) {
+    const rows = fields.map(([label, value]) => `<span class="report-field"><span class="report-label">${esc(label)}</span>
+      <span class="report-value">${esc(String(value).trim())}</span></span>`).join('');
+    return ed.frontBlock('front-card report-card', page, rows);
+  }
+
+  // Reflection answers only show once it's shot, as on the page.
+  function reflection(s) {
+    const fields = [['whatWentRight', 'What went right'], ['couldBeBetter', "What could've gone better"], ['lessonsLearned', 'Lessons for next time']]
+      .filter(([key]) => has(s[key])).map(([key, label]) => [label, s[key]]);
+    return fields.length ? ed.frontTitle('Reflection') + fieldsCard('postShootHeading', fields) : '';
+  }
+
+  // The final images, three to a row; a tap opens one large.
+  function finalImages(s, c) {
+    if (c.video) {
+      const fields = ed.videoDeliverableFields(s);
+      return fields.length ? ed.frontTitle('Deliverables') + fieldsCard('postShootHeading', fields) : '';
+    }
+    finals = c.finals;
+    const title = ed.frontTitle('Final images', c.finalImages ? plural(c.finalImages, 'image') : '');
+    if (!c.finalImages) {
+      return title + ed.frontBlock('front-card front-board', 'postShootHeading',
+        '<span class="front-empty"><span class="front-empty-big">No final images yet.</span><span>Add them once they\'re edited.</span></span>');
+    }
+    const thumbs = c.finals.slice(0, 6).map((img, i) => `<button type="button" class="report-thumb" data-final="${i}" aria-label="Final image ${i + 1}"><img src="${img.src}" alt="" /></button>`).join('');
+    return `${title}<div class="front-card report-finals"><div class="report-grid">${thumbs}</div>
+      <button type="button" class="front-see-all" data-page="postShootHeading">See all ${c.finalImages} ${CHEVRON}</button></div>`;
+  }
+
+  // What it was about: the Direction boxes this kind of shoot has.
+  function idea(s) {
+    const fields = [['premise', 'Concept'], ['elevatorPitch', 'Elevator pitch'], ['character', 'Character/Personality'], ['worldNotes', 'World-building notes']]
+      .filter(([key]) => ed.directionFieldApplies(s, key) && has(s[key])).map(([key, label]) => [label, s[key]]);
+    return fields.length ? ed.frontTitle('The idea') + fieldsCard('directionHeading', fields) : '';
+  }
+
+  function shootingNotes(s) {
+    if (!has(s.shootingNotes)) return '';
+    return ed.frontTitle('Shooting notes') + ed.frontBlock('front-card report-card', 'shotListHeading', `<span class="report-value">${esc(s.shootingNotes.trim())}</span>`);
+  }
+
+  // The reflection card (asking for it) comes first while it's missing.
+  function drawReportCards(s, c, prompt) {
+    const told = reflection(s);
+    const html = (told || prompt) + finalImages(s, c) + ed.onSetHtml(s) + idea(s) + shootingNotes(s);
+    return { html, onFront: [told || prompt ? 'reflection' : '', c.video ? '' : 'finalImages', idea(s) ? 'direction' : ''].filter(Boolean) };
+  }
+
+  document.getElementById('shootFrontCards').addEventListener('click', (e) => {
+    const thumb = e.target.closest('[data-final]');
+    if (thumb) ed.openImageViewer(finals, Number(thumb.dataset.final), ed.finalImagesKey(ed.currentShootId), null, false);
   });
 };
 ;
@@ -21669,293 +21733,6 @@ window.EyeParts.addShootModeLastTime = function addShootModeLastTime(ed) {
 };
 ;
 
-// ---- pages/archive-mode/archive-mode.js ----
-// Archive mode.
-// (Loaded before app.js, which runs it in its turn.)
-window.EyeParts = window.EyeParts || {};
-window.EyeParts.addArchiveMode = function addArchiveMode(ed) {
-  Object.assign(ed, { archiveModeSectionHeading, drawArchivePage, breakArchivePages, openArchiveMode, exitArchiveMode });
-  // ---------- Archive mode ----------
-  // A read-only counterpart to Shoot mode for a shoot that's already done —
-  // a condensed report (Basic info, a trimmed Logistics/Team, the idea,
-  // shooting notes, the reflection in full, final images) instead of a
-  // working view, since there's nothing left to plan or shoot. No persisted
-  // "survives a restart" id like Shoot mode's — this is a quick look, not a
-  // mode you'd want to still be in after relaunching the app.
-  const archiveModeOverlay = document.getElementById('archiveModeOverlay'); ed.archiveModeOverlay = archiveModeOverlay;
-  ed.archiveModeShootId = null;
-
-  // One label-over-value block, styled like Shoot Mode's Quick review fields
-  // but a plain div rather than a button — nothing here is tappable. An
-  // empty label leaves just the value, under a heading that already names it.
-  function archiveModeField(label, value) {
-    const div = document.createElement('div');
-    div.className = 'archive-mode-field';
-    div.innerHTML = `
-      ${label ? `<p class="shoot-mode-review-label">${ed.escapeHtml(label)}</p>` : ''}
-      <div class="archive-mode-value"><p class="shoot-mode-review-value jb-in">${ed.escapeHtml(value)}</p></div>
-    `;
-    return div;
-  }
-
-  function archiveModeSectionHeading(text, colorClass) {
-    const h3 = document.createElement('h3');
-    h3.className = `shoot-mode-section-heading ${colorClass}`;
-    h3.textContent = text;
-    return h3;
-  }
-
-  function renderArchiveModeBody(shoot) {
-    const body = document.getElementById('archiveModeBody');
-    body.innerHTML = '';
-    const sectionHeading = (text) => archiveModeSectionHeading(text, '');
-
-    // Whichever of Title/Talent the header's shootDisplayName actually drew
-    // from is skipped below so it isn't said twice — titleDisplayMode picks
-    // talent-first by default, so that's normally Talent, but flips to Title
-    // when the app's set to show titles first. The other one, if present,
-    // still adds information the header alone doesn't carry (e.g. a title
-    // distinct from whoever's in it, or extra talents beyond the first).
-    const displayName = ed.shootDisplayName(shoot);
-    const talentNames = (shoot.talents || []).map(t => t.name).filter(ed.hasText);
-    const basicInfoFields = [];
-    basicInfoFields.push(['Category', ed.CATEGORY_LABELS[shoot.category] || 'Uncategorized']);
-    if (ed.hasText(shoot.title) && shoot.title !== displayName) basicInfoFields.push(['Title', shoot.title]);
-    if (talentNames.length && !(talentNames.length === 1 && talentNames[0] === displayName)) {
-      basicInfoFields.push(['Talent', talentNames.join(', ')]);
-    }
-    if (basicInfoFields.length) {
-      body.appendChild(sectionHeading('Basic info'));
-      basicInfoFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
-    }
-
-    const logisticsFields = [];
-    // A postponed or canceled shoot keeps its date as the original plan
-    // (see isOriginalPlanDate), so it's labelled that way here too.
-    if (ed.hasText(shoot.date)) logisticsFields.push([ed.isOriginalPlanDate(shoot) ? 'Originally' : 'Shoot date', ed.prettyDate(shoot.date)]);
-    const locationText = ed.formatLocationDisplay(shoot.location);
-    if (ed.hasText(locationText)) logisticsFields.push(['Location', locationText]);
-    if (logisticsFields.length) {
-      body.appendChild(sectionHeading('Logistics'));
-      logisticsFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
-    }
-
-    // Only a shoot that had a team says who was on it — the same "team
-    // required: yes" switch the page and the PDFs go by. Members kept on a
-    // shoot that was switched to solo stay saved, just not listed here.
-    const teamMembers = (shoot.teamRequired === 'yes' ? (shoot.teamMembers || []) : []).filter(tm => ed.hasText(tm.name));
-    if (teamMembers.length) {
-      body.appendChild(sectionHeading('Team'));
-      teamMembers.forEach(tm => {
-        const roleLabel = (ed.TEAM_ROLE_OPTIONS.find(([val]) => val === tm.role) || [null, 'Other'])[1];
-        body.appendChild(archiveModeField(roleLabel, tm.name));
-      });
-    }
-
-    // What the shoot was about, in the page's own Direction wording, so the
-    // report says more than who/when/where: only the boxes this kind of
-    // shoot has on its page (directionFieldApplies — no story boxes on a
-    // headshot, no concept on an event) and only ones with something in
-    // them. Comes after Team, where Direction sits on the page.
-    const ideaFields = [
-      ['premise', 'Concept'],
-      ['elevatorPitch', 'Elevator pitch'],
-      ['character', 'Character/Personality'],
-      ['worldNotes', 'World-building notes'],
-    ].filter(([key]) => ed.directionFieldApplies(shoot, key) && ed.hasText(shoot[key]));
-    if (ideaFields.length) {
-      body.appendChild(sectionHeading('The idea'));
-      ideaFields.forEach(([key, label]) => body.appendChild(archiveModeField(label, shoot[key])));
-    }
-
-    // Shooting notes, worth looking back on — after the idea, where they
-    // sit on the page (under the shot list, which isn't repeated here). The
-    // heading already says what they are, so no label over the text.
-    if (ed.hasText(shoot.shootingNotes)) {
-      body.appendChild(sectionHeading('Shooting notes'));
-      body.appendChild(archiveModeField('', shoot.shootingNotes.trim()));
-    }
-
-    // Reflection answers are kept when a shoot steps back from Captured, but
-    // only shown once it's Captured or later — same as the shoot page.
-    const reflectionFields = [];
-    if (ed.isPostCaptureStatus(shoot.status)) {
-      if (ed.hasText(shoot.whatWentRight)) reflectionFields.push(['What went right', shoot.whatWentRight]);
-      if (ed.hasText(shoot.couldBeBetter)) reflectionFields.push(["What could've gone better", shoot.couldBeBetter]);
-      if (ed.hasText(shoot.lessonsLearned)) reflectionFields.push(['Lessons for next time', shoot.lessonsLearned]);
-    }
-    if (reflectionFields.length) {
-      body.appendChild(sectionHeading('Reflection'));
-      reflectionFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
-    }
-
-    // Video's counterpart to final images in this report: what was made and
-    // where it went, in the same label-over-value fields as above. Video has
-    // no final images — any stored from before the shoot was switched to
-    // video stay in IndexedDB, just aren't shown.
-    const deliverableFields = ed.videoDeliverableFields(shoot);
-    if (deliverableFields.length) {
-      body.appendChild(sectionHeading('Deliverables'));
-      deliverableFields.forEach(([label, value]) => body.appendChild(archiveModeField(label, value)));
-    }
-    if (ed.isVideoShoot(shoot)) return;
-
-    ed.idbGetImages(ed.finalImagesKey(shoot.id)).then(images => {
-      if (!images.length || ed.archiveModeShootId !== shoot.id) { archiveWanted = null; return; }
-      if (!reflectionFields.length) body.appendChild(sectionHeading('Reflection'));
-      // A grid per row of three, so a page can break between rows.
-      let row = null;
-      images.forEach((img, idx) => {
-        if (idx % 3 === 0) {
-          row = document.createElement('div');
-          row.className = 'moodboard-grid archive-mode-final-images';
-          body.appendChild(row);
-        }
-        const thumb = document.createElement('div');
-        thumb.className = 'moodboard-thumb';
-        thumb.innerHTML = `<img src="${img.src}" alt="" />`;
-        thumb.querySelector('img').addEventListener('click', () => {
-          ed.openImageViewer(images, idx, ed.finalImagesKey(shoot.id), null, false);
-        });
-        row.appendChild(thumb);
-      });
-      breakArchivePages();
-      archiveWanted = null;
-    }).catch(() => { archiveWanted = null; });
-  }
-
-  // The summary is a page of the notebook: it breaks at the bottom and carries
-  // on over the leaf, the same as a shoot.
-  const archiveModePage = archiveModeOverlay.querySelector('.modal'); ed.archiveModePage = archiveModePage;
-  const archiveModeBody = document.getElementById('archiveModeBody');
-  ed.archiveFlow = null;
-  ed.archiveAt = 0;
-  let archiveWanted = null; // a page asked for at launch, held until the photos are in
-
-  // Line by line, like a Journal entry: a long answer carries over the leaf,
-  // under its heading and label again.
-  function archiveAtoms(body) {
-    const atoms = [];
-    let heading = null;
-    [...body.children].forEach((el) => {
-      if (el.matches('.shoot-mode-section-heading')) { heading = el; return; }
-      if (!el.matches('.archive-mode-field')) { atoms.push({ el, heads: heading ? [heading] : [] }); return; }
-      const label = el.querySelector('.shoot-mode-review-label');
-      const value = el.querySelector('.archive-mode-value');
-      const heads = [heading, label].filter(Boolean);
-      const rows = Math.max(1, Math.round(value.offsetHeight / ed.LINE));
-      for (let row = 0; row < rows; row++) atoms.push({ el: value, heads, row, rows });
-    });
-    return atoms;
-  }
-
-  function drawArchivePage() {
-    ed.queueLastPlace();
-    const count = (ed.archiveFlow && ed.archiveFlow.pages.length) || 1;
-    ed.archiveAt = Math.max(0, Math.min(ed.archiveAt, count - 1));
-    if (ed.archiveFlow) ed.drawFlowPage(ed.archiveFlow, ed.archiveAt);
-    document.getElementById('archiveModeFoot').textContent = `${ed.archiveAt + 1} / ${count}`;
-    document.getElementById('archiveModePrev').disabled = ed.archiveAt <= 0;
-    document.getElementById('archiveModeNext').disabled = ed.archiveAt >= count - 1;
-  }
-
-  function breakArchivePages() {
-    if (archiveModeOverlay.hidden) return;
-    const scrolled = archiveModePage.scrollTop;
-    ed.archiveFlow = ed.buildFlow(archiveModeBody, archiveAtoms);
-    if (archiveWanted !== null) ed.archiveAt = archiveWanted;
-    drawArchivePage();
-    archiveModePage.scrollTop = scrolled;
-  }
-
-  // Its look comes from a class, so the copy can lose the id: a copy in the
-  // shoot's turning sheet comes earlier in the document than the real page.
-  const archivePageCopy = () => ed.pageCopy(archiveModeBody, copy => copy.removeAttribute('id'));
-
-  function stepArchivePage(by) {
-    const to = ed.archiveAt + by;
-    if (!ed.archiveFlow || to < 0 || to >= ed.archiveFlow.pages.length) return;
-    const turning = ed.motionOk();
-    const oldCopy = turning ? archivePageCopy() : null;
-    ed.archiveAt = to;
-    archiveModePage.scrollTop = 0;
-    drawArchivePage();
-    if (!turning) return;
-    const layer = archiveModeOverlay.querySelector('.nb-turn-layer');
-    if (by > 0) ed.playTurn(layer, '', oldCopy);
-    else ed.playTurn(layer, 'back', archivePageCopy(), oldCopy);
-  }
-  document.getElementById('archiveModePrev').addEventListener('click', () => stepArchivePage(-1));
-  document.getElementById('archiveModeNext').addEventListener('click', () => stepArchivePage(1));
-
-  (function setupArchivePageSwipe() {
-    let start = null;
-    archiveModeOverlay.addEventListener('touchstart', (e) => {
-      start = null;
-      if (e.touches.length !== 1 || e.target.closest('.nb-shoot-bar, .nb-page-num')) return;
-      const selection = window.getSelection();
-      if (selection && !selection.isCollapsed) return;
-      start = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }, { passive: true });
-    archiveModeOverlay.addEventListener('touchcancel', () => { start = null; }, { passive: true });
-    archiveModeOverlay.addEventListener('touchend', (e) => {
-      if (!start) return;
-      const dx = e.changedTouches[0].clientX - start.x;
-      const dy = e.changedTouches[0].clientY - start.y;
-      start = null;
-      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      stepArchivePage(dx < 0 ? 1 : -1);
-    }, { passive: true });
-  })();
-
-  function openArchiveMode(shootId, at = 0) {
-    if (!ed.shootModalOverlay.hidden) ed.closeShootModal();
-    const shoot = ed.state.shoots.find(s => s.id === shootId);
-    if (!shoot) return;
-    ed.archiveModeShootId = shootId;
-    archiveWanted = at > 0 && !ed.isVideoShoot(shoot) ? at : null;
-    document.getElementById('archiveModeTitle').textContent = ed.shootDisplayName(shoot);
-    renderArchiveModeBody(shoot);
-    archiveModeOverlay.hidden = false;
-    ed.archiveAt = at > 0 ? at : 0;
-    archiveModePage.scrollTop = 0;
-    breakArchivePages();
-  }
-
-  function exitArchiveMode() {
-    ed.archiveModeShootId = null;
-    archiveWanted = null;
-    ed.queueLastPlace();
-    ed.archiveFlow = null;
-    ed.clearTurn(archiveModeOverlay.querySelector('.nb-turn-layer'));
-    archiveModeOverlay.hidden = true;
-  }
-
-  document.getElementById('archiveModeExitBtn').addEventListener('click', exitArchiveMode);
-
-  // "Shoot details" swaps to the full edit view for the same shoot — the
-  // mirror image of Archive mode's own button on that page (see
-  // updateEnterShootModeBtnVisibility), so the two stay switchable back and
-  // forth without ever landing on the main tab underneath.
-  document.getElementById('archiveModeShootDetailsBtn').addEventListener('click', () => {
-    const shootId = ed.archiveModeShootId;
-    const oldCopy = ed.motionOk() ? archivePageCopy() : null;
-    exitArchiveMode();
-    if (!shootId) return;
-    if (ed.currentScreen() !== 'archive') document.querySelector('.tab[data-view="archive"]').click();
-    ed.openShootModal(shootId);
-    if (oldCopy) ed.playTurn(ed.shootModalOverlay.querySelector('.nb-turn-layer'), '', oldCopy);
-  });
-
-  document.getElementById('enterArchiveModeBtn').addEventListener('click', () => {
-    if (!ed.currentShootId) return;
-    const oldCopy = ed.motionOk() ? ed.shootPageCopy() : null;
-    openArchiveMode(ed.currentShootId);
-    if (oldCopy && !archiveModeOverlay.hidden) ed.playTurn(archiveModeOverlay.querySelector('.nb-turn-layer'), '', oldCopy);
-  });
-};
-;
-
 // ---- pages/new-shoot/last-time-notes.js ----
 // "Last time" notes: lessons carried into planning.
 // (Loaded before app.js, which runs it in its turn.)
@@ -23036,9 +22813,14 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
     document.getElementById('mondayBriefTitle').textContent = label;
     const body = document.getElementById('mondayBriefBody');
     body.innerHTML = '';
-    // Alternating bars, as in Archive mode.
+    // Alternating bars.
     let headingCount = 0;
-    const sectionHeading = (text) => ed.archiveModeSectionHeading(text, headingCount++ % 2 ? 'heading-navy' : 'heading-yellow');
+    const sectionHeading = (text) => {
+      const h3 = document.createElement('h3');
+      h3.className = `shoot-mode-section-heading ${headingCount++ % 2 ? 'heading-navy' : 'heading-yellow'}`;
+      h3.textContent = text;
+      return h3;
+    };
     const shoots = week ? week.shoots : [];
 
     if (week) {
@@ -23451,7 +23233,7 @@ window.EyeParts.addNotebook = function addNotebook(ed) {
     ed.resumePlace = resuming && !startShut && !suiteAt && !atShoot && !fromBoard && place ? place : null;
     if (startShut) notebook.show('closed');
     if (suiteAt) document.querySelector(`.tabbar .tab[data-view="${suiteAt}"]`).click();
-    if (atShoot) setTimeout(() => { if (atShoot.archived) ed.openArchiveMode(atShoot.id); else ed.openShootModal(atShoot.id); }, 120);
+    if (atShoot) setTimeout(() => ed.openShootModal(atShoot.id), 120);
     else if (fromBoard) setTimeout(() => ed.openShootFromBoard(fromBoard), 120);
     notebook.remember(startShut ? 'shut' : 'open');
     if (suite && suite.firstVisit) setTimeout(() => ed.eyeWelcome(ed.launchPopups), 400);
@@ -24706,7 +24488,7 @@ window.EyeParts.addOffline = function addOffline(ed) {
         if (Number.isFinite(scrollY) && scrollY > 0) ed.scrollPageTo(scrollY);
         const { shoot, archive } = place;
         const kept = id => typeof id === 'string' && ed.state.shoots.some(s => s.id === id);
-        const clear = ed.shootModalOverlay.hidden && ed.archiveModeOverlay.hidden;
+        const clear = ed.shootModalOverlay.hidden;
         if (clear && shoot && kept(shoot.id)) {
           const page = shoot.page;
           if (page && (page.id === 'front' || ed.SHOOT_MODAL_SECTIONS.some(sec => sec.id === page.id)) && Number.isInteger(page.sub) && page.sub >= 0) {
@@ -24714,7 +24496,8 @@ window.EyeParts.addOffline = function addOffline(ed) {
           }
           ed.openShootModal(shoot.id);
         } else if (clear && archive && kept(archive.id)) {
-          ed.openArchiveMode(archive.id, Number.isInteger(archive.at) && archive.at > 0 ? archive.at : 0);
+          // Saved before Archive mode became the shoot's own page.
+          ed.openShootModal(archive.id);
         }
       });
     }
@@ -24911,13 +24694,6 @@ window.EyeParts.addSwipeTabs = function addSwipeTabs(ed) {
         count: () => ed.shootFlatPages().length,
         at: () => Math.max(0, ed.shootFlatPages().findIndex(p => p.id === ed.shootPageId && p.sub === ed.shootSub)),
         go: (i) => { const page = ed.shootFlatPages()[i]; if (page) ed.showShootPage(page.id, { sub: page.sub }); },
-      },
-      {
-        el: document.getElementById('archiveModeFoot'),
-        ok: () => !ed.archiveModeOverlay.hidden && !!ed.archiveFlow,
-        count: () => (ed.archiveFlow && ed.archiveFlow.pages.length) || 1,
-        at: () => ed.archiveAt,
-        go: (i) => { ed.archiveAt = i; ed.archiveModePage.scrollTop = 0; ed.drawArchivePage(); },
       },
       {
         el: document.getElementById('shootModeFoot'),
@@ -25174,8 +24950,7 @@ window.EyeParts.addNavigator = function addNavigator(ed) {
     document.querySelectorAll('.nb-screen-tabs-shoot').forEach(tabs => tabs.addEventListener('click', (e) => {
       const tab = e.target.closest('[data-view]');
       if (!tab) return;
-      if (!ed.archiveModeOverlay.hidden) ed.exitArchiveMode();
-      else ed.shootModalOverlay.querySelector('[data-close="shoot"]').click();
+      ed.shootModalOverlay.querySelector('[data-close="shoot"]').click();
       // Whatever the shoot was opened from goes too: it belongs to the old section.
       if (ed.activeStatBoxKey) ed.closeStatBoxDetail();
       ed.closeProjectPopup();
@@ -25336,6 +25111,7 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addShootFront(ed);
   window.EyeParts.addShootFrontCards(ed);
   window.EyeParts.addShootStageCards(ed);
+  window.EyeParts.addShootReportCards(ed);
   window.EyeParts.addShootNextStep(ed);
   window.EyeParts.addShootStatusSheet(ed);
   window.EyeParts.addToast(ed);
@@ -25373,7 +25149,6 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addShootModeClock(ed);
   window.EyeParts.addShootModeGoldenHour(ed);
   window.EyeParts.addShootModeLastTime(ed);
-  window.EyeParts.addArchiveMode(ed);
   window.EyeParts.addNewShootLastTimeNotes(ed);
   window.EyeParts.addShootModeQuickReview(ed);
   window.EyeParts.addShootModeWildCard(ed);

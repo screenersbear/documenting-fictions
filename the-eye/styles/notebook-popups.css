@@ -3,9 +3,7 @@
 #appMenuOverlay .app-menu-header { font-family: var(--font-head); font-weight: 400; color: var(--text); background: none; text-transform: none; letter-spacing: 0; }
 .options-item { font-family: var(--font-body); letter-spacing: 0; text-transform: none; }
 
-/* Archive mode shares Shoot mode's header, so its title goes navy on the mango too. */
-
-/* Shoot mode and Archive mode: one flat sheet, no book and no floating card. */
+/* Shoot mode: one flat sheet, no book and no floating card. */
 .shoot-mode-overlay { padding: 0; background: #fff; align-items: stretch; }
 .shoot-mode-modal { max-width: 560px; margin: 0 auto; height: var(--nb-h); max-height: none; border: none; border-radius: 0; }
 .shoot-mode-header { padding-top: calc(var(--sa-top) + 18px); }
@@ -48,7 +46,7 @@
 #shootWizardCard { border: none; border-radius: 14px; }
 
 /* iOS can leave the whole view slid down; these move with it (setupTabbarDriftFix). */
-#shootModalOverlay, #archiveModeOverlay, #bookOverlay { top: var(--layer-shift, 0px); bottom: calc(0px - var(--layer-shift, 0px) - var(--screen-gap)); }
+#shootModalOverlay, #bookOverlay { top: var(--layer-shift, 0px); bottom: calc(0px - var(--layer-shift, 0px) - var(--screen-gap)); }
 .nb-board { top: calc(var(--nb-top) + var(--layer-shift, 0px)); }
 
 /* Two fonts: the serif for the app's formal headlines, the handwriting for
@@ -201,19 +199,6 @@
 @keyframes nb-pan-back { from { transform: translateX(var(--pan)); } to { transform: translateX(0); } }
 :root.nb-panning .nb-screen-tabs:not(.nb-screen-tabs-shoot) { visibility: hidden; }
 
-/* Archive mode: a page of the notebook, framed as a shoot is. */
-#archiveModeOverlay { background: #fff; }
-#archiveModeOverlay:not([hidden]) { display: block; }
-#archiveModeOverlay .nb-chapter-board { z-index: 0; }
-#archiveModeOverlay > .modal { position: absolute; top: calc(var(--nb-top) + var(--nb-rim)); left: max(0px, calc(50% - 280px)); right: calc(var(--nb-edge) + var(--nb-rim)); width: auto; height: calc(var(--nb-h) - var(--nb-top) - var(--nb-bar) - var(--nb-rim) * 2); max-width: none; max-height: none; margin: 0; padding: 12px 12px 56px 20px; border: none; border-radius: 0 6px 6px 0; scrollbar-width: none; animation: none; }
-#archiveModeOverlay > .modal::-webkit-scrollbar { display: none; }
-#archiveModeOverlay .nb-screen-tabs-shoot > [data-view="archive"] { visibility: hidden; }
-.archive-summary .shoot-mode-section-heading { display: block; margin: 18px 0 10px; padding: 0 0 9px; border: none; border-bottom: 1px solid var(--line); border-radius: 0; background: none; color: var(--text); font-family: var(--font-head); font-size: 26px; font-weight: 400; line-height: 1.2; text-align: center; text-transform: none; letter-spacing: 0; }
-.archive-summary .archive-mode-field { padding: 0 0 10px; border: none; }
-.archive-summary .shoot-mode-review-label { margin: 0; font-size: 12.5px; font-weight: 400; color: var(--dim); opacity: 1; letter-spacing: 0; text-transform: none; }
-.archive-summary .shoot-mode-review-value { padding: 0; font-family: var(--font-title); font-size: 17px; font-weight: 400; line-height: 28px; }
-.archive-summary .archive-mode-value { border-bottom: 1px solid var(--line); box-sizing: content-box; }
-.archive-summary .archive-mode-final-images { padding: 0 0 8px; }
 
 /* One weight of handwriting: only headings are bold. Not in the parts already
    in the round 2 look, which use Figtree's own weights (the band, the section
@@ -226,7 +211,7 @@ body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subse
 .nb-corner-btn { position: absolute; z-index: 2; top: 6px; right: 8px; min-height: 0; height: auto; width: auto; padding: 4px 12px; border: none; border-radius: 3px; background: var(--text); color: #fff; font-family: var(--font-body); font-size: 14px; line-height: 20px; letter-spacing: 0; text-transform: none; }
 .nb-corner-btn[hidden] { display: none; }
 #shootModalOverlay .nb-corner-btn { top: 6px; right: 8px; } /* clear of the page's rounder corner */
-#archiveModeOverlay .nb-run, #shootModalOverlay[data-section="archive"] .nb-run { padding: 0 96px; }
+#shootModalOverlay[data-section="archive"] .nb-run { padding: 0 96px; }
 
 /* App color: the notebook, its rim and everything in the app's color. */
 :root {

@@ -46,26 +46,9 @@
    yellow to fix that would just blend into what's behind it instead. Tinted
    navy (matching --text, which stays fixed across every color theme) reads
    as a visible glint against the white pill without changing its color.
-   ID-scoped so #enterArchiveModeBtn, sharing the base class, is untouched. */
+   ID-scoped, so other buttons sharing the base class are untouched. */
 #enterShootModeBtn::after {
   background: linear-gradient(115deg, transparent 0%, rgba(49, 61, 69, 0.3) 50%, transparent 100%);
-}
-
-/* Archive mode's header is its own, much shorter banner: just the shoot's
-   name (no "Archive" eyebrow above it — that's the tab it came from, not
-   something worth repeating here) with the mode-switch and close buttons
-   beside it, rather than Shoot mode's taller stacked eyebrow+title. */
-.archive-mode-header {
-  align-items: center;
-  padding: 12px 12px 10px 18px;
-}
-
-
-.archive-mode-header-actions {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 8px;
 }
 
 /* Same pill look as .enter-shoot-mode-btn, recolored for sitting directly on

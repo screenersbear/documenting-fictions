@@ -77,9 +77,14 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
     document.getElementById('mondayBriefTitle').textContent = label;
     const body = document.getElementById('mondayBriefBody');
     body.innerHTML = '';
-    // Alternating bars, as in Archive mode.
+    // Alternating bars.
     let headingCount = 0;
-    const sectionHeading = (text) => ed.archiveModeSectionHeading(text, headingCount++ % 2 ? 'heading-navy' : 'heading-yellow');
+    const sectionHeading = (text) => {
+      const h3 = document.createElement('h3');
+      h3.className = `shoot-mode-section-heading ${headingCount++ % 2 ? 'heading-navy' : 'heading-yellow'}`;
+      h3.textContent = text;
+      return h3;
+    };
     const shoots = week ? week.shoots : [];
 
     if (week) {

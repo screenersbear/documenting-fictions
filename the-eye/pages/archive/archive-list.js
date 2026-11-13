@@ -9,7 +9,7 @@ window.EyeParts.addArchiveList = function addArchiveList(ed) {
   Object.assign(ed, { renderArchive });
   // The months showing their shoots, for as long as the app's open.
   const openMonths = new Set();
-  const ROW_OPTS = { showBadge: false, openArchiveMode: true };
+  const ROW_OPTS = { showBadge: false };
 
   // A project box stands for several shoots.
   const shootCount = items => items.reduce((n, item) => n + (item.kind === 'project' ? item.members.length : 1), 0);

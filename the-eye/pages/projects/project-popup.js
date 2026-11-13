@@ -39,9 +39,8 @@ window.EyeParts.addProjectsProjectPopup = function addProjectsProjectPopup(ed) {
     members.forEach(s => {
       // The stock compact row, so its tap (opens the shoot modal, which
       // stacks above this popup) and its ⋮ (normal shoot options) work
-      // here unchanged; only the title gets its "Day N" prefix. An archived
-      // day opens its Archive mode recap instead, like on the Archive tab.
-      ed.renderCompactShootRow(list, s, { openArchiveMode: !!s.archived });
+      // here unchanged; only the title gets its "Day N" prefix.
+      ed.renderCompactShootRow(list, s);
       const info = ed.projectDayInfo(s);
       if (!info) return;
       const titleEl = list.lastElementChild && list.lastElementChild.querySelector('.shoot-row-compact-title');

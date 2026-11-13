@@ -24,7 +24,7 @@
 #shootModalOverlay .shoot-band-line { left: 64px; right: 64px; top: calc(var(--nb-top) + 21px); }
 .shoot-band-line b { overflow: hidden; text-overflow: ellipsis; }
 
-#shootModalOverlay :is(.shoot-modal-header, .nb-run, #enterShootModeBtn, #enterArchiveModeBtn, .nb-page-foot, .nb-screen-tabs-shoot, .folder-tab-deco) { display: none !important; }
+#shootModalOverlay :is(.shoot-modal-header, .nb-run, #enterShootModeBtn, .nb-page-foot, .nb-screen-tabs-shoot, .folder-tab-deco) { display: none !important; }
 
 #shootModalOverlay .shoot-next {
   top: auto; bottom: 0; height: auto; display: block; box-sizing: border-box; padding: 10px 16px calc(12px + env(safe-area-inset-bottom));

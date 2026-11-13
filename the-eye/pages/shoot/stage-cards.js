@@ -1,22 +1,24 @@
 // The cards on a shoot's front page once it's shot: the reflection while
 // it's fresh (with Walk me through it and Later), the proofs and the
 // deadline, what happened on set, and the final images. Each opens the
-// part of the page it's about. Before the shoot, front-cards.js has its own.
+// part of the page it's about. Before the shoot, front-cards.js has its own;
+// once it's delivered, report-cards.js.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootStageCards = function addShootStageCards(ed) {
-  Object.assign(ed, { drawStageCards });
+  Object.assign(ed, { drawStageCards, onSetHtml: onSet });
   const CHEVRON = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
   // The Reflections mark (pages/tabs.html), as the card's picture.
   const MARK = '<svg class="front-reflect-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22"/><path d="M24 2a22 22 0 0 1 22 22H24Z"/></svg>';
   const IN_THE_EDIT = ['waiting_for_selects', 'editing', 'rough_cut', 'client_review', 'revisions'];
   const esc = v => ed.escapeHtml(v);
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-  // Later puts the reflection card away for as long as the app's open.
+  // Later puts the reflection card away for as long as the app's open. An
+  // archived shoot isn't fresh any more: its reflection is a row below.
   const later = new Set();
 
   function reflectionCard(s) {
-    if (ed.hasReflection(s) || later.has(s.id)) return '';
+    if (s.archived || ed.hasReflection(s) || later.has(s.id)) return '';
     return `<div class="front-card front-reflect">${MARK}<div class="front-reflect-words">
       <span class="front-card-title">Reflection</span>
       <p class="front-card-text front-card-big">While it's fresh: what went right, what could've gone better, and one lesson for next time.</p>
@@ -102,7 +104,8 @@ window.EyeParts.addShootStageCards = function addShootStageCards(ed) {
     const covered = reflect ? ['reflection'] : [];
     if (s.status === 'captured') return { html: reflect + proofsCard(s, c) + onSet(s), onFront: covered };
     if (IN_THE_EDIT.includes(s.status)) return { html: reflect + deadlineCard(s) + finalImagesCard(s, c), onFront: [...covered, 'finalImages'] };
-    return { html: reflect + finalImagesCard(s, c) + onSet(s), onFront: [...covered, 'finalImages'] };
+    // Delivered or archived: its report (report-cards.js).
+    return ed.drawReportCards(s, c, reflect);
   }
 
   document.getElementById('shootFrontCards').addEventListener('click', (e) => {

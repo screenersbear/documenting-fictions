@@ -28,14 +28,6 @@
   margin-top: 14px;
 }
 
-/* Archive mode's header bar already has its own bottom padding/border, so
-   its first heading ("Basic info") doesn't need the breathing room above
-   that Shoot mode's flush-against-the-banner "Quick review" does — that
-   14px was just showing up as unwanted white space here instead. */
-.archive-summary .shoot-mode-section-heading:first-child {
-  margin-top: 0;
-}
-
 .shoot-mode-shots {
   display: flex;
   flex-direction: column;

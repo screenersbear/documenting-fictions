@@ -122,6 +122,7 @@
   window.EyeParts.addShootFront(ed);
   window.EyeParts.addShootFrontCards(ed);
   window.EyeParts.addShootStageCards(ed);
+  window.EyeParts.addShootReportCards(ed);
   window.EyeParts.addShootNextStep(ed);
   window.EyeParts.addShootStatusSheet(ed);
   window.EyeParts.addToast(ed);
@@ -159,7 +160,6 @@
   window.EyeParts.addShootModeClock(ed);
   window.EyeParts.addShootModeGoldenHour(ed);
   window.EyeParts.addShootModeLastTime(ed);
-  window.EyeParts.addArchiveMode(ed);
   window.EyeParts.addNewShootLastTimeNotes(ed);
   window.EyeParts.addShootModeQuickReview(ed);
   window.EyeParts.addShootModeWildCard(ed);

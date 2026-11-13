@@ -119,7 +119,8 @@ button.front-card { cursor: pointer; }
 .detail-row-closed .detail-sum { color: var(--dim); }
 
 /* A part of the page on its own: its heading is the page's title. */
-#shootModalOverlay:not(.on-front) #shootForm > .shoot-section-heading {
+#shootModalOverlay:not(.on-front) #shootForm > .shoot-section-heading,
+#shootModalOverlay:not(.on-front) #postShootContent > .shoot-section-heading {
   margin: 0 0 12px; padding: 0; border: 0; background: none; color: var(--text); text-shadow: none; text-align: left;
   font: 300 30px/36px var(--ui) !important; letter-spacing: 0 !important; text-transform: none !important;
 }

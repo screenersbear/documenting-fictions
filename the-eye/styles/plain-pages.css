@@ -52,13 +52,13 @@
 .stats-dots { display: none; }
 
 /* A shoot, Archive mode and Shoot mode: the screen, white, down to their bar. */
-#shootModalOverlay > .modal, #archiveModeOverlay > .modal, #shootModeOverlay > .modal.shoot-mode-modal {
+#shootModalOverlay > .modal, #shootModeOverlay > .modal.shoot-mode-modal {
   top: var(--nb-top); left: 0; right: 0; width: auto;
   height: calc(var(--nb-h) - var(--nb-top) - var(--nb-bar));
   padding: 8px max(var(--page-side), calc(50% - 280px)) 28px;
   border-radius: 0; box-shadow: none; background: #fff;
 }
-#shootModeOverlay, #archiveModeOverlay, #shootModalOverlay { background: #fff; }
+#shootModeOverlay, #shootModalOverlay { background: #fff; }
 /* A shoot's sections follow on, each heading clear of the one before. */
 #shootForm .shoot-section-heading:not(#basicInfoHeading) { margin-top: 36px; }
 

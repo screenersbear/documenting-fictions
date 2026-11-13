@@ -173,8 +173,7 @@ window.EyeParts.addNavigator = function addNavigator(ed) {
     document.querySelectorAll('.nb-screen-tabs-shoot').forEach(tabs => tabs.addEventListener('click', (e) => {
       const tab = e.target.closest('[data-view]');
       if (!tab) return;
-      if (!ed.archiveModeOverlay.hidden) ed.exitArchiveMode();
-      else ed.shootModalOverlay.querySelector('[data-close="shoot"]').click();
+      ed.shootModalOverlay.querySelector('[data-close="shoot"]').click();
       // Whatever the shoot was opened from goes too: it belongs to the old section.
       if (ed.activeStatBoxKey) ed.closeStatBoxDetail();
       ed.closeProjectPopup();

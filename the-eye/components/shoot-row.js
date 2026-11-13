@@ -47,7 +47,7 @@ window.EyeParts.addShootRow = function addShootRow(ed) {
   // opts: showStatus puts the status first on its line (lists that mix
   // statuses); dueOnly leaves the shoot's day out (Upcoming deadlines);
   // more adds the More button (Shoots); showBadge false leaves the flags off
-  // (Archive); switchToShootsTab and openArchiveMode change where a tap goes.
+  // (Archive); switchToShootsTab opens the shoot on the Shoots tab.
   // A deadline gone by takes over the line in crimson, written out
   // ("Overdue by 3 days"), never colour alone. Once delivered or archived
   // there's nothing left to deliver, so the deadline isn't shown.
@@ -77,7 +77,6 @@ window.EyeParts.addShootRow = function addShootRow(ed) {
     `;
     div.addEventListener('click', () => {
       if (o.switchToShootsTab) document.querySelector('.tab[data-view="shoots"]').click();
-      if (o.openArchiveMode) { ed.openArchiveMode(s.id); return; }
       ed.openShootModal(s.id);
     });
     const more = div.querySelector('.row-more-btn');
@@ -103,9 +102,7 @@ window.EyeParts.addShootRow = function addShootRow(ed) {
   // A smaller, photo-free row for tight spaces (the lists that open from the
   // Monday brief) — title, status, and shoot date, each on its own line, so
   // nothing is ever squeezed side-by-side against anything else.
-  // opts.openArchiveMode (the project popup, for archived days) opens the
-  // read-only Archive mode recap instead, same as a row on the Archive tab.
-  function renderCompactShootRow(container, s, opts) {
+  function renderCompactShootRow(container, s) {
     const statusLabel = ed.STATUS_LABELS[s.status] || '';
     const div = document.createElement('div');
     div.className = 'shoot-row-compact';
@@ -118,7 +115,6 @@ window.EyeParts.addShootRow = function addShootRow(ed) {
       <button type="button" class="row-options-btn" aria-label="Options">&#8942;</button>
     `;
     div.addEventListener('click', () => {
-      if (opts && opts.openArchiveMode) { ed.openArchiveMode(s.id); return; }
       ed.openShootModal(s.id);
     });
     div.querySelector('.row-options-btn').addEventListener('click', (e) => {

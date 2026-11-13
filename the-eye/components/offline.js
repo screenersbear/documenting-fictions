@@ -213,7 +213,7 @@ window.EyeParts.addOffline = function addOffline(ed) {
         if (Number.isFinite(scrollY) && scrollY > 0) ed.scrollPageTo(scrollY);
         const { shoot, archive } = place;
         const kept = id => typeof id === 'string' && ed.state.shoots.some(s => s.id === id);
-        const clear = ed.shootModalOverlay.hidden && ed.archiveModeOverlay.hidden;
+        const clear = ed.shootModalOverlay.hidden;
         if (clear && shoot && kept(shoot.id)) {
           const page = shoot.page;
           if (page && (page.id === 'front' || ed.SHOOT_MODAL_SECTIONS.some(sec => sec.id === page.id)) && Number.isInteger(page.sub) && page.sub >= 0) {
@@ -221,7 +221,8 @@ window.EyeParts.addOffline = function addOffline(ed) {
           }
           ed.openShootModal(shoot.id);
         } else if (clear && archive && kept(archive.id)) {
-          ed.openArchiveMode(archive.id, Number.isInteger(archive.at) && archive.at > 0 ? archive.at : 0);
+          // Saved before Archive mode became the shoot's own page.
+          ed.openShootModal(archive.id);
         }
       });
     }

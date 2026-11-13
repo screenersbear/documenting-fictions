@@ -69,13 +69,6 @@ window.EyeParts.addSwipeTabs = function addSwipeTabs(ed) {
         go: (i) => { const page = ed.shootFlatPages()[i]; if (page) ed.showShootPage(page.id, { sub: page.sub }); },
       },
       {
-        el: document.getElementById('archiveModeFoot'),
-        ok: () => !ed.archiveModeOverlay.hidden && !!ed.archiveFlow,
-        count: () => (ed.archiveFlow && ed.archiveFlow.pages.length) || 1,
-        at: () => ed.archiveAt,
-        go: (i) => { ed.archiveAt = i; ed.archiveModePage.scrollTop = 0; ed.drawArchivePage(); },
-      },
-      {
         el: document.getElementById('shootModeFoot'),
         ok: () => !ed.shootModeOverlay.hidden && !!ed.shootModeFlows,
         count: () => ed.shootModePages().length,

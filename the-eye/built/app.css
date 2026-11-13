@@ -5107,26 +5107,9 @@ h2.status-group-heading.heading-navy {
    yellow to fix that would just blend into what's behind it instead. Tinted
    navy (matching --text, which stays fixed across every color theme) reads
    as a visible glint against the white pill without changing its color.
-   ID-scoped so #enterArchiveModeBtn, sharing the base class, is untouched. */
+   ID-scoped, so other buttons sharing the base class are untouched. */
 #enterShootModeBtn::after {
   background: linear-gradient(115deg, transparent 0%, rgba(49, 61, 69, 0.3) 50%, transparent 100%);
-}
-
-/* Archive mode's header is its own, much shorter banner: just the shoot's
-   name (no "Archive" eyebrow above it — that's the tab it came from, not
-   something worth repeating here) with the mode-switch and close buttons
-   beside it, rather than Shoot mode's taller stacked eyebrow+title. */
-.archive-mode-header {
-  align-items: center;
-  padding: 12px 12px 10px 18px;
-}
-
-
-.archive-mode-header-actions {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 8px;
 }
 
 /* Same pill look as .enter-shoot-mode-btn, recolored for sitting directly on
@@ -5368,14 +5351,6 @@ h2.status-group-heading.heading-navy {
    room from the banner. */
 .shoot-mode-body .shoot-mode-section-heading {
   margin-top: 14px;
-}
-
-/* Archive mode's header bar already has its own bottom padding/border, so
-   its first heading ("Basic info") doesn't need the breathing room above
-   that Shoot mode's flush-against-the-banner "Quick review" does — that
-   14px was just showing up as unwanted white space here instead. */
-.archive-summary .shoot-mode-section-heading:first-child {
-  margin-top: 0;
 }
 
 .shoot-mode-shots {
@@ -5698,25 +5673,6 @@ h2.status-group-heading.heading-navy {
      native blue tint by default, which is exactly the stray blue this was
      showing instead of the app's own text color. */
   color: var(--text);
-}
-
-/* Archive mode's read-only counterpart to .shoot-mode-review-field above —
-   same label-over-value block and divider, but a plain div rather than a
-   button: nothing in Archive mode is tappable, so no cursor or :active
-   state, just typed text laid out like a report. Reuses
-   .shoot-mode-review-label/-value as-is for the text itself. */
-.archive-mode-field {
-  width: 100%;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.archive-mode-field:last-child {
-  border-bottom: 0;
-}
-
-.archive-mode-final-images {
-  padding: 4px 20px 14px;
 }
 
 /* Lighting setups inside the review popup: one group per setup, its name as
@@ -6163,9 +6119,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 #appMenuOverlay .app-menu-header { font-family: var(--font-head); font-weight: 400; color: var(--text); background: none; text-transform: none; letter-spacing: 0; }
 .options-item { font-family: var(--font-body); letter-spacing: 0; text-transform: none; }
 
-/* Archive mode shares Shoot mode's header, so its title goes navy on the mango too. */
-
-/* Shoot mode and Archive mode: one flat sheet, no book and no floating card. */
+/* Shoot mode: one flat sheet, no book and no floating card. */
 .shoot-mode-overlay { padding: 0; background: #fff; align-items: stretch; }
 .shoot-mode-modal { max-width: 560px; margin: 0 auto; height: var(--nb-h); max-height: none; border: none; border-radius: 0; }
 .shoot-mode-header { padding-top: calc(var(--sa-top) + 18px); }
@@ -6208,7 +6162,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 #shootWizardCard { border: none; border-radius: 14px; }
 
 /* iOS can leave the whole view slid down; these move with it (setupTabbarDriftFix). */
-#shootModalOverlay, #archiveModeOverlay, #bookOverlay { top: var(--layer-shift, 0px); bottom: calc(0px - var(--layer-shift, 0px) - var(--screen-gap)); }
+#shootModalOverlay, #bookOverlay { top: var(--layer-shift, 0px); bottom: calc(0px - var(--layer-shift, 0px) - var(--screen-gap)); }
 .nb-board { top: calc(var(--nb-top) + var(--layer-shift, 0px)); }
 
 /* Two fonts: the serif for the app's formal headlines, the handwriting for
@@ -6361,19 +6315,6 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 @keyframes nb-pan-back { from { transform: translateX(var(--pan)); } to { transform: translateX(0); } }
 :root.nb-panning .nb-screen-tabs:not(.nb-screen-tabs-shoot) { visibility: hidden; }
 
-/* Archive mode: a page of the notebook, framed as a shoot is. */
-#archiveModeOverlay { background: #fff; }
-#archiveModeOverlay:not([hidden]) { display: block; }
-#archiveModeOverlay .nb-chapter-board { z-index: 0; }
-#archiveModeOverlay > .modal { position: absolute; top: calc(var(--nb-top) + var(--nb-rim)); left: max(0px, calc(50% - 280px)); right: calc(var(--nb-edge) + var(--nb-rim)); width: auto; height: calc(var(--nb-h) - var(--nb-top) - var(--nb-bar) - var(--nb-rim) * 2); max-width: none; max-height: none; margin: 0; padding: 12px 12px 56px 20px; border: none; border-radius: 0 6px 6px 0; scrollbar-width: none; animation: none; }
-#archiveModeOverlay > .modal::-webkit-scrollbar { display: none; }
-#archiveModeOverlay .nb-screen-tabs-shoot > [data-view="archive"] { visibility: hidden; }
-.archive-summary .shoot-mode-section-heading { display: block; margin: 18px 0 10px; padding: 0 0 9px; border: none; border-bottom: 1px solid var(--line); border-radius: 0; background: none; color: var(--text); font-family: var(--font-head); font-size: 26px; font-weight: 400; line-height: 1.2; text-align: center; text-transform: none; letter-spacing: 0; }
-.archive-summary .archive-mode-field { padding: 0 0 10px; border: none; }
-.archive-summary .shoot-mode-review-label { margin: 0; font-size: 12.5px; font-weight: 400; color: var(--dim); opacity: 1; letter-spacing: 0; text-transform: none; }
-.archive-summary .shoot-mode-review-value { padding: 0; font-family: var(--font-title); font-size: 17px; font-weight: 400; line-height: 28px; }
-.archive-summary .archive-mode-value { border-bottom: 1px solid var(--line); box-sizing: content-box; }
-.archive-summary .archive-mode-final-images { padding: 0 0 8px; }
 
 /* One weight of handwriting: only headings are bold. Not in the parts already
    in the round 2 look, which use Figtree's own weights (the band, the section
@@ -6386,7 +6327,7 @@ body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subse
 .nb-corner-btn { position: absolute; z-index: 2; top: 6px; right: 8px; min-height: 0; height: auto; width: auto; padding: 4px 12px; border: none; border-radius: 3px; background: var(--text); color: #fff; font-family: var(--font-body); font-size: 14px; line-height: 20px; letter-spacing: 0; text-transform: none; }
 .nb-corner-btn[hidden] { display: none; }
 #shootModalOverlay .nb-corner-btn { top: 6px; right: 8px; } /* clear of the page's rounder corner */
-#archiveModeOverlay .nb-run, #shootModalOverlay[data-section="archive"] .nb-run { padding: 0 96px; }
+#shootModalOverlay[data-section="archive"] .nb-run { padding: 0 96px; }
 
 /* App color: the notebook, its rim and everything in the app's color. */
 :root {
@@ -6497,14 +6438,14 @@ body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subse
    the page, and the notebook's color a shade deeper right around it, solid
    again toward the notebook's outer edge. */
 :root { --pg-r: 16px; }
-.nb-board-page, .nb-turn, .nb-turn-under, #shootModalOverlay > .modal, #archiveModeOverlay > .modal { border-radius: 0 var(--pg-r) var(--pg-r) 0; }
+.nb-board-page, .nb-turn, .nb-turn-under, #shootModalOverlay > .modal { border-radius: 0 var(--pg-r) var(--pg-r) 0; }
 :root[data-side="verso"] .nb-board-page, :root[data-side="verso"] .nb-board > .nb-turn, :root[data-side="verso"] .nb-board > .nb-turn-under { border-radius: var(--pg-r) 0 0 var(--pg-r); }
 .nb-page-foot { border-bottom-right-radius: var(--pg-r); } /* its white mustn't square off the page's corner */
 @supports (color: color-mix(in oklab, red, blue)) {
   :root { --rim-deep: color-mix(in oklab, var(--accent) 84%, #000); }
   :root[data-book="ink"] { --rim-deep: color-mix(in oklab, var(--accent) 70%, #000); } /* navy needs more to show */
   .nb-board-page { box-shadow: 0 0 3px 1px var(--rim-deep), 0 0 0 40px var(--accent); transition: box-shadow 0.3s; }
-  #shootModalOverlay > .modal, #archiveModeOverlay > .modal { box-shadow: 0 0 3px 1px var(--rim-deep); }
+  #shootModalOverlay > .modal { box-shadow: 0 0 3px 1px var(--rim-deep); }
   /* The opening book is a picture without the deeper shade, so it comes in
      once the real page takes over rather than popping on. */
   :root:has(#bookOverlay:not([hidden])) .nb-board-page { box-shadow: 0 0 3px 1px var(--accent), 0 0 0 40px var(--accent); transition: none; }
@@ -6552,7 +6493,6 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 .status-swatch-display { font-size: 14px; }
 .field-hint { font-size: 15px; }
 .nb-tool { font-size: 12px; }
-.archive-summary .shoot-mode-review-label { font-size: 14px; }
 .archive-mode-details-btn { font-size: 13px; }
 
 /* ---- styles/notebook-shoot-mode.css ---- */
@@ -6687,7 +6627,7 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
    is 12px taller in a shoot and in Archive mode and the page gives that up:
    every length in these overlays goes through --nb-bar, and their pages are
    measured from the page itself. The rest of the app keeps :root's bar. */
-#shootModalOverlay, #archiveModeOverlay { --nb-bar: calc(50px + var(--nb-foot)); }
+#shootModalOverlay { --nb-bar: calc(50px + var(--nb-foot)); }
 /* Every icon at the same top, labelled or not; the label hangs under it.
    No display here: it would beat .nb-tool[hidden]. */
 .nb-shoot-bar .nb-tool { justify-content: flex-start; gap: 1px; min-height: 0; padding: 8px 0 0; line-height: 14px; }
@@ -6878,13 +6818,13 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 .stats-dots { display: none; }
 
 /* A shoot, Archive mode and Shoot mode: the screen, white, down to their bar. */
-#shootModalOverlay > .modal, #archiveModeOverlay > .modal, #shootModeOverlay > .modal.shoot-mode-modal {
+#shootModalOverlay > .modal, #shootModeOverlay > .modal.shoot-mode-modal {
   top: var(--nb-top); left: 0; right: 0; width: auto;
   height: calc(var(--nb-h) - var(--nb-top) - var(--nb-bar));
   padding: 8px max(var(--page-side), calc(50% - 280px)) 28px;
   border-radius: 0; box-shadow: none; background: #fff;
 }
-#shootModeOverlay, #archiveModeOverlay, #shootModalOverlay { background: #fff; }
+#shootModeOverlay, #shootModalOverlay { background: #fff; }
 /* A shoot's sections follow on, each heading clear of the one before. */
 #shootForm .shoot-section-heading:not(#basicInfoHeading) { margin-top: 36px; }
 
@@ -7308,7 +7248,7 @@ html:not(.df-suite) .band-books { display: none; }
 #shootModalOverlay .shoot-band-line { left: 64px; right: 64px; top: calc(var(--nb-top) + 21px); }
 .shoot-band-line b { overflow: hidden; text-overflow: ellipsis; }
 
-#shootModalOverlay :is(.shoot-modal-header, .nb-run, #enterShootModeBtn, #enterArchiveModeBtn, .nb-page-foot, .nb-screen-tabs-shoot, .folder-tab-deco) { display: none !important; }
+#shootModalOverlay :is(.shoot-modal-header, .nb-run, #enterShootModeBtn, .nb-page-foot, .nb-screen-tabs-shoot, .folder-tab-deco) { display: none !important; }
 
 #shootModalOverlay .shoot-next {
   top: auto; bottom: 0; height: auto; display: block; box-sizing: border-box; padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
@@ -7444,7 +7384,23 @@ button.front-card { cursor: pointer; }
 .detail-row-closed .detail-sum { color: var(--dim); }
 
 /* A part of the page on its own: its heading is the page's title. */
-#shootModalOverlay:not(.on-front) #shootForm > .shoot-section-heading {
+#shootModalOverlay:not(.on-front) #shootForm > .shoot-section-heading,
+#shootModalOverlay:not(.on-front) #postShootContent > .shoot-section-heading {
   margin: 0 0 12px; padding: 0; border: 0; background: none; color: var(--text); text-shadow: none; text-align: left;
   font: 300 30px/36px var(--ui) !important; letter-spacing: 0 !important; text-transform: none !important;
 }
+
+/* ---- styles/shoot-report.css ---- */
+/* A delivered or archived shoot's front page as its report
+   (pages/shoot/report-cards.js): label-over-words cards and the final
+   images three to a row. */
+.report-card { display: flex; flex-direction: column; gap: 14px; }
+.report-field { display: flex; flex-direction: column; gap: 4px; }
+.report-field + .report-field { padding-top: 14px; border-top: 1px solid var(--line); }
+.report-label { font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.report-value { font: 400 16px/23px var(--ui); color: var(--text); white-space: pre-line; }
+.report-finals { padding: 12px; }
+.report-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.report-thumb { display: block; width: 100%; height: auto; min-height: 0; aspect-ratio: 4 / 5; margin: 0; padding: 0; border: 0; border-radius: 8px; overflow: hidden; background: #EFEFEA; cursor: zoom-in; }
+.report-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.report-finals .front-see-all { width: auto; min-height: 0; margin: 8px 4px 0; padding: 0; border: 0; background: none; color: var(--text); cursor: pointer; }

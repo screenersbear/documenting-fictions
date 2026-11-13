@@ -129,7 +129,7 @@
    is 12px taller in a shoot and in Archive mode and the page gives that up:
    every length in these overlays goes through --nb-bar, and their pages are
    measured from the page itself. The rest of the app keeps :root's bar. */
-#shootModalOverlay, #archiveModeOverlay { --nb-bar: calc(50px + var(--nb-foot)); }
+#shootModalOverlay { --nb-bar: calc(50px + var(--nb-foot)); }
 /* Every icon at the same top, labelled or not; the label hangs under it.
    No display here: it would beat .nb-tool[hidden]. */
 .nb-shoot-bar .nb-tool { justify-content: flex-start; gap: 1px; min-height: 0; padding: 8px 0 0; line-height: 14px; }

@@ -77,7 +77,6 @@ window.EyeParts.addShootDeadlinePrompt = function addShootDeadlinePrompt(ed) {
     const shoot = ed.editingShootId ? ed.state.shoots.find(s => s.id === ed.editingShootId) : null;
     const isArchived = !!(shoot && shoot.archived);
     document.getElementById('enterShootModeBtn').hidden = !ed.editingShootId || isArchived || status !== 'waiting_to_shoot';
-    document.getElementById('enterArchiveModeBtn').hidden = !ed.editingShootId || !isArchived;
   }
 
   document.getElementById('shootStatus').addEventListener('change', (e) => {

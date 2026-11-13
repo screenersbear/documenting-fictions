@@ -109,7 +109,7 @@ window.EyeParts.addNotebook = function addNotebook(ed) {
     ed.resumePlace = resuming && !startShut && !suiteAt && !atShoot && !fromBoard && place ? place : null;
     if (startShut) notebook.show('closed');
     if (suiteAt) document.querySelector(`.tabbar .tab[data-view="${suiteAt}"]`).click();
-    if (atShoot) setTimeout(() => { if (atShoot.archived) ed.openArchiveMode(atShoot.id); else ed.openShootModal(atShoot.id); }, 120);
+    if (atShoot) setTimeout(() => ed.openShootModal(atShoot.id), 120);
     else if (fromBoard) setTimeout(() => ed.openShootFromBoard(fromBoard), 120);
     notebook.remember(startShut ? 'shut' : 'open');
     if (suite && suite.firstVisit) setTimeout(() => ed.eyeWelcome(ed.launchPopups), 400);
