@@ -34,7 +34,7 @@ export async function deleteEntry(id) {
   tx.objectStore('entries').delete(id);
   tx.objectStore('images').delete(id);
   links.forEach((l) => tx.objectStore('links').delete(l.id));
-  await new Promise((ok, no) => { tx.oncomplete = ok; tx.onerror = tx.onabort = () => no(tx.error); });
+  await new Promise((ok, no) => { tx.oncomplete = ok; tx.onerror = tx.onabort = () => no(tx.error || new Error("That entry wasn't deleted.")); });
 }
 export function newEntry(date) {
   const now = D.nowIso();

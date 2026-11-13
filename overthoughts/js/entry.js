@@ -168,7 +168,7 @@ export async function entryScreen(view, id) {
     if (ev.target.closest('[data-delete]')) {
       if (!saved) { back(); return; }
       if (!(await confirmSheet({ title: 'Delete entry', message: 'This entry and its photos go for good.', confirmLabel: 'Delete', danger: true }))) return;
-      await deleteEntry(e.id);
+      try { await deleteEntry(e.id); } catch (err) { toast(err.message || "That entry wasn't deleted."); return; }
       saved = false;
       toast('Entry deleted');
       back();

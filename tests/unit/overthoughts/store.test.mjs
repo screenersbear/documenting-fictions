@@ -159,7 +159,7 @@ describe('deleteEntry', () => {
       };
       return db;
     });
-    await expect(store.deleteEntry('a')).rejects.toBeNull();
+    await rejectsWith(store.deleteEntry('a'), "That entry wasn't deleted.");
     D.overthoughts.mockImplementation(opening);
     expect((await raw('entries')).map(([k]) => k)).toEqual(['a', 'b']);
     expect((await raw('links')).length).toBe(4);

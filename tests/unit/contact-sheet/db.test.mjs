@@ -179,6 +179,26 @@ describe('opening the database', () => {
     expect(e).toBeInstanceOf(Error);
     expect(e.message).toBe('Close Contact Sheet in your other tabs, then try again.');
   });
+
+  it('really can try again: once the other tabs are closed, the next call opens', async () => {
+    globalThis.indexedDB = { open: vi.fn(() => { const req = {}; later(() => req.onblocked()); return req; }) };
+    await reason(tooLong(db.getMeta('k')));
+    globalThis.indexedDB = idb;
+    await db.setMeta('k', 'v');
+    expect(await tooLong(db.getMeta('k'))).toBe('v');
+  });
+
+  it('opens again after stepping aside for another tab, rather than using the closed connection', async () => {
+    await db.setMeta('k', 'v');
+    await new Promise((resolve, reject) => {
+      const r = idb.deleteDatabase('contact-sheet');
+      r.onsuccess = resolve;
+      r.onerror = () => reject(r.error);
+      r.onblocked = () => reject(new Error('blocked by the open connection'));
+    });
+    expect(await tooLong(db.listProjects())).toEqual([]);
+    expect(await tooLong(db.getMeta('k'))).toBeNull(); // a new, empty database
+  });
 });
 
 // ---------- Failures inside a transaction ----------
