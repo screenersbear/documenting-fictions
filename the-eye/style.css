@@ -6500,10 +6500,10 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
   --tab-light: #fff0ae; /* a pale yellow, well apart from the mango */
   --screen-gap: 0px;
   --nb-h: calc(100 * var(--svh));
-  /* The navigator's icon sits 25px + the bottom safe area (10px at least)
+  /* The navigator's icon sits 35px + the bottom safe area (10px at least)
      above the screen's edge: the same height in all four notebooks and on
-     the shelf (its centre is this + 19px). */
-  --nb-foot: max(16px, calc(var(--sa-bottom) + 6px));
+     the shelf (its centre is this + 19px; 10px up on 11-12, the user's mark). */
+  --nb-foot: max(26px, calc(var(--sa-bottom) + 16px));
   --nb-bar: calc(38px + var(--nb-foot));
   --nb-edge: max(22px, calc(50% - 270px));
 }

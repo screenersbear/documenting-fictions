@@ -2867,6 +2867,7 @@
   if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('nb-installed');
   let screenGap = 0;
   let screenShortHeight = 0;
+  let screenLaidOut = 0;
   let screenGapUpright = null;
   const screenHeightNow = () => layoutBoxProbe.getBoundingClientRect().height + screenGap;
 
@@ -2882,19 +2883,24 @@
     const hasStatusBar = upright && statusBarProbe.getBoundingClientRect().height > 0;
     const shortBy = (el) => full - el.getBoundingClientRect().height;
     const boxShort = shortBy(layoutBoxProbe);
-    const smallShort = shortBy(smallHeightProbe);
-    if (upright && (boxShort > SCREEN_GAP_MAX || smallShort > SCREEN_GAP_MAX)) return false;
+    // (Only the page's own box: 100svh can be off on its own, see below.)
+    if (upright && boxShort > SCREEN_GAP_MAX) return false;
     screenGapUpright = upright;
     // iOS draws nothing in the strip it's short by (on the iPhone the
     // navigator vanished in it), so everything stays above it: --nb-h is the
     // height iOS laid out, and .nb-short drops the room kept for the home bar,
     // which is that strip's height further down anyway.
     const shortHeight = hasStatusBar && boxShort >= 8 ? Math.round(full - boxShort) : 0;
-    if (shortHeight === screenShortHeight) return false;
+    // Installed, everything is laid out from the height iOS laid the page out
+    // at, never 100svh: on iOS 26 that can be a status bar short of the
+    // screen even when the page isn't, which left the navigator that high with
+    // the list showing under it (user's screenshot, 11-12).
+    const laidOut = Math.round(layoutBoxProbe.getBoundingClientRect().height);
+    if (shortHeight === screenShortHeight && laidOut === screenLaidOut) return false;
     screenShortHeight = shortHeight;
+    screenLaidOut = laidOut;
     document.documentElement.classList.toggle('nb-short', !!shortHeight);
-    const style = document.documentElement.style;
-    if (shortHeight) style.setProperty('--nb-h', `${shortHeight}px`); else style.removeProperty('--nb-h');
+    document.documentElement.style.setProperty('--nb-h', `${laidOut}px`);
     return true;
   }
   measureScreenGap();
