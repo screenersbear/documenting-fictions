@@ -26,11 +26,11 @@ export async function newLayout() {
     let made = false;
     const W = { step: 0, name: '', defaultName: dateName(), ratio: DEFAULT_RATIO, template: '' };
     let list = [];
-    const s = openSheet({ title: 'New layout', className: 'sheet-guide', onClose: () => resolve(made) });
+    const s = openSheet({ title: 'New layout', className: 'sheet-page sheet-guide', onClose: () => resolve(made) });
     s.body.innerHTML = `
       ${shortBandHtml({ name: 'New layout', backAttr: 'data-back', end: { label: 'Close', attr: 'data-close', svg: CLOSE } })}
-      <div class="guide-scroll" data-scroll></div>
-      <div class="guide-foot">
+      <div class="page-scroll" data-scroll></div>
+      <div class="page-foot guide-foot">
         <button type="button" class="btn secondary" data-back>Back</button>
         <button type="button" class="btn primary" data-next></button>
       </div>`;

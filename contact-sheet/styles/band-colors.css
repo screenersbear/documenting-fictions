@@ -4,9 +4,11 @@
    under it (75, 50, 25 and 10% on paper). Picked in Options (data-book on
    <html>); berry when nothing is picked (round 2, Layouts). Buttons, chips
    and ticks (--ink) take the band colour with its small-text colour. The
-   round 2 text colours are here too: berry blade black and its quiet grey. */
-:root {
+   round 2 text colours are here too: berry blade black and its quiet grey,
+   on the round 2 paper (over notebook.css's white pages), fields white. */
+:root, :root[data-book] {
   --paper: #FAFAF7;
+  --field: #FFFFFF;
   --text: #313D45;
   --dim: #5C666D;
   --text-dim: var(--dim);

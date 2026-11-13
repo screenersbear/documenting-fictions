@@ -17,7 +17,7 @@ export const SIZE_GROUPS = [
 
 const MORE = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="19" r="1.6" fill="currentColor"/></svg>';
 
-const head = (title, ask) => `<h1 class="guide-title">${esc(title)}</h1><p class="guide-ask">${esc(ask)}</p>`;
+const head = (title, ask) => `<h1 class="page-title">${esc(title)}</h1><p class="page-ask">${esc(ask)}</p>`;
 
 export function nameStep(W) {
   return `${head('Name', 'What is this one called?')}

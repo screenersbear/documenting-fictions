@@ -3024,6 +3024,40 @@ async function recordSlide(p, photos, i, { audio, host, openSource, onTime, stil
 	}
 }
 
+// components/band.js
+const ring = (label, attr, svg) => `<button type="button" class="ring-btn" ${attr} aria-label="${esc(label)}"><span>${svg}</span></button>`;
+const line = (d) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const BOOKS = "<svg viewBox=\"0 0 24 24\" width=\"19\" height=\"19\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"5\" width=\"4.5\" height=\"14\" rx=\"1\"/><rect x=\"9.5\" y=\"3\" width=\"4.5\" height=\"16\" rx=\"1\"/><path d=\"M16 6.2l3.6-1 3 12.6-3.6 1z\"/></svg>";
+const PLUS = line("<line x1=\"12\" y1=\"5\" x2=\"12\" y2=\"19\"/><line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/>");
+const MENU = line("<line x1=\"4\" y1=\"7\" x2=\"20\" y2=\"7\"/><line x1=\"4\" y1=\"12\" x2=\"20\" y2=\"12\"/><line x1=\"4\" y1=\"17\" x2=\"20\" y2=\"17\"/>");
+const MARK = "<svg class=\"band-mark\" viewBox=\"0 0 80 40\" aria-hidden=\"true\"><rect x=\"6\" width=\"20\" height=\"40\" class=\"mk-p\"/><rect x=\"32\" y=\"8\" width=\"20\" height=\"32\" class=\"mk-w\"/><rect x=\"58\" y=\"14.4\" width=\"20\" height=\"25.6\" class=\"mk-p\"/></svg>";
+const BACK = line("<polyline points=\"15 5 8 12 15 19\"/>");
+const CLOSE = line("<line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/>");
+const MORE$1 = "<svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\"><circle cx=\"5\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/><circle cx=\"19\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/></svg>";
+const bandDate = (d = new Date()) => d.toLocaleDateString("en-GB", {
+	weekday: "short",
+	day: "numeric",
+	month: "short"
+}).replace(",", "");
+function bandHtml({ title, place, add }) {
+	return `
+    <header class="band">
+      <h1 class="band-title">${esc(title)}</h1>
+      <div class="band-btns">${ring("Back to your notebooks", "data-books", BOOKS)}${ring(add, "data-band-add", PLUS)}${ring("Options", "data-app-menu", MENU)}</div>
+      ${MARK}
+      <p class="band-line"><b>${esc(place)}</b><span class="band-rule"></span><span class="band-date">${bandDate()}</span></p>
+    </header>`;
+}
+function shortBandHtml({ name, backAttr, backLabel = "Back", end = null }) {
+	const right = end ? ring(end.label, end.attr, end.svg) : "<span class=\"ring-btn\" aria-hidden=\"true\"></span>";
+	return `
+    <header class="band band-short">
+      ${ring(backLabel, backAttr, BACK)}
+      <p class="band-line"><b>${esc(name)}</b><span class="band-rule"></span></p>
+      ${right}
+    </header>`;
+}
+
 // data/slide-images.js
 async function openSource(photo, scale) {
 	const url = URL.createObjectURL(photo.kind === "video" ? photo.preview : photo.original || photo.preview);
@@ -3199,76 +3233,6 @@ function makePdf(sheets) {
 	return new Blob(parts, { type: "application/pdf" });
 }
 
-// data/print-check.js
-const FULL_AREA = {
-	x: 36,
-	y: 36,
-	w: 792 - 72,
-	h: 612 - 72
-};
-const BOOK_AREA = {
-	x: 36,
-	y: 44,
-	w: 792 - 72,
-	h: 612 - 74
-};
-const TOC_ROWS = 9;
-const INK$1 = "#313d45";
-const PRINT_PPI = 300;
-const BLURRY_PPI = 150;
-const pagesPerSheet = (pxW, pxH) => pxW / pxH > 1.1 ? 1 : 2;
-const printedW = (aspect, area) => Math.min(area.w / (aspect > 1.1 ? 1 : 2), area.h * aspect);
-const printScale = (p, area) => Math.round(PRINT_PPI * printedW(SLIDE_W / slideH(p), area) / 72) / SLIDE_W;
-function checkPictures(p, photos, order, sheets, first = 0, chapter = "") {
-	const per = pagesPerSheet(SLIDE_W, slideH(p));
-	const H = slideH(p);
-	const report = {
-		checked: 0,
-		low: []
-	};
-	for (const f of p.frames) {
-		const photo = f.photoId && photos[f.photoId];
-		if (!photo) continue;
-		const seen = order.map((i, pos) => ({
-			i,
-			pos
-		})).filter(({ i }) => framesOnSlide(p, i).includes(f));
-		if (!seen.length) continue;
-		report.checked++;
-		const sheetAt = (pos) => sheets[Math.floor(pos / per)];
-		const pageAt = (pos) => sheetAt(pos).images[pos % per];
-		const real = photo.original && photo.kind !== "video" ? 1 : (photo.previewW || photo.width) / photo.width;
-		const ppi = Math.round(real * 72 * SLIDE_W / (placement(f, photo).s * pageAt(seen[0].pos).w));
-		if (ppi >= PRINT_PPI) continue;
-		const blurry = ppi < BLURRY_PPI;
-		for (const { i, pos } of seen) {
-			const im = pageAt(pos);
-			const x0 = Math.max(0, f.x - i * SLIDE_W);
-			const x1 = Math.min(SLIDE_W, f.x + f.w - i * SLIDE_W);
-			const y0 = Math.max(0, f.y);
-			const y1 = Math.min(H, f.y + f.h);
-			const sheet = sheetAt(pos);
-			sheet.marks = sheet.marks || [];
-			sheet.marks.push({
-				x: im.x + x0 / SLIDE_W * im.w,
-				y: im.y + im.h - y1 / H * im.h,
-				w: (x1 - x0) / SLIDE_W * im.w,
-				h: (y1 - y0) / H * im.h,
-				blurry
-			});
-		}
-		const where = `${pageWord(p)} ${seen[0].i + 1}`;
-		report.low.push({
-			ppi,
-			blurry,
-			thumb: photo.thumb,
-			sheet: first + Math.floor(seen[0].pos / per),
-			label: chapter ? `${chapter}, ${where}` : where[0].toUpperCase() + where.slice(1)
-		});
-	}
-	return report;
-}
-
 // pages/pdfview.js
 const MAX_ZOOM = 4;
 const pct = (v, of) => `${(v / of * 100).toFixed(3)}%`;
@@ -3436,6 +3400,75 @@ function showPdf(s, { sheets, report, fileName, onSaved }) {
 	};
 }
 
+// data/print-check.js
+const FULL_AREA = {
+	x: 36,
+	y: 36,
+	w: 792 - 72,
+	h: 612 - 72
+};
+const BOOK_AREA = {
+	x: 36,
+	y: 44,
+	w: 792 - 72,
+	h: 612 - 74
+};
+const INK$1 = "#313d45";
+const PRINT_PPI = 300;
+const BLURRY_PPI = 150;
+const pagesPerSheet = (pxW, pxH) => pxW / pxH > 1.1 ? 1 : 2;
+const printedW = (aspect, area) => Math.min(area.w / (aspect > 1.1 ? 1 : 2), area.h * aspect);
+const printScale = (p, area) => Math.round(PRINT_PPI * printedW(SLIDE_W / slideH(p), area) / 72) / SLIDE_W;
+function checkPictures(p, photos, order, sheets, first = 0, layout = "") {
+	const per = pagesPerSheet(SLIDE_W, slideH(p));
+	const H = slideH(p);
+	const report = {
+		checked: 0,
+		low: []
+	};
+	for (const f of p.frames) {
+		const photo = f.photoId && photos[f.photoId];
+		if (!photo) continue;
+		const seen = order.map((i, pos) => ({
+			i,
+			pos
+		})).filter(({ i }) => framesOnSlide(p, i).includes(f));
+		if (!seen.length) continue;
+		report.checked++;
+		const sheetAt = (pos) => sheets[Math.floor(pos / per)];
+		const pageAt = (pos) => sheetAt(pos).images[pos % per];
+		const real = photo.original && photo.kind !== "video" ? 1 : (photo.previewW || photo.width) / photo.width;
+		const ppi = Math.round(real * 72 * SLIDE_W / (placement(f, photo).s * pageAt(seen[0].pos).w));
+		if (ppi >= PRINT_PPI) continue;
+		const blurry = ppi < BLURRY_PPI;
+		for (const { i, pos } of seen) {
+			const im = pageAt(pos);
+			const x0 = Math.max(0, f.x - i * SLIDE_W);
+			const x1 = Math.min(SLIDE_W, f.x + f.w - i * SLIDE_W);
+			const y0 = Math.max(0, f.y);
+			const y1 = Math.min(H, f.y + f.h);
+			const sheet = sheetAt(pos);
+			sheet.marks = sheet.marks || [];
+			sheet.marks.push({
+				x: im.x + x0 / SLIDE_W * im.w,
+				y: im.y + im.h - y1 / H * im.h,
+				w: (x1 - x0) / SLIDE_W * im.w,
+				h: (y1 - y0) / H * im.h,
+				blurry
+			});
+		}
+		const where = `${pageWord(p)} ${seen[0].i + 1}`;
+		report.low.push({
+			ppi,
+			blurry,
+			thumb: photo.thumb,
+			sheet: first + Math.floor(seen[0].pos / per),
+			label: layout ? `${layout}, ${where}` : where[0].toUpperCase() + where.slice(1)
+		});
+	}
+	return report;
+}
+
 // data/notebook-pdf.js
 function sheetsOf(jpegs, pxW, pxH, area = FULL_AREA) {
 	const aspect = pxW / pxH;
@@ -3495,7 +3528,7 @@ function fitText(ctx, str, max) {
 }
 async function coverSheet() {
 	try {
-		const img = await loadImage(`art/${document.documentElement.dataset.book || "orange"}-cover.webp`);
+		const img = await loadImage(`art/${document.documentElement.dataset.book || "berry"}-cover.webp`);
 		const { c, ctx } = whiteCanvas(1e3, 1360);
 		ctx.drawImage(img, 0, 0, 1e3, 1360);
 		const h = FULL_AREA.h;
@@ -3514,46 +3547,12 @@ async function coverSheet() {
 		return null;
 	}
 }
-async function contentsSheets(rows) {
-	const sheets = [];
-	for (let i = 0; i < rows.length; i += 9) {
-		const { c, ctx } = whiteCanvas(2200, 1700);
-		ctx.fillStyle = INK$1;
-		ctx.textAlign = "center";
-		ctx.font = "112px \"Klee One\", \"Bradley Hand\", cursive";
-		ctx.fillText("Table of contents", 1100, 250);
-		ctx.fillStyle = "#d6dadd";
-		ctx.fillRect(300, 320, 1600, 3);
-		rows.slice(i, i + 9).forEach((row, n) => {
-			const y = 320 + n * 128;
-			ctx.fillStyle = INK$1;
-			ctx.textAlign = "left";
-			ctx.font = "68px \"Klee One\", \"Bradley Hand\", cursive";
-			ctx.fillText(fitText(ctx, row.name, 1360), 320, y + 90);
-			ctx.textAlign = "right";
-			ctx.font = "60px \"Klee One\", \"Bradley Hand\", cursive";
-			ctx.fillText(String(row.page), 1880, y + 88);
-			ctx.fillStyle = "#d6dadd";
-			ctx.fillRect(300, y + 128, 1600, 3);
-		});
-		sheets.push({
-			images: [{
-				...await finishCanvas(c),
-				x: 0,
-				y: 0,
-				w: 792,
-				h: 612
-			}],
-			text: []
-		});
-	}
-	return sheets;
-}
+const FONT = "\"Figtree\", system-ui, sans-serif";
 async function nameStrip(name) {
 	const { c, ctx } = whiteCanvas(1400, 72);
 	ctx.fillStyle = INK$1;
 	ctx.textBaseline = "middle";
-	ctx.font = "46px \"Klee One\", \"Bradley Hand\", cursive";
+	ctx.font = `500 44px ${FONT}`;
 	ctx.fillText(fitText(ctx, name, 1380), 0, 38);
 	return {
 		...await finishCanvas(c),
@@ -3568,7 +3567,7 @@ async function numberMark(str) {
 	ctx.fillStyle = INK$1;
 	ctx.textAlign = "right";
 	ctx.textBaseline = "middle";
-	ctx.font = "46px \"Klee One\", \"Bradley Hand\", cursive";
+	ctx.font = `500 44px ${FONT}`;
 	ctx.fillText(str, 156, 38);
 	return {
 		...await finishCanvas(c),
@@ -3579,28 +3578,19 @@ async function numberMark(str) {
 	};
 }
 async function makeNotebook(onProgress, stillOpen = () => true) {
-	const chapters = await listProjects();
-	if (!chapters.length) return null;
-	if (document.fonts && document.fonts.load) await document.fonts.load("60px \"Klee One\"").catch(() => {});
-	const total = chapters.reduce((sum, p) => sum + p.slides, 0);
-	let page = 1;
-	const rows = chapters.map((p) => {
-		const row = {
-			name: p.name,
-			page
-		};
-		page += Math.ceil(p.slides / pagesPerSheet(SLIDE_W, slideH(p)));
-		return row;
-	});
+	const layouts = await listProjects();
+	if (!layouts.length) return null;
+	if (document.fonts && document.fonts.load) await document.fonts.load(`500 44px ${FONT}`).catch(() => {});
+	const total = layouts.reduce((sum, p) => sum + p.slides, 0);
 	const cover = await coverSheet();
-	const sheets = [...cover ? [cover] : [], ...await contentsSheets(rows)];
+	const sheets = cover ? [cover] : [];
 	const report = {
 		checked: 0,
 		low: []
 	};
 	let made = 0;
 	let number = 1;
-	for (const p of chapters) {
+	for (const p of layouts) {
 		if (!stillOpen()) return null;
 		const photos = Object.fromEntries((await photosForProject(p.id)).map((ph) => [ph.id, ph]));
 		const files = await renderSlides(p, photos, "jpeg", (i) => onProgress && onProgress(p.name, (made + i) / total), {
@@ -3614,9 +3604,8 @@ async function makeNotebook(onProgress, stillOpen = () => true) {
 		report.checked += found.checked;
 		report.low.push(...found.low);
 		for (const sheet of own) {
-			const str = String(number++);
 			sheet.images.push(strip);
-			sheet.images.push(await numberMark(str));
+			sheet.images.push(await numberMark(String(number++)));
 			sheets.push(sheet);
 		}
 	}
@@ -3630,12 +3619,11 @@ async function makeNotebook(onProgress, stillOpen = () => true) {
 function openNotebookExport() {
 	let free = null;
 	const s = openSheet({
-		title: "Export notebook",
+		title: "Everything as one PDF",
 		className: "sheet-export",
 		onClose: () => free && free()
 	});
 	async function run() {
-		s.setTitle("Export notebook");
 		s.body.innerHTML = `
       <p class="sheet-message" data-msg>Getting ready</p>
       <div class="progress"><div class="progress-bar" data-bar></div></div>
@@ -3664,14 +3652,14 @@ function openNotebookExport() {
 		}
 		free = showPdf(s, {
 			...book,
-			fileName: "contact-sheet-notebook.pdf",
+			fileName: "layouts.pdf",
 			onSaved: () => s.close()
 		});
 	}
 	run();
 	return s;
 }
-function openChapterPdf(p, photos, order, base, exportSheet) {
+function openLayoutPdf(p, photos, order, base, exportSheet) {
 	let free = null;
 	const s = openSheet({
 		title: "Printable PDF",
@@ -3719,166 +3707,7 @@ function openChapterPdf(p, photos, order, base, exportSheet) {
 	run();
 }
 
-// pages/export.js
-function openExport(p, photos) {
-	const H = slideH(p);
-	const empty = p.frames.filter((f) => !f.photoId).length;
-	let urls = [];
-	const slidesWithVideo = Array.from({ length: p.slides }, (_, i) => i).filter((i) => hasVideo(p, photos, i));
-	const record = slidesWithVideo.length > 0 && canRecordVideo();
-	const audio = record ? startSound() : null;
-	const s = openSheet({
-		title: "Export",
-		className: "sheet-export",
-		onClose: () => {
-			urls.forEach((u) => URL.revokeObjectURL(u));
-			if (audio) audio.close().catch(() => {});
-		}
-	});
-	async function run() {
-		s.setTitle("Export");
-		s.body.innerHTML = `
-      <p class="sheet-message" data-msg>Getting ready</p>
-      <div class="progress"><div class="progress-bar" data-bar></div></div>
-      <p class="field-hint">${p.slides} ${esc(pageWord(p, p.slides !== 1))}, each ${Math.round(SLIDE_W * exportScale(p))} × ${Math.round(H * exportScale(p))}. Keep this screen open while it works.</p>`;
-		const msg = s.body.querySelector("[data-msg]");
-		const bar = s.body.querySelector("[data-bar]");
-		let files;
-		try {
-			files = await renderSlides(p, photos, "jpeg", (i, n) => {
-				msg.textContent = `Making ${pageWord(p)} ${i + 1} of ${n}`;
-				bar.style.width = `${Math.round(i / n * 100)}%`;
-			});
-			if (record) {
-				s.body.querySelector(".field-hint").textContent = `Videos are made as they play, up to ${60} seconds each. Keep this screen open while it works.`;
-				const live = document.createElement("div");
-				live.className = "video-live";
-				s.body.appendChild(live);
-				for (const i of slidesWithVideo) {
-					if (!s.overlay.isConnected) return;
-					msg.textContent = `Making the video on ${pageWord(p)} ${i + 1}`;
-					bar.style.width = "0%";
-					const made = await recordSlide(p, photos, i, {
-						audio,
-						host: live,
-						openSource,
-						stillOpen: () => s.overlay.isConnected,
-						onTime: (t, length) => bar.style.width = `${Math.round(t / length * 100)}%`
-					});
-					files[i] = {
-						...files[i],
-						...made,
-						name: files[i].name.replace(/\.jpg$/, `.${made.ext}`)
-					};
-				}
-			}
-		} catch (e) {
-			console.error(e);
-			if (!s.overlay.isConnected) return;
-			s.body.innerHTML = `
-        <p class="sheet-message">Something went wrong making the ${record ? "videos" : "images"}. Keep this screen open and try again, or try fewer ${esc(pageWord(p, true))} at a time.</p>
-        <button type="button" class="modal-cta primary" data-again>Try again</button>`;
-			s.body.querySelector("[data-again]").addEventListener("click", run);
-			return;
-		}
-		if (!s.overlay.isConnected) return;
-		finished(files);
-	}
-	function finished(files) {
-		urls = files.map((f) => URL.createObjectURL(f.thumb));
-		const base = slug(p.name);
-		const n = files.length;
-		let order = files.map((_, i) => i);
-		const off = new Set();
-		let canShare = false;
-		try {
-			canShare = isPhone() && !!navigator.canShare && navigator.canShare({ files: files.map((f) => new File([f.blob], f.name, { type: f.mime })) });
-		} catch {}
-		const perSheet = pagesPerSheet(files[0].width, files[0].height);
-		s.setTitle("Ready");
-		s.body.innerHTML = `
-      ${n > 1 ? `<p class="order-note"><b>${isPrint(p) ? "Keep" : "Post"} them in this order.</b> Tap one to leave it out. Hold and drag to move it.</p>` : ""}
-      <ol class="order-grid${n > 1 ? " is-pick" : ""}" data-grid>
-        ${files.map((f, i) => `<li data-i="${i}"><img style="aspect-ratio:${f.width}/${f.height}" src="${urls[i]}" alt="${esc(pageWord(p))} ${i + 1}" draggable="false" /><span class="order-num"></span>${f.isVideo ? `<span class="order-vid">${ICONS.play}</span>` : ""}<span class="order-off">Left out</span></li>`).join("")}
-      </ol>
-      ${empty ? `<p class="tip">${empty === 1 ? "1 box is" : `${empty} boxes are`} empty and show the background color.</p>` : ""}
-      ${slidesWithVideo.length && !record ? "<p class=\"tip\">This browser can't save video, so those slides are saved as still images. Safari and Chrome can.</p>" : ""}
-      <div class="button-stack wide">
-        <button type="button" class="modal-cta primary" data-save></button>
-      </div>
-      ${canShare ? "<p class=\"field-hint\" data-hint></p>" : ""}
-      <div class="button-stack wide">
-        <button type="button" class="modal-cta secondary" data-pdf>Printable PDF</button>
-      </div>
-      <p class="field-hint">Landscape, ${perSheet === 1 ? "one page" : "two pages"} to a sheet.</p>`;
-		const grid = s.body.querySelector("[data-grid]");
-		const save = s.body.querySelector("[data-save]");
-		const hint = s.body.querySelector("[data-hint]");
-		const items = new Map([...grid.children].map((li) => [Number(li.dataset.i), li]));
-		const chosen = () => order.filter((i) => !off.has(i)).map((i, k) => ({
-			...files[i],
-			name: `${base}-${String(k + 1).padStart(2, "0")}.${files[i].ext || "jpg"}`
-		}));
-		function draw() {
-			let k = 0;
-			for (const i of order) {
-				const li = items.get(i);
-				grid.appendChild(li);
-				li.classList.toggle("is-off", off.has(i));
-				li.querySelector(".order-num").textContent = off.has(i) ? "" : String(++k);
-			}
-			const c = k;
-			const all = c === n;
-			save.disabled = !c;
-			if (canShare) save.textContent = all || !c ? "Save to Photos" : `Save ${c} to Photos`;
-			else save.textContent = c === 1 ? "Download" : all ? "Download ZIP" : `Download ${c} as ZIP`;
-			if (hint) {
-				const v = order.filter((i) => !off.has(i) && files[i].isVideo).length;
-				const what = !v ? c === 1 ? "Image" : `${c} Images` : c === 1 ? "Video" : v === c ? `${c} Videos` : `${c} Items`;
-				hint.innerHTML = c ? `In the share sheet, tap <b>Save ${what}</b>.` : "Tap an image to put it back.";
-			}
-		}
-		save.addEventListener("click", async () => {
-			const list = chosen();
-			if (!list.length) return;
-			if (canShare) {
-				try {
-					await navigator.share({ files: list.map((f) => new File([f.blob], f.name, { type: f.mime })) });
-					s.close();
-				} catch (e) {
-					if (e && e.name !== "AbortError") toast("Sharing did not work here. Try again in Safari.");
-				}
-				return;
-			}
-			if (list.length === 1) downloadBlob(list[0].blob, list[0].name);
-			else downloadBlob(await makeZip(list), `${base}.zip`);
-			s.close();
-		});
-		s.body.querySelector("[data-pdf]").addEventListener("click", () => {
-			const picked = order.filter((i) => !off.has(i));
-			if (picked.length) openChapterPdf(p, photos, picked, base, s);
-		});
-		if (n > 1) {
-			let suppress = false;
-			grid.addEventListener("click", (e) => {
-				const li = e.target.closest("li[data-i]");
-				if (!li || suppress) return;
-				const i = Number(li.dataset.i);
-				if (off.has(i)) off.delete(i);
-				else off.add(i);
-				draw();
-			});
-			dragToReorder(grid, (from, to) => {
-				const [i] = order.splice(from, 1);
-				order.splice(to, 0, i);
-				draw();
-			}, (v) => suppress = v);
-		}
-		draw();
-	}
-	run();
-	return s;
-}
+// pages/export-drag.js
 function dragToReorder(list, onMove, setSuppress) {
 	let d = null;
 	const HOLD = 300;
@@ -3951,6 +3780,183 @@ function dragToReorder(list, onMove, setSuppress) {
 	list.addEventListener("pointerup", end);
 	list.addEventListener("pointercancel", end);
 	list.addEventListener("contextmenu", (e) => e.preventDefault());
+}
+
+// pages/export.js
+const PDF_ICON = "<svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3v12\"/><path d=\"M7 10l5 5 5-5\"/><path d=\"M5 20h14\"/></svg>";
+const GO_ICON = "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 5l7 7-7 7\"/></svg>";
+function openExport(p, photos) {
+	const H = slideH(p);
+	const empty = p.frames.filter((f) => !f.photoId).length;
+	let urls = [];
+	const slidesWithVideo = Array.from({ length: p.slides }, (_, i) => i).filter((i) => hasVideo(p, photos, i));
+	const record = slidesWithVideo.length > 0 && canRecordVideo();
+	const audio = record ? startSound() : null;
+	const s = openSheet({
+		title: "Export",
+		className: "sheet-page sheet-export",
+		onClose: () => {
+			urls.forEach((u) => URL.revokeObjectURL(u));
+			if (audio) audio.close().catch(() => {});
+		}
+	});
+	s.body.innerHTML = `
+    ${shortBandHtml({
+		name: "Export",
+		backAttr: "data-close"
+	})}
+    <div class="page-scroll" data-scroll></div>
+    <div class="page-foot exp-foot" data-foot hidden></div>`;
+	const scroll = s.body.querySelector("[data-scroll]");
+	const foot = s.body.querySelector("[data-foot]");
+	async function run() {
+		foot.hidden = true;
+		scroll.innerHTML = `
+      <h1 class="page-title" data-msg>Getting ready</h1>
+      <p class="page-ask" data-hint>${p.slides} ${esc(pageWord(p, p.slides !== 1))}, each ${Math.round(SLIDE_W * exportScale(p))} × ${Math.round(H * exportScale(p))}. Keep this screen open while it works.</p>
+      <div class="progress"><div class="progress-bar" data-bar></div></div>`;
+		const msg = scroll.querySelector("[data-msg]");
+		const bar = scroll.querySelector("[data-bar]");
+		let files;
+		try {
+			files = await renderSlides(p, photos, "jpeg", (i, n) => {
+				msg.textContent = `Making ${pageWord(p)} ${i + 1} of ${n}`;
+				bar.style.width = `${Math.round(i / n * 100)}%`;
+			});
+			if (record) {
+				scroll.querySelector("[data-hint]").textContent = `Videos are made as they play, up to ${60} seconds each. Keep this screen open while it works.`;
+				const live = document.createElement("div");
+				live.className = "video-live";
+				scroll.appendChild(live);
+				for (const i of slidesWithVideo) {
+					if (!s.overlay.isConnected) return;
+					msg.textContent = `Making the video on ${pageWord(p)} ${i + 1}`;
+					bar.style.width = "0%";
+					const made = await recordSlide(p, photos, i, {
+						audio,
+						host: live,
+						openSource,
+						stillOpen: () => s.overlay.isConnected,
+						onTime: (t, length) => bar.style.width = `${Math.round(t / length * 100)}%`
+					});
+					files[i] = {
+						...files[i],
+						...made,
+						name: files[i].name.replace(/\.jpg$/, `.${made.ext}`)
+					};
+				}
+			}
+		} catch (e) {
+			console.error(e);
+			if (!s.overlay.isConnected) return;
+			scroll.innerHTML = `
+        <h1 class="page-title">That didn't work</h1>
+        <p class="page-ask">Something went wrong making the ${record ? "videos" : "images"}. Keep this screen open and try again, or try fewer ${esc(pageWord(p, true))} at a time.</p>`;
+			foot.innerHTML = "<button type=\"button\" class=\"btn primary\" data-again>Try again</button>";
+			foot.hidden = false;
+			foot.querySelector("[data-again]").addEventListener("click", run);
+			return;
+		}
+		if (!s.overlay.isConnected) return;
+		finished(files);
+	}
+	function finished(files) {
+		urls = files.map((f) => URL.createObjectURL(f.thumb));
+		const base = slug(p.name);
+		const n = files.length;
+		let order = files.map((_, i) => i);
+		const off = new Set();
+		let canShare = false;
+		try {
+			canShare = isPhone() && !!navigator.canShare && navigator.canShare({ files: files.map((f) => new File([f.blob], f.name, { type: f.mime })) });
+		} catch {}
+		const word = pageWord(p);
+		scroll.innerHTML = `
+      ${n > 1 ? `<h1 class="page-title">${isPrint(p) ? "Keep" : "Post"} them in this order</h1>
+           <p class="page-ask">Tap a ${esc(word)} to leave it out. Hold and drag to change the order.</p>` : `<h1 class="page-title">Ready</h1><p class="page-ask">Your ${esc(word)}, made at full size.</p>`}
+      <ol class="order-grid${n > 1 ? " is-pick" : ""}" data-grid>
+        ${files.map((f, i) => `<li data-i="${i}"><img style="aspect-ratio:${f.width}/${f.height}" src="${urls[i]}" alt="${esc(word)} ${i + 1}" draggable="false" /><span class="order-num"></span>${f.isVideo ? `<span class="order-vid">${ICONS.play}</span>` : ""}<span class="order-off">Left out</span></li>`).join("")}
+      </ol>
+      ${n > 1 ? "<p class=\"order-count\" data-count></p>" : ""}
+      ${empty ? `<p class="tip">${empty === 1 ? "1 box is" : `${empty} boxes are`} empty and show the background color.</p>` : ""}
+      ${slidesWithVideo.length && !record ? `<p class="tip">This browser can't save video, so those ${esc(pageWord(p, true))} are saved as still images. Safari and Chrome can.</p>` : ""}
+      <button type="button" class="exp-row" data-pdf>
+        <span class="exp-row-icon">${PDF_ICON}</span>
+        <span class="exp-row-text"><span class="exp-row-name">Printable PDF</span><span class="exp-row-sub">Preview, sharpness check, then save or print</span></span>
+        <span class="exp-row-go">${GO_ICON}</span>
+      </button>`;
+		foot.innerHTML = `
+      <button type="button" class="btn primary" data-save></button>
+      ${canShare ? "<p class=\"exp-hint\" data-share-hint></p>" : ""}`;
+		foot.hidden = false;
+		const grid = scroll.querySelector("[data-grid]");
+		const count = scroll.querySelector("[data-count]");
+		const save = foot.querySelector("[data-save]");
+		const hint = foot.querySelector("[data-share-hint]");
+		const items = new Map([...grid.children].map((li) => [Number(li.dataset.i), li]));
+		const chosen = () => order.filter((i) => !off.has(i)).map((i, k) => ({
+			...files[i],
+			name: `${base}-${String(k + 1).padStart(2, "0")}.${files[i].ext || "jpg"}`
+		}));
+		function draw() {
+			let k = 0;
+			for (const i of order) {
+				const li = items.get(i);
+				grid.appendChild(li);
+				li.classList.toggle("is-off", off.has(i));
+				li.querySelector(".order-num").textContent = off.has(i) ? "" : String(++k);
+			}
+			const c = k;
+			save.disabled = !c;
+			if (canShare) save.textContent = c ? `Save ${c} to Photos` : "Save to Photos";
+			else save.textContent = c > 1 ? `Download ${c} as ZIP` : "Download";
+			if (count) count.textContent = c === n ? `${n} ${pageWord(p, true)}` : `${c} of ${n} ${pageWord(p, true)} · ${n - c} left out`;
+			if (hint) {
+				const v = order.filter((i) => !off.has(i) && files[i].isVideo).length;
+				const what = !v ? c === 1 ? "Image" : `${c} Images` : c === 1 ? "Video" : v === c ? `${c} Videos` : `${c} Items`;
+				hint.innerHTML = c ? `In the share sheet, tap <b>Save ${what}</b>.` : `Tap a ${esc(word)} to put it back.`;
+			}
+		}
+		save.addEventListener("click", async () => {
+			const list = chosen();
+			if (!list.length) return;
+			if (canShare) {
+				try {
+					await navigator.share({ files: list.map((f) => new File([f.blob], f.name, { type: f.mime })) });
+					s.close();
+				} catch (e) {
+					if (e && e.name !== "AbortError") toast("Sharing did not work here. Try again in Safari.");
+				}
+				return;
+			}
+			if (list.length === 1) downloadBlob(list[0].blob, list[0].name);
+			else downloadBlob(await makeZip(list), `${base}.zip`);
+			s.close();
+		});
+		scroll.querySelector("[data-pdf]").addEventListener("click", () => {
+			const picked = order.filter((i) => !off.has(i));
+			if (picked.length) openLayoutPdf(p, photos, picked, base, s);
+		});
+		if (n > 1) {
+			let suppress = false;
+			grid.addEventListener("click", (e) => {
+				const li = e.target.closest("li[data-i]");
+				if (!li || suppress) return;
+				const i = Number(li.dataset.i);
+				if (off.has(i)) off.delete(i);
+				else off.add(i);
+				draw();
+			});
+			dragToReorder(grid, (from, to) => {
+				const [i] = order.splice(from, 1);
+				order.splice(to, 0, i);
+				draw();
+			}, (v) => suppress = v);
+		}
+		draw();
+	}
+	run();
+	return s;
 }
 
 // pages/editor-buttons.js
@@ -5713,40 +5719,6 @@ function modeOfHash(h) {
 }
 const currentMode = () => modeOfHash((location.hash || "#/").slice(1) || "/");
 
-// components/band.js
-const ring = (label, attr, svg) => `<button type="button" class="ring-btn" ${attr} aria-label="${esc(label)}"><span>${svg}</span></button>`;
-const line = (d) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-const BOOKS = "<svg viewBox=\"0 0 24 24\" width=\"19\" height=\"19\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"5\" width=\"4.5\" height=\"14\" rx=\"1\"/><rect x=\"9.5\" y=\"3\" width=\"4.5\" height=\"16\" rx=\"1\"/><path d=\"M16 6.2l3.6-1 3 12.6-3.6 1z\"/></svg>";
-const PLUS = line("<line x1=\"12\" y1=\"5\" x2=\"12\" y2=\"19\"/><line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/>");
-const MENU = line("<line x1=\"4\" y1=\"7\" x2=\"20\" y2=\"7\"/><line x1=\"4\" y1=\"12\" x2=\"20\" y2=\"12\"/><line x1=\"4\" y1=\"17\" x2=\"20\" y2=\"17\"/>");
-const MARK = "<svg class=\"band-mark\" viewBox=\"0 0 80 40\" aria-hidden=\"true\"><rect x=\"6\" width=\"20\" height=\"40\" class=\"mk-p\"/><rect x=\"32\" y=\"8\" width=\"20\" height=\"32\" class=\"mk-w\"/><rect x=\"58\" y=\"14.4\" width=\"20\" height=\"25.6\" class=\"mk-p\"/></svg>";
-const BACK = line("<polyline points=\"15 5 8 12 15 19\"/>");
-const CLOSE = line("<line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/>");
-const MORE$1 = "<svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\"><circle cx=\"5\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/><circle cx=\"19\" cy=\"12\" r=\"1.8\" fill=\"currentColor\"/></svg>";
-const bandDate = (d = new Date()) => d.toLocaleDateString("en-GB", {
-	weekday: "short",
-	day: "numeric",
-	month: "short"
-}).replace(",", "");
-function bandHtml({ title, place, add }) {
-	return `
-    <header class="band">
-      <h1 class="band-title">${esc(title)}</h1>
-      <div class="band-btns">${ring("Back to your notebooks", "data-books", BOOKS)}${ring(add, "data-band-add", PLUS)}${ring("Options", "data-app-menu", MENU)}</div>
-      ${MARK}
-      <p class="band-line"><b>${esc(place)}</b><span class="band-rule"></span><span class="band-date">${bandDate()}</span></p>
-    </header>`;
-}
-function shortBandHtml({ name, backAttr, backLabel = "Back", end = null }) {
-	const right = end ? ring(end.label, end.attr, end.svg) : "<span class=\"ring-btn\" aria-hidden=\"true\"></span>";
-	return `
-    <header class="band band-short">
-      ${ring(backLabel, backAttr, BACK)}
-      <p class="band-line"><b>${esc(name)}</b><span class="band-rule"></span></p>
-      ${right}
-    </header>`;
-}
-
 // pages/book-contents.js
 function addContents(ed) {
 	Object.assign(ed, {
@@ -6759,7 +6731,7 @@ const SIZE_GROUPS = [
 	]]
 ];
 const MORE = "<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"5\" r=\"1.6\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.6\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"19\" r=\"1.6\" fill=\"currentColor\"/></svg>";
-const head = (title, ask) => `<h1 class="guide-title">${esc(title)}</h1><p class="guide-ask">${esc(ask)}</p>`;
+const head = (title, ask) => `<h1 class="page-title">${esc(title)}</h1><p class="page-ask">${esc(ask)}</p>`;
 function nameStep(W) {
 	return `${head("Name", "What is this one called?")}
     <input class="guide-input" type="text" data-name value="${esc(W.name)}" placeholder="${esc(W.defaultName)}" aria-label="Name" autocomplete="off" enterkeyhint="next" />`;
@@ -6809,7 +6781,7 @@ async function newLayout() {
 		let list = [];
 		const s = openSheet({
 			title: "New layout",
-			className: "sheet-guide",
+			className: "sheet-page sheet-guide",
 			onClose: () => resolve(made)
 		});
 		s.body.innerHTML = `
@@ -6822,8 +6794,8 @@ async function newLayout() {
 				svg: CLOSE
 			}
 		})}
-      <div class="guide-scroll" data-scroll></div>
-      <div class="guide-foot">
+      <div class="page-scroll" data-scroll></div>
+      <div class="page-foot guide-foot">
         <button type="button" class="btn secondary" data-back>Back</button>
         <button type="button" class="btn primary" data-next></button>
       </div>`;
