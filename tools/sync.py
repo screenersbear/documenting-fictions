@@ -2,9 +2,10 @@
 """Documenting Fictions: the suite is the master copy of every notebook.
 
     python3 tools/sync.py shared
-        Copies shared/df-data.js into each notebook's folder (as df-data.js),
-        so a notebook copied out on its own still has it. Run it after any
-        change to shared/df-data.js.
+        Copies the shared data files (shared/data/*.js) into each notebook's
+        data/shared/ folder, so a notebook copied out on its own still has
+        them; a file taken out of shared/data/ is taken out there too. Run it
+        after any change in shared/data/.
 
     python3 tools/sync.py export NOTEBOOK [DEST]
     python3 tools/sync.py export all
@@ -149,14 +150,29 @@ def sha_file(path):
 
 
 def shared(dry):
-    src = os.path.join(ROOT, 'shared', 'df-data.js')
+    src_dir = os.path.join(ROOT, 'shared', 'data')
+    names = sorted(f for f in os.listdir(src_dir) if f.endswith('.js'))
     for nb in NOTEBOOKS:
-        dst = os.path.join(ROOT, nb, 'df-data.js')
-        if os.path.exists(dst) and filecmp.cmp(src, dst, shallow=False):
-            continue
-        say(f'  shared -> {nb}/df-data.js')
-        if not dry:
-            shutil.copyfile(src, dst)
+        # Until 2026-11-12 the shared data was one file, df-data.js, beside index.html.
+        old = os.path.join(ROOT, nb, 'df-data.js')
+        if os.path.exists(old):
+            say(f'  removed {nb}/df-data.js (it is in data/shared/ now)')
+            if not dry:
+                os.remove(old)
+        dst_dir = os.path.join(ROOT, nb, 'data', 'shared')
+        for f in names:
+            src, dst = os.path.join(src_dir, f), os.path.join(dst_dir, f)
+            if os.path.exists(dst) and filecmp.cmp(src, dst, shallow=False):
+                continue
+            say(f'  shared -> {nb}/data/shared/{f}')
+            if not dry:
+                os.makedirs(dst_dir, exist_ok=True)
+                shutil.copyfile(src, dst)
+        for f in sorted(os.listdir(dst_dir)) if os.path.isdir(dst_dir) else []:
+            if f.endswith('.js') and f not in names:
+                say(f'  removed {nb}/data/shared/{f} (no longer in shared/data/)')
+                if not dry:
+                    os.remove(os.path.join(dst_dir, f))
 
 
 def standalone_index(nb, text):

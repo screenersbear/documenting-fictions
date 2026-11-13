@@ -1,11 +1,11 @@
-// overthoughts/js/prompts.js: the starting prompts for a blank page, and a
+// overthoughts/data/prompts.js: the starting prompts for a blank page, and a
 // random pick that never gives the one already showing.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 let P;
 beforeEach(async () => {
   vi.resetModules(); // some tests cut the list down: start each from a fresh copy
-  P = await import('../../../overthoughts/js/prompts.js');
+  P = await import('../../../overthoughts/data/prompts.js');
 });
 afterEach(() => {
   vi.restoreAllMocks();

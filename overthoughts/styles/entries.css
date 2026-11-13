@@ -1,0 +1,8 @@
+/* Entries: the months and each entry's row. */
+.month { margin: 18px 2px 4px; font: 500 19px var(--head); text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
+.rows > .month:first-child, .scroll > .week:first-child .month { margin-top: 10px; }
+.entry-row .row-open { gap: 14px; }
+.entry-row .row-meta { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.day { flex: none; width: 40px; display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.day b { font: 400 26px var(--hand); }
+.day small { font-size: 14px; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }

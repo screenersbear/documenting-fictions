@@ -17,6 +17,7 @@ Keep every app (the shelf, Ref, The Eye, Contact Sheet, Overthoughts) organized 
 1. Screens go in `pages/`.
 2. Shared pieces (anything more than one screen uses: bars, buttons, icons, sheets, small helpers) go in `components/`.
 3. Saving and loading (the database, backups, import and export, the shape of what's saved) goes in `data/`.
+   How it looks (the CSS) goes in `styles/`, one file per screen or piece, loaded by `index.html` in the order they apply. (All in one folder so links to `art/` and `fonts/` work the same from every file.) Each app starts in `app.js` beside `index.html`.
 4. One job per file. The file's name says its job, and a line at the top says it in plain words.
 5. No file over 300 lines. When a file gets near 300, split it by job. Third-party files (`lib/`, `ml/`, `vendor/`, `*.min.js`) aren't ours and don't count.
 6. Before writing anything new, check if it already exists (in this app, in `shared/`, or in another notebook) and use that instead of writing a second copy.

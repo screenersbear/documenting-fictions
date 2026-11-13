@@ -1,5 +1,5 @@
 // Bump CACHE_NAME with every deploy so installed copies pick up new files.
-const CACHE_NAME = 'ref-notebook-v45';
+const CACHE_NAME = 'ref-notebook-v46';
 // The same notebook can live twice on one website (inside the Documenting
 // Fictions suite and as its own app), and both workers see every cache there:
 // each name carries the folder this copy lives in, and each copy only ever
@@ -9,7 +9,9 @@ const CACHE = `${CACHE_NAME} ${HERE}`;
 const PREFIX = 'ref-notebook-v';
 const mine = (k) => k !== CACHE && (k.endsWith(` ${HERE}`) || (k.startsWith(PREFIX) && !k.includes(' ')));
 const ASSETS = [
-  './', './index.html', './style.css', './manifest.json', './df-data.js',
+  './', './index.html', './style.css', './manifest.json',
+  './data/shared/basics.js', './data/shared/files.js', './data/shared/overthoughts.js', './data/shared/the-eye.js', './data/shared/journal-move.js', './data/shared/json-backup.js',
+  './data/shared/zip-format.js', './data/shared/zip-backup.js', './data/shared/zip-restore.js', './data/shared/links.js', './data/shared/df-data.js',
   './js/app.js', './js/db.js', './js/editor.js', './js/filing.js', './js/icons.js', './js/library.js',
   './js/navbar.js', './js/newboard.js', './js/options.js', './js/stickers.js', './js/spread.js', './js/textsize.js', './js/showboard.js', './js/intro.js', './js/pages.js', './js/pdf.js', './js/photos.js', './js/screens.js', './js/sendshoot.js',
   './js/tagger.js', './js/tagger-worker.js', './js/templates.js', './js/ui.js', './js/undo.js', './js/util.js', './js/viewer.js', './js/welcome.js',

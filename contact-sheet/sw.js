@@ -1,5 +1,5 @@
 // Bump CACHE_NAME with every deploy so installed copies pick up new files.
-const CACHE_NAME = 'contact-sheet-v56';
+const CACHE_NAME = 'contact-sheet-v57';
 // The same notebook can live twice on one website (inside the Documenting
 // Fictions suite and as its own app), and both workers see every cache there:
 // each name carries the folder this copy lives in, and each copy only ever
@@ -14,7 +14,17 @@ const ASSETS = [
   './style.css',
   './manifest.json',
   './js/app.js',
-  './df-data.js',
+  './data/shared/basics.js',
+  './data/shared/files.js',
+  './data/shared/overthoughts.js',
+  './data/shared/the-eye.js',
+  './data/shared/journal-move.js',
+  './data/shared/json-backup.js',
+  './data/shared/zip-format.js',
+  './data/shared/zip-backup.js',
+  './data/shared/zip-restore.js',
+  './data/shared/links.js',
+  './data/shared/df-data.js',
   './js/book.js',
   './js/db.js',
   './js/editor.js',

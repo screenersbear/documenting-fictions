@@ -1,8 +1,10 @@
-// Shared set-up for the shared/df-data.js tests (not a test file itself).
+// Shared set-up for the tests of the shared data files, shared/data/ (not a
+// test file itself).
 //
-// df-data.js is a classic script: one IIFE that sets window.DFData. Each test
-// loads a fresh copy (its module state, like the cached Overthoughts
-// connection, starts empty) over a fresh, empty IndexedDB.
+// They're classic scripts, loaded in order like the pages load them; the last,
+// df-data.js, sets window.DFData. Each test loads a fresh copy (its module
+// state, like the cached Overthoughts connection, starts empty) over a fresh,
+// empty IndexedDB.
 //
 // jsdom's Blob can't go through IndexedDB (structuredClone turns it into a
 // plain object), so the tests use Node's own Blob and File, which can, and a
@@ -57,7 +59,17 @@ export async function loadDFData() {
   try { localStorage.clear(); } catch (e) { /* stubbed in a test */ }
   delete window.DF_SUITE;
   vi.resetModules();
-  await import('../../../shared/df-data.js');
+  await import('../../../shared/data/basics.js');
+  await import('../../../shared/data/files.js');
+  await import('../../../shared/data/overthoughts.js');
+  await import('../../../shared/data/the-eye.js');
+  await import('../../../shared/data/journal-move.js');
+  await import('../../../shared/data/json-backup.js');
+  await import('../../../shared/data/zip-format.js');
+  await import('../../../shared/data/zip-backup.js');
+  await import('../../../shared/data/zip-restore.js');
+  await import('../../../shared/data/links.js');
+  await import('../../../shared/data/df-data.js');
   return window.DFData;
 }
 

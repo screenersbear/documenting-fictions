@@ -1,0 +1,20 @@
+/* Form pieces: labels, text boxes, segmented buttons, the tour's dots. */
+/* new board */
+.form-page { padding: 12px 0 10px; display: flex; flex-direction: column; gap: 16px; }
+.group { display: block; flex: none; }
+.label { font: 400 19px var(--hand); color: var(--dim); }
+.small { margin: 3px 0 0; font-size: 16px; color: var(--dim); }
+.hand-input { display: block; width: 100%; border: 0; border-bottom: 2px solid var(--ink); border-radius: 0; padding: 4px 0; font: 400 26px var(--hand); background: none; outline: none; }
+.check { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 18px; }
+.check input { width: 20px; height: 20px; margin: 0; accent-color: var(--ink); }
+.style { padding: 7px 4px 6px; border: 2px solid var(--line); font-size: 15px; line-height: 1.2; }
+.style svg { width: 62%; margin: 0 auto 5px; fill: var(--ink); }
+.style.on { background: var(--mango); border-color: var(--mango); }
+.seg { display: flex; }
+.seg button { height: 38px; padding: 0 16px; border: 2px solid var(--ink); font-size: 18px; }
+.seg button + button { border-left: 0; }
+.seg .on { background: var(--ink); color: var(--on-ink); }
+/* The new board wizard. */
+.wz-dots { display: flex; gap: 6px; padding: 0 4px; }
+.wz-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.wz-dots i.on { background: var(--ink); }

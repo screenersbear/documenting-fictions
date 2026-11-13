@@ -2,9 +2,11 @@
 // worker for its own folder (registered from the shelf, see home.js); this one
 // answers for the shelf itself and the covers it shows.
 // Bump CACHE_NAME with every deploy so installed copies pick up new files.
-const CACHE_NAME = 'df-suite-v19';
+const CACHE_NAME = 'df-suite-v20';
 const ASSETS = [
-  './', './index.html', './home.css', './home.js', './stickers.js', './suite-backup.js', './backup.js', './shared/df-data.js', './suite.js', './manifest.json', './icon-180.png', './icon-512.png',
+  './', './index.html', './home.css', './home.js', './stickers.js', './suite-backup.js', './backup.js', './suite.js', './manifest.json', './icon-180.png', './icon-512.png',
+  './shared/data/basics.js', './shared/data/files.js', './shared/data/overthoughts.js', './shared/data/the-eye.js', './shared/data/journal-move.js', './shared/data/json-backup.js',
+  './shared/data/zip-format.js', './shared/data/zip-backup.js', './shared/data/zip-restore.js', './shared/data/links.js', './shared/data/df-data.js',
   './ref/fonts/klee-one-latin.woff', './ref/fonts/figtree-latin.woff2', './ref/fonts/archivo-black-latin.woff2',
   './ref/art/ocean-cover.webp', './ref/art/ocean-block.webp',
   './the-eye/art/df-mango-cover.webp', './the-eye/art/df-mango-block.webp',

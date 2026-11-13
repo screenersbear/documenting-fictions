@@ -1,4 +1,4 @@
-// overthoughts/js/store.js: Overthoughts' entries, photos and reviews in its own
+// overthoughts/data/store.js: Overthoughts' entries, photos and reviews in its own
 // database, plus the small helpers that read entries and dates.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { freshIndexedDB, fakeDFData, rows, getOne, NOW, TODAY } from './fake-df-data.mjs';
@@ -10,7 +10,7 @@ beforeEach(async () => {
   D = fakeDFData();
   window.DFData = D;
   vi.resetModules();
-  store = await import('../../../overthoughts/js/store.js');
+  store = await import('../../../overthoughts/data/store.js');
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -45,7 +45,7 @@ describe('loading the module', () => {
   it('fails without df-data.js loaded first', async () => {
     delete window.DFData;
     vi.resetModules();
-    await rejectsWith(import('../../../overthoughts/js/store.js'), TypeError);
+    await rejectsWith(import('../../../overthoughts/data/store.js'), TypeError);
   });
   it('hands on df-data.js\'s hasText as it is', () => {
     expect(store.hasText).toBe(D.hasText);

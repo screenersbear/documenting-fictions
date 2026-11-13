@@ -1,11 +1,11 @@
-// overthoughts/js/nav.js: Back from an entry or a review goes back in history
+// overthoughts/components/nav.js: Back from an entry or a review goes back in history
 // once the app has moved inside itself, or to the section's own hash otherwise.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 let nav;
 beforeEach(async () => {
   vi.resetModules(); // `moves` lives in the module: start each test from a fresh one
-  nav = await import('../../../overthoughts/js/nav.js');
+  nav = await import('../../../overthoughts/components/nav.js');
   location.hash = '';
 });
 
@@ -47,7 +47,7 @@ describe('moved', () => {
     const spy = vi.spyOn(history, 'back').mockImplementation(() => {});
     nav.moved();
     vi.resetModules();
-    const fresh = await import('../../../overthoughts/js/nav.js');
+    const fresh = await import('../../../overthoughts/components/nav.js');
     fresh.back('#/entries');
     expect(spy).not.toHaveBeenCalled();
     expect(location.hash).toBe('#/entries');
