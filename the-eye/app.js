@@ -151,6 +151,7 @@
   window.EyeParts.addAppMenuDeleteAll(ed);
   window.EyeParts.addAppMenuBackup(ed);
   window.EyeParts.addAppMenuRestore(ed);
+  window.EyeParts.addStatsWords(ed);
   window.EyeParts.addStatsTab(ed);
   window.EyeParts.addStatsRegionsMap(ed);
   window.EyeParts.addStatsPages(ed);

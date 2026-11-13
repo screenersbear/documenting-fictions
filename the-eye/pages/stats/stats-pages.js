@@ -1,15 +1,39 @@
-// The Stats tab's pages: swiping between them, the dots, the year filters, drawing it.
+// The Stats tab's pages, one chart each: its name, a sentence about it
+// (components/stats-words.js), the sliced circle and the legend; swiping
+// between them, "1 of 5" and the dots, the year, drawing it.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addStatsPages = function addStatsPages(ed) {
-  Object.assign(ed, { renderStatsDots, updateStatsCarouselHeight, positionStatsTrack, renderStats, openStatsDetail, closeStatsDetail });
+  Object.assign(ed, { renderStatsDots, updateStatsCarouselHeight, positionStatsTrack, renderStats, openStatsDetail, closeStatsDetail, statsPageHead, statsLegendRow });
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
+  const CHEVRON_DOWN = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
+
+  // The chart's name and the one line about it.
+  function statsPageHead(title, sentence) {
+    return `<h2 class="stats-page-title">${ed.escapeHtml(title)}</h2>`
+      + (sentence ? `<p class="stats-sentence">${ed.escapeHtml(sentence)}</p>` : '');
+  }
+
+  // One legend row: swatch, name, percent, how many, and a chevron (it
+  // opens the shoots behind it).
+  function statsLegendRow(s, cls = '', color = s.color) {
+    return `
+      <button type="button" class="stats-legend-row ${cls}" data-key="${ed.escapeHtml(String(s.key))}">
+        <span class="legend-swatch${color ? '' : ' legend-swatch-blank'}"${color ? ` style="background:${color}"` : ''}></span>
+        <span class="legend-label">${ed.escapeHtml(s.label)}</span>
+        <span class="legend-pct">${s.pct}%</span>
+        <span class="legend-count">${s.value}</span>
+        <span class="legend-chevron">${CHEVRON}</span>
+      </button>`;
+  }
+
   function renderStatsPage(page, data) {
     const total = data.reduce((sum, d) => sum + d.value, 0);
     if (total === 0) {
       return {
         html: `
           <div class="stats-page" data-key="${page.key}">
-            <h2 class="stats-page-title">${ed.escapeHtml(page.title)}</h2>
+            ${statsPageHead(page.title, '')}
             <p class="empty-hint">Not enough data yet.</p>
           </div>
         `,
@@ -17,19 +41,12 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
       };
     }
     const { pathsHtml, slices } = ed.buildPieSVG(data);
-    const legendHtml = slices.map(s => `
-      <button type="button" class="stats-legend-row" data-key="${ed.escapeHtml(String(s.key))}">
-        <span class="legend-swatch" style="background:${s.color}"></span>
-        <span class="legend-label">${ed.escapeHtml(s.label)}</span>
-        <span class="legend-pct">${s.pct}%</span>
-      </button>
-    `).join('');
     return {
       html: `
         <div class="stats-page" data-key="${page.key}">
-          <h2 class="stats-page-title">${ed.escapeHtml(page.title)}</h2>
-          <svg class="pie-chart" viewBox="0 0 200 200">${pathsHtml}</svg>
-          <div class="stats-legend">${legendHtml}</div>
+          ${statsPageHead(page.title, ed.statsSentence(page.key, data))}
+          <svg class="pie-chart" viewBox="0 0 200 200" aria-hidden="true">${pathsHtml}</svg>
+          <div class="stats-legend">${slices.map(s => statsLegendRow(s)).join('')}</div>
         </div>
       `,
       slices,
@@ -38,6 +55,8 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
 
   const statsCarousel = document.getElementById('statsCarousel'); ed.statsCarousel = statsCarousel;
   const statsDotsEl = document.getElementById('statsDots');
+  const statsCountEl = document.getElementById('statsPageCount');
+  const statsHintEl = document.getElementById('statsSwipeHint');
   const statsYearFiltersEl = document.getElementById('statsYearFilters');
 
   // Which page is showing. Tracked directly rather than read back off a
@@ -46,8 +65,16 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
   ed.statsPageIdx = 0;
   let statsSlideLocked = false;
 
+  // "1 of 5", the dots, and which chart a swipe brings next.
   function renderStatsDots() {
-    statsDotsEl.innerHTML = ed.STATS_PAGES.map((p, i) => `<span class="stats-dot ${i === ed.statsPageIdx ? 'active' : ''}"></span>`).join('');
+    const pages = ed.STATS_PAGES;
+    const at = ed.statsPageIdx;
+    statsDotsEl.innerHTML = pages.map((p, i) => `<span class="stats-dot ${i === at ? 'active' : ''}"></span>`).join('');
+    statsCountEl.textContent = `${at + 1} of ${pages.length}`;
+    const next = pages[at + 1];
+    const back = pages[at - 1];
+    statsHintEl.textContent = next ? `Swipe the chart for ${next.title.toLowerCase()}` : back ? `Swipe back for ${back.title.toLowerCase()}` : '';
+    statsHintEl.hidden = !next && !back;
   }
 
   // A horizontal flex row's own height, left to auto, always matches its
@@ -72,19 +99,21 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
     ed.turnScreenPage('stats', ed.statsFlat().findIndex(p => p.stat === clamped));
   }
 
-  // A page only changes on a clear, mostly-horizontal swipe, judged when the
-  // finger lifts — the page never follows the finger sideways, so nothing
+  // A swipe anywhere in Stats changes the chart (the navigator changes
+  // sections), and stops at the first and last. A page only changes on a
+  // clear, mostly-horizontal swipe, judged when the finger lifts — the page never follows the finger sideways, so nothing
   // from the next page slides partway into view. Same thresholds as the
   // tab-to-tab swipe. The world map scrolls sideways on its own, so a swipe
   // that starts on it only turns the page once the map is already at its
   // edge in that direction (mirroring how a scroll would chain).
   (function setupStatsSwipe() {
+    const statsView = document.getElementById('view-stats');
     let startX = null;
     let startY = null;
     let mapEdges = null;
 
-    statsCarousel.addEventListener('touchstart', (e) => {
-      if (e.touches.length !== 1) { startX = null; return; }
+    statsView.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1 || ed.anyPopupOpen()) { startX = null; return; }
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       const map = e.target.closest('.world-map-scroll');
@@ -93,7 +122,7 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
         : null;
     }, { passive: true });
 
-    statsCarousel.addEventListener('touchend', (e) => {
+    statsView.addEventListener('touchend', (e) => {
       if (startX === null) return;
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
@@ -105,10 +134,10 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
       // One page per swipe: further swipes wait until this one has landed.
       statsSlideLocked = true;
       setTimeout(() => { statsSlideLocked = false; }, 350);
-      ed.stepScreenPage(dir);
+      goToStatsPage(ed.statsPageIdx + dir);
     }, { passive: true });
 
-    statsCarousel.addEventListener('touchcancel', () => { startX = null; }, { passive: true });
+    statsView.addEventListener('touchcancel', () => { startX = null; }, { passive: true });
   })();
 
   // Delegated (survives renderStats() rebuilding the carousel's innerHTML on
@@ -135,7 +164,10 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
     const chips = [...sortedYears.map(y => ({ key: y, label: y })), { key: 'all', label: 'All time' }];
     statsYearFiltersEl.innerHTML = chips.map(c => `<button type="button" class="chip ${c.key === ed.statsYearFilter ? 'active' : ''}" data-year="${c.key}">${ed.escapeHtml(c.label)}</button>`).join('');
     const activeChip = chips.find(c => c.key === ed.statsYearFilter);
-    document.getElementById('statsYearFilterToggle').textContent = `Filter: ${activeChip ? activeChip.label : ed.statsYearFilter}`;
+    const yearBtn = document.getElementById('statsYearFilterToggle');
+    const label = activeChip ? activeChip.label : ed.statsYearFilter;
+    yearBtn.innerHTML = `${ed.escapeHtml(label)} ${CHEVRON_DOWN}`;
+    yearBtn.setAttribute('aria-label', `Year: ${label}`);
   }
 
   document.getElementById('statsYearFilterToggle').addEventListener('click', () => {

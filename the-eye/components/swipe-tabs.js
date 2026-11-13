@@ -17,9 +17,9 @@ window.EyeParts.addSwipeTabs = function addSwipeTabs(ed) {
 
     document.addEventListener('touchstart', (e) => {
       if (e.touches.length !== 1 || anyModalOpen()) { tracking = false; return; }
-      // The stats carousel and the image viewer already own horizontal
+      // Stats (its charts) and the image viewer already own horizontal
       // swipes for their own paging — don't hijack those.
-      if (e.target.closest('#statsCarousel') || e.target.closest('.image-viewer-stage') || e.target.closest('.tabbar') || e.target.closest('.nb-page-num')) {
+      if (e.target.closest('#view-stats') || e.target.closest('.image-viewer-stage') || e.target.closest('.tabbar') || e.target.closest('.nb-page-num')) {
         tracking = false;
         return;
       }

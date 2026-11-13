@@ -291,6 +291,7 @@ built/app.js
   pages/app-menu/delete-all.js
   pages/app-menu/backup.js
   pages/app-menu/restore.js
+  components/stats-words.js
   pages/stats/stats-tab.js
   pages/stats/regions-map.js
   pages/stats/stats-pages.js

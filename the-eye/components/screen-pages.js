@@ -76,8 +76,7 @@ window.EyeParts.addScreenPages = function addScreenPages(ed) {
   };
 
   function statsAtoms(page) {
-    const title = page.querySelector('.stats-page-title');
-    const heads = title ? [title] : [];
+    const heads = [...page.querySelectorAll(':scope > .stats-page-title, :scope > .stats-sentence')];
     const atoms = [];
     const pie = page.querySelector(':scope > .pie-chart');
     if (pie) atoms.push({ el: pie, heads });
@@ -96,9 +95,9 @@ window.EyeParts.addScreenPages = function addScreenPages(ed) {
     return atoms;
   }
 
-  // Every breakdown is on the one page, one under another.
+  // One chart a page.
   function statsFlat() {
-    return ed.statsFlows.length ? [{ stat: 0, sub: 0 }] : [];
+    return ed.statsFlows.map((f, stat) => ({ stat, sub: 0 }));
   }
 
   function buildStatsFlows() {

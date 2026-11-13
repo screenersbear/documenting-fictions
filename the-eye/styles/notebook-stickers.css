@@ -119,7 +119,6 @@
 .chip { font-size: 15px; line-height: 20px; }
 h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group-heading.heading-navy { font-size: 17px; }
 .status-group-heading.archive-month-heading, .archive-month-heading.heading-yellow, .archive-month-heading.heading-navy { font-size: 15px; }
-.stats-legend-row { font-size: 15.5px; }
 #journalList h2.status-group-heading { font-size: 17px; }
 #journalList .log-week-heading { font-size: 15px; }
 #journalList .journal-entry-date { font-size: 14.5px; }

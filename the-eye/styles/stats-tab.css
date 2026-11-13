@@ -1,17 +1,22 @@
-/* ---- Stats tab ---- */
-.stats-fun-fact {
-  background: var(--ink);
-  color: var(--surface);
-  border-radius: var(--radius-3xl);
-  padding: 14px 16px;
-  font-size: 15px;
-  line-height: 1.4;
-  margin-bottom: 16px;
+/* The Stats tab, one chart a page (round 2, 05a-stats-status): the year at
+   the left and "1 of 5" with dots at the right; the chart's name and its
+   sentence; a 220px circle cut into flat, touching slices; the legend under
+   a rule (swatch, name, percent, count, chevron); which chart a swipe
+   brings next; the fun fact last. */
+.stats-head { display: flex; align-items: center; justify-content: space-between; margin: -6px 0 0; }
+.stats-year-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 44px; margin: 0 0 0 -8px; padding: 0 8px; border: 0; background: none;
+  font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); cursor: pointer;
 }
-
-.stats-fun-fact[hidden] {
-  display: none;
+.stats-year-btn svg, .legend-chevron svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.stats-count {
+  display: flex; align-items: center; gap: 10px; margin: 0;
+  font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums;
 }
+.stats-dots { display: flex; align-items: center; gap: 5px; }
+.stats-dot { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: #D6DADD; }
+.stats-dot.active { width: 8px; height: 8px; background: #313D45; }
+#statsYearFilters { margin: 4px 0 8px; }
 
 /* The carousel is a fixed window, not a scroller: nothing inside it ever
    scrolls by touch, so a horizontal drag can't drag the next page partway
@@ -19,141 +24,48 @@
    would reveal blank space below a short page). Pages sit in a track that
    slides by whole pages, one at a time, when JS registers a clear swipe (see
    setupStatsSwipe). touch-action leaves vertical panning to the page. */
-.stats-carousel {
-  overflow: hidden;
-  touch-action: pan-y;
-  margin: 0 -16px;
-  transition: height 0.2s ease;
-}
+.stats-carousel { overflow: hidden; touch-action: pan-y; margin: 0 -16px; transition: height 0.2s ease; }
+/* align-items keeps a short page from stretching to the tallest one; the
+   carousel's own height is set in JS to the page in view. */
+.stats-track { display: flex; align-items: flex-start; transition: transform 0.3s ease; }
+.stats-page { flex: 0 0 100%; width: 100%; box-sizing: border-box; padding: 0 16px; }
 
-.stats-track {
-  display: flex;
-  /* Without this, a flex row's default cross-axis stretch makes every page
-     exactly as tall as the tallest one — a short page (few categories)
-     would still be full of blank trailing space rather than ending where
-     its own content does. The carousel's own height is set in JS to the
-     page in view. */
-  align-items: flex-start;
-  transition: transform 0.3s ease;
-}
+.stats-page-title { margin: 8px 0 0; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); text-align: left; }
+.stats-sentence { margin: 4px 0 0; font: 300 22px/28px var(--ui); color: var(--text); }
 
-.stats-page {
-  flex: 0 0 100%;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
-  padding: 4px 16px 8px;
-}
+.pie-chart { display: block; width: 220px; height: 220px; max-width: calc(60 * var(--vw)); max-height: calc(60 * var(--vw)); margin: 22px auto 14px; }
+.pie-slice { cursor: pointer; }
 
-.stats-page-title {
-  font-size: 24px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text);
-  margin: 0;
-  text-align: center;
-}
-
-.pie-chart {
-  width: 210px;
-  height: 210px;
-  max-width: calc(68 * var(--vw));
-  max-height: calc(68 * var(--vw));
-}
-
-.pie-slice {
-  cursor: pointer;
-  stroke: var(--surface);
-  stroke-width: 2;
-}
-
-.stats-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-}
-
+.stats-legend { border-top: 1px solid #313D45; }
 .stats-legend-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 10px 14px;
-  font-family: var(--font-title);
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--text);
-  cursor: pointer;
-  width: 100%;
-  text-align: left;
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; margin: 0; padding: 0;
+  border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none;
+  font: 400 17px/22px var(--ui); color: var(--text); text-align: left; cursor: pointer;
 }
+.legend-swatch { flex-shrink: 0; box-sizing: border-box; width: 14px; height: 14px; border-radius: 0; }
+/* Cities never get their own colour on the map (only countries do): an
+   empty square instead of a colour keeps that clear. */
+.legend-swatch-blank { background: none; border: 1px solid #9AA3A8; }
+.legend-label { flex: 1 1 auto; min-width: 0; }
+.legend-pct { font: 500 12px/16px var(--ui); letter-spacing: .12em; color: var(--dim); font-variant-numeric: tabular-nums; }
+.legend-count { width: 28px; text-align: right; font-variant-numeric: tabular-nums; }
+.legend-chevron { display: inline-flex; color: #9AA3A8; }
 
-.legend-swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: var(--radius-xs);
-  flex-shrink: 0;
-}
+.stats-region-cities { display: flex; flex-direction: column; margin: 0 0 0 26px; }
+.stats-region-cities[hidden] { display: none; }
+.stats-legend-row-nested { min-height: 44px; font-size: 15px; }
 
-/* Cities never get their own color on the map (only countries do) — a
-   plain white/bordered swatch instead of a color keeps that clear. */
-.legend-swatch-blank {
-  background: #fff;
-  border: 1px solid var(--border);
-}
+/* An empty chart says so where its sentence would be. */
+.stats-page .empty-hint { margin: 4px 0 0; padding: 0; font: 300 22px/28px var(--ui); color: var(--dim); text-align: left; }
 
-.legend-label {
-  flex: 1;
-  text-transform: capitalize;
+.stats-swipe-hint {
+  margin: 16px 0 0; text-align: center;
+  font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim);
 }
+.stats-swipe-hint[hidden] { display: none; }
 
-.legend-pct {
-  color: var(--text-dim);
-  font-weight: 700;
+.stats-fun-fact {
+  margin: 20px 0 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; background: #fff;
+  font: 400 15px/21px var(--ui); color: var(--text);
 }
-
-.stats-region-cities {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 8px 0 0 16px;
-}
-
-.stats-region-cities[hidden] {
-  display: none;
-}
-
-.stats-legend-row-nested {
-  padding: 8px 12px;
-  font-size: 14px;
-}
-
-.stats-dots {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.stats-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--border);
-  transition: background 0.2s ease;
-  flex-shrink: 0;
-}
-
-.stats-dot.active {
-  background: var(--ink);
-}
-
-.stats-page .empty-hint {
-  text-align: center;
-  padding-top: 40px;
-}
+.stats-fun-fact[hidden] { display: none; }

@@ -55,7 +55,7 @@ window.EyeParts.addStatsRegionsMap = function addStatsRegionsMap(ed) {
       return {
         html: `
           <div class="stats-page stats-page-regions" data-key="regions">
-            <h2 class="stats-page-title">Regions</h2>
+            ${ed.statsPageHead('Regions', '')}
             <p class="empty-hint">Not enough data yet.</p>
           </div>
         `,
@@ -65,20 +65,10 @@ window.EyeParts.addStatsRegionsMap = function addStatsRegionsMap(ed) {
     const { slices } = ed.buildPieSVG(data);
     regionsSliceColors = Object.fromEntries(slices.map(s => [s.key, s.color]));
     const groupsHtml = data.map((d, i) => {
-      const cityRowsHtml = d.cities.map(c => `
-        <button type="button" class="stats-legend-row stats-legend-row-nested" data-key="${ed.escapeHtml(c.key)}">
-          <span class="legend-swatch legend-swatch-blank"></span>
-          <span class="legend-label">${ed.escapeHtml(c.label)}</span>
-          <span class="legend-pct">${c.pct}%</span>
-        </button>
-      `).join('');
+      const cityRowsHtml = d.cities.map(c => ed.statsLegendRow(c, 'stats-legend-row-nested', '')).join('');
       return `
         <div class="stats-region-group">
-          <button type="button" class="stats-legend-row stats-region-heading" data-key="${ed.escapeHtml(d.key)}">
-            <span class="legend-swatch" style="background:${slices[i].color}"></span>
-            <span class="legend-label">${ed.escapeHtml(d.label)}</span>
-            <span class="legend-pct">${slices[i].pct}%</span>
-          </button>
+          ${ed.statsLegendRow(slices[i], 'stats-region-heading')}
           <div class="stats-region-cities">${cityRowsHtml}</div>
         </div>
       `;
@@ -86,7 +76,7 @@ window.EyeParts.addStatsRegionsMap = function addStatsRegionsMap(ed) {
     return {
       html: `
         <div class="stats-page stats-page-regions" data-key="regions">
-          <h2 class="stats-page-title">Regions</h2>
+          ${ed.statsPageHead('Regions', ed.statsSentence('regions', data))}
           <div class="world-map-toolbar">
             <button type="button" class="map-zoom-btn" id="worldMapZoomOutBtn" aria-label="Zoom out">&minus;</button>
             <button type="button" class="map-zoom-btn" id="worldMapZoomInBtn" aria-label="Zoom in">+</button>

@@ -90,16 +90,16 @@ window.EyeParts.addCategories = function addCategories(ed) {
     localStorage.setItem(CATEGORY_VISIBILITY_KEY, JSON.stringify(categoryVisibility));
   }
 
-  // Tonally matched to the app's navy/mango-yellow brand pair: same
-  // mid-to-dark, non-neon register, cycled per pie in this fixed order.
+  // The chart slices, in this order (DESIGN.md 4.3, the mark colours): the
+  // app's navy and mango first, then the board's brights.
   const PIE_COLORS = [
-    '#ffd103', // mango yellow (accent)
     '#313d45', // navy (text)
-    '#c8683d', // terracotta
-    '#5b7c99', // dusty blue
-    '#5c8a72', // sage green
-    '#8a5a72', // plum
-    '#d9a441', // warm sand
+    '#ffd103', // mango yellow (accent)
+    '#0596ff', // sky
+    '#2c5e3c', // forest
+    '#f7a52b', // amber
+    '#a1062a', // crimson
+    '#e2e600', // chartreuse
     '#7d8a92', // slate
   ]; ed.PIE_COLORS = PIE_COLORS;
 

@@ -5406,16 +5406,16 @@ window.EyeParts.addCategories = function addCategories(ed) {
     localStorage.setItem(CATEGORY_VISIBILITY_KEY, JSON.stringify(categoryVisibility));
   }
 
-  // Tonally matched to the app's navy/mango-yellow brand pair: same
-  // mid-to-dark, non-neon register, cycled per pie in this fixed order.
+  // The chart slices, in this order (DESIGN.md 4.3, the mark colours): the
+  // app's navy and mango first, then the board's brights.
   const PIE_COLORS = [
-    '#ffd103', // mango yellow (accent)
     '#313d45', // navy (text)
-    '#c8683d', // terracotta
-    '#5b7c99', // dusty blue
-    '#5c8a72', // sage green
-    '#8a5a72', // plum
-    '#d9a441', // warm sand
+    '#ffd103', // mango yellow (accent)
+    '#0596ff', // sky
+    '#2c5e3c', // forest
+    '#f7a52b', // amber
+    '#a1062a', // crimson
+    '#e2e600', // chartreuse
     '#7d8a92', // slate
   ]; ed.PIE_COLORS = PIE_COLORS;
 
@@ -7575,8 +7575,7 @@ window.EyeParts.addScreenPages = function addScreenPages(ed) {
   };
 
   function statsAtoms(page) {
-    const title = page.querySelector('.stats-page-title');
-    const heads = title ? [title] : [];
+    const heads = [...page.querySelectorAll(':scope > .stats-page-title, :scope > .stats-sentence')];
     const atoms = [];
     const pie = page.querySelector(':scope > .pie-chart');
     if (pie) atoms.push({ el: pie, heads });
@@ -7595,9 +7594,9 @@ window.EyeParts.addScreenPages = function addScreenPages(ed) {
     return atoms;
   }
 
-  // Every breakdown is on the one page, one under another.
+  // One chart a page.
   function statsFlat() {
-    return ed.statsFlows.length ? [{ stat: 0, sub: 0 }] : [];
+    return ed.statsFlows.map((f, stat) => ({ stat, sub: 0 }));
   }
 
   function buildStatsFlows() {
@@ -20157,6 +20156,94 @@ window.EyeParts.addAppMenuRestore = function addAppMenuRestore(ed) {
 };
 ;
 
+// ---- components/stats-words.js ----
+// The one-line sentence over each chart on Stats ("Nine of fourteen shoots
+// delivered. Two are waiting on your edit."). A chart's rows in, words out
+// (no page, no saved data), so it's unit tested
+// (tests/unit/the-eye/stats-words.test.mjs).
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addStatsWords = function addStatsWords(ed) {
+  Object.assign(ed, { numberWord, statsSentence });
+  const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+    'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+  const IN_THE_EDIT = ['waiting_for_selects', 'editing', 'rough_cut', 'client_review', 'revisions'];
+  const NOT_A_PLACE = ['No location set', '__other_locations__'];
+
+  // Up to twenty in words, then figures.
+  function numberWord(n) {
+    return Number.isInteger(n) && n >= 0 && n < NUMBER_WORDS.length ? NUMBER_WORDS[n] : String(n);
+  }
+  const capital = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const count = (n, one, many) => `${numberWord(n)} ${n === 1 ? one : many}`;
+  const sum = rows => rows.reduce((total, d) => total + d.value, 0);
+
+  function status(rows) {
+    const total = sum(rows);
+    const delivered = sum(rows.filter(d => d.key === 'delivered'));
+    const edit = sum(rows.filter(d => IN_THE_EDIT.includes(d.key)));
+    const first = total === 1
+      ? (delivered ? 'Your one shoot is delivered.' : "Your one shoot isn't delivered yet.")
+      : `${capital(delivered ? numberWord(delivered) : 'none')} of ${numberWord(total)} shoots delivered.`;
+    if (!edit) return first;
+    return `${first} ${capital(numberWord(edit))} ${edit === 1 ? 'is' : 'are'} waiting on your edit.`;
+  }
+
+  // A kind of shoot as a countable noun: a row's `plural` ("wedding
+  // shoots"), else made from its label ("Content shoot" -> "content shoots").
+  const kinds = d => d.plural || d.label.toLowerCase().replace(/( shoot)?$/, ' shoots');
+  const aOrAn = words => `${/^[aeiou]/.test(words) ? 'an' : 'a'} ${words}`;
+
+  function categories(rows) {
+    const [top, next] = rows;
+    if (rows.length === 1 && top.value === 1) return `Your one shoot is ${aOrAn(kinds(top).replace(/s$/, ''))}.`;
+    if (rows.length === 1) return `${top.value === 2 ? 'Both' : `All ${numberWord(top.value)}`} are ${kinds(top)}.`;
+    if (next.value === top.value) return `${capital(kinds(top))} and ${kinds(next)} are level, ${numberWord(top.value)} each.`;
+    return `More ${kinds(top)} than anything else: ${numberWord(top.value)} of ${numberWord(sum(rows))}.`;
+  }
+
+  function team(rows) {
+    const roles = rows.filter(d => d.key !== '__none__');
+    if (!roles.length) return 'Just you on every shoot so far.';
+    const [top, next] = roles;
+    if (top.key === 'other') return 'Most of your team is listed as Other.';
+    const role = d => aOrAn(d.label.toLowerCase());
+    const level = next && next.value === top.value && next.key !== 'other';
+    return `You work with ${role(top)}${level ? ` and ${role(next)}` : ''} most often.`;
+  }
+
+  function locations(rows) {
+    const places = rows.filter(d => !NOT_A_PLACE.includes(d.key));
+    if (!places.length) return 'No locations set yet.';
+    const [top, next] = places;
+    if (top.value === 1) return places.length === 1 ? `One shoot so far, at ${top.label}.` : `${capital(numberWord(places.length))} places, one shoot each.`;
+    if (next && next.value === top.value) return `${top.label} and ${next.label} are level, ${numberWord(top.value)} shoots each.`;
+    return `${top.label} is where you shoot most: ${numberWord(top.value)} shoots.`;
+  }
+
+  function visualLanguages(rows) {
+    const [top, next] = rows;
+    if (next && next.value === top.value) return `${top.label} and ${next.label} come up most, on ${count(top.value, 'shoot', 'shoots')} each.`;
+    return `${top.label} comes up most, on ${count(top.value, 'shoot', 'shoots')}.`;
+  }
+
+  function regions(rows) {
+    if (rows.length === 1) return `Every shoot so far is in ${rows[0].label}.`;
+    if (rows[1].value === rows[0].value) return `Shot across ${numberWord(rows.length)} countries.`;
+    return `Shot across ${numberWord(rows.length)} countries, most in ${rows[0].label}.`;
+  }
+
+  const SENTENCES = { status, shootCategory: categories, teamMembers: team, location: locations, visualLanguage: visualLanguages, regions };
+
+  // `rows` as the chart draws them, most first: { key, label, value }.
+  function statsSentence(pageKey, rows) {
+    const say = SENTENCES[pageKey];
+    if (!say || !Array.isArray(rows) || !sum(rows)) return '';
+    return say(rows);
+  }
+};
+;
+
 // ---- pages/stats/stats-tab.js ----
 // The Stats tab: its charts and numbers.
 // (Loaded before app.js, which runs it in its turn.)
@@ -20176,7 +20263,7 @@ window.EyeParts.addStatsTab = function addStatsTab(ed) {
     return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y} Z`;
   }
 
-  const PIE_CX = 100, PIE_CY = 100, PIE_R = 90;
+  const PIE_CX = 100, PIE_CY = 100, PIE_R = 100;
 
   // Builds slice paths (a lone 100% slice is drawn as a near-full arc rather
   // than a <circle> so it can grow in with the same sweep animation as
@@ -20254,7 +20341,7 @@ window.EyeParts.addStatsTab = function addStatsTab(ed) {
       counts[key] = (counts[key] || 0) + 1;
     });
     const data = Object.entries(counts)
-      .map(([key, value]) => ({ key, label: ed.CATEGORY_LABELS[key] || 'Uncategorized', value }))
+      .map(([key, value]) => ({ key, label: ed.CATEGORY_LABELS[key] || 'Uncategorized', plural: ed.CATEGORY_PLURAL_LABELS[key], value }))
       .sort((a, b) => b.value - a.value);
     ed.statsSliceFilters.shootCategory = {};
     data.forEach(d => {
@@ -20341,9 +20428,9 @@ window.EyeParts.addStatsTab = function addStatsTab(ed) {
 
   const ALL_STATS_PAGES = [
     { key: 'status', title: 'Status', build: buildStatusStats },
-    { key: 'visualLanguage', title: 'Visual Languages', build: buildVisualLanguageStats },
-    { key: 'shootCategory', title: 'Shoot Categories', build: buildCategoryStats },
-    { key: 'teamMembers', title: 'Team Members', build: buildTeamStats },
+    { key: 'visualLanguage', title: 'Visual languages', build: buildVisualLanguageStats },
+    { key: 'shootCategory', title: 'Categories', build: buildCategoryStats },
+    { key: 'teamMembers', title: 'Team', build: buildTeamStats },
     { key: 'location', title: 'Locations', build: buildLocationStats },
     { key: 'regions', title: 'Regions', custom: true },
   ];
@@ -20413,7 +20500,7 @@ window.EyeParts.addStatsRegionsMap = function addStatsRegionsMap(ed) {
       return {
         html: `
           <div class="stats-page stats-page-regions" data-key="regions">
-            <h2 class="stats-page-title">Regions</h2>
+            ${ed.statsPageHead('Regions', '')}
             <p class="empty-hint">Not enough data yet.</p>
           </div>
         `,
@@ -20423,20 +20510,10 @@ window.EyeParts.addStatsRegionsMap = function addStatsRegionsMap(ed) {
     const { slices } = ed.buildPieSVG(data);
     regionsSliceColors = Object.fromEntries(slices.map(s => [s.key, s.color]));
     const groupsHtml = data.map((d, i) => {
-      const cityRowsHtml = d.cities.map(c => `
-        <button type="button" class="stats-legend-row stats-legend-row-nested" data-key="${ed.escapeHtml(c.key)}">
-          <span class="legend-swatch legend-swatch-blank"></span>
-          <span class="legend-label">${ed.escapeHtml(c.label)}</span>
-          <span class="legend-pct">${c.pct}%</span>
-        </button>
-      `).join('');
+      const cityRowsHtml = d.cities.map(c => ed.statsLegendRow(c, 'stats-legend-row-nested', '')).join('');
       return `
         <div class="stats-region-group">
-          <button type="button" class="stats-legend-row stats-region-heading" data-key="${ed.escapeHtml(d.key)}">
-            <span class="legend-swatch" style="background:${slices[i].color}"></span>
-            <span class="legend-label">${ed.escapeHtml(d.label)}</span>
-            <span class="legend-pct">${slices[i].pct}%</span>
-          </button>
+          ${ed.statsLegendRow(slices[i], 'stats-region-heading')}
           <div class="stats-region-cities">${cityRowsHtml}</div>
         </div>
       `;
@@ -20444,7 +20521,7 @@ window.EyeParts.addStatsRegionsMap = function addStatsRegionsMap(ed) {
     return {
       html: `
         <div class="stats-page stats-page-regions" data-key="regions">
-          <h2 class="stats-page-title">Regions</h2>
+          ${ed.statsPageHead('Regions', ed.statsSentence('regions', data))}
           <div class="world-map-toolbar">
             <button type="button" class="map-zoom-btn" id="worldMapZoomOutBtn" aria-label="Zoom out">&minus;</button>
             <button type="button" class="map-zoom-btn" id="worldMapZoomInBtn" aria-label="Zoom in">+</button>
@@ -20611,18 +20688,42 @@ window.EyeParts.addStatsRegionsMap = function addStatsRegionsMap(ed) {
 ;
 
 // ---- pages/stats/stats-pages.js ----
-// The Stats tab's pages: swiping between them, the dots, the year filters, drawing it.
+// The Stats tab's pages, one chart each: its name, a sentence about it
+// (components/stats-words.js), the sliced circle and the legend; swiping
+// between them, "1 of 5" and the dots, the year, drawing it.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addStatsPages = function addStatsPages(ed) {
-  Object.assign(ed, { renderStatsDots, updateStatsCarouselHeight, positionStatsTrack, renderStats, openStatsDetail, closeStatsDetail });
+  Object.assign(ed, { renderStatsDots, updateStatsCarouselHeight, positionStatsTrack, renderStats, openStatsDetail, closeStatsDetail, statsPageHead, statsLegendRow });
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
+  const CHEVRON_DOWN = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
+
+  // The chart's name and the one line about it.
+  function statsPageHead(title, sentence) {
+    return `<h2 class="stats-page-title">${ed.escapeHtml(title)}</h2>`
+      + (sentence ? `<p class="stats-sentence">${ed.escapeHtml(sentence)}</p>` : '');
+  }
+
+  // One legend row: swatch, name, percent, how many, and a chevron (it
+  // opens the shoots behind it).
+  function statsLegendRow(s, cls = '', color = s.color) {
+    return `
+      <button type="button" class="stats-legend-row ${cls}" data-key="${ed.escapeHtml(String(s.key))}">
+        <span class="legend-swatch${color ? '' : ' legend-swatch-blank'}"${color ? ` style="background:${color}"` : ''}></span>
+        <span class="legend-label">${ed.escapeHtml(s.label)}</span>
+        <span class="legend-pct">${s.pct}%</span>
+        <span class="legend-count">${s.value}</span>
+        <span class="legend-chevron">${CHEVRON}</span>
+      </button>`;
+  }
+
   function renderStatsPage(page, data) {
     const total = data.reduce((sum, d) => sum + d.value, 0);
     if (total === 0) {
       return {
         html: `
           <div class="stats-page" data-key="${page.key}">
-            <h2 class="stats-page-title">${ed.escapeHtml(page.title)}</h2>
+            ${statsPageHead(page.title, '')}
             <p class="empty-hint">Not enough data yet.</p>
           </div>
         `,
@@ -20630,19 +20731,12 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
       };
     }
     const { pathsHtml, slices } = ed.buildPieSVG(data);
-    const legendHtml = slices.map(s => `
-      <button type="button" class="stats-legend-row" data-key="${ed.escapeHtml(String(s.key))}">
-        <span class="legend-swatch" style="background:${s.color}"></span>
-        <span class="legend-label">${ed.escapeHtml(s.label)}</span>
-        <span class="legend-pct">${s.pct}%</span>
-      </button>
-    `).join('');
     return {
       html: `
         <div class="stats-page" data-key="${page.key}">
-          <h2 class="stats-page-title">${ed.escapeHtml(page.title)}</h2>
-          <svg class="pie-chart" viewBox="0 0 200 200">${pathsHtml}</svg>
-          <div class="stats-legend">${legendHtml}</div>
+          ${statsPageHead(page.title, ed.statsSentence(page.key, data))}
+          <svg class="pie-chart" viewBox="0 0 200 200" aria-hidden="true">${pathsHtml}</svg>
+          <div class="stats-legend">${slices.map(s => statsLegendRow(s)).join('')}</div>
         </div>
       `,
       slices,
@@ -20651,6 +20745,8 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
 
   const statsCarousel = document.getElementById('statsCarousel'); ed.statsCarousel = statsCarousel;
   const statsDotsEl = document.getElementById('statsDots');
+  const statsCountEl = document.getElementById('statsPageCount');
+  const statsHintEl = document.getElementById('statsSwipeHint');
   const statsYearFiltersEl = document.getElementById('statsYearFilters');
 
   // Which page is showing. Tracked directly rather than read back off a
@@ -20659,8 +20755,16 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
   ed.statsPageIdx = 0;
   let statsSlideLocked = false;
 
+  // "1 of 5", the dots, and which chart a swipe brings next.
   function renderStatsDots() {
-    statsDotsEl.innerHTML = ed.STATS_PAGES.map((p, i) => `<span class="stats-dot ${i === ed.statsPageIdx ? 'active' : ''}"></span>`).join('');
+    const pages = ed.STATS_PAGES;
+    const at = ed.statsPageIdx;
+    statsDotsEl.innerHTML = pages.map((p, i) => `<span class="stats-dot ${i === at ? 'active' : ''}"></span>`).join('');
+    statsCountEl.textContent = `${at + 1} of ${pages.length}`;
+    const next = pages[at + 1];
+    const back = pages[at - 1];
+    statsHintEl.textContent = next ? `Swipe the chart for ${next.title.toLowerCase()}` : back ? `Swipe back for ${back.title.toLowerCase()}` : '';
+    statsHintEl.hidden = !next && !back;
   }
 
   // A horizontal flex row's own height, left to auto, always matches its
@@ -20685,19 +20789,21 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
     ed.turnScreenPage('stats', ed.statsFlat().findIndex(p => p.stat === clamped));
   }
 
-  // A page only changes on a clear, mostly-horizontal swipe, judged when the
-  // finger lifts — the page never follows the finger sideways, so nothing
+  // A swipe anywhere in Stats changes the chart (the navigator changes
+  // sections), and stops at the first and last. A page only changes on a
+  // clear, mostly-horizontal swipe, judged when the finger lifts — the page never follows the finger sideways, so nothing
   // from the next page slides partway into view. Same thresholds as the
   // tab-to-tab swipe. The world map scrolls sideways on its own, so a swipe
   // that starts on it only turns the page once the map is already at its
   // edge in that direction (mirroring how a scroll would chain).
   (function setupStatsSwipe() {
+    const statsView = document.getElementById('view-stats');
     let startX = null;
     let startY = null;
     let mapEdges = null;
 
-    statsCarousel.addEventListener('touchstart', (e) => {
-      if (e.touches.length !== 1) { startX = null; return; }
+    statsView.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1 || ed.anyPopupOpen()) { startX = null; return; }
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       const map = e.target.closest('.world-map-scroll');
@@ -20706,7 +20812,7 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
         : null;
     }, { passive: true });
 
-    statsCarousel.addEventListener('touchend', (e) => {
+    statsView.addEventListener('touchend', (e) => {
       if (startX === null) return;
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
@@ -20718,10 +20824,10 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
       // One page per swipe: further swipes wait until this one has landed.
       statsSlideLocked = true;
       setTimeout(() => { statsSlideLocked = false; }, 350);
-      ed.stepScreenPage(dir);
+      goToStatsPage(ed.statsPageIdx + dir);
     }, { passive: true });
 
-    statsCarousel.addEventListener('touchcancel', () => { startX = null; }, { passive: true });
+    statsView.addEventListener('touchcancel', () => { startX = null; }, { passive: true });
   })();
 
   // Delegated (survives renderStats() rebuilding the carousel's innerHTML on
@@ -20748,7 +20854,10 @@ window.EyeParts.addStatsPages = function addStatsPages(ed) {
     const chips = [...sortedYears.map(y => ({ key: y, label: y })), { key: 'all', label: 'All time' }];
     statsYearFiltersEl.innerHTML = chips.map(c => `<button type="button" class="chip ${c.key === ed.statsYearFilter ? 'active' : ''}" data-year="${c.key}">${ed.escapeHtml(c.label)}</button>`).join('');
     const activeChip = chips.find(c => c.key === ed.statsYearFilter);
-    document.getElementById('statsYearFilterToggle').textContent = `Filter: ${activeChip ? activeChip.label : ed.statsYearFilter}`;
+    const yearBtn = document.getElementById('statsYearFilterToggle');
+    const label = activeChip ? activeChip.label : ed.statsYearFilter;
+    yearBtn.innerHTML = `${ed.escapeHtml(label)} ${CHEVRON_DOWN}`;
+    yearBtn.setAttribute('aria-label', `Year: ${label}`);
   }
 
   document.getElementById('statsYearFilterToggle').addEventListener('click', () => {
@@ -24791,9 +24900,9 @@ window.EyeParts.addSwipeTabs = function addSwipeTabs(ed) {
 
     document.addEventListener('touchstart', (e) => {
       if (e.touches.length !== 1 || anyModalOpen()) { tracking = false; return; }
-      // The stats carousel and the image viewer already own horizontal
+      // Stats (its charts) and the image viewer already own horizontal
       // swipes for their own paging — don't hijack those.
-      if (e.target.closest('#statsCarousel') || e.target.closest('.image-viewer-stage') || e.target.closest('.tabbar') || e.target.closest('.nb-page-num')) {
+      if (e.target.closest('#view-stats') || e.target.closest('.image-viewer-stage') || e.target.closest('.tabbar') || e.target.closest('.nb-page-num')) {
         tracking = false;
         return;
       }
@@ -25287,6 +25396,7 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addAppMenuDeleteAll(ed);
   window.EyeParts.addAppMenuBackup(ed);
   window.EyeParts.addAppMenuRestore(ed);
+  window.EyeParts.addStatsWords(ed);
   window.EyeParts.addStatsTab(ed);
   window.EyeParts.addStatsRegionsMap(ed);
   window.EyeParts.addStatsPages(ed);

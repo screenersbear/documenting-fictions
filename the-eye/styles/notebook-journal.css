@@ -30,8 +30,5 @@
 #journalList .log-no-takeaways { margin: 0; line-height: 28px; font-size: 15px; }
 #journalList .log-shoots li, #journalList .log-takeaways li { padding: 0; margin: 0; }
 
-/* ---- Stats and Archive ---- */
-.stats-fun-fact { background: none; color: var(--text); font-family: var(--font-title); font-size: 16px; text-align: center; padding: 11px 6px 0; border: none; }
-.stats-page-title { font-family: var(--font-head); font-weight: 400; font-size: 19px; text-transform: none; letter-spacing: 0; }
-.stats-legend-row { background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; font-family: var(--font-body); font-size: 14px; font-weight: 400; letter-spacing: 0; min-height: 40px; padding: 8px 0; text-transform: none; }
+/* ---- Archive (Stats is in its round 2 look: styles/stats-tab.css) ---- */
 .archive-slideshow { border: none; border-radius: 2px; }

@@ -16,7 +16,7 @@ window.EyeParts.addStatsTab = function addStatsTab(ed) {
     return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y} Z`;
   }
 
-  const PIE_CX = 100, PIE_CY = 100, PIE_R = 90;
+  const PIE_CX = 100, PIE_CY = 100, PIE_R = 100;
 
   // Builds slice paths (a lone 100% slice is drawn as a near-full arc rather
   // than a <circle> so it can grow in with the same sweep animation as
@@ -94,7 +94,7 @@ window.EyeParts.addStatsTab = function addStatsTab(ed) {
       counts[key] = (counts[key] || 0) + 1;
     });
     const data = Object.entries(counts)
-      .map(([key, value]) => ({ key, label: ed.CATEGORY_LABELS[key] || 'Uncategorized', value }))
+      .map(([key, value]) => ({ key, label: ed.CATEGORY_LABELS[key] || 'Uncategorized', plural: ed.CATEGORY_PLURAL_LABELS[key], value }))
       .sort((a, b) => b.value - a.value);
     ed.statsSliceFilters.shootCategory = {};
     data.forEach(d => {
@@ -181,9 +181,9 @@ window.EyeParts.addStatsTab = function addStatsTab(ed) {
 
   const ALL_STATS_PAGES = [
     { key: 'status', title: 'Status', build: buildStatusStats },
-    { key: 'visualLanguage', title: 'Visual Languages', build: buildVisualLanguageStats },
-    { key: 'shootCategory', title: 'Shoot Categories', build: buildCategoryStats },
-    { key: 'teamMembers', title: 'Team Members', build: buildTeamStats },
+    { key: 'visualLanguage', title: 'Visual languages', build: buildVisualLanguageStats },
+    { key: 'shootCategory', title: 'Categories', build: buildCategoryStats },
+    { key: 'teamMembers', title: 'Team', build: buildTeamStats },
     { key: 'location', title: 'Locations', build: buildLocationStats },
     { key: 'regions', title: 'Regions', custom: true },
   ];

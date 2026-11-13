@@ -119,11 +119,16 @@
       <svg class="band-mark" viewBox="0 0 80 40" aria-hidden="true"><circle cx="40" cy="40" r="35" fill="none" stroke-width="10"/><circle cx="40" cy="40" r="13.3"/></svg>
       <p class="band-line"><b>The Eye</b><span class="band-rule"></span><span class="band-date"></span></p>
     </header>
-    <button type="button" class="filter-toggle" id="statsYearFilterToggle">Filter: Year</button>
+    <!-- One chart per page (pages/stats/stats-pages.js): the year at the
+         left, which chart this is at the right; a swipe inside changes it. -->
+    <div class="stats-head">
+      <button type="button" class="stats-year-btn" id="statsYearFilterToggle">2026</button>
+      <p class="stats-count"><span id="statsPageCount"></span><span class="stats-dots" id="statsDots" aria-hidden="true"></span></p>
+    </div>
     <div class="filters" id="statsYearFilters" hidden></div>
-    <div id="statsFunFact" class="stats-fun-fact" hidden></div>
     <div class="stats-carousel" id="statsCarousel"></div>
-    <div class="stats-dots" id="statsDots"></div>
+    <p class="stats-swipe-hint" id="statsSwipeHint" hidden></p>
+    <div id="statsFunFact" class="stats-fun-fact" hidden></div>
   </section>
 
   <!-- ============ THE SECTION BAR (styles/tab-bar.css): a mark and a name for each section ============ -->
