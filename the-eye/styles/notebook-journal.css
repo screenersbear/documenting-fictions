@@ -9,9 +9,6 @@
   background-position: 0 calc(var(--nb-top) + 10px);
 }
 #view-journal::before { content: ''; position: absolute; top: 0; bottom: 0; left: 36px; width: 2px; background: #d9534f; }
-#view-journal .topbar { position: absolute; top: calc(var(--nb-top) + 10px); right: 28px; height: 56px; padding: 0; margin: 0; border: none; z-index: 1; }
-#view-journal .topbar h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-#view-journal .topbar .icon-btn { position: static; margin-top: 6px; }
 .journal-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 56px; padding-right: 38px; margin: 0; }
 .journal-toolbar .filter-toggle { width: auto; line-height: 28px; }
 #journalList h2.status-group-heading { border: none; line-height: 28px; padding: 0; font-size: 13px; }

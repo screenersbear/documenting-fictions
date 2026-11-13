@@ -17,25 +17,39 @@
   --display: "Archivo Black", "Arial Black", "Helvetica Neue", Arial, sans-serif;
   --font-hand: var(--ui); --font-body: var(--ui); --font-title: var(--ui);
   --head: var(--display); --font-head: var(--display);
-  --band: var(--text); /* berry blade black */
-  --band-ink: #ffd100; /* mango yellow */
 }
 body { font-family: var(--ui); }
 
-/* 1: the band, from the top of the screen to under the title. */
-.topbar {
-  margin: calc(-1 * (var(--nb-top) + 12px)) calc(-1 * var(--page-side)) 14px;
-  padding: calc(var(--nb-top) + 14px) var(--page-side) 14px;
-  border-bottom: none; background: var(--band); color: var(--band-ink);
+/* 1: the band (DESIGN.md 9.1), on every section: the notebook's colour from
+   the top of the screen, 92px under the safe area, with its grain; the title
+   (34px light capitals) and the ring buttons on one line; the rising mark at
+   its foot; the label line (the place, a hairline, the date); then four
+   steps fading into the paper. The page starts 53px under the band. */
+.band {
+  position: relative; display: flex; align-items: flex-start; gap: 8px; box-sizing: border-box;
+  height: calc(var(--nb-top) + 92px); margin: calc(-1 * (var(--nb-top) + 12px)) calc(-1 * var(--page-side)) 53px;
+  padding: calc(var(--nb-top) + 8px) 8px 0 16px;
+  background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal; color: var(--partner);
 }
-.hero-band .topbar { padding: calc(var(--nb-top) + 14px) var(--page-side) 14px; }
-/* (:not(#df-x):not(#df-y) only lifts these over the headers rule above, which has an id in it) */
-:is(.brand-title, .topbar h1):not(#df-x):not(#df-y) { font-family: var(--display) !important; font-weight: 400; font-size: 24px; line-height: 32px; letter-spacing: .02em !important; color: var(--band-ink); }
-.topbar :is(.app-menu-btn, .icon-btn), .brand-eye { color: var(--band-ink); }
-.topbar > .icon-btn { top: calc(var(--nb-top) + 8px); right: calc(var(--page-side) - 8px); } /* level with the title, as before the band */
-/* Weekly gets its title back, in its band like every other section's. */
-#view-journal .topbar { position: relative; top: auto; right: auto; height: auto; z-index: auto; margin: calc(-1 * (var(--nb-top) + 12px)) calc(-1 * var(--page-side)) 4px; padding: calc(var(--nb-top) + 14px) var(--page-side) 14px; border: none; }
-#view-journal .topbar h1 { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+.band::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 41.4px; pointer-events: none;
+  background: linear-gradient(var(--step1) 0 14px, var(--step2) 14px 25.2px, var(--step3) 25.2px 34.2px, var(--step4) 34.2px); }
+.band-title:not(#df-x):not(#df-y) { flex: 1; min-width: 0; margin: 0; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;
+  font: 300 34px/40px var(--ui) !important; letter-spacing: .04em !important; text-transform: uppercase; color: var(--partner); }
+.band-btns { display: flex; flex: none; }
+.band-mark { position: absolute; left: 16px; bottom: 0; width: 80px; height: 40px; pointer-events: none; }
+.band-mark circle:first-child { stroke: var(--partner); }
+.band-mark circle:last-child { fill: var(--paper); }
+.band-line { position: absolute; left: 108px; right: 16px; top: calc(var(--nb-top) + 68px); display: flex; align-items: center; gap: 10px; margin: 0;
+  font: 500 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: var(--band-small); }
+.band-line b { font-weight: 700; }
+.band-rule { flex: 1; height: 1px; background: var(--partner); }
+.band-date { font-variant-numeric: tabular-nums; }
+/* A ring button (DESIGN.md 8): a 44px target, a 40px ring 1.5px thick. */
+.ring-btn { display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; cursor: pointer; }
+.ring-btn > span { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
+.ring-btn svg { display: block; }
+/* The notebooks button is the suite's: a copy of The Eye on its own has no shelf to go back to. */
+html:not(.df-suite) .band-books { display: none; }
 
 /* 2: headings on the page, and the titles of sheets. */
 :is(.section-block h2, .shoot-section-heading, .status-group-heading, .log-week-heading, .stats-page-title, .modal h2, .app-menu-header, .shoot-wizard-head h2, .shoot-mode-review h2):not(#df-x):not(#df-y), :is(#shootModeReviewTitle, #mondayBriefTitle):not(#df-x) {
@@ -62,4 +76,3 @@ body { font-family: var(--ui); }
 /* What you wrote: a shoot's name in its rows. */
 .shoot-row-title { font-family: var(--ui); font-weight: 600; font-size: 19px; line-height: 1.25; }
 .stat-num { font-family: var(--display); font-size: 27px; }
-.new-shoot-cta { font-family: var(--display); font-weight: 400; font-size: 17px; letter-spacing: .06em; text-transform: uppercase; }

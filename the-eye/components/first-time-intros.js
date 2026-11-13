@@ -18,7 +18,7 @@ window.EyeParts.addFirstTimeIntros = function addFirstTimeIntros(ed) {
       text: "shoots move here once you mark them complete, keeping your active list clean while still letting you look back. This is also where you'll find backup and restore for all your data.",
     },
     journal2: {
-      title: 'Weekly',
+      title: 'Reflections',
       text: "one running page with two kinds of entries. The weekly log fills itself in for every week you shoot: which shoots happened, their categories, and the lessons learned pulled from each shoot's reflection. Tap any shoot or takeaway to see where it came from. Tap '+' to add your own reflection anytime, and tag entries with hashtags so you can find them again later. The table of contents jumps you to any entry or week.",
     },
     stats: {

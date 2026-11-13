@@ -165,4 +165,5 @@
   window.EyeParts.addPullToRefresh(ed);
   window.EyeParts.addSwipeTabs(ed);
   window.EyeParts.addNavigator(ed);
+  window.EyeParts.addBand(ed);
 })();

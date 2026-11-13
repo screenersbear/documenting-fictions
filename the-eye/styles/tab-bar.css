@@ -1,15 +1,28 @@
-/* ---- Tab bar ---- */
+/* ---- The section bar (DESIGN.md 9.4) ----
+   On paper, a 1px line on top: each section's mark (28px) over its name
+   (10px capitals). The one you're on is in berry blade black and the
+   notebook's colour, its name bold; the others in two greys. Swiping along
+   it or holding it: components/navigator.js. */
 .tabbar {
   position: fixed;
+  z-index: 9;
   bottom: 0;
   left: 0;
   right: 0;
   display: flex;
-  background: var(--surface);
-  border-top: 3px solid var(--ink);
-  padding: 8px 0 calc(8px + var(--sa-bottom));
+  justify-content: space-between;
+  align-items: flex-start;
+  box-sizing: border-box;
+  height: var(--nb-bar);
   max-width: 560px;
   margin: 0 auto;
+  padding: 8px 12px var(--nb-foot);
+  background: var(--paper);
+  border-top: 1px solid #E1E1DC;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
   /* iOS Safari has a known bug where position:fixed elements can visually
      detach and scroll with the page (the "bottom nav sliding up" glitch) —
      forcing this onto its own GPU-composited layer is the standard fix,
@@ -18,35 +31,29 @@
   transform: translate3d(0, var(--bar-drift, 0px), 0);
   will-change: transform;
 }
-
-
 .tab {
-  flex: 1;
-  background: none;
-  border: none;
-  color: var(--text-dim);
-  font-size: 13px;
+  --mk-a: #9AA3A8;
+  --mk-b: #D6DADD;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 6px;
+  min-width: 62px;
+  height: 52px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: #5C666D;
+  font: 500 10px/14px var(--ui);
+  letter-spacing: .1em;
+  text-transform: uppercase;
   cursor: pointer;
-  padding: 4px;
-  letter-spacing: 1.5px;
 }
-
-.tab-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tab-icon svg {
-  width: 23px;
-  height: 23px;
-  display: block;
-}
-
-.tab.active {
-  color: var(--text);
-}
+.tab.active { --mk-a: var(--text); --mk-b: var(--accent); color: var(--text); font-weight: 700; }
+.tab-icon svg { display: block; width: 28px; height: 28px; }
+.mk-a, .mk-b { stroke: none; }
+.mk-a { fill: var(--mk-a); }
+.mk-b { fill: var(--mk-b); }
+.mk-line { stroke: var(--mk-a); }

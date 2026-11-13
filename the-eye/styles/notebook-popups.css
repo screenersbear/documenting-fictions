@@ -101,20 +101,6 @@
 .nb-screen-tabs-shoot { position: absolute; z-index: 4; top: var(--nb-top); bottom: auto; height: calc(var(--nb-h) - var(--nb-top) - var(--nb-bar)); }
 .nb-screen-tabs-shoot > * { pointer-events: none; }
 
-/* The navigator, as in Callback: one icon, a triangle each side there's another. */
-.tabbar { justify-content: center; padding: 2px 0 calc(2px + var(--sa-bottom)); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
-.tabbar .tab { display: none; }
-.slider { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 44px; }
-.slide-arrow { appearance: none; -webkit-appearance: none; display: grid; place-items: center; width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; color: var(--text); }
-.slide-arrow:active { opacity: 0.5; }
-.slide-arrow.is-off { visibility: hidden; }
-.slide-arrow svg { display: block; width: 9px; height: 11px; }
-.slide-arrow.is-prev svg { transform: scaleX(-1); }
-.slide-now { appearance: none; -webkit-appearance: none; display: block; flex: none; width: 46px; height: 40px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; overflow: hidden; color: var(--text); -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18%, #000 82%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 18%, #000 82%, transparent 100%); }
-.slide-strip { display: flex; }
-.slide-strip.is-moving { transition: transform 0.2s cubic-bezier(0.3, 0.6, 0.3, 1); }
-.slide-icon { flex: 0 0 46px; height: 40px; display: grid; place-items: center; }
-.slide-icon svg { display: block; width: 27px; height: 27px; stroke-width: 1.8; }
 
 .scroll-top-btn { right: calc(var(--nb-edge) + 20px); }
 #projectDetailTitle { font-family: var(--font-hand); font-weight: 400; }
@@ -125,7 +111,7 @@
 /* A thinner frame, closer to the navigator, with room for named tabs. */
 :root {
   --nb-rim: 5px;
-  --tab-light: #fff0ae; /* a pale yellow, well apart from the mango */
+  --tab-light: #FBF0B9; /* mango's 25% step (styles/band-colors.css) */
   --screen-gap: 0px;
   --nb-h: calc(100 * var(--svh));
   /* The navigator's icon's middle (this + 19px) sits where an iPhone's home
@@ -133,7 +119,7 @@
      least, above the screen's edge, the same in all four notebooks and on
      the shelf. */
   --nb-foot: max(11px, calc(var(--sa-bottom) - 13px));
-  --nb-bar: calc(44px + var(--nb-foot)); /* its top (the line) 25px over the icon's middle, as in the other notebooks */
+  --nb-bar: calc(64px + var(--nb-foot)); /* the section bar: its marks and names, over the foot */
   --nb-edge: max(22px, calc(50% - 270px));
 }
 .nb-board, .nb-chapter-board { border-radius: 0 8px 8px 0; }
@@ -152,18 +138,8 @@
 .nb-screen-tabs > .n > span { background: var(--text); color: #fff; }
 .nb-screen-tabs-shoot > * { pointer-events: auto; }
 
-/* The navigator: the triangles right beside the icon, the page close above it. */
-.tabbar { bottom: calc(0px - var(--screen-gap)); padding: 7px 0 calc(1px + var(--nb-foot)); }
-.slider { gap: 0; height: 36px; }
-.slide-arrow { height: 36px; }
-.slide-arrow.is-prev { justify-items: end; }
-.slide-arrow.is-next { justify-items: start; }
-.slide-now { width: 36px; height: 36px; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%); }
-.slide-icon { flex: 0 0 36px; height: 36px; }
-.slide-icon-shut { margin-left: -36px; }
-/* The arrows sit right up against the icon. */
-.slide-now { width: 30px; }
-.slide-strip { margin-left: -3px; }
+/* The section bar sits on the bottom of what iOS laid out. */
+.tabbar { bottom: calc(0px - var(--screen-gap)); }
 
 /* The cover's tabs carry the names too, and open the book at that section. */
 .nb-side-tabs i { top: calc(16% + var(--t) * 14.6%); height: 13.6%; display: flex; align-items: center; justify-content: flex-end; width: 10%; }
@@ -257,11 +233,11 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
   --book-block: url(../art/df-mango-block.webp);
   --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23313d45' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E");
 }
-:root[data-book="orange"] { --accent: #ec701e; --tab-light: #f6b98f; --book-cover: url(../art/df-orange-cover.webp); --book-block: url(../art/df-orange-block.webp); }
-:root[data-book="berry"] { --accent-on-ink: #fff; --accent: #bf0b83; --tab-light: #e8a0d0; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(../art/df-berry-cover.webp); --book-block: url(../art/df-berry-block.webp); }
-:root[data-book="fern"] { --accent-on-ink: #fff; --accent: #2e7a55; --tab-light: #9fc8b3; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(../art/df-fern-cover.webp); --book-block: url(../art/df-fern-block.webp); }
-:root[data-book="ocean"] { --accent-on-ink: #fff; --accent: #245caa; --tab-light: #9dbbe2; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(../art/df-ocean-cover.webp); --book-block: url(../art/df-ocean-block.webp); }
-:root[data-book="ink"] { --accent-on-ink: #fff; --accent: #313d45; --tab-light: #a3adb4; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(../art/df-ink-cover.webp); --book-block: url(../art/df-ink-block.webp); }
+:root[data-book="orange"] { --accent: #FF8A3D; --tab-light: #FBDEC8; --book-cover: url(../art/df-orange-cover.webp); --book-block: url(../art/df-orange-block.webp); }
+:root[data-book="berry"] { --accent-on-ink: #fff; --accent: #CC2E8A; --tab-light: #EEC7DC; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(../art/df-berry-cover.webp); --book-block: url(../art/df-berry-block.webp); }
+:root[data-book="fern"] { --accent-on-ink: #fff; --accent: #13803F; --tab-light: #C0DCC9; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(../art/df-fern-cover.webp); --book-block: url(../art/df-fern-block.webp); }
+:root[data-book="ocean"] { --accent-on-ink: #fff; --accent: #0A4FD6; --tab-light: #BECFEF; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(../art/df-ocean-cover.webp); --book-block: url(../art/df-ocean-block.webp); }
+:root[data-book="ink"] { --accent-on-ink: #fff; --accent: #313d45; --tab-light: #C8CBCA; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(../art/df-ink-cover.webp); --book-block: url(../art/df-ink-block.webp); }
 
 /* The sun on the shut book, as in Contact Sheet. */
 .nb-sun { position: absolute; z-index: 7; left: 50%; bottom: calc(var(--sa-bottom) + 16px); width: 48px; height: 48px; min-height: 0; margin-left: -24px; padding: 10px; border: none; background: none; color: var(--text); transition: opacity 0.25s; }

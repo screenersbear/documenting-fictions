@@ -113,8 +113,6 @@
    headings elsewhere come up; the big text stays. Pages are packed from what's
    drawn, so this only means a little more turning. The Journal keeps its 28px
    ruled lines, so nothing there passes about 22px. */
-.brand-title, .topbar h1 { font-size: 28px; }
-.new-shoot-cta { font-size: 17px; line-height: 24px; }
 .stat-num { font-size: 31px; }
 .stat-label { font-size: 13.5px; }
 .section-block h2, .section-block h2.heading-yellow, .section-block h2.heading-navy { font-size: 22px; }

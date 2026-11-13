@@ -18,7 +18,7 @@
    their own case, hence the !important). Names the user wrote (a shoot's,
    an entry's, a lighting setup's) stay in their handwriting, and so do the
    team questions, which are questions. */
-:is(h1, h2, h3, h4, h5, h6, .brand-title, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .moodboard-label, .app-menu-header, .stats-region-heading, #shootModeReviewTitle, #mondayBriefTitle):not(#projectDetailTitle, #shootModeTitle, #journalViewTitle, .journal-entry-title, .shoot-mode-review-setup-name, .modal-title-jump-wrap) {
+:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .moodboard-label, .app-menu-header, .stats-region-heading, #shootModeReviewTitle, #mondayBriefTitle):not(#projectDetailTitle, #shootModeTitle, #journalViewTitle, .journal-entry-title, .shoot-mode-review-setup-name, .modal-title-jump-wrap) {
   font-family: var(--head) !important; font-weight: 500; text-transform: uppercase !important; letter-spacing: .08em !important; text-shadow: none;
 }
 :is(#appMenuOverlay, #sunMenuOverlay) .opt-sheet-head .app-menu-header { font-family: var(--head); font-weight: 500; text-transform: uppercase; letter-spacing: .08em; text-shadow: none; }
@@ -38,7 +38,6 @@
    in capitals, its entries as far apart. */
 #view-journal { margin: 0; padding: 0 0 28px; min-height: 0; background: none; }
 #view-journal::before { display: none; }
-#view-journal .topbar { top: 0; right: 0; }
 #view-journal .journal-toolbar { height: 48px; align-items: center; }
 #view-journal .journal-toolbar > button, #view-journal .journal-toolbar > #addJournalBtn { top: 0; padding-top: 0; }
 #journalList .log-week-heading { margin: 0; padding: 0; }
@@ -94,7 +93,3 @@
 .eye-cards-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(49, 61, 69, .2); }
 .eye-cards-dots i.on { background: var(--text); }
 
-/* An eye left of OVERVIEW (user, 11-12): it hangs off the word, so the word
-   stays centred where every section's title sits. */
-#view-overview .brand-title { position: relative; }
-.brand-eye { position: absolute; right: calc(100% + 10px); top: 50%; width: 30px; height: 30px; margin-top: -14px; color: var(--text); pointer-events: none; }

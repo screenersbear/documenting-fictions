@@ -23,6 +23,7 @@ built/shared-data.js
 # How it looks, in the order the rules apply.
 built/app.css
   styles/base.css
+  styles/band-colors.css
   styles/stat-boxes.css
   styles/journal-log.css
   styles/journal-reflections.css
@@ -301,4 +302,5 @@ built/app.js
   components/pull-to-refresh.js
   components/swipe-tabs.js
   components/navigator.js
+  components/band.js
   app.js

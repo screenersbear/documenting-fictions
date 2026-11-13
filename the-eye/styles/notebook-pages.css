@@ -1,17 +1,6 @@
 /* ---- Pages: titles, sections and rows ---- */
-.hero-band { background: none; width: auto; margin: 0; padding: 0; border-bottom: none; }
-.topbar { position: relative; justify-content: center; padding: 0 0 9px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
-.hero-band .topbar { padding: 0 0 9px; }
-.brand-row { position: relative; justify-content: center; min-height: 32px; }
-.brand-logo-wrap { display: none; }
-.brand-title, .topbar h1 { font-family: var(--font-head); font-weight: 400; font-size: 26px; line-height: 1.2; text-align: center; text-transform: none; letter-spacing: 0; color: var(--text); }
 .app-menu-btn { position: absolute; top: -6px; width: 44px; height: 44px; margin: 0; color: var(--text); }
 .app-menu-btn svg { width: 20px; height: 20px; }
-#shutBookBtn { display: none; } /* gone from the header (user, 11-11); the navigator still uses it to shut the book */
-#notificationBellBtn { right: 22px; }
-#appMenuBtn { right: -12px; }
-.topbar .icon-btn { position: absolute; right: -8px; top: -6px; width: 44px; height: 44px; background: none; color: var(--text); font-family: var(--font-body); font-weight: 400; font-size: 26px; }
-.new-shoot-cta { background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius-lg); padding: 11px; min-height: 44px; font-family: var(--font-body); font-size: 15px; font-weight: 600; line-height: 22px; text-transform: none; letter-spacing: 0; margin-top: 6px; }
 .stats-row { gap: 0; margin: 14px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .stat-box { background: none; border: none; border-left: 1px solid var(--line); border-radius: 0; padding: 9px 6px 10px; }
 .stat-box:first-child { border-left: none; }

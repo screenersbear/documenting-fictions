@@ -59,14 +59,3 @@
 }
 :root[data-side="verso"] #app { padding-left: 29px; padding-right: 29px; }
 
-/* The row of app screens: no border, just the icons in berry blade black. */
-.tabbar {
-  z-index: 9;
-  border-top: none;
-  background: #fff;
-  padding: 6px 0 calc(6px + var(--sa-bottom));
-}
-.tab { color: var(--text); padding: 8px 4px; min-height: 44px; justify-content: center; }
-.tab > span:not(.tab-icon) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.tab .tab-icon svg { width: 25px; height: 25px; stroke-width: 1.6; }
-.tab.active .tab-icon svg { stroke-width: 2.8; }

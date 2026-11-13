@@ -1,16 +1,13 @@
-// The navigator.
+// The section bar: tapping, swiping and holding it.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addNavigator = function addNavigator(ed) {
-  // ---------- the navigator ----------
-  // One button that slides through the screens, as in Callback: the screen
-  // you're on sits in the middle as its icon, with a little triangle on each
-  // side that has another screen. Swipe along it, or tap a triangle, and the
-  // notebook turns to that screen's tab. The tab buttons stay (hidden): they
-  // still do the switching.
+  // ---------- the section bar ----------
+  // A mark and a name for each section (pages/tabs.html .tabbar). Tap one,
+  // or swipe along the bar, and the notebook turns to it with a page turn;
+  // swiping right on the first section shuts the notebook. Tapping the
+  // section you're on goes back to the top of its page.
   (function setupNavigator() {
-    const STEP = 36; // px from one icon to the next on the strip
-    const triangle = '<svg viewBox="0 0 10 12" aria-hidden="true"><path d="M2.3 1.5Q5.6 3.8 8.7 6.1 5.5 8.3 2.2 10.5 2.5 6 2.3 1.5Z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
     const bar = document.querySelector('.tabbar');
     const tabs = [...bar.querySelectorAll('.tab')].map(el => ({
       el,
@@ -18,61 +15,42 @@ window.EyeParts.addNavigator = function addNavigator(ed) {
       name: el.textContent.trim(),
       icon: el.querySelector('.tab-icon').innerHTML,
     }));
-    const slider = document.createElement('div');
-    slider.className = 'slider';
-    slider.innerHTML = `<button type="button" class="slide-arrow is-prev">${triangle}</button>`
-      + `<button type="button" class="slide-now"><span class="slide-strip" aria-hidden="true"><span class="slide-icon slide-icon-shut">${document.getElementById('shutBookBtn').innerHTML}</span>${tabs.map(t => `<span class="slide-icon">${t.icon}</span>`).join('')}</span></button>`
-      + `<button type="button" class="slide-arrow is-next">${triangle}</button>`;
-    bar.appendChild(slider);
-    const strip = slider.querySelector('.slide-strip');
-    const now = slider.querySelector('.slide-now');
-    const prev = slider.querySelector('.is-prev');
-    const next = slider.querySelector('.is-next');
     let idx = 0;
     let arrivedAt = 0;
     let drag = null;
     let draggedAt = 0;
 
-    function stripTo(i, x = 0, moving = false) {
-      strip.classList.toggle('is-moving', moving);
-      strip.style.transform = `translateX(${(-i * STEP + x).toFixed(1)}px)`;
-    }
-    function sync(moving) {
+    function sync() {
       const found = tabs.findIndex(t => t.el.classList.contains('active'));
       if (found >= 0 && found !== idx) arrivedAt = performance.now();
       if (found >= 0) idx = found;
-      const before = tabs[idx - 1];
-      const after = tabs[idx + 1];
-      now.setAttribute('aria-label', tabs[idx].name);
-      // Before the first screen there's the shut book.
-      next.classList.toggle('is-off', !after);
-      next.disabled = !after;
-      prev.setAttribute('aria-label', before ? `Previous: ${before.name}` : 'Shut the notebook');
-      next.setAttribute('aria-label', after ? `Next: ${after.name}` : 'Nothing after this');
-      if (!drag) stripTo(idx, 0, moving);
+      tabs.forEach((t, i) => { if (i === idx) t.el.setAttribute('aria-current', 'page'); else t.el.removeAttribute('aria-current'); });
     }
     function go(by) {
+      // Before the first section there's the shut book.
       if (idx + by < 0) {
-        stripTo(idx, 0, true);
-        // A repeat of the tap that just got here isn't asking to shut the book.
+        // A repeat of the swipe that just got here isn't asking to shut the book.
         if (performance.now() - arrivedAt >= 700) document.getElementById('shutBookBtn').click();
         return;
       }
       const t = tabs[idx + by];
       if (t) ed.turnToView(t.view);
     }
-    prev.addEventListener('click', () => go(-1));
-    next.addEventListener('click', () => go(1));
-    // A tap on the icon goes back to the top of its page.
-    now.addEventListener('click', () => { if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: ed.motionOk() ? 'smooth' : 'auto' }); });
+    // A tap on a mark (the finger's own: the app's jumps click the buttons
+    // themselves) turns the page to it, as a swipe does.
+    bar.addEventListener('click', (e) => {
+      const tab = e.target.closest('.tab');
+      if (!tab || !e.isTrusted) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (performance.now() - draggedAt < 350) return; // a swipe that ends on a mark isn't a tap on it
+      if (!tab.classList.contains('active')) { ed.turnToView(tab.dataset.view); return; }
+      if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: ed.motionOk() ? 'smooth' : 'auto' });
+    }, true);
 
-    // A finger the width of a third of the screen moves one icon over.
+    // A finger the width of a third of the screen (120px at most), or a
+    // quick flick, turns one section along.
     const span = () => (window.innerWidth || 1) / 3;
-    function follow(dx) {
-      const has = dx > 0 || tabs[idx + 1];
-      const x = Math.max(-STEP, Math.min(STEP, (dx / span()) * STEP));
-      stripTo(idx, has ? x : x * 0.25);
-    }
     bar.addEventListener('pointerdown', (e) => {
       if (e.button || !e.isPrimary) return;
       drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, dx: 0, v: 0, t: performance.now(), lx: e.clientX };
@@ -92,7 +70,6 @@ window.EyeParts.addNavigator = function addNavigator(ed) {
       drag.lx = e.clientX;
       drag.t = t;
       drag.dx = dx;
-      follow(dx);
     });
     const end = (e) => {
       if (!drag || e.pointerId !== drag.id) return;
@@ -103,20 +80,14 @@ window.EyeParts.addNavigator = function addNavigator(ed) {
       const by = dx < 0 ? 1 : -1;
       const flick = Math.abs(v) > 0.45 && Math.sign(v) === Math.sign(dx) && Math.abs(dx) > 24;
       if (e.type === 'pointerup' && (by < 0 || tabs[idx + by]) && (Math.abs(dx) > Math.min(span() * 0.6, 120) || flick)) go(by);
-      else stripTo(idx, 0, true);
     };
     bar.addEventListener('pointerup', end);
     bar.addEventListener('pointercancel', end);
-    // A swipe that ends on a button isn't a tap on it. On the slider only:
-    // the hidden tab buttons are clicked by the app itself straight after.
-    slider.addEventListener('click', (e) => {
-      if (performance.now() - draggedAt < 350) { e.preventDefault(); e.stopPropagation(); }
-    }, true);
 
-    // Held still for a moment, the icon swells into a row of every section,
+    // Held still for a moment, the bar swells into a row of every section,
     // the way the Mac's Dock grows under the pointer (user, 11-11). Slide
     // along it and let go on one to turn there; let go without sliding and
-    // nothing changes. The shut book isn't on it: only the arrow shuts it.
+    // nothing changes.
     const DOCK_SLOT = 46; // px from one icon to the next
     const DOCK_PAD = 10;  // the card's padding and border, each side
     const dock = document.createElement('div');
@@ -163,14 +134,14 @@ window.EyeParts.addNavigator = function addNavigator(ed) {
       dock.classList.add('is-open');
       try { bar.setPointerCapture(h.id); } catch (err) { /* capture is a nice-to-have */ }
     }
-    now.addEventListener('pointerdown', (e) => {
+    bar.addEventListener('pointerdown', (e) => {
       if (e.button || !e.isPrimary) return;
       if (hold) clearTimeout(hold.timer);
       const h = { id: e.pointerId, x: e.clientX, y: e.clientY };
       h.timer = setTimeout(() => { if (hold === h) openDock(h); }, 380);
       hold = h;
     });
-    now.addEventListener('contextmenu', e => e.preventDefault());
+    bar.addEventListener('contextmenu', e => e.preventDefault());
     bar.addEventListener('pointermove', (e) => {
       if (hold && e.pointerId === hold.id && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) >= 8) { clearTimeout(hold.timer); hold = null; }
       if (!docked || e.pointerId !== docked.id) return;
@@ -184,14 +155,14 @@ window.EyeParts.addNavigator = function addNavigator(ed) {
       const { moved, at } = docked;
       docked = null;
       dock.classList.remove('is-open');
-      draggedAt = performance.now(); // the icon's own tap (back to page 1) stands down
+      draggedAt = performance.now(); // the mark's own tap stands down
       if (e.type === 'pointerup' && moved && at !== idx) ed.turnToView(tabs[at].view);
     };
     bar.addEventListener('pointerup', dockEnd);
     bar.addEventListener('pointercancel', dockEnd);
 
-    new MutationObserver(() => sync(true)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-view'] });
-    sync(false);
+    new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['data-view'] });
+    sync();
 
     // The tabs poking out of the page's edge, one for each screen. From
     // inside a shoot, a tab closes it first (saving, the same as Back).
