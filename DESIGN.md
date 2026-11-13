@@ -74,9 +74,9 @@ and each colour gets its own partner to play the support part: the title, the bu
 - Small text (the label line) uses the partner only when it is at least 4.5:1; otherwise white or berry blade black, whichever
   passes.
 
-The values below are Proposed until Starky has seen them side by side (canvas board "Seven pairs").
+Starky approved these seven pairs on the canvas board "Seven pairs" (2026-11-13, "They work"): **Decided**.
 
-| Name | Live now | Band colour (proposed) | Partner | Small text |
+| Name | Live now | Band colour | Partner | Small text |
 |---|---|---|---|---|
 | `orange` | `#EC701E` | `#FF8A3D` tangerine (the darker vermilion `#F05A1A` could carry no small text at all) | berry blade black, 4.8:1 | berry blade black |
 | `mango` | `#FFD100` | `#FFD100`, unchanged | berry blade black, 7.6:1 | berry blade black |
@@ -276,9 +276,10 @@ The app marks (drawn on the canvas board "App marks and icons"):
 | D10 | Band titles | Left-aligned |
 | D11 | Band shape | Neither tag nor frame. The "take two" band (9) is the direction |
 | — | Band colour | The notebook colour leads, and a partner colour supports it (4.2) |
+| — | Colour pairs | The seven pairs in 4.2 ("They work") |
 | — | App mark ideas | Mock them up before settling |
 
 Starky likes the app marks in section 7 ("the marks look great").
 
-Still open: the colour pairs (4.2), the band layout details (9) and the exact type sizes (5.1). They're on the mockup canvas
+Still open: the band layout details (9), the exact type sizes (5.1), and The Eye's default colour (mango band, or ink for today's look). They're on the mockup canvas
 "STKY look mockups" (https://claude.ai/artifact/YDz11YGa9iKqPgNNNcoWrP), waiting on Starky.
