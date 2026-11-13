@@ -147,11 +147,23 @@ describe('importDb', () => {
     (await notebook()).close();
     await expect(D.importDb(backup({ app: 'anything', stores: { kv: { rows: [] } } }), 'nb')).resolves.toEqual({ extra: {}, counts: { kv: 0 } });
   });
-  // Looks unintended: with no store in common the empty transaction throws
-  // the browser's InvalidAccessError, not a message of the app's own.
-  it('rejects a backup that has none of the database\'s stores', async () => {
+  it('rejects a backup that has none of the database\'s stores, in its own words, changing nothing', async () => {
     (await notebook()).close();
-    await expect(D.importDb(backup({ stores: { other: { rows: [] } } }), 'nb')).rejects.toMatchObject({ name: 'InvalidAccessError' });
+    await expectError(D.importDb(backup({ stores: { other: { rows: [] } } }), 'nb'), 'That file is a backup of a different notebook.');
+    const db = await rawOpen('nb');
+    expect(await rawAll(db, 'kv')).toEqual([[3, { n: 3 }], ['theme', 'dark']]);
+    db.close();
+  });
+  it('rejects a row a store cannot take at all, writing nothing: not the clear, not the rows before it', async () => {
+    const nb = await notebook();
+    const before = { shots: await rawAll(nb, 'shots'), kv: await rawAll(nb, 'kv') };
+    nb.close();
+    expect(before.shots.length).toBe(1);
+    const rows = [[5, { id: 5, day: 'a', tags: [], code: 'p' }], [6, { id: 'no' }], [7, 'not an object, so it has no id']];
+    await expectError(D.importDb(backup({ stores: { shots: { rows }, kv: { rows: [['k', 'v']] } } }), 'nb'), "That wasn't saved.");
+    const db = await rawOpen('nb');
+    expect({ shots: await rawAll(db, 'shots'), kv: await rawAll(db, 'kv') }).toEqual(before);
+    db.close();
   });
   it('round-trips an export, keys of stores without a key path included', async () => {
     (await notebook()).close();

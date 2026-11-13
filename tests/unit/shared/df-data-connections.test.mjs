@@ -36,6 +36,15 @@ describe('connections are let go of', () => {
     expect(opened.length).toBe(2);
     expect(stillOpen()).toEqual([]);
   });
+  it('by importDb when the backup has none of its stores, and when a row breaks its write', async () => {
+    (await seed()).close();
+    opened.length = 0;
+    const file = (stores) => new NodeFile([JSON.stringify({ database: 'nb', stores })], 'nb.json');
+    await expectError(D.importDb(file({ other: { rows: [] } }), 'nb'), 'That file is a backup of a different notebook.');
+    await expectError(D.importDb(file({ s: { rows: [[{}, 'an object is no key']] } }), 'nb'), "That wasn't saved.");
+    expect(opened.length).toBe(2);
+    expect(stillOpen()).toEqual([]);
+  });
   it('by zipBackup (each database twice: counting and reading) and its scratch once done', async () => {
     (await seed()).close();
     opened.length = 0;

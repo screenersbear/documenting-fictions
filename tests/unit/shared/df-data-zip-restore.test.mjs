@@ -488,13 +488,12 @@ describe('restoreZip: into the database', () => {
     expect(log.mock.calls[0][0].name).toBe('DataError');
     expect(await all('nb', 's')).toEqual([[1, { id: 1 }]]);
   });
-  // Looks like a bug: a row of an auto-increment store with a key path whose
-  // key isn't in the backed-up value goes in under a new key, and is then
-  // taken out again with the rows the backup "doesn't have".
-  it('puts in, then takes out again, a row whose key was to be made for it', async () => {
-    (await makeDb('nb', { s: { keyPath: 'a.b', autoIncrement: true } })).close();
-    const got = await D.restoreZip(backupZip(manifest({ nb: { stores: { s: { rows: [[null, {}]] } } } })), { databases: ['nb'] });
-    expect(got.counts).toEqual({ nb: { s: 1 } });
-    expect(await all('nb', 's')).toEqual([]);
+  // A row of an auto-increment store with a key path whose key isn't in the
+  // backed-up value goes in under a new key, and stays: it's one of the backup's.
+  it('keeps a row whose key was made for it as it went in', async () => {
+    (await makeDb('nb', { s: { keyPath: 'a.b', autoIncrement: true, rows: [{ a: { b: 7 }, old: true }] } })).close();
+    const got = await D.restoreZip(backupZip(manifest({ nb: { stores: { s: { rows: [[null, {}], [3, { a: { b: 3 } }]] } } } })), { databases: ['nb'] });
+    expect(got.counts).toEqual({ nb: { s: 2 } });
+    expect(await all('nb', 's')).toEqual([[3, { a: { b: 3 } }], [8, { a: { b: 8 } }]]);
   });
 });
