@@ -207,47 +207,57 @@ describe('stepSize on a step', () => {
   });
 });
 
-// These pin down what stepSize does today for a size between two steps. The code
-// means to "round toward the tap", but it rounds away from it: smaller lands on
-// the step above, bigger skips a step. Because sizes are stored rounded, a title
-// at 115% and a text box at 75%, 90%, 150%, 175% or 300% read back a hair off
-// their step, so "smaller" does nothing for them. Reported as a suspected bug;
-// when it is fixed, change these expectations to the fixed behaviour first.
-describe('stepSize between steps (current behaviour, suspected bug)', () => {
-  it('smaller from 105% lands on 115%', () => {
+// A size between two steps goes to the next step in the tap's direction:
+// smaller to the step below, bigger to the step above. Sizes are stored
+// rounded, so one that reads back a hair off its step (a title at 115%, a text
+// box at 75%, 90%, 150%, 175% or 300%) counts as on it.
+describe('stepSize between steps', () => {
+  it('smaller from 105% goes down to 100%', () => {
     const page = { textSize: 1.05 };
     stepSize(page, 'body', -1);
-    expect(page.textSize).toBe(1.15);
+    expect(page.textSize).toBeUndefined(); // 100% is the built-in size: nothing stored
   });
-  it('bigger from 105% lands on 130%, skipping 115%', () => {
+  it('bigger from 105% goes up to 115%, the next step', () => {
     const page = { textSize: 1.05 };
     stepSize(page, 'body', 1);
-    expect(page.textSize).toBe(1.3);
+    expect(page.textSize).toBe(1.15);
+  });
+  it('two steps smaller from 105% go to 90%', () => {
+    const page = { textSize: 1.05 };
+    stepSize(page, 'body', -2);
+    expect(page.textSize).toBe(0.9);
   });
   it('a zero step from 105% snaps up to 115%', () => {
     const page = { textSize: 1.05 };
     stepSize(page, 'body', 0);
     expect(page.textSize).toBe(1.15);
   });
-  it('smaller leaves a title at 115% where it is', () => {
+  it('steps a title at 115% down to 100%, then 90%', () => {
     const page = {};
     setSize(page, 'title', 1.15);
     expect(page.titleSize).toBe(1.725);
     stepSize(page, 'title', -1);
-    expect(page.titleSize).toBe(1.725);
+    expect(page.titleSize).toBeUndefined();
+    stepSize(page, 'title', -1);
+    expect(page.titleSize).toBe(1.35);
   });
-  it('smaller leaves a text box at 75% where it is', () => {
-    const page = {};
-    setSize(page, 'note', 0.75);
-    stepSize(page, 'note', -1);
-    expect(page.size).toBe(1.2);
+  it('steps every text box size down and up by one step', () => {
+    TEXT_STEPS.forEach((v, i) => {
+      const down = {}, up = {};
+      setSize(down, 'note', v);
+      setSize(up, 'note', v);
+      stepSize(down, 'note', -1);
+      stepSize(up, 'note', 1);
+      expect(sizeOf(down, 'note')).toBeCloseTo(TEXT_STEPS[Math.max(0, i - 1)], 6);
+      expect(sizeOf(up, 'note')).toBeCloseTo(TEXT_STEPS[Math.min(TEXT_STEPS.length - 1, i + 1)], 6);
+    });
   });
-  it('below 60%, smaller goes up to 60% and bigger skips to 75%', () => {
+  it('below 60%, either way goes to 60%', () => {
     const down = { textSize: 0.5 }, up = { textSize: 0.5 };
     stepSize(down, 'body', -1);
     stepSize(up, 'body', 1);
     expect(down.textSize).toBe(0.6);
-    expect(up.textSize).toBe(0.75);
+    expect(up.textSize).toBe(0.6);
   });
 });
 

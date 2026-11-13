@@ -275,11 +275,11 @@ describe('defaultTemplate', () => {
     expect(defaultTemplate(LP, 0).id).toBe('lp-single');
     expect(defaultTemplate(WIDE, -3).id).toBe('w-single-text');
   });
-  it('falls back to the last plain layout when none is big enough', () => {
+  it('falls back to the plain layout with the most images when none is big enough', () => {
     expect(defaultTemplate(WIDE, 11).id).toBe('w-grid-10');
     expect(defaultTemplate(WIDE, 500).id).toBe('w-grid-10');
-    // On letter the last plain layout is the one-image "long text" page (suspected bug, see report).
-    expect(defaultTemplate(LP, 10).id).toBe('lp-text');
+    expect(defaultTemplate(LP, 10).id).toBe('lp-grid-9');
+    expect(defaultTemplate(LP, 500).id).toBe('lp-grid-9');
   });
   it('never picks a bleed, cover or guide page', () => {
     for (const shape of [LP, WIDE]) for (let n = -1; n <= 13; n++) {
@@ -425,10 +425,13 @@ describe('paginate', () => {
     expect(pages.map((p) => p.template)).toEqual(['w-grid-10', 'w-grid-10', 'w-three']);
     expect(pages.flatMap((p) => p.images)).toEqual(imgs(23));
   });
-  it('on letter with 10+ images and no style, starts with one-image text pages (current behaviour)', () => {
-    const pages = paginate(LP, null, imgs(10));
-    expect(pages.map((p) => p.template)).toEqual(['lp-text', 'lp-grid-9']);
-    expect(pages[0].images).toEqual(['i0']);
+  it('on letter with 10+ images and no style, fills grids of nine, then fits the rest', () => {
+    const ten = paginate(LP, null, imgs(10));
+    expect(ten.map((p) => p.template)).toEqual(['lp-grid-9', 'lp-single']);
+    expect(ten[0].images).toEqual(imgs(9));
+    const pages = paginate(LP, null, imgs(23));
+    expect(pages.map((p) => p.template)).toEqual(['lp-grid-9', 'lp-grid-9', 'lp-five']);
+    expect(pages.flatMap((p) => p.images)).toEqual(imgs(23));
   });
   it('stops at 501 pages', () => {
     const pages = paginate(LP, 'bleed', imgs(600));

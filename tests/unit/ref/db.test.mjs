@@ -3,7 +3,7 @@
 // stickers, meta), run against fake-indexeddb. The node environment gives the
 // real Blob class, which IndexedDB can store, so old Blob-backed records can be tested.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { IDBFactory, IDBDatabase } from 'fake-indexeddb';
+import { IDBFactory, IDBDatabase, IDBObjectStore } from 'fake-indexeddb';
 
 const NAME = 'ref-notebook';
 const STORES = ['boards', 'files', 'folders', 'meta', 'photos', 'stickers', 'thumbs'];
@@ -488,6 +488,14 @@ describe('failed saves', () => {
     const e = await errorOf(db.putBack({ items: [], boards: [] }));
     expect(e).toBeInstanceOf(Error);
     expect(e.message).toBe('Could not save. Your phone may be out of space.');
+  });
+  it("a save one of whose writes fails says why: that write's own error, not nothing", async () => {
+    const f = await db.saveFolder({ name: 'Beach' });
+    // the same key added again: the write fails later, with a ConstraintError
+    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (...a) { return this.add(...a); });
+    const e = await errorOf(db.saveFolder(f));
+    expect(e?.name).toBe('ConstraintError');
+    expect(typeof e.message).toBe('string');
   });
   it('a read stopped before it finishes fails too', async () => {
     await db.listPhotos();
