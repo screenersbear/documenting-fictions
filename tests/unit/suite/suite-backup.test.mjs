@@ -404,17 +404,35 @@ describe('restoreJson puts a notebook back', () => {
     await makeDb('df-stickers', 3, { stickers: { keyPath: 'id' } });
     indexedDB.databases = undefined;
     await B.restoreJson(fileOf(suite({ stickers: part('df-stickers', { stickers: { meta: { keyPath: 'id' }, rows: [['s', { id: 's' }]] } }, { version: 1 }) })));
-    expect(D.open.mock.calls[0]).toEqual(['df-stickers', undefined, null]);
+    // first a look to see whether it's new here (it isn't), then opened as it is
+    expect(D.open.mock.calls.map(([n, v, up]) => [n, v, typeof up])).toEqual([['df-stickers', undefined, 'function'], ['df-stickers', undefined, 'object']]);
+    expect(D.open.mock.calls[1][2]).toBe(null);
     const after = await readDb('df-stickers');
     expect(after.version).toBe(3);
     expect(after.stores.stickers.rows).toEqual([['s', { id: 's' }]]);
   });
-  it('with no list of databases, a notebook never opened here gets an empty database and none of its rows', async () => {
-    // Known gap (see the report): without indexedDB.databases the database can't be made from the backup.
+  it('with no list of databases, a notebook never opened here is still made from the backup, at its version, with its rows', async () => {
     indexedDB.databases = undefined;
-    await B.restoreJson(fileOf(suite({ overthoughts: part('overthoughts', { entries: { meta: { keyPath: 'id' }, rows: [['a', { id: 'a' }]] } }, { version: 1 }) })));
-    expect(D.open.mock.calls[0]).toEqual(['overthoughts', undefined, null]);
-    expect(await readDb('overthoughts')).toEqual({ version: 1, stores: {} });
+    await B.restoreJson(fileOf(suite({ overthoughts: part('overthoughts', { entries: { meta: { keyPath: 'id', indexes: [{ name: 'byDay', keyPath: 'day' }] }, rows: [['a', { id: 'a', day: 1 }]] } }, { version: 4 }) })));
+    expect(D.open.mock.calls.map(([n, v]) => [n, v])).toEqual([['overthoughts', undefined], ['overthoughts', 4]]);
+    delete indexedDB.databases; // back to the real list, to read it
+    const after = await readDb('overthoughts');
+    expect(after.version).toBe(4);
+    expect(after.stores.entries).toEqual({ keyPath: 'id', autoIncrement: false, indexes: [{ name: 'byDay', keyPath: 'day', unique: false, multiEntry: false }], rows: [['a', { id: 'a', day: 1 }]] });
+  });
+  it('with no list of databases, the look to see whether a notebook is new leaves nothing behind when it is', async () => {
+    indexedDB.databases = undefined;
+    let made = 0;
+    D.open.mockImplementationOnce(async (...a) => { try { return await open(...a); } catch (e) { made = e.name; throw e; } });
+    await B.restoreJson(fileOf(suite({ overthoughts: part('overthoughts', { entries: { meta: { keyPath: 'id' }, rows: [] } }, { version: 2 }) })));
+    expect(made).toBe('AbortError');
+    delete indexedDB.databases;
+    expect((await readDb('overthoughts')).version).toBe(2);
+  });
+  it('with no list of databases, a failure other than the database being new is passed on', async () => {
+    indexedDB.databases = undefined;
+    D.open.mockImplementationOnce(async () => { throw new Error('Blocked by another tab.'); });
+    await rejectsWith(B.restoreJson(fileOf(suite({ overthoughts: part('overthoughts', {}) }))), 'Blocked by another tab.');
   });
   it('puts every part back in the same order, Eye last', async () => {
     const data = suite({
@@ -436,13 +454,12 @@ describe('restoreJson puts a notebook back', () => {
     await rejectsWith(B.restoreJson(fileOf(data)), "That wasn't restored.");
     expect((await readDb('ref-notebook')).stores.boards.rows).toEqual([['keep', { id: 'keep', name: 'K' }]]);
   });
-  it('rejects a row the store cannot take at all (known gap: the rows before it are already in)', async () => {
-    // A value with no key for a keyPath store throws while the write is still open,
-    // so the clear and the rows before it go in (see the report).
+  it('rejects a row the store cannot take at all, writing nothing: the notebook stays as it was', async () => {
+    // A value with no key for a keyPath store throws while the write is still open.
     await makeDb('ref-notebook', 1, { boards: { keyPath: 'id', rows: [['keep', { id: 'keep' }]] } });
     const data = suite({ ref: part('ref-notebook', { boards: { meta: { keyPath: 'id' }, rows: [['a', { id: 'a' }], ['b', { noId: true }]] } }) });
-    expect((await rejectsWith(B.restoreJson(fileOf(data)))).name).toBe('DataError');
-    expect((await readDb('ref-notebook')).stores.boards.rows).toEqual([['a', { id: 'a' }]]);
+    await rejectsWith(B.restoreJson(fileOf(data)), "That wasn't restored.");
+    expect((await readDb('ref-notebook')).stores.boards.rows).toEqual([['keep', { id: 'keep' }]]);
   });
   it("rejects with \"That wasn't restored.\" when the write is cut short", async () => {
     await makeDb('ref-notebook', 1, { boards: { keyPath: 'id', rows: [['keep', { id: 'keep' }]] } });
@@ -474,6 +491,32 @@ describe('restoreJson closes what it opens', () => {
     await B.restoreJson(fileOf(suite({ ref: part('ref-notebook', { s: { rows: [['k', 'v']] } }), links: part('df-links', { other: {} }) })));
     expect(await canUpgrade('ref-notebook')).toBe(true);
     expect(await canUpgrade('df-links')).toBe(true);
+  });
+  it("closes the look it takes at an existing notebook's database when the browser can't list them", async () => {
+    await makeDb('df-stickers', 1, { stickers: { keyPath: 'id' } });
+    const list = indexedDB.databases;
+    indexedDB.databases = undefined;
+    await B.restoreJson(fileOf(suite({ stickers: part('df-stickers', { stickers: { meta: { keyPath: 'id' }, rows: [] } }) })));
+    indexedDB.databases = list;
+    expect(D.open).toHaveBeenCalledTimes(2);
+    expect(await canUpgrade('df-stickers')).toBe(true);
+  });
+  it("closes a notebook's database when its write fails", async () => {
+    await makeDb('ref-notebook', 1, { boards: { keyPath: 'id' } });
+    await rejectsWith(B.restoreJson(fileOf(suite({ ref: part('ref-notebook', { boards: { meta: { keyPath: 'id' }, rows: [['b', { noId: true }]] } }) }))), "That wasn't restored.");
+    expect(await canUpgrade('ref-notebook')).toBe(true);
+  });
+  it("closes The Eye's photo database when its write fails", async () => {
+    // cut short like cutWritesTo, with an opener that doesn't close itself
+    D.open.mockImplementation(async (...a) => {
+      const db = await open(...a);
+      db.onversionchange = null;
+      const tx0 = db.transaction.bind(db);
+      db.transaction = (stores, mode) => { const tx = tx0(stores, mode); if (mode === 'readwrite') queueMicrotask(() => tx.abort()); return tx; };
+      return db;
+    });
+    await rejectsWith(B.restoreJson(fileOf(suite({ 'the-eye': eyePart({ shoots: [] }, { p: 'x' }) }))), "The Eye's photos weren't restored.");
+    expect(await canUpgrade(EYE_DB)).toBe(true);
   });
   it("closes The Eye's photo database after putting the photos back", async () => {
     await B.restoreJson(fileOf(suite({ 'the-eye': eyePart({ shoots: [] }, { p: 'x' }) })));

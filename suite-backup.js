@@ -38,8 +38,24 @@
   // Which databases are there already. Opening one that isn't would make an
   // empty one, which its notebook would then trip over.
   async function existing() {
-    if (!indexedDB.databases) return null; // can't tell: every one is tried
+    if (!indexedDB.databases) return null; // can't tell: isNew() looks at each one
     return new Set((await indexedDB.databases()).map((d) => d.name));
+  }
+
+  // Whether a notebook's database is new on this device. Where the browser
+  // can't list them, opening it says: a new one starts from version 0, and
+  // that first opening is called off, so it can be made from the backup.
+  async function isNew(name, have) {
+    if (have) return !have.has(name);
+    try {
+      // Asked for no version, an existing one opens as it is: this only runs for a new one.
+      const db = await D.open(name, undefined, (made, old, tx) => tx.abort());
+      db.close();
+      return false;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return true;
+      throw e;
+    }
   }
 
   const EYE_DB = 'starky-moodboards'; // The Eye's photos
@@ -101,7 +117,7 @@
       unpacked[name] = [];
       for (const [k, v] of s.rows || []) unpacked[name].push([await unpack(k), await unpack(v)]);
     }
-    const fresh = have ? !have.has(n.db) : false;
+    const fresh = await isNew(n.db, have);
     const db = await D.open(n.db, fresh ? data.version : undefined, fresh ? (made) => {
       for (const [name, s] of Object.entries(data.stores)) {
         if (made.objectStoreNames.contains(name)) continue;
@@ -110,17 +126,25 @@
         (m.indexes || []).forEach((ix) => os.createIndex(ix.name, ix.keyPath, { unique: !!ix.unique, multiEntry: !!ix.multiEntry }));
       }
     } : null);
-    const names = Object.keys(unpacked).filter((s) => db.objectStoreNames.contains(s));
-    if (names.length) {
-      const tx = db.transaction(names, 'readwrite');
-      names.forEach((s) => {
-        const os = tx.objectStore(s);
-        os.clear();
-        unpacked[s].forEach(([k, v]) => { if (os.keyPath) os.put(v); else os.put(v, k); });
-      });
-      await new Promise((ok, no) => { tx.oncomplete = ok; tx.onabort = tx.onerror = () => no(tx.error || new Error("That wasn't restored.")); });
+    try {
+      const names = Object.keys(unpacked).filter((s) => db.objectStoreNames.contains(s));
+      if (names.length) {
+        const tx = db.transaction(names, 'readwrite');
+        const done = new Promise((ok, no) => { tx.oncomplete = ok; tx.onabort = tx.onerror = () => no(tx.error || new Error("That wasn't restored.")); });
+        try {
+          names.forEach((s) => {
+            const os = tx.objectStore(s);
+            os.clear();
+            unpacked[s].forEach(([k, v]) => { if (os.keyPath) os.put(v); else os.put(v, k); });
+          });
+        } catch (e) {
+          tx.abort(); // a row the store can't take at all: nothing goes in, not even the clear
+        }
+        await done;
+      }
+    } finally {
+      db.close();
     }
-    db.close();
     if (n.book && data.extra && data.extra.book) ls.set(n.book, data.extra.book);
   }
 
@@ -148,10 +172,13 @@
   async function putBackEye(part) {
     if (!part || !part.state || !Array.isArray(part.state.shoots)) throw new Error("The Eye's part of that file isn't right.");
     const db = await D.open('starky-moodboards', 1, (made) => { if (!made.objectStoreNames.contains('images')) made.createObjectStore('images'); });
-    const tx = db.transaction('images', 'readwrite');
-    Object.entries(part.images || {}).forEach(([k, v]) => tx.objectStore('images').put(v, k));
-    await new Promise((ok, no) => { tx.oncomplete = ok; tx.onabort = tx.onerror = () => no(tx.error || new Error("The Eye's photos weren't restored.")); });
-    db.close();
+    try {
+      const tx = db.transaction('images', 'readwrite');
+      Object.entries(part.images || {}).forEach(([k, v]) => tx.objectStore('images').put(v, k));
+      await new Promise((ok, no) => { tx.oncomplete = ok; tx.onabort = tx.onerror = () => no(tx.error || new Error("The Eye's photos weren't restored.")); });
+    } finally {
+      db.close();
+    }
     localStorage.setItem(EYE_STATE, JSON.stringify(part.state)); // throws if it doesn't fit, and the restore says so
     if (part.state.presentation && part.state.presentation.color) ls.set('df-app-color', part.state.presentation.color);
   }
