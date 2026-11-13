@@ -69,12 +69,12 @@ The new values are Proposed until Starky has seen them side by side (mockup).
 
 | Name | Live now | Proposed retune | From | Text on the new one |
 |---|---|---|---|---|
-| `orange` | `#EC701E` | `#F05A1A` vermilion orange | refs 1, 5 | berry blade black (white only for large text) |
+| `orange` | `#EC701E` | `#F05A1A` vermilion orange | refs 1, 5 | white, big text only (3.4:1); no small text on it |
 | `mango` | `#FFD100` | `#FFD100`, unchanged (already the card's yellow) | ref 1 | berry blade black |
-| `berry` | `#BF0B83` | `#D93A96` orchid pink | ref 2 | white for large text, berry blade black for small |
+| `berry` | `#BF0B83` | `#CC2E8A` orchid pink | ref 2 | white (4.9:1) |
 | `fern` | `#2E7A55` | `#13803F` print green | refs 5, 6 | white |
 | `ocean` | `#245CAA` | `#0A4FD6` cobalt | refs 2, 7 | white |
-| `leaf` | `#2F9A55` | `#14BFA0` teal | refs 2, 3 | berry blade black |
+| `leaf` | `#2F9A55` | `#14BFA0` teal | refs 2, 3 | berry blade black (4.8:1); white fails |
 | `ink` | `#313D45` | `#313D45`, unchanged (berry blade black) | — | white or mango |
 
 Note: each notebook's cover and edge on the shelf are pictures made per colour (`<app>/art/<colour>-cover.webp` and
@@ -95,7 +95,8 @@ colours.
 
 ### 4.4 Colour rules
 
-- A mark uses **at most three colours plus the paper**, and the hairline.
+- A mark uses **at most three colours plus the paper**, and the hairline. The one exception is the shelf's mark: one quarter
+  for each of the four notebooks.
 - A tint is only ever the light partner of a bright, never on its own as a mark.
 - Pairs that work, straight from the board: crimson + paper, berry blade black + chartreuse, cobalt + salmon, orange + green,
   sky + peach, forest + teal.
@@ -257,4 +258,4 @@ Starting ideas for the app marks, to be mocked up:
 | — | App mark ideas | Mock them up before settling |
 
 Still open: the band shape (D11), the app marks (section 7), the retuned colour values (4.2) and the exact type sizes (5.1).
-All four wait on the mockup.
+All four are on the mockup canvas "STKY look mockups" (https://claude.ai/artifact/YDz11YGa9iKqPgNNNcoWrP), waiting on Starky.
