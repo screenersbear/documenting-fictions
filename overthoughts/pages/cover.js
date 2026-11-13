@@ -20,8 +20,8 @@ tabHits.addEventListener('click', (e) => { const b = e.target.closest('[data-go]
 const RATIO = 1000 / 1360;
 const TAB_OUT = 0.08;
 const STACK = 16;
-const TURNED = (20 * Math.PI) / 180; // matches style.css
-const PERSPECTIVE = 1100;            // matches .nb in style.css
+const TURNED = (20 * Math.PI) / 180; // matches styles/cover.css
+const PERSPECTIVE = 1100;            // matches .nb in styles/cover.css
 const OPEN_MS = 900, ZOOM_MS = 760;
 const OVER = 12;
 document.getElementById('bookStack').innerHTML =

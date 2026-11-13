@@ -2,14 +2,9 @@
 // worker for its own folder (registered from the shelf, see app.js); this one
 // answers for the shelf itself and the covers it shows.
 // Bump CACHE_NAME with every deploy so installed copies pick up new files.
-const CACHE_NAME = 'df-suite-v21';
+const CACHE_NAME = 'df-suite-v22';
 const ASSETS = [
-  './', './index.html', './app.js', './suite.js', './manifest.json', './icon-180.png', './icon-512.png',
-  './styles/shelf.css', './styles/cover-stickers.css', './styles/shelf-bar.css', './styles/sheet.css', './styles/sticker-new.css', './styles/toast.css', './styles/sheet-words.css', './styles/type.css',
-  './data/sticker-store.js', './components/sticker-art.js', './components/sticker-new.js', './components/stickers.js', './pages/shelf-turntable.js', './pages/shelf-hands.js', './pages/shelf-options.js', './components/toast.js', './pages/shelf-open.js', './components/screen-fit.js',
-  './data/suite-backup.js', './components/backup-sheet.js',
-  './shared/data/basics.js', './shared/data/files.js', './shared/data/overthoughts.js', './shared/data/the-eye.js', './shared/data/journal-move.js', './shared/data/json-backup.js',
-  './shared/data/zip-format.js', './shared/data/zip-backup.js', './shared/data/zip-restore.js', './shared/data/links.js', './shared/data/df-data.js',
+  './', './index.html', './built/app.css', './built/app.js', './suite.js', './manifest.json', './icon-180.png', './icon-512.png',
   './ref/fonts/klee-one-latin.woff', './ref/fonts/figtree-latin.woff2', './ref/fonts/archivo-black-latin.woff2',
   './ref/art/ocean-cover.webp', './ref/art/ocean-block.webp',
   './the-eye/art/df-mango-cover.webp', './the-eye/art/df-mango-block.webp',

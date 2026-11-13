@@ -1,0 +1,180 @@
+/* Made by tools/join.mjs from the files listed in files.txt. Never edit it: change those files, then run node tools/join.mjs. */
+
+/* ---- styles/shelf.css ---- */
+/* Documenting Fictions: the shelf. The four notebooks float shut on white on a
+   turntable; swipe to bring one round, tap it to open it. */
+@font-face { font-family: "Klee One"; src: url("../ref/fonts/klee-one-latin.woff") format("woff"); font-display: block; }
+
+:root {
+  --text: #313d45; /* berry blade black */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: #fff; color: var(--text); overflow: hidden; overscroll-behavior: none; }
+body { font-family: "Klee One", "Bradley Hand", "Noteworthy", cursive; }
+button { font: inherit; color: inherit; }
+
+.shelf { position: fixed; inset: 0; overflow: hidden; background: #fff; padding-top: var(--safe-t); } /* (the padding only tells app.js where the top is) */
+.stage {
+  --W: 242px; --H: calc(var(--W) * 1.36); --T: calc(var(--W) * 0.19); --y: 60%;
+  position: absolute; inset: 0; perspective: 1100px; perspective-origin: 50% 40%;
+  touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab;
+  transform-origin: 0 0; transition: opacity .25s;
+}
+.stage.waiting { opacity: 0; } /* until the covers are in (app.js whenArtIn) */
+.stage.measuring, .stage.measuring * { transition: none !important; }
+.stage.zooming { transition: transform var(--zoom-ms, 760ms) cubic-bezier(.5, 0, .2, 1); }
+.slot { position: absolute; left: 50%; top: var(--y); width: 0; height: 0; transform-style: preserve-3d; }
+.slot.turning { transition: transform 420ms cubic-bezier(.4, 0, .2, 1); }
+.slot.reshaping { transition: transform 620ms cubic-bezier(.4, 0, .2, 1); } /* ring, dominoes, row */
+.float { position: absolute; transform-style: preserve-3d; animation: nbFloat 5.2s ease-in-out infinite; }
+@keyframes nbFloat { 0%, 100% { transform: translateY(-7px) rotateZ(-0.7deg) rotateY(-2deg); } 50% { transform: translateY(7px) rotateZ(0.7deg) rotateY(2deg); } }
+.slot.still .float, .slot.still .ground { animation: none; }
+
+.book { position: absolute; left: calc(var(--W) / -2); top: calc(var(--H) / -2); width: var(--W); height: var(--H); transform-style: preserve-3d; }
+.book > div, .leaf > div { position: absolute; box-sizing: border-box; }
+.face { left: 0; top: 0; width: 100%; height: 100%; border-radius: 0 calc(var(--W) * .035) calc(var(--W) * .035) 0; }
+.back { background: var(--c); transform: translateZ(calc(var(--T) / -2)); }
+.back::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: rgba(0, 0, 0, .12); }
+.edge { top: calc(var(--H) * .012); height: calc(var(--H) * .976); width: var(--T); left: calc(var(--W) * .985 - var(--T) / 2); transform: rotateY(90deg); background: repeating-linear-gradient(90deg, #fbfbfb 0 1.6px, #dcdcdc 1.6px 2.3px); }
+.edge::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0, 0, 0, .10), rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, .06)); }
+.top { left: calc(var(--W) * .01); width: calc(var(--W) * .975); height: var(--T); top: calc(var(--H) * .012 - var(--T) / 2); transform: rotateX(90deg); background: repeating-linear-gradient(0deg, #fdfdfd 0 1.6px, #e2e2e2 1.6px 2.3px); }
+.spine { top: 0; height: 100%; width: var(--T); left: calc(var(--T) / -2); transform: rotateY(-90deg); background: var(--c); }
+.spine::after { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, .22); }
+/* The first page, under the cover: the notebook's own page art, white inside a rim of the cover. */
+.page { background: #fff var(--block) center / 100% 100% no-repeat; transform: translateZ(calc(var(--T) / 2 - 1px)); }
+.tab { left: calc(var(--W) * .975); border-radius: 0 calc(var(--W) * .03) calc(var(--W) * .03) 0; display: flex; align-items: center; justify-content: center; }
+.tab span { writing-mode: vertical-rl; font-size: calc(var(--W) * .043); white-space: nowrap; transform: translateX(calc(var(--W) * .006)); letter-spacing: .01em; pointer-events: none; }
+
+/* The cover swings open on the spine. */
+.leaf { left: 0; top: 0; width: 100%; height: 100%; transform-style: preserve-3d; transform-origin: 0 50%; transform: translateZ(calc(var(--T) / 2)) rotateY(0deg); }
+.slot.opening .leaf { transition: transform var(--open-ms, 900ms) cubic-bezier(.45, .05, .3, 1); }
+.slot.open .leaf { transform: translateZ(calc(var(--T) / 2)) rotateY(-178deg); }
+.front { background: var(--c) var(--cover) center / 100% 100% no-repeat; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.inside { background: #fff; border-radius: calc(var(--W) * .035) 0 0 calc(var(--W) * .035); transform: rotateY(180deg) translateZ(.5px); backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: inset 0 0 0 calc(var(--W) * .012) var(--c); }
+.fog { background: #fff; transform: translateZ(.6px); pointer-events: none; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.lip { top: calc(var(--W) * .035); height: calc(var(--H) - var(--W) * .07); width: calc(var(--W) * .012); left: calc(var(--W) * .994); transform: translateZ(calc(var(--W) * -.006)) rotateY(90deg); background: var(--c); filter: brightness(.82); }
+/* The same colour as brightness(.82) gives, without a filter to run on every frame (the shelf lagged as it moved, 11-12). */
+@supports (background: color-mix(in srgb, red 50%, #000)) { .lip { background: color-mix(in srgb, var(--c) 82%, #000); filter: none; } }
+/* The first page is only seen once the cover opens: under the shut cover it isn't drawn at all. */
+.slot:not(.opening):not(.open) .page { visibility: hidden; }
+
+.ground { position: absolute; left: calc(var(--W) * -0.55); top: calc(var(--H) / 2 + var(--W) * .02); width: calc(var(--W) * 1.1); height: calc(var(--W) * .5); transform-origin: 50% 0; transform: rotateX(90deg); background: radial-gradient(closest-side, rgba(40, 42, 48, .34), rgba(40, 42, 48, .14) 55%, rgba(40, 42, 48, 0)); animation: nbGround 5.2s ease-in-out infinite; }
+@keyframes nbGround { 0%, 100% { opacity: .78; transform: rotateX(90deg) scale(1.06); } 50% { opacity: 1; transform: rotateX(90deg) scale(.96); } }
+.slot.open .ground { opacity: 0; transition: opacity .3s; }
+
+@media (prefers-reduced-motion: reduce) { .float, .ground { animation: none; } }
+
+/* ---- styles/cover-stickers.css ---- */
+/* Stickers on a cover (components/stickers.js), and round its fore-edge. */
+.front .stickers { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.sticker { position: absolute; aspect-ratio: var(--r, 1); transform: translate(-50%, -50%); padding: calc(var(--W) * .012); background: #f1eee6; box-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 calc(var(--W) * .008) calc(var(--W) * .02) rgba(0, 0, 0, .18); overflow: hidden; pointer-events: none; }
+.sticker.square, .sticker.rect { border-radius: calc(var(--W) * .012); }
+.sticker.circle { border-radius: 50%; }
+.sticker.printed { padding: 0; background: none; }
+.sticker .photo { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; filter: saturate(.74) contrast(.86) brightness(1.06) sepia(.1); -webkit-touch-callout: none; }
+.sticker.printed .photo { filter: none; }
+.sticker::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(118deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, .04) 42%, rgba(30, 30, 40, .12)); }
+.sticker .crease { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; }
+.fold { position: absolute; z-index: 2; pointer-events: none; }
+.fold.r, .fold.l { top: 0; bottom: 0; }
+.fold.t, .fold.b { left: 0; right: 0; }
+.fold.r { background: linear-gradient(90deg, rgba(25, 20, 15, 0), rgba(25, 20, 15, .1) 45%, rgba(25, 20, 15, .36) 88%, rgba(255, 255, 255, .55) 97%, rgba(255, 255, 255, .8)); }
+.fold.l { background: linear-gradient(270deg, rgba(25, 20, 15, 0), rgba(25, 20, 15, .1) 45%, rgba(25, 20, 15, .36) 88%, rgba(255, 255, 255, .55) 97%, rgba(255, 255, 255, .8)); }
+.fold.b { background: linear-gradient(180deg, rgba(25, 20, 15, 0), rgba(25, 20, 15, .1) 45%, rgba(25, 20, 15, .36) 88%, rgba(255, 255, 255, .55) 97%, rgba(255, 255, 255, .8)); }
+.fold.t { background: linear-gradient(0deg, rgba(25, 20, 15, 0), rgba(25, 20, 15, .1) 45%, rgba(25, 20, 15, .36) 88%, rgba(255, 255, 255, .55) 97%, rgba(255, 255, 255, .8)); }
+.leaf > .sticker-flap { left: 100%; top: 0; width: var(--T); height: 100%; overflow: hidden; transform-origin: 0 50%; transform: translateZ(1px) rotateY(90deg); pointer-events: none; }
+.sticker-flap .sticker { filter: brightness(.84); box-shadow: none; }
+.slot.open .sticker-flap { visibility: hidden; }
+
+/* ---- styles/shelf-bar.css ---- */
+/* Up close (the film roll): the book in front on its own, the others gone. */
+.slot.nearing { transition: transform 560ms cubic-bezier(.4, 0, .2, 1); }
+.stage.near .slot:not(.near) :is(.face, .spine, .top, .edge, .tab, .lip, .ground, .sticker-flap) { opacity: 0 !important; transition: opacity .3s; }
+.stage.unnear .slot :is(.face, .spine, .top, .edge, .tab, .lip, .ground, .sticker-flap) { transition: opacity .3s; }
+
+/* The bar under the books: a roll of film, which brings the notebook in
+   front up close with its options (colour, stickers, Back up all four). Its icon's middle sits where an
+   iPhone's home button used to be (user, 11-12): the bottom safe area + 6px,
+   30px at least, above the screen's edge, the same in all four notebooks. */
+.shelf-bar { position: absolute; left: 50%; bottom: max(8px, calc(var(--safe-b) - 16px)); display: flex; align-items: center; transform: translateX(-50%); touch-action: none; user-select: none; -webkit-user-select: none; transition: opacity .3s; }
+.logo-btn { width: 44px; height: 44px; border: 0; padding: 10px; background: none; color: #334045; cursor: pointer; }
+.logo-btn svg { display: block; width: 100%; height: 100%; }
+.shelf.away .shelf-bar { opacity: 0; pointer-events: none; }
+/* The iPhone home-screen app (components/screen-fit.js): for a moment the page is
+   taller than the screen, so iOS measures itself again. If it stays short,
+   the bar comes down by that much less: its icon then sits as in the notebooks. */
+html.ios-nudge, html.ios-hold { overflow-x: clip; overflow-y: visible; }
+html.ios-nudge body, html.ios-hold body { height: auto; min-height: calc(var(--screen-h, 100vh) + 160px); overflow-x: clip; overflow-y: visible; }
+html.is-short .shelf-bar { bottom: max(8px, calc(var(--safe-b) - 16px - var(--short-by, 0px))); }
+/* Installed, the bar shows once iOS has its height right (components/screen-fit.js
+   adds .settled), so it never shows high and then drops. */
+@media (display-mode: standalone) { html:not(.settled) .shelf-bar { opacity: 0; pointer-events: none; } }
+
+/* ---- styles/sheet.css ---- */
+/* The sheet that comes up from the foot of the screen, and the options in it:
+   the notebook's colours and its stickers. */
+.sheet-dim { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-end; justify-content: center; background: rgba(51, 64, 69, 0); transition: background .2s; }
+.sheet-dim.in { background: rgba(51, 64, 69, .28); }
+.sheet { width: 100%; max-width: 480px; box-sizing: border-box; padding: 22px 20px calc(18px + var(--safe-b)); border-radius: 18px 18px 0 0; background: #fff; color: #334045; box-shadow: 0 -8px 30px rgba(0, 0, 0, .12); transform: translateY(100%); transition: transform .22s ease-out; }
+.sheet-dim.in .sheet { transform: none; }
+.sheet-dim.near, .sheet-dim.near.in { background: transparent; }
+.sheet.opts { max-height: calc(100% - 140px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.opt-label { display: block; margin: 18px 0 8px; font-size: 15px; color: #5f696e; }
+.opt-label:first-child { margin-top: 0; }
+.opt-colors { display: grid; grid-template-columns: repeat(var(--n, 6), 1fr); gap: 4px; margin: 0 -6px; }
+.opt-color { display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; padding: 6px 0 4px; border: 0; background: none; color: #334045; font-size: 13px; cursor: pointer; }
+.opt-book { display: block; width: 38px; height: 52px; border-radius: 0 4px 4px 0; background: center / 100% 100% no-repeat; box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
+.opt-color[aria-pressed="true"] .opt-book { outline: 1.5px solid #334045; outline-offset: 3px; }
+.sticker-kinds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sticker-kind { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 0 10px; border: 1.5px solid #334045; border-radius: 12px; background: #fff; color: #334045; font-size: 15px; cursor: pointer; }
+.sticker-kind .shape { display: block; width: 26px; height: 26px; border: 1.5px solid #334045; }
+.sticker-kind .shape.circle { border-radius: 50%; }
+.sticker-kind .shape.square { border-radius: 4px; }
+.sticker-kind .shape.rect { width: 36px; height: 24px; border-radius: 4px; }
+.sticker-kinds + .sheet-btn { margin-top: 10px; }
+.opt-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+.opt-foot.one { grid-template-columns: 1fr; }
+.opt-foot .sheet-btn { margin-top: 0; }
+.sticker-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; align-items: center; }
+.sticker-pick { aspect-ratio: var(--r, 1); overflow: hidden; padding: 0; border: 0; background: #f1eee6; border-radius: 6px; cursor: pointer; }
+.sticker-pick.circle { border-radius: 50%; }
+.sticker-pick img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* ---- styles/sticker-new.css ---- */
+/* A new sticker: fitting the photo in its shape, then placing it on the cover. */
+.crop-layer { position: fixed; inset: 0; z-index: 1100; background: #fff; overflow: hidden; touch-action: none; }
+.crop-layer canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.crop-win { position: absolute; box-shadow: 0 0 0 200vmax rgba(255, 255, 255, .8); outline: 2px solid #334045; pointer-events: none; }
+.crop-win.circle { border-radius: 50%; }
+.crop-win.square, .crop-win.rect { border-radius: 4px; }
+.place-layer { position: fixed; inset: 0; z-index: 1100; touch-action: none; }
+.place-foot { position: absolute; z-index: 1; left: 16px; right: 16px; bottom: calc(10px + var(--safe-b)); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.place-foot .sheet-btn { margin-top: 0; }
+
+/* ---- styles/toast.css ---- */
+/* The toast: a word at the foot of the screen. */
+.toast { position: fixed; left: 50%; bottom: calc(24px + var(--safe-b)); z-index: 1200; display: flex; align-items: center; gap: 14px; max-width: calc(100% - 32px); padding: 11px 16px; border-radius: 12px; background: #334045; color: #fff; font-size: 15px; transform: translate(-50%, 16px); opacity: 0; transition: transform .2s, opacity .2s; }
+.toast.in { transform: translate(-50%, 0); opacity: 1; }
+.toast button { padding: 0; border: 0; background: none; color: #ffd100; font-size: 15px; cursor: pointer; }
+
+/* ---- styles/sheet-words.css ---- */
+/* The sheet's words and buttons. */
+.sheet h2 { margin: 0 0 8px; font-size: 21px; font-weight: 600; }
+.sheet p { margin: 0 0 16px; font-size: 15px; line-height: 1.45; }
+.sheet .sheet-note { margin: 12px 0 0; text-align: center; }
+.sheet-btn { display: block; width: 100%; margin-top: 10px; padding: 13px; border: 1.5px solid #334045; border-radius: 12px; background: #fff; color: #334045; font: inherit; font-size: 16px; cursor: pointer; }
+.sheet-btn.primary { background: #334045; color: #fff; }
+.sheet-btn.danger { background: #b3261e; border-color: #b3261e; }
+.sheet-btn.plain { border-color: transparent; }
+.sheet-btn:disabled { opacity: .6; }
+
+/* ---- styles/type.css ---- */
+/* ===== The shelf's sheets in the notebooks' new type (user, 11-12): Inter, with titles in Archivo Black capitals and labels in Inter semibold capitals. The books' tabs stay in Klee One. ===== */
+@font-face { font-family: "Figtree"; src: url("../ref/fonts/figtree-latin.woff2") format("woff2"); font-weight: 300 900; font-display: swap; size-adjust: 96.5%; }
+@font-face { font-family: "Archivo Black"; src: url("../ref/fonts/archivo-black-latin.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+.sheet-dim, .toast, .crop-layer, .place-layer { font-family: "Figtree", "Helvetica Neue", Arial, sans-serif; }
+.sheet h2 { font: 400 18px/1.3 "Archivo Black", "Arial Black", "Helvetica Neue", Arial, sans-serif; text-transform: uppercase; letter-spacing: .02em; }
+.opt-label { font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+.opt-label.opt-hint { font-weight: 400; text-transform: none; letter-spacing: 0; }

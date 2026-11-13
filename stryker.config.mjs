@@ -17,4 +17,9 @@ export default {
   // Not copied into each mutation sandbox: big assets no unit test touches
   // (ref/ml is ~117 MB of image-recognition models).
   ignorePatterns: ['ref/ml', '**/art', '**/fonts', 'the-eye/lib', 'reports', '.claude', 'tests/e2e', 'tests/perf'],
+  // Every file stays exactly as it is in the sandbox (Stryker would otherwise
+  // add a "// @ts-nocheck" line to the top of scripts; nothing here is
+  // TypeScript). The tests that check each app's built/ files and layout read
+  // the files themselves.
+  disableTypeChecks: false,
 };

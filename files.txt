@@ -1,0 +1,42 @@
+# The shelf (the suite's first page) is made of the files below. tools/join.mjs joins the files under
+# each built/ name, in this order, into that one file, and index.html loads the
+# built file: one trip to the server instead of one per file.
+# After changing, adding or removing a file listed here, run: node tools/join.mjs
+
+# How it looks, in the order the rules apply.
+built/app.css
+  styles/shelf.css
+  styles/cover-stickers.css
+  styles/shelf-bar.css
+  styles/sheet.css
+  styles/sticker-new.css
+  styles/toast.css
+  styles/sheet-words.css
+  styles/type.css
+
+# What it does, in the order the scripts run.
+built/app.js
+  data/sticker-store.js
+  components/sticker-art.js
+  components/sticker-new.js
+  components/stickers.js
+  pages/shelf-turntable.js
+  pages/shelf-hands.js
+  pages/shelf-options.js
+  components/toast.js
+  pages/shelf-open.js
+  components/screen-fit.js
+  app.js
+  shared/data/basics.js
+  shared/data/files.js
+  shared/data/overthoughts.js
+  shared/data/the-eye.js
+  shared/data/journal-move.js
+  shared/data/json-backup.js
+  shared/data/zip-format.js
+  shared/data/zip-backup.js
+  shared/data/zip-restore.js
+  shared/data/links.js
+  shared/data/df-data.js
+  data/suite-backup.js
+  components/backup-sheet.js

@@ -17,11 +17,12 @@ Keep every app (the shelf, Ref, The Eye, Contact Sheet, Overthoughts) organized 
 1. Screens go in `pages/`.
 2. Shared pieces (anything more than one screen uses: bars, buttons, icons, sheets, small helpers) go in `components/`.
 3. Saving and loading (the database, backups, import and export, the shape of what's saved) goes in `data/`.
-   How it looks (the CSS) goes in `styles/`, one file per screen or piece, loaded by `index.html` in the order they apply. (All in one folder so links to `art/` and `fonts/` work the same from every file.) Each app starts in `app.js` beside `index.html`.
+   How it looks (the CSS) goes in `styles/`, one file per screen or piece, in the order they apply. (All in one folder so links to `art/` and `fonts/` work the same from every file.) Each app starts in `app.js` beside `index.html`. A screen's markup can be a piece of its own in `pages/` (The Eye's are): an `.html` file whose first line is a comment saying what it is.
 4. One job per file. The file's name says its job, and a line at the top says it in plain words.
-5. No file over 300 lines. When a file gets near 300, split it by job. Third-party files (`lib/`, `ml/`, `vendor/`, `*.min.js`) aren't ours and don't count.
+5. No file over 300 lines. When a file gets near 300, split it by job. Third-party files (`lib/`, `ml/`, `vendor/`, `*.min.js`) aren't ours and don't count, and neither are the joined files in `built/` (see 8).
 6. Before writing anything new, check if it already exists (in this app, in `shared/`, or in another notebook) and use that instead of writing a second copy.
 7. Moving code around never changes how an app works: same screens, buttons, words, look and saved data. Check with `npm run test:quick` and in the browser before saying it's done.
+8. The page loads joined files, so the small files cost no speed (Starky, 2026-11-13). Each app's `files.txt` lists its stylesheets, classic scripts and markup pieces, in order, under the file in `built/` they're joined into. After changing, adding or removing any of an app's files, run `node tools/join.mjs` (it rewrites only what changed) and commit `built/` with it (`tools/sync.py` joins before every export too). Never edit `built/`. The push check fails while a `built/` is out of date. In Ref, Contact Sheet and Overthoughts the line `built/app.js from app.js` joins `app.js` and every ES module it imports, by following the imports (`tools/join-modules.mjs`), so those aren't listed. A file loaded by its address instead of imported (Ref's `data/tagger-worker.js`, Contact Sheet's `components/upright.js`) stays a file of its own, in `sw.js`'s list.
 
 ## How it looks (Starky, 2026-11-13)
 

@@ -3,6 +3,7 @@
   "logic": [
     "shared/data/*.js",
     "data/suite-backup.js",
+    "tools/join-files.mjs", "tools/join-modules.mjs",
     "ref/data/db.js",
     "ref/data/library.js",
     "ref/data/templates.js",

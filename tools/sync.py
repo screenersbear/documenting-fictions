@@ -5,7 +5,9 @@
         Copies the shared data files (shared/data/*.js) into each notebook's
         data/shared/ folder, so a notebook copied out on its own still has
         them; a file taken out of shared/data/ is taken out there too. Run it
-        after any change in shared/data/.
+        after any change in shared/data/. Then it joins every app's files
+        again (node tools/join.mjs), since each app's built/ holds a joined
+        copy of the shared data.
 
     python3 tools/sync.py export NOTEBOOK [DEST]
     python3 tools/sync.py export all
@@ -13,7 +15,8 @@
         its own: files that changed are written, new ones added, nothing in
         DEST is deleted (files only DEST has are listed). The line loading
         ../suite.js is taken out of index.html. DEST defaults to the folder
-        in TARGETS, beside this repository.
+        in TARGETS, beside this repository. The notebook's files are joined
+        again first (node tools/join.mjs), so its built/ is never out of date.
 
         The Eye on its own also gets its own storage: everything it keeps is
         under names starting df-theeye, so on the same website it never
@@ -149,7 +152,22 @@ def sha_file(path):
     return h.hexdigest()
 
 
+def join(apps, dry):
+    """Joins the apps' small files into their built/ folders (tools/join.mjs)."""
+    if dry:
+        say(f'  would join: {" ".join(apps)}')
+        return
+    node = shutil.which('node') or os.path.expanduser('~/.local/node/bin/node')
+    if not os.path.exists(node):
+        raise SystemExit('Node is needed to join the files (tools/join.mjs) and was not found; nothing exported.')
+    out = subprocess.run([node, os.path.join(ROOT, 'tools', 'join.mjs'), *apps], capture_output=True, text=True)
+    if out.returncode:
+        raise SystemExit(f'Joining the files failed; nothing exported.\n{out.stderr.strip()}')
+
+
 def shared(dry):
+    """Copies shared/data/ into each notebook; gives the notebooks whose copies changed."""
+    changed = set()
     src_dir = os.path.join(ROOT, 'shared', 'data')
     names = sorted(f for f in os.listdir(src_dir) if f.endswith('.js'))
     for nb in NOTEBOOKS:
@@ -157,6 +175,7 @@ def shared(dry):
         old = os.path.join(ROOT, nb, 'df-data.js')
         if os.path.exists(old):
             say(f'  removed {nb}/df-data.js (it is in data/shared/ now)')
+            changed.add(nb)
             if not dry:
                 os.remove(old)
         dst_dir = os.path.join(ROOT, nb, 'data', 'shared')
@@ -165,14 +184,17 @@ def shared(dry):
             if os.path.exists(dst) and filecmp.cmp(src, dst, shallow=False):
                 continue
             say(f'  shared -> {nb}/data/shared/{f}')
+            changed.add(nb)
             if not dry:
                 os.makedirs(dst_dir, exist_ok=True)
                 shutil.copyfile(src, dst)
         for f in sorted(os.listdir(dst_dir)) if os.path.isdir(dst_dir) else []:
             if f.endswith('.js') and f not in names:
                 say(f'  removed {nb}/data/shared/{f} (no longer in shared/data/)')
+                changed.add(nb)
                 if not dry:
                     os.remove(os.path.join(dst_dir, f))
+    return changed
 
 
 def standalone_index(nb, text):
@@ -348,7 +370,9 @@ def main(argv):
     if not args or args[0] not in ('shared', 'export'):
         print(__doc__)
         return 1
-    shared(dry)
+    changed = shared(dry)
+    if args[0] == 'shared':
+        join(['.'] + NOTEBOOKS, dry)  # the shelf joins shared/data/ itself
     if args[0] == 'export':
         if len(args) < 2:
             print(__doc__)
@@ -358,6 +382,8 @@ def main(argv):
         for nb in names:
             if nb not in TARGETS:
                 raise SystemExit(f'Unknown notebook {nb}: one of {", ".join(NOTEBOOKS)}')
+        join(sorted(set(names) | changed), dry)
+        for nb in names:
             dest = os.path.abspath(args[2]) if len(args) > 2 and len(names) == 1 else TARGETS[nb]
             ok = export(nb, dest, dry, force) and ok
         return 0 if ok else 2
