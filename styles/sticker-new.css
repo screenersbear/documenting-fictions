@@ -1,0 +1,9 @@
+/* A new sticker: fitting the photo in its shape, then placing it on the cover. */
+.crop-layer { position: fixed; inset: 0; z-index: 1100; background: #fff; overflow: hidden; touch-action: none; }
+.crop-layer canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.crop-win { position: absolute; box-shadow: 0 0 0 200vmax rgba(255, 255, 255, .8); outline: 2px solid #334045; pointer-events: none; }
+.crop-win.circle { border-radius: 50%; }
+.crop-win.square, .crop-win.rect { border-radius: 4px; }
+.place-layer { position: fixed; inset: 0; z-index: 1100; touch-action: none; }
+.place-foot { position: absolute; z-index: 1; left: 16px; right: 16px; bottom: calc(10px + var(--safe-b)); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.place-foot .sheet-btn { margin-top: 0; }

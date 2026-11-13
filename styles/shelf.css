@@ -1,0 +1,64 @@
+/* Documenting Fictions: the shelf. The four notebooks float shut on white on a
+   turntable; swipe to bring one round, tap it to open it. */
+@font-face { font-family: "Klee One"; src: url("../ref/fonts/klee-one-latin.woff") format("woff"); font-display: block; }
+
+:root {
+  --text: #313d45; /* berry blade black */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: #fff; color: var(--text); overflow: hidden; overscroll-behavior: none; }
+body { font-family: "Klee One", "Bradley Hand", "Noteworthy", cursive; }
+button { font: inherit; color: inherit; }
+
+.shelf { position: fixed; inset: 0; overflow: hidden; background: #fff; padding-top: var(--safe-t); } /* (the padding only tells app.js where the top is) */
+.stage {
+  --W: 242px; --H: calc(var(--W) * 1.36); --T: calc(var(--W) * 0.19); --y: 60%;
+  position: absolute; inset: 0; perspective: 1100px; perspective-origin: 50% 40%;
+  touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab;
+  transform-origin: 0 0; transition: opacity .25s;
+}
+.stage.waiting { opacity: 0; } /* until the covers are in (app.js whenArtIn) */
+.stage.measuring, .stage.measuring * { transition: none !important; }
+.stage.zooming { transition: transform var(--zoom-ms, 760ms) cubic-bezier(.5, 0, .2, 1); }
+.slot { position: absolute; left: 50%; top: var(--y); width: 0; height: 0; transform-style: preserve-3d; }
+.slot.turning { transition: transform 420ms cubic-bezier(.4, 0, .2, 1); }
+.slot.reshaping { transition: transform 620ms cubic-bezier(.4, 0, .2, 1); } /* ring, dominoes, row */
+.float { position: absolute; transform-style: preserve-3d; animation: nbFloat 5.2s ease-in-out infinite; }
+@keyframes nbFloat { 0%, 100% { transform: translateY(-7px) rotateZ(-0.7deg) rotateY(-2deg); } 50% { transform: translateY(7px) rotateZ(0.7deg) rotateY(2deg); } }
+.slot.still .float, .slot.still .ground { animation: none; }
+
+.book { position: absolute; left: calc(var(--W) / -2); top: calc(var(--H) / -2); width: var(--W); height: var(--H); transform-style: preserve-3d; }
+.book > div, .leaf > div { position: absolute; box-sizing: border-box; }
+.face { left: 0; top: 0; width: 100%; height: 100%; border-radius: 0 calc(var(--W) * .035) calc(var(--W) * .035) 0; }
+.back { background: var(--c); transform: translateZ(calc(var(--T) / -2)); }
+.back::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: rgba(0, 0, 0, .12); }
+.edge { top: calc(var(--H) * .012); height: calc(var(--H) * .976); width: var(--T); left: calc(var(--W) * .985 - var(--T) / 2); transform: rotateY(90deg); background: repeating-linear-gradient(90deg, #fbfbfb 0 1.6px, #dcdcdc 1.6px 2.3px); }
+.edge::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0, 0, 0, .10), rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, .06)); }
+.top { left: calc(var(--W) * .01); width: calc(var(--W) * .975); height: var(--T); top: calc(var(--H) * .012 - var(--T) / 2); transform: rotateX(90deg); background: repeating-linear-gradient(0deg, #fdfdfd 0 1.6px, #e2e2e2 1.6px 2.3px); }
+.spine { top: 0; height: 100%; width: var(--T); left: calc(var(--T) / -2); transform: rotateY(-90deg); background: var(--c); }
+.spine::after { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, .22); }
+/* The first page, under the cover: the notebook's own page art, white inside a rim of the cover. */
+.page { background: #fff var(--block) center / 100% 100% no-repeat; transform: translateZ(calc(var(--T) / 2 - 1px)); }
+.tab { left: calc(var(--W) * .975); border-radius: 0 calc(var(--W) * .03) calc(var(--W) * .03) 0; display: flex; align-items: center; justify-content: center; }
+.tab span { writing-mode: vertical-rl; font-size: calc(var(--W) * .043); white-space: nowrap; transform: translateX(calc(var(--W) * .006)); letter-spacing: .01em; pointer-events: none; }
+
+/* The cover swings open on the spine. */
+.leaf { left: 0; top: 0; width: 100%; height: 100%; transform-style: preserve-3d; transform-origin: 0 50%; transform: translateZ(calc(var(--T) / 2)) rotateY(0deg); }
+.slot.opening .leaf { transition: transform var(--open-ms, 900ms) cubic-bezier(.45, .05, .3, 1); }
+.slot.open .leaf { transform: translateZ(calc(var(--T) / 2)) rotateY(-178deg); }
+.front { background: var(--c) var(--cover) center / 100% 100% no-repeat; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.inside { background: #fff; border-radius: calc(var(--W) * .035) 0 0 calc(var(--W) * .035); transform: rotateY(180deg) translateZ(.5px); backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: inset 0 0 0 calc(var(--W) * .012) var(--c); }
+.fog { background: #fff; transform: translateZ(.6px); pointer-events: none; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.lip { top: calc(var(--W) * .035); height: calc(var(--H) - var(--W) * .07); width: calc(var(--W) * .012); left: calc(var(--W) * .994); transform: translateZ(calc(var(--W) * -.006)) rotateY(90deg); background: var(--c); filter: brightness(.82); }
+/* The same colour as brightness(.82) gives, without a filter to run on every frame (the shelf lagged as it moved, 11-12). */
+@supports (background: color-mix(in srgb, red 50%, #000)) { .lip { background: color-mix(in srgb, var(--c) 82%, #000); filter: none; } }
+/* The first page is only seen once the cover opens: under the shut cover it isn't drawn at all. */
+.slot:not(.opening):not(.open) .page { visibility: hidden; }
+
+.ground { position: absolute; left: calc(var(--W) * -0.55); top: calc(var(--H) / 2 + var(--W) * .02); width: calc(var(--W) * 1.1); height: calc(var(--W) * .5); transform-origin: 50% 0; transform: rotateX(90deg); background: radial-gradient(closest-side, rgba(40, 42, 48, .34), rgba(40, 42, 48, .14) 55%, rgba(40, 42, 48, 0)); animation: nbGround 5.2s ease-in-out infinite; }
+@keyframes nbGround { 0%, 100% { opacity: .78; transform: rotateX(90deg) scale(1.06); } 50% { opacity: 1; transform: rotateX(90deg) scale(.96); } }
+.slot.open .ground { opacity: 0; transition: opacity .3s; }
+
+@media (prefers-reduced-motion: reduce) { .float, .ground { animation: none; } }

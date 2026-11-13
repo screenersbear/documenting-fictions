@@ -1,0 +1,22 @@
+/* Up close (the film roll): the book in front on its own, the others gone. */
+.slot.nearing { transition: transform 560ms cubic-bezier(.4, 0, .2, 1); }
+.stage.near .slot:not(.near) :is(.face, .spine, .top, .edge, .tab, .lip, .ground, .sticker-flap) { opacity: 0 !important; transition: opacity .3s; }
+.stage.unnear .slot :is(.face, .spine, .top, .edge, .tab, .lip, .ground, .sticker-flap) { transition: opacity .3s; }
+
+/* The bar under the books: a roll of film, which brings the notebook in
+   front up close with its options (colour, stickers, Back up all four). Its icon's middle sits where an
+   iPhone's home button used to be (user, 11-12): the bottom safe area + 6px,
+   30px at least, above the screen's edge, the same in all four notebooks. */
+.shelf-bar { position: absolute; left: 50%; bottom: max(8px, calc(var(--safe-b) - 16px)); display: flex; align-items: center; transform: translateX(-50%); touch-action: none; user-select: none; -webkit-user-select: none; transition: opacity .3s; }
+.logo-btn { width: 44px; height: 44px; border: 0; padding: 10px; background: none; color: #334045; cursor: pointer; }
+.logo-btn svg { display: block; width: 100%; height: 100%; }
+.shelf.away .shelf-bar { opacity: 0; pointer-events: none; }
+/* The iPhone home-screen app (components/screen-fit.js): for a moment the page is
+   taller than the screen, so iOS measures itself again. If it stays short,
+   the bar comes down by that much less: its icon then sits as in the notebooks. */
+html.ios-nudge, html.ios-hold { overflow-x: clip; overflow-y: visible; }
+html.ios-nudge body, html.ios-hold body { height: auto; min-height: calc(var(--screen-h, 100vh) + 160px); overflow-x: clip; overflow-y: visible; }
+html.is-short .shelf-bar { bottom: max(8px, calc(var(--safe-b) - 16px - var(--short-by, 0px))); }
+/* Installed, the bar shows once iOS has its height right (components/screen-fit.js
+   adds .settled), so it never shows high and then drops. */
+@media (display-mode: standalone) { html:not(.settled) .shelf-bar { opacity: 0; pointer-events: none; } }

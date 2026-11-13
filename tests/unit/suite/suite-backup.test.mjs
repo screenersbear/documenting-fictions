@@ -20,7 +20,7 @@ async function load(dfData) {
   delete window.DFSuiteBackup;
   if (dfData === undefined) delete window.DFData;
   else window.DFData = dfData;
-  await import('../../../suite-backup.js');
+  await import('../../../data/suite-backup.js');
   return window.DFSuiteBackup;
 }
 beforeEach(async () => {

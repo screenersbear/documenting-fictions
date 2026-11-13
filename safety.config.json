@@ -2,7 +2,7 @@
   "_readme": "One settings file for every safety check. Edit this, not the individual configs. Round 1 (2026-11-12, Starky's choice): logic = the files that were already logic (shared data + backup code, each notebook's model/util/storage files). The Eye's logic is still inside the-eye/app.js and comes out into tested files in later rounds. Each notebook's data/shared/ folder is a byte-for-byte copy of shared/data/ made by tools/sync.py shared, so shared/data/ stands for all five.",
   "logic": [
     "shared/data/*.js",
-    "suite-backup.js",
+    "data/suite-backup.js",
     "ref/data/db.js",
     "ref/data/library.js",
     "ref/data/templates.js",

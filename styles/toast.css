@@ -1,0 +1,4 @@
+/* The toast: a word at the foot of the screen. */
+.toast { position: fixed; left: 50%; bottom: calc(24px + var(--safe-b)); z-index: 1200; display: flex; align-items: center; gap: 14px; max-width: calc(100% - 32px); padding: 11px 16px; border-radius: 12px; background: #334045; color: #fff; font-size: 15px; transform: translate(-50%, 16px); opacity: 0; transition: transform .2s, opacity .2s; }
+.toast.in { transform: translate(-50%, 0); opacity: 1; }
+.toast button { padding: 0; border: 0; background: none; color: #ffd100; font-size: 15px; cursor: pointer; }

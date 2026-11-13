@@ -1,5 +1,5 @@
 // Documenting Fictions: the "Back up all four" sheet on the shelf. What it
-// saves and restores is in suite-backup.js.
+// saves and restores is in data/suite-backup.js.
 (function () {
   'use strict';
   const D = window.DFData;
@@ -21,7 +21,7 @@
   }
   const say = (s, text) => { const p = s.el.querySelector('.sheet-note'); p.textContent = text; p.hidden = !text; };
 
-  // Opened from the film roll's panel on the shelf (home.js).
+  // Opened from the film roll's panel on the shelf (pages/shelf-options.js).
   window.DFBackup = { open() {
     // The backup's made on the first tap and handed over on a second one, as
     // an iPhone only shares a file straight from a tap.

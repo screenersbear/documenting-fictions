@@ -1,0 +1,9 @@
+/* The sheet's words and buttons. */
+.sheet h2 { margin: 0 0 8px; font-size: 21px; font-weight: 600; }
+.sheet p { margin: 0 0 16px; font-size: 15px; line-height: 1.45; }
+.sheet .sheet-note { margin: 12px 0 0; text-align: center; }
+.sheet-btn { display: block; width: 100%; margin-top: 10px; padding: 13px; border: 1.5px solid #334045; border-radius: 12px; background: #fff; color: #334045; font: inherit; font-size: 16px; cursor: pointer; }
+.sheet-btn.primary { background: #334045; color: #fff; }
+.sheet-btn.danger { background: #b3261e; border-color: #b3261e; }
+.sheet-btn.plain { border-color: transparent; }
+.sheet-btn:disabled { opacity: .6; }

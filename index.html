@@ -30,18 +30,34 @@
   } catch (e) {}
 })();
 </script>
-<link rel="stylesheet" href="home.css" />
+<link rel="stylesheet" href="styles/shelf.css" />
+<link rel="stylesheet" href="styles/cover-stickers.css" />
+<link rel="stylesheet" href="styles/shelf-bar.css" />
+<link rel="stylesheet" href="styles/sheet.css" />
+<link rel="stylesheet" href="styles/sticker-new.css" />
+<link rel="stylesheet" href="styles/toast.css" />
+<link rel="stylesheet" href="styles/sheet-words.css" />
+<link rel="stylesheet" href="styles/type.css" />
 </head>
 <body>
 <main class="shelf" id="shelf" aria-label="Your notebooks">
   <div class="stage" id="stage"></div>
-  <!-- The bar under the books: the film roll, which brings the notebook in front up close with its colour, its stickers (stickers.js) and Back up all four (backup.js). -->
+  <!-- The bar under the books: the film roll, which brings the notebook in front up close with its colour, its stickers (components/stickers.js) and Back up all four (components/backup-sheet.js). -->
   <div class="shelf-bar" id="shelfBar">
     <button type="button" class="logo-btn" id="logoBtn"></button>
   </div>
 </main>
-<script src="stickers.js"></script>
-<script src="home.js"></script>
+<script src="data/sticker-store.js"></script>
+<script src="components/sticker-art.js"></script>
+<script src="components/sticker-new.js"></script>
+<script src="components/stickers.js"></script>
+<script src="pages/shelf-turntable.js"></script>
+<script src="pages/shelf-hands.js"></script>
+<script src="pages/shelf-options.js"></script>
+<script src="components/toast.js"></script>
+<script src="pages/shelf-open.js"></script>
+<script src="components/screen-fit.js"></script>
+<script src="app.js"></script>
 <script src="shared/data/basics.js"></script>
 <script src="shared/data/files.js"></script>
 <script src="shared/data/overthoughts.js"></script>
@@ -53,7 +69,7 @@
 <script src="shared/data/zip-restore.js"></script>
 <script src="shared/data/links.js"></script>
 <script src="shared/data/df-data.js"></script>
-<script src="suite-backup.js"></script>
-<script src="backup.js"></script>
+<script src="data/suite-backup.js"></script>
+<script src="components/backup-sheet.js"></script>
 </body>
 </html>
