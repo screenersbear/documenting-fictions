@@ -7,7 +7,7 @@ window.EyeParts.addJournalEntryPdf = function addJournalEntryPdf(ed) {
   // ensureSpace, courier body text) — no sections to choose here since a
   // journal entry is just title/date/tags/body/photos, one flat page.
   async function buildJournalEntryPdf(entry) {
-    const { jsPDF } = window.jspdf;
+    const { jsPDF } = await ed.loadLib('lib/jspdf.umd.min.js', 'jspdf');
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();

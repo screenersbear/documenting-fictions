@@ -8,7 +8,7 @@ window.EyeParts.addPdfShootPdf = function addPdfShootPdf(ed) {
   Object.assign(pdf, { ensureSpace, drawLabeledLine, sectionHeading });
     const sections = chosenSections || { talent: true, logistics: true, deliverables: true, direction: false, references: false, team: true, moodboard: true }; pdf.sections = sections;
     const isVideo = ed.isVideoShoot(s); pdf.isVideo = isVideo;
-    const { jsPDF } = window.jspdf;
+    const { jsPDF } = await ed.loadLib('lib/jspdf.umd.min.js', 'jspdf');
     const doc = new jsPDF({ unit: 'pt', format: 'letter' }); pdf.doc = doc;
     const pageWidth = doc.internal.pageSize.getWidth(); pdf.pageWidth = pageWidth;
     const pageHeight = doc.internal.pageSize.getHeight();

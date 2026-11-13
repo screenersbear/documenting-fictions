@@ -115,6 +115,7 @@
   window.EyeParts.addShootOptionsAddToProject(ed);
   window.EyeParts.addToast(ed);
   window.EyeParts.addConfirm(ed);
+  window.EyeParts.addLoadLib(ed);
   window.EyeParts.addPdfHelpers(ed);
   window.EyeParts.addPdfShootPdf(ed);
   window.EyeParts.addPdfSections(ed);

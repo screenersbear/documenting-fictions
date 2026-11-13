@@ -16675,6 +16675,42 @@ window.EyeParts.addConfirm = function addConfirm(ed) {
 };
 ;
 
+// ---- components/load-lib.js ----
+// Loads someone else's library from lib/ the first time The Eye needs it,
+// instead of with the page, so The Eye opens sooner: the PDF maker
+// (jspdf.umd.min.js, 356 KB) when a PDF is made, the PDF viewer (pdf.min.js)
+// when a preview opens. sw.js keeps a copy of each, so they load offline too.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addLoadLib = function addLoadLib(ed) {
+  const loading = new Map(); // each library's one load, by its file
+
+  // What the library puts on window (window[name]) once its file has run:
+  // the same promise every time. If it can't load, it says so, and the next
+  // try starts again.
+  function loadLib(src, name) {
+    if (!loading.has(src)) loading.set(src, window[name] ? Promise.resolve(window[name]) : addTag(src, name));
+    return loading.get(src);
+  }
+
+  function addTag(src, name) {
+    return new Promise((resolve, reject) => {
+      const tag = document.createElement('script');
+      tag.src = src;
+      tag.onload = () => resolve(window[name]);
+      tag.onerror = () => {
+        loading.delete(src);
+        tag.remove();
+        reject(new Error(`${src} did not load`));
+      };
+      document.head.appendChild(tag);
+    });
+  }
+
+  Object.assign(ed, { loadLib });
+};
+;
+
 // ---- pages/pdf/pdf-helpers.js ----
 // For the PDFs: the logo, picture sizes and a shoot's times.
 // (Loaded before app.js, which runs it in its turn.)
@@ -16729,7 +16765,7 @@ window.EyeParts.addPdfShootPdf = function addPdfShootPdf(ed) {
   Object.assign(pdf, { ensureSpace, drawLabeledLine, sectionHeading });
     const sections = chosenSections || { talent: true, logistics: true, deliverables: true, direction: false, references: false, team: true, moodboard: true }; pdf.sections = sections;
     const isVideo = ed.isVideoShoot(s); pdf.isVideo = isVideo;
-    const { jsPDF } = window.jspdf;
+    const { jsPDF } = await ed.loadLib('lib/jspdf.umd.min.js', 'jspdf');
     const doc = new jsPDF({ unit: 'pt', format: 'letter' }); pdf.doc = doc;
     const pageWidth = doc.internal.pageSize.getWidth(); pdf.pageWidth = pageWidth;
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -17231,23 +17267,12 @@ window.EyeParts.addPdfViewer = function addPdfViewer(ed) {
   const PDF_DOUBLE_TAP_ZOOM = 2.5; ed.PDF_DOUBLE_TAP_ZOOM = PDF_DOUBLE_TAP_ZOOM;
   const PDF_MAX_CANVAS_PX = 2600;
   const pdfViewer = { doc: null, pages: [], zoom: 1, fitW: 0, token: 0, sharpenTimer: null }; ed.pdfViewer = pdfViewer;
-  let pdfjsLoadPromise = null;
 
-  function loadPdfJs() {
-    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
-    if (!pdfjsLoadPromise) {
-      pdfjsLoadPromise = new Promise((resolve, reject) => {
-        const el = document.createElement('script');
-        el.src = 'lib/pdf.min.js';
-        el.onload = () => {
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
-          resolve(window.pdfjsLib);
-        };
-        el.onerror = () => { pdfjsLoadPromise = null; reject(new Error('pdf.js failed to load')); };
-        document.head.appendChild(el);
-      });
-    }
-    return pdfjsLoadPromise;
+  // pdf.js and the worker it draws with (components/load-lib.js loads it).
+  async function loadPdfJs() {
+    const pdfjsLib = await ed.loadLib('lib/pdf.min.js', 'pdfjsLib');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
+    return pdfjsLib;
   }
 
   const pdfViewportEl = document.getElementById('pdfPreviewViewport'); ed.pdfViewportEl = pdfViewportEl;
@@ -17521,7 +17546,7 @@ window.EyeParts.addJournalEntryPdf = function addJournalEntryPdf(ed) {
   // ensureSpace, courier body text) — no sections to choose here since a
   // journal entry is just title/date/tags/body/photos, one flat page.
   async function buildJournalEntryPdf(entry) {
-    const { jsPDF } = window.jspdf;
+    const { jsPDF } = await ed.loadLib('lib/jspdf.umd.min.js', 'jspdf');
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -17912,7 +17937,7 @@ window.EyeParts.addPdfArchivePdf = function addPdfArchivePdf(ed) {
   async function buildArchivePdf(shoots) {
   const pdf = {  }; // what the parts of buildArchivePdf share
   Object.assign(pdf, { ensureSpace, drawLabeledLine, sectionHeading, drawImageGrid });
-    const { jsPDF } = window.jspdf;
+    const { jsPDF } = await ed.loadLib('lib/jspdf.umd.min.js', 'jspdf');
     const doc = new jsPDF({ unit: 'pt', format: 'letter' }); pdf.doc = doc;
     const pageWidth = doc.internal.pageSize.getWidth(); pdf.pageWidth = pageWidth;
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -24780,6 +24805,7 @@ window.EyeParts.addNavigator = function addNavigator(ed) {
   window.EyeParts.addShootOptionsAddToProject(ed);
   window.EyeParts.addToast(ed);
   window.EyeParts.addConfirm(ed);
+  window.EyeParts.addLoadLib(ed);
   window.EyeParts.addPdfHelpers(ed);
   window.EyeParts.addPdfShootPdf(ed);
   window.EyeParts.addPdfSections(ed);

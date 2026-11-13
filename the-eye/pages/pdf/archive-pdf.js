@@ -12,7 +12,7 @@ window.EyeParts.addPdfArchivePdf = function addPdfArchivePdf(ed) {
   async function buildArchivePdf(shoots) {
   const pdf = {  }; // what the parts of buildArchivePdf share
   Object.assign(pdf, { ensureSpace, drawLabeledLine, sectionHeading, drawImageGrid });
-    const { jsPDF } = window.jspdf;
+    const { jsPDF } = await ed.loadLib('lib/jspdf.umd.min.js', 'jspdf');
     const doc = new jsPDF({ unit: 'pt', format: 'letter' }); pdf.doc = doc;
     const pageWidth = doc.internal.pageSize.getWidth(); pdf.pageWidth = pageWidth;
     const pageHeight = doc.internal.pageSize.getHeight();

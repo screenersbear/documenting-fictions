@@ -2,7 +2,8 @@
 # each built/ name, in this order, into that one file, and index.html loads the
 # built file: one trip to the server instead of one per file.
 # After changing, adding or removing a file listed here, run: node tools/join.mjs
-# (lib/jspdf.umd.min.js, the PDF maker, is someone else's and loads on its own.)
+# (lib/ is someone else's: components/load-lib.js loads the PDF maker and the
+# PDF viewer from there the first time they're needed.)
 
 # What the notebooks share (window.DFData): copies of the suite's shared/data/,
 # made by tools/sync.py shared.
@@ -239,6 +240,7 @@ built/app.js
   pages/shoot-options/add-to-project.js
   components/toast.js
   components/confirm.js
+  components/load-lib.js
   pages/pdf/pdf-helpers.js
   pages/pdf/shoot-pdf.js
   pages/pdf/shoot-pdf-talent.js

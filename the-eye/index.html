@@ -64,10 +64,10 @@
 </div>
 
 <!-- The screens and popups: their markup is in pages/ and components/ (files.txt lists the pieces in order), joined into built/markup.js, which puts it here.
-     defer, here and below: these run in this order once the page is read, before app.js starts The Eye, without holding up the rest of the page. (The page stays hidden until app.js shows it.) -->
+     defer, here and below: both run in this order once the page is read, without holding up the rest of the page. (The page stays hidden until app.js shows it.)
+     The PDF maker (lib/jspdf.umd.min.js) isn't loaded here: components/load-lib.js loads it the first time a PDF is made. -->
 <script defer src="built/markup.js"></script><div id="toast" class="toast" hidden></div>
 
-<script defer src="lib/jspdf.umd.min.js"></script>
 <script defer src="built/app.js"></script>
 </body>
 </html>

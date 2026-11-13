@@ -1,7 +1,7 @@
 // The Eye's offline copy: what's saved on the phone, and installing and
 // clearing it (data/offline-launch.js answers each request from it).
 // Bump CACHE_NAME with every deploy so installed copies pick up new files.
-const CACHE_NAME = 'the-eye-v164';
+const CACHE_NAME = 'the-eye-v165';
 // The same notebook can live twice on one website (inside the Documenting
 // Fictions suite and as its own app), and both workers see every cache there:
 // each name carries the folder this copy lives in, and each copy only ever

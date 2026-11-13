@@ -15,23 +15,12 @@ window.EyeParts.addPdfViewer = function addPdfViewer(ed) {
   const PDF_DOUBLE_TAP_ZOOM = 2.5; ed.PDF_DOUBLE_TAP_ZOOM = PDF_DOUBLE_TAP_ZOOM;
   const PDF_MAX_CANVAS_PX = 2600;
   const pdfViewer = { doc: null, pages: [], zoom: 1, fitW: 0, token: 0, sharpenTimer: null }; ed.pdfViewer = pdfViewer;
-  let pdfjsLoadPromise = null;
 
-  function loadPdfJs() {
-    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
-    if (!pdfjsLoadPromise) {
-      pdfjsLoadPromise = new Promise((resolve, reject) => {
-        const el = document.createElement('script');
-        el.src = 'lib/pdf.min.js';
-        el.onload = () => {
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
-          resolve(window.pdfjsLib);
-        };
-        el.onerror = () => { pdfjsLoadPromise = null; reject(new Error('pdf.js failed to load')); };
-        document.head.appendChild(el);
-      });
-    }
-    return pdfjsLoadPromise;
+  // pdf.js and the worker it draws with (components/load-lib.js loads it).
+  async function loadPdfJs() {
+    const pdfjsLib = await ed.loadLib('lib/pdf.min.js', 'pdfjsLib');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
+    return pdfjsLib;
   }
 
   const pdfViewportEl = document.getElementById('pdfPreviewViewport'); ed.pdfViewportEl = pdfViewportEl;
