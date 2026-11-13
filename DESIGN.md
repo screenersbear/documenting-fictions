@@ -229,8 +229,11 @@ The app marks (drawn on the canvas board "App marks and icons"):
     - a solid band, then four flat steps of the band colour fading into the paper (each step shorter than the one before);
     - a big light title in capitals;
     - the buttons in thin rings;
-    - a label line with a tiny mark, the app's name, a hairline and the date;
-    - the notebook's mark rising from the band's bottom edge at the lower right, only its top half showing.
+    - a label line with the app's name, a hairline and the date;
+    - the notebook's mark rising from the band's bottom edge at the lower left, under the title, only its top half showing
+      (**Decided**, Starky 11-13, canvas board "Where the mark sits", option A). Its left edge lines up with the title. The
+      label line starts to its right. The buttons sit alone at the top right with only the date under them, so nothing you
+      press is over the logo. The label line drops its tiny mark, since the big one is right beside it.
   - **What Starky said about the tries:** stripped-down versions looked generic, and the busier ones looked designed.
 - **Specimen grid (Decided with the marks):** a list of things shown as objects is a grid of equal tiles: object, a label,
   then the name, all left-aligned (refs 2, 3, 4).
@@ -287,6 +290,7 @@ The app marks (drawn on the canvas board "App marks and icons"):
 | — | Colour pairs | The seven pairs in 4.2 ("They work") |
 | — | App mark ideas | Mock them up before settling |
 | — | The Eye's default | Mango ("it follows the new rule", 4.2) |
+| — | Mark in the band | Lower left, under the title, buttons alone at the top right (9) |
 
 Starky likes the app marks in section 7 ("the marks look great").
 
