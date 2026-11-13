@@ -1,7 +1,17 @@
-// contact-sheet/js/model.js: formats, starter templates and the geometry of a
+// contact-sheet's model (data/formats, templates, slides, spreads, slide-layouts;
+// components/placement, snapping): formats, starter templates and the geometry of a
 // project (one long strip of 1080-wide slides).
 import { describe, it, expect } from 'vitest';
-import * as M from '../../../contact-sheet/js/model.js';
+import * as formats from '../../../contact-sheet/data/formats.js';
+import * as templates from '../../../contact-sheet/data/templates.js';
+import * as placement from '../../../contact-sheet/components/placement.js';
+import * as slides from '../../../contact-sheet/data/slides.js';
+import * as spreads from '../../../contact-sheet/data/spreads.js';
+import * as slideLayouts from '../../../contact-sheet/data/slide-layouts.js';
+import * as snapping from '../../../contact-sheet/components/snapping.js';
+
+// One object with all of them, as when they were one file (model.js).
+const M = { ...formats, ...templates, ...placement, ...slides, ...spreads, ...slideLayouts, ...snapping };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const proj = (over = {}) => ({ ratio: '3:4', slides: 3, padding: 0, seamsOpen: false, frames: [], ...over });

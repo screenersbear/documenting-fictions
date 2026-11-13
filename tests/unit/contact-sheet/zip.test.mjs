@@ -1,7 +1,7 @@
-// contact-sheet/js/zip.js: a plain stored (uncompressed) ZIP writer. These tests
+// contact-sheet/data/zip.js: a plain stored (uncompressed) ZIP writer. These tests
 // read the real bytes back: signatures, header fields, CRC32s and offsets.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { makeZip } from '../../../contact-sheet/js/zip.js';
+import { makeZip } from '../../../contact-sheet/data/zip.js';
 
 const LOCAL = 0x04034b50;
 const CENTRAL = 0x02014b50;

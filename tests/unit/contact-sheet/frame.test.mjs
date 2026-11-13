@@ -1,7 +1,7 @@
-// contact-sheet/js/frame.js: how much of the screen a chapter's pages take,
+// contact-sheet/components/frame.js: how much of the screen a chapter's pages take,
 // and where the notebook's left edge sits.
 import { describe, it, expect } from 'vitest';
-import { OUT, RIM, GAP, PEEK, bookSize, bookLeft } from '../../../contact-sheet/js/frame.js';
+import { OUT, RIM, GAP, PEEK, bookSize, bookLeft } from '../../../contact-sheet/components/frame.js';
 
 describe('margins', () => {
   it('leaves nothing outside the pages and draws no notebook edge', () => {

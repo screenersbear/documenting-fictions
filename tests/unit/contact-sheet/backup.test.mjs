@@ -1,4 +1,4 @@
-// contact-sheet/js/backup.js: Contact Sheet's part of the notebooks' shared zip
+// contact-sheet/data/backup.js: Contact Sheet's part of the notebooks' shared zip
 // backup. It hands everything to df-data.js (window.DFData), read at import.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -14,7 +14,7 @@ beforeEach(async () => {
     todayStr: vi.fn(() => '2026-11-12'),
   };
   window.DFData = D;
-  backup = await import('../../../contact-sheet/js/backup.js');
+  backup = await import('../../../contact-sheet/data/backup.js');
 });
 
 afterEach(() => {
@@ -110,7 +110,7 @@ describe('without df-data.js', () => {
   it('fails every call when window.DFData was missing at import', async () => {
     vi.resetModules();
     delete window.DFData;
-    const bare = await import('../../../contact-sheet/js/backup.js');
+    const bare = await import('../../../contact-sheet/data/backup.js');
     window.DFData = D; // too late: the module already read it
     expect(() => bare.makeBackup()).toThrow(TypeError);
     expect(() => bare.isZipBackup({})).toThrow(TypeError);

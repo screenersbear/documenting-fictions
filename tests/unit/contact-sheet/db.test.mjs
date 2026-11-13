@@ -1,4 +1,4 @@
-// contact-sheet/js/db.js: the only file that knows about IndexedDB. Normal
+// contact-sheet/data/db.js: the only file that knows about IndexedDB. Normal
 // behaviour runs on fake-indexeddb (a fresh database per test); failures it
 // can't produce on cue (blocked upgrades, failed reads, aborted writes) use a
 // small hand-driven stand-in.
@@ -24,7 +24,7 @@ beforeEach(async () => {
   idb = new IDBFactory();
   globalThis.indexedDB = idb;
   vi.resetModules(); // db.js keeps its open connection in the module
-  db = await import('../../../contact-sheet/js/db.js');
+  db = await import('../../../contact-sheet/data/db.js');
 });
 
 afterEach(() => {

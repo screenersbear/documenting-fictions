@@ -1,8 +1,8 @@
-// contact-sheet/js/pdf.js: a small PDF writer (JPEGs + text on landscape
+// contact-sheet/data/pdf.js: a small PDF writer (JPEGs + text on landscape
 // Letter sheets). These tests read the real bytes back, including the xref
 // table's byte offsets.
 import { describe, it, expect } from 'vitest';
-import { makePdf, SHEET_W, SHEET_H } from '../../../contact-sheet/js/pdf.js';
+import { makePdf, SHEET_W, SHEET_H } from '../../../contact-sheet/data/pdf.js';
 
 const JPEG = [0xff, 0xd8, 0xff, 0xd9];
 const jpeg = (bytes = JPEG) => new Blob([new Uint8Array(bytes)], { type: 'image/jpeg' });

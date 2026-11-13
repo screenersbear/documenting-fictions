@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as refUtil from '../../../ref/components/util.js';
 import * as overthoughtsUtil from '../../../overthoughts/components/util.js';
-import * as contactSheetUtil from '../../../contact-sheet/js/util.js';
+import * as contactSheetUtil from '../../../contact-sheet/components/util.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -32,7 +32,7 @@ afterEach(() => {
 describe.each([
   ['ref/components/util.js', refUtil],
   ['overthoughts/components/util.js', overthoughtsUtil],
-  ['contact-sheet/js/util.js', contactSheetUtil],
+  ['contact-sheet/components/util.js', contactSheetUtil],
 ])('%s', (_name, u) => {
   describe('uuid', () => {
     it('uses crypto.randomUUID when the browser has it', () => {
