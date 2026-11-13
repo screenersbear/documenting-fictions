@@ -1,0 +1,33 @@
+/* ---- Project popup (reuses the stat box popup above wholesale) ---- */
+/* A project name is user-typed and can be one long unbroken word — without
+   this it would shove the close X off the header instead of wrapping. */
+#projectDetailTitle {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Same 20px side inset the stat box popup gives its header and list (its
+   scroll container carries no padding of its own, see above). */
+#projectDetailSummary {
+  padding: 0 20px 12px;
+}
+
+/* Stacked full-width, the same way "+ Add X" buttons sit in their own
+   flex-column sections everywhere else. */
+.project-detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 20px 20px;
+}
+
+.project-rename-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Author display rule above, so [hidden] needs restating. */
+.project-rename-row[hidden] {
+  display: none;
+}

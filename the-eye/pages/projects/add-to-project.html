@@ -1,0 +1,17 @@
+<!-- Adding a shoot to a project. -->
+<!-- ============ ADD TO PROJECT (opened from the shoot options kebab) ============ -->
+<!-- Its own small sheet, built like the journal entry options above, rather
+     than a sixth pane on the shoot options slider — that track's widths and
+     translate steps are sized for exactly five panes. -->
+<div id="projectPickerOverlay" class="modal-overlay options-overlay" hidden>
+  <div class="modal options-modal rounded-modal">
+    <button type="button" class="options-item" id="projectPickerOpenBtn" hidden></button>
+    <input type="text" id="projectPickerNameInput" class="options-rename-input" maxlength="120" placeholder="New project name" />
+    <button type="button" class="options-item primary" id="projectPickerCreateBtn">Create project</button>
+    <div class="menu-divider" id="projectPickerDivider" aria-hidden="true" hidden></div>
+    <div id="projectPickerList" hidden></div>
+    <button type="button" class="options-item" id="projectPickerRemoveBtn" hidden>Remove from project</button>
+    <button type="button" class="options-item options-cancel" id="projectPickerCancelBtn">Cancel</button>
+  </div>
+</div>
+

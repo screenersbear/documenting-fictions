@@ -1,0 +1,38 @@
+/* ---- The new-shoot guide's own type (user, 11-12: bigger fonts, and bold
+   or bigger titles, since it "just looks like text") ----
+   Its fields are the shoot page's own, at the page's sizes (see "Bigger text
+   on a shoot's pages"). Here each field's name is a heading, in the header
+   capitals, and the guide's own words are a size up. The team's questions
+   stay in handwriting, being questions. */
+.shoot-wizard-head h2 { font-size: 26px; }
+.shoot-wizard-head p { font-size: 17px; }
+#shootForm #shootWizardBody label:not(.checkbox-row, .tag-check),
+#shootForm #shootWizardBody :is(.status-swatch-label, .talents-section > .team-question, .aspect-ratio-field-label) {
+  font-family: var(--head); font-size: 20px; line-height: 28px; text-transform: uppercase; letter-spacing: .06em; color: var(--text); text-shadow: none;
+}
+/* Side by side, a name that wraps (START TIME on a small phone) mustn't push
+   its box below its neighbour's: the pairs line up at the bottom. */
+#shootForm #shootWizardBody .time-range-row { align-items: flex-end; }
+/* The Mood board and References slides' titles already name them. */
+#shootWizardBody :is(.moodboard-section > .moodboard-label, .references-block > .beats-label) { display: none; }
+/* Status: the same heading and select as Title and Category, rather than the
+   page's yellow button, which read as a heading and got missed (user, 11-12). */
+.status-swatch-label { display: none; }
+#shootForm #shootWizardBody .status-swatch-wrap { display: flex; flex-direction: column; width: 100%; margin: 0; text-align: left; }
+#shootForm #shootWizardBody .status-swatch-label { display: block; }
+#shootWizardBody .status-swatch-display { display: none; }
+#shootForm #shootWizardBody .status-swatch-select { position: static; width: 100%; height: auto; opacity: 1; }
+/* "Need to think it through?" is a button here, like the guide's others,
+   not a line that reads as one more label. */
+#shootForm #shootWizardBody #conceptHelperBtn { min-height: 0; padding: 12px 14px !important; border: 1px solid var(--border); border-radius: 6px; background: #fff; text-align: center; }
+
+/* Short on an iPhone (see measureScreenGap), iOS is made to measure again
+   (app.js nudgeShortScreen): for a moment the page is taller than the screen. */
+:root.nb-nudge body { min-height: calc(100vh + 160px); }
+:root.nb-hold body { min-height: calc(100vh + 1px); }
+/* A line along the top of the bars at the foot, so a page scrolling under
+   them is cut off by something (user, 11-12). Drawn inside, so nothing moves. */
+:is(.tabbar, .nb-shoot-bar, #shootModeOverlay .shoot-mode-bottom-bar) { box-shadow: inset 0 2px 0 #d6dadd; }
+/* Installed, the navigator and the sun show once iOS has its height right
+   (app.js adds .settled), so they never show high and then drop. */
+@media (display-mode: standalone) { :root:not(.settled) :is(.tabbar, .nb-sun) { visibility: hidden; } }

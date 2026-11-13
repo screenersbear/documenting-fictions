@@ -1,0 +1,222 @@
+/* ---------- Storage usage popup ---------- */
+#storageUsageBody {
+  margin-top: 12px;
+}
+
+.storage-usage-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 14px;
+  margin-bottom: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.storage-usage-total-label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.storage-usage-total-value {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  color: var(--text);
+}
+
+.storage-usage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.storage-usage-row:last-child {
+  border-bottom: 0;
+}
+
+.storage-usage-row-label {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.storage-usage-row-value {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.storage-usage-row-count {
+  font-weight: 400;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.field-hint-bold {
+  font-weight: 700;
+}
+
+.pdf-sections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 14px 0;
+}
+
+#frameworkTagsContainerEarly,
+#frameworkTagsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Extra breathing room on top of #visualsBody's own 14px flex gap, so Visual
+   Language / References / Mood board / any custom frameworks read as
+   distinct blocks rather than one continuous stack. */
+#visualsBody .references-block,
+#visualsBody .moodboard-section,
+#visualsBody #frameworkTagsContainer {
+  margin-top: 28px;
+}
+
+.framework-subsection-body {
+  margin-top: 10px;
+}
+
+/* Its own border-top is dropped (see #lightingSetupsHeading below) since
+   .subsection-heading's usual top rule would otherwise double up with the
+   margin here. No left border/indent: that read as a stray line rather
+   than a clear nesting cue. */
+.lighting-setups-section {
+  margin-top: 18px;
+}
+
+#lightingSetupsHeading {
+  border-top: none;
+  padding-top: 0;
+}
+
+#lightingSetupsBody {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lighting-setups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* A theme-colored bar across the card's full width holds the setup's name
+   and a collapse arrow, so a shoot with several setups can be folded down
+   instead of becoming one long scroll — the bar is why this drops
+   .team-member-card's own padding (and its absolutely-positioned delete
+   button): the bar goes edge to edge and the delete × lives inside it,
+   with the padding moved onto .lighting-setup-card-body instead. Both
+   classes in the selector: .team-member-card comes later in this file, so
+   at equal weight its padding (with the 44px kept for its corner ×) won,
+   boxing the bar in and squeezing the fields — worst on the narrower
+   new-shoot guide slide, where the placeholders got cut off. */
+.team-member-card.lighting-setup-card {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* The card's own overflow:hidden (above) exists to keep its full-bleed
+   header bar's corners clean — but it also clips the suggestions dropdown
+   below, which needs to escape past the card's edge. Toggled on only while
+   that card's own dropdown is open, so collapsed neighbors stay clipped. */
+.lighting-setup-card.lighting-setup-suggestions-open {
+  overflow: visible;
+}
+
+.lighting-setup-card-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ink);
+  padding: 6px 8px 6px 12px;
+}
+
+.lighting-setup-name-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+#shootForm .lighting-setup-card-bar .lighting-setup-name {
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: var(--radius-xs);
+  padding: 5px 6px;
+  color: #fff;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 15px;
+  text-transform: none;
+  text-overflow: ellipsis;
+}
+
+/* Dropdown of past setups by name — this app's only floating (as opposed to
+   inline chip-row) suggestion list, so it has no existing pattern to reuse;
+   modeled on the app's other popovers' surface/border treatment instead. */
+.lighting-setup-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  margin-top: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  max-height: 180px;
+  overflow-y: auto;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.lighting-setup-suggestions[hidden] {
+  display: none;
+}
+
+.lighting-setup-suggestion {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.lighting-setup-suggestion:last-child {
+  border-bottom: none;
+}
+
+.lighting-setup-suggestion:hover,
+.lighting-setup-suggestion:active {
+  background: var(--surface-2);
+}
+
+.lighting-setup-suggestion-manage {
+  color: var(--accent);
+  font-weight: 700;
+}

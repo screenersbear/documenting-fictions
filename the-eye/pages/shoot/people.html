@@ -1,0 +1,56 @@
+<!-- The talent and team member popups. -->
+<div id="talentModalOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2>Talent</h2>
+      <button class="icon-btn close-btn" data-close="talent"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div id="talentForm">
+      <label>Returning talent
+        <select id="pastTalentsSelect">
+          <option value="">Select a past talent…</option>
+        </select>
+      </label>
+      <label>Name
+        <input type="text" id="talentModalNameInput" maxlength="120" placeholder="Talent name" />
+      </label>
+      <div class="talent-social-section">
+        <p class="team-question talent-social-heading">Social media handle(s)</p>
+        <div id="talentModalHandlesList" class="social-handles-list"></div>
+        <button type="button" id="talentModalAddHandleBtn" class="secondary small-btn">+ Add handle</button>
+      </div>
+      <button type="button" id="talentModalPhotoBtn" class="secondary small-btn">+ Add talent photo</button>
+      <div id="talentModalPhotoWrap"></div>
+    </div>
+    <button type="button" class="primary modal-cta" id="saveTalentModalBtn">Save</button>
+  </div>
+</div>
+
+<div id="teamMemberModalOverlay" class="modal-overlay team-member-overlay" hidden>
+  <div class="modal rounded-modal team-member-modal">
+    <div class="modal-header">
+      <h2>Team Member</h2>
+      <button class="icon-btn close-btn" data-close="teamMember"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div id="teamMemberForm">
+      <label>Returning team member
+        <select id="pastTeamMembersSelect">
+          <option value="">Select a past team member…</option>
+        </select>
+      </label>
+      <label>Role
+        <select id="teamMemberModalRoleSelect"></select>
+      </label>
+      <label>Name
+        <input type="text" id="teamMemberModalNameInput" maxlength="120" placeholder="Name" />
+      </label>
+      <p class="team-question talent-social-heading">Social media handle</p>
+      <div class="social-handle-row">
+        <select id="teamMemberModalSocialPlatform" class="social-handle-platform"></select>
+        <input type="text" id="teamMemberModalSocialInput" class="social-handle-input" placeholder="@handle" />
+      </div>
+    </div>
+    <button type="button" class="primary modal-cta" id="saveTeamMemberModalBtn">Save</button>
+  </div>
+</div>
+

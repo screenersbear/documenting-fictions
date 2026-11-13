@@ -1,0 +1,186 @@
+/* ---------- Shoot mode: Done button, Quick review ---------- */
+/* The Quick review row itself is laid out near the end of the file
+   (`#shootModeOverlay .shoot-mode-quick-review`). */
+
+.shoot-mode-quick-review-btn {
+  padding: 13px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  /* The row stretches all three buttons to match the tallest two-line label
+     ("Lighting setups"); without flex centering a shorter one-line label
+     just sits at the top of that extra height instead of centering in it. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.shoot-mode-quick-review-btn:active {
+  background: var(--accent);
+}
+
+/* Wild card popup: the Quick review card, but sized to its one card —
+   .shoot-mode-modal's fixed working-view height would leave a short line
+   floating in an empty screen. Its max-height still caps a long one.
+   The Monday brief sizes the same way, to however much last week had. */
+.shoot-mode-wild-card-modal,
+.monday-brief-modal {
+  height: auto;
+}
+
+/* Eyebrow alone, no title under it, so it centres against the X instead of
+   riding at its top edge (same as .archive-mode-header). */
+.shoot-mode-wild-card-header {
+  align-items: center;
+}
+
+/* The card is the whole point, so it's set big in the title face —
+   readable at arm's length with a camera in the other hand. */
+.shoot-mode-wild-card-text {
+  margin: 0;
+  padding: 32px 24px 20px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.3;
+  color: var(--text);
+  overflow-wrap: break-word;
+}
+
+/* "Tried it" under the card, lined up with its text, and the line that
+   replaces it once tapped. */
+.shoot-mode-wild-card-tried {
+  padding: 0 24px 28px;
+}
+
+.shoot-mode-wild-card-tried [hidden] {
+  display: none;
+}
+
+/* Monday brief: last week's numbers as the Overview's own tiles, then the
+   week's page of the Journal's weekly log, each inside the body's 20px
+   gutter (the body has none of its own, see .shoot-mode-body). The tiles
+   here are a read-out, not buttons, so they drop the tap look the
+   Overview's open a list with — the same way .log-card drops .card's. */
+.monday-brief-stats {
+  margin: 14px 20px;
+}
+
+.monday-brief-stats .stat-box {
+  cursor: default;
+}
+
+.monday-brief-stats .stat-box:active {
+  opacity: 1;
+}
+
+.monday-brief-log {
+  margin: 14px 20px;
+}
+
+.monday-brief-text {
+  margin: 0;
+  padding: 14px 20px 0;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* Direction fields inside the Quick review popup — every field is its own
+   tap target (see renderShootModeReviewField), opening the shared
+   expand-field editor to modify it or, for a field with nothing written
+   yet, add something. */
+.shoot-mode-review-field {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.shoot-mode-review-field:last-child {
+  border-bottom: 0;
+}
+
+.shoot-mode-review-field:active {
+  background: var(--surface-2);
+}
+
+.shoot-mode-review-empty {
+  color: var(--text-dim);
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.shoot-mode-review-label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  opacity: 0.75;
+}
+
+.shoot-mode-review-value {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  /* Without this it inherits from .shoot-mode-review-field, a <button> with
+     no color of its own — some browsers give unstyled button text their
+     native blue tint by default, which is exactly the stray blue this was
+     showing instead of the app's own text color. */
+  color: var(--text);
+}
+
+/* Archive mode's read-only counterpart to .shoot-mode-review-field above —
+   same label-over-value block and divider, but a plain div rather than a
+   button: nothing in Archive mode is tappable, so no cursor or :active
+   state, just typed text laid out like a report. Reuses
+   .shoot-mode-review-label/-value as-is for the text itself. */
+.archive-mode-field {
+  width: 100%;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.archive-mode-field:last-child {
+  border-bottom: 0;
+}
+
+.archive-mode-final-images {
+  padding: 4px 20px 14px;
+}
+
+/* Lighting setups inside the review popup: one group per setup, its name as
+   a heading followed by whichever of Characteristics/Description are
+   filled in (see .shoot-mode-review-field above) — the group's own
+   border-bottom is the only divider between setups, since the last field
+   inside a group already drops its own via :last-child. */
+.shoot-mode-review-setup {
+  border-bottom: 1px solid var(--border);
+}
+
+.shoot-mode-review-setup:last-child {
+  border-bottom: 0;
+}
+
+.shoot-mode-review-setup-name {
+  margin: 14px 20px 0;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 17px;
+  cursor: pointer;
+}

@@ -1,0 +1,141 @@
+<!-- A shoot's page, first part: basic info, logistics and team (it carries on in shoot-page-2.html). -->
+<!-- ============ SHOOT MODAL ============ -->
+<div id="shootModalOverlay" class="modal-overlay" hidden>
+  <div class="nb-chapter-board" aria-hidden="true"></div>
+  <div class="modal">
+    <p class="nb-run" id="nbShootRun"></p>
+    <div class="modal-header shoot-modal-header">
+      <h2 class="modal-title-jump-wrap">
+        <button type="button" class="modal-title-jump-btn" id="shootModalTitleBtn">
+          <span id="shootModalTitle">Log a Shoot</span>
+          <svg class="modal-title-jump-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="modal-title-jump-menu" id="shootModalJumpMenu" hidden>
+          <button type="button" class="modal-title-jump-item" data-jump="basicInfoHeading">Basic Info</button>
+          <button type="button" class="modal-title-jump-item" data-jump="logisticsHeading">Logistics</button>
+          <button type="button" class="modal-title-jump-item" data-jump="teamHeading">Team</button>
+          <button type="button" class="modal-title-jump-item" data-jump="directionHeading">Direction</button>
+          <button type="button" class="modal-title-jump-item" data-jump="visualsHeading">Visuals</button>
+          <button type="button" class="modal-title-jump-item" data-jump="shotListHeading">Shot list</button>
+          <button type="button" class="modal-title-jump-item" data-jump="postShootHeading" id="jumpToPostShootItem">Reflection</button>
+        </div>
+      </h2>
+      <div class="modal-header-actions">
+        <button type="button" class="icon-btn" id="shootTourBtn" aria-label="Guide me through this shoot">?</button>
+        <button type="button" class="icon-btn share-shoot-btn" id="shareShootBtn" aria-label="Share as PDF" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
+        </button>
+        <button class="icon-btn close-btn" data-close="shoot"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+      </div>
+    </div>
+    <button type="button" class="enter-shoot-mode-btn shine-sweep" id="enterShootModeBtn" hidden>shoot mode</button>
+    <button type="button" class="nb-corner-btn" id="enterArchiveModeBtn" hidden>archive mode</button>
+    <form id="shootForm">
+      <svg class="folder-tab-deco tab-fill-yellow" viewBox="0 -90 400 120" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,-90 L0,-90 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
+      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="basicInfoHeading">Basic Info</h3>
+      <div id="basicInfoBody">
+        <div class="status-swatch-wrap">
+          <!-- In the new-shoot guide only (styles/new-shoot-guide-type.css): a "Status" heading over the select itself, like Title and Category. -->
+          <span class="status-swatch-label" aria-hidden="true">Status</span>
+          <span class="status-swatch-display shine-sweep" id="statusSwatchDisplay" aria-hidden="true">Status: Prospect</span>
+          <select id="shootStatus" class="status-swatch-select" aria-label="Status">
+            <option value="prospect">Prospect</option>
+            <option value="planning">Active planning</option>
+            <option value="waiting_to_shoot">Shoot ready</option>
+            <option value="captured">Captured</option>
+            <option value="waiting_for_selects">Waiting for selects</option>
+            <option value="editing">Editing</option>
+            <option value="delivered">Delivered</option>
+            <option value="rescheduled">Postponed</option>
+            <option value="canceled">Canceled</option>
+          </select>
+        </div>
+        <label>Title
+          <input type="text" id="shootTitle" maxlength="120" placeholder="Name for the shoot if applicable" />
+        </label>
+        <label>Category
+          <select id="shootCategory" class="bold-select" required>
+            <option value="" disabled>Tap here to select</option>
+            <option value="branding">Branding</option>
+            <option value="commercial">Commercial</option>
+            <option value="content_shoot">Content shoot</option>
+            <option value="editorial">Editorial</option>
+            <option value="engagement">Engagement</option>
+            <option value="event">Event</option>
+            <option value="family">Family</option>
+            <option value="headshot">Headshot</option>
+            <option value="lighting_test">Lighting test</option>
+            <option value="maternity">Maternity</option>
+            <option value="other">Other</option>
+            <option value="portfolio_building">Portfolio building</option>
+            <option value="publicity">Publicity</option>
+            <option value="test_shoot">Test shoot</option>
+            <option value="video">Video</option>
+            <option value="wedding">Wedding</option>
+          </select>
+        </label>
+        <div class="talents-section">
+          <p class="team-question">Talent name(s)</p>
+          <button type="button" id="addTalentBtn" class="primary small-btn">+ Add talent</button>
+          <input type="file" id="talentPhotoFileInput" accept="image/*" hidden />
+          <div id="talentsList" class="team-members-list"></div>
+          <!-- Lessons from past shoots with the same talent, and notes about this shoot from Overthoughts (app.js). -->
+          <div id="pastLessons" class="past-lessons" hidden></div>
+          <div id="shootNotes" class="past-lessons" hidden></div>
+        </div>
+      </div>
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
+      <h3 class="shoot-section-heading status-group-heading heading-navy" id="logisticsHeading">Logistics</h3>
+      <div id="logisticsBody">
+        <label>Shoot date
+          <input type="date" id="shootDate" />
+        </label>
+        <label class="checkbox-row" id="multiDayRow"><input type="checkbox" id="shootMultiDay" /> <span id="multiDayLabel">Multi-day shoot</span></label>
+        <label id="multiDayLastDayLabel" hidden>Last day
+          <input type="date" id="shootLastDay" />
+        </label>
+        <label>Deadline
+          <input type="date" id="shootDeadline" />
+        </label>
+        <div class="time-range-row">
+          <label>Start time
+            <input type="time" id="shootStartTime" step="1800" />
+          </label>
+          <label>End time
+            <input type="time" id="shootEndTime" step="1800" />
+          </label>
+        </div>
+        <div class="time-range-row" id="videoCallTimesRow" hidden>
+          <label>Crew call
+            <input type="time" id="shootCrewCallTime" step="1800" />
+          </label>
+          <label>Talent call
+            <input type="time" id="shootTalentCallTime" step="1800" />
+          </label>
+        </div>
+        <label>Location
+          <button type="button" id="shootLocationBtn" class="location-field-btn">Tap to add location</button>
+        </label>
+        <label>Location directions
+          <textarea id="shootLocationDirections" rows="3" maxlength="1000" placeholder="What floor the studio is on, where to park, etc." readonly></textarea>
+        </label>
+      </div>
+
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
+      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="teamHeading">Team</h3>
+      <div id="teamBody">
+        <p class="team-question">Requires team?</p>
+        <!-- Two named choices in the app's chip look (the picked one filled);
+             saved as teamRequired 'no'/'yes' — see setTeamRequiredChoice. -->
+        <div class="team-yesno-row">
+          <button type="button" class="chip" id="teamRequiredNoBtn" aria-pressed="false">Just me</button>
+          <button type="button" class="chip" id="teamRequiredYesBtn" aria-pressed="false">With a team</button>
+        </div>
+        <p class="field-hint team-finalized-note" id="teamFinalizedNote" hidden>Team finalized</p>
+        <div id="teamDetailsBlock" hidden>
+          <button type="button" id="addTeamMemberBtn" class="primary small-btn">+ Add team member</button>
+          <div id="teamMembersList" class="team-members-list"></div>
+          <label class="checkbox-row"><input type="checkbox" id="shootTeamFinalized" /> <span id="teamFinalizedLabel">Team finalized</span></label>
+        </div>
+      </div>
+

@@ -1,0 +1,168 @@
+/* ---- Shoot options sheet ---- */
+.options-overlay {
+  z-index: 20;
+}
+
+.options-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+/* Left-aligned so a column of options reads as a scannable list — with the
+   labels alphabetized (see the panes in index.html), a common left edge is
+   what makes that ordering actually usable. */
+.options-item {
+  width: 100%;
+  background: var(--surface-2);
+  border: none;
+  border-radius: var(--radius-xl);
+  padding: 15px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+/* .options-item is declared after .primary, so at equal specificity it
+   would otherwise win and silently flatten a "primary" options-item back
+   to the plain gray style — this compound selector re-asserts it. */
+.options-item.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* A small .field-hint line under an option's label, inside the same button
+   ("Last backup: 3 days ago" under App options' Save a backup). */
+.options-item .options-item-hint {
+  display: block;
+  margin-top: 2px;
+  font-weight: 400;
+}
+
+.options-rename-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 15px;
+  font-size: 17px;
+  font-family: var(--font-body);
+  color: var(--text);
+}
+
+.options-cancel {
+  color: var(--text-dim);
+}
+
+.options-delete {
+  color: var(--red);
+}
+
+.options-modal-slider {
+  overflow: hidden;
+  padding: 0;
+}
+
+.options-pane-track {
+  display: flex;
+  flex-shrink: 0;
+  align-self: flex-start;
+  align-items: flex-start;
+  width: 200%;
+  transition: transform 0.25s ease, height 0.2s ease;
+}
+
+.options-pane-track.show-second {
+  transform: translateX(-50%);
+}
+
+/* Shoot options has 5 panes (rename title, project photo picker, change
+   deadline), so it needs its own proportions rather than the shared 2-pane
+   200%/50% split used elsewhere (e.g. the app menu) — scoped by ID so that
+   other .options-pane-track instances are unaffected. */
+#shootOptionsPaneTrack {
+  width: 500%;
+}
+
+#shootOptionsPaneTrack .options-pane {
+  width: 20%;
+}
+
+#shootOptionsPaneTrack.show-second {
+  transform: translateX(-20%);
+}
+
+#shootOptionsPaneTrack.show-third {
+  transform: translateX(-40%);
+}
+
+#shootOptionsPaneTrack.show-fourth {
+  transform: translateX(-60%);
+}
+
+#shootOptionsPaneTrack.show-fifth {
+  transform: translateX(-80%);
+}
+
+.menu-divider {
+  height: 1px;
+  flex-shrink: 0;
+  margin: 0 4px;
+  background: var(--ink);
+}
+
+.theme-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  margin-right: 8px;
+  vertical-align: -3px;
+}
+
+.project-photo-picker-grid {
+  max-height: min(calc(55 * var(--vh)), 420px);
+  overflow-y: auto;
+}
+
+.options-pane {
+  width: 50%;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.options-back {
+  color: var(--text-dim);
+  text-align: left;
+}
+
+.choice-item.active {
+  background: var(--ink);
+  color: #fff;
+}
+
+#statusOptionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* The "Add to project" sheet's existing-project choices — same stacked
+   choice-item column as the status pane's list above. */
+#projectPickerList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#projectPickerList[hidden] {
+  display: none;
+}

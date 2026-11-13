@@ -1,0 +1,23 @@
+<!-- The full-size picture viewer (mood boards). -->
+<!-- ============ IMAGE VIEWER (mood board full view) ============ -->
+<div id="imageViewerOverlay" class="image-viewer-overlay" hidden>
+  <div class="image-viewer-top">
+    <button type="button" class="image-viewer-close" id="closeImageViewer"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+  </div>
+  <div class="image-viewer-stage" id="imageViewerStage">
+    <img id="imageViewerImg" src="" alt="" class="image-viewer-img" />
+    <div class="image-viewer-caption-overlay" id="imageViewerCaptionOverlay" hidden>
+      <span id="imageViewerCaptionText"></span>
+    </div>
+  </div>
+  <div class="image-viewer-caption-bar">
+    <button type="button" id="imageViewerAddCaptionBtn">+ Add caption</button>
+    <input type="text" id="imageViewerCaptionInput" placeholder="Add a caption" maxlength="140" hidden />
+    <button type="button" class="image-viewer-menu-btn" id="imageViewerMenuBtn">&#8226;&#8226;&#8226;</button>
+    <div id="imageViewerMenu" class="image-viewer-menu" hidden>
+      <button type="button" id="setProjectPhotoFromViewer">Set as cover photo</button>
+      <button type="button" id="deleteImageFromViewer" class="options-delete">Delete this image</button>
+    </div>
+  </div>
+</div>
+

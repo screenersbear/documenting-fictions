@@ -1,0 +1,80 @@
+/* ---- Pages: titles, sections and rows ---- */
+.hero-band { background: none; width: auto; margin: 0; padding: 0; border-bottom: none; }
+.topbar { position: relative; justify-content: center; padding: 0 0 9px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
+.hero-band .topbar { padding: 0 0 9px; }
+.brand-row { position: relative; justify-content: center; min-height: 32px; }
+.brand-logo-wrap { display: none; }
+.brand-title, .topbar h1 { font-family: var(--font-head); font-weight: 400; font-size: 26px; line-height: 1.2; text-align: center; text-transform: none; letter-spacing: 0; color: var(--text); }
+.app-menu-btn { position: absolute; top: -6px; width: 44px; height: 44px; margin: 0; color: var(--text); }
+.app-menu-btn svg { width: 20px; height: 20px; }
+#shutBookBtn { display: none; } /* gone from the header (user, 11-11); the navigator still uses it to shut the book */
+#notificationBellBtn { right: 22px; }
+#appMenuBtn { right: -12px; }
+.topbar .icon-btn { position: absolute; right: -8px; top: -6px; width: 44px; height: 44px; background: none; color: var(--text); font-family: var(--font-body); font-weight: 400; font-size: 26px; }
+.new-shoot-cta { background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius-lg); padding: 11px; min-height: 44px; font-family: var(--font-body); font-size: 15px; font-weight: 600; line-height: 22px; text-transform: none; letter-spacing: 0; margin-top: 6px; }
+.stats-row { gap: 0; margin: 14px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.stat-box { background: none; border: none; border-left: 1px solid var(--line); border-radius: 0; padding: 9px 6px 10px; }
+.stat-box:first-child { border-left: none; }
+.stat-box::before { display: none; }
+.stat-num { font-family: var(--font-title); font-weight: 400; font-size: 28px; line-height: 1.1; color: var(--text); }
+.stat-label { font-family: var(--font-body); font-weight: 400; font-size: 11px; line-height: 1.2; color: var(--dim); text-transform: none; letter-spacing: 0; padding-top: 3px; }
+.section-block { margin-bottom: 0; }
+.section-block h2, .section-block h2.heading-yellow, .section-block h2.heading-navy {
+  background: none; color: var(--text); border: none; border-bottom: 1px solid var(--line); border-radius: 0;
+  font-family: var(--font-head); font-weight: 400; font-size: 19px; text-transform: none; letter-spacing: 0;
+  padding: 16px 0 5px; margin: 0;
+}
+.section-block h2 span { font-family: var(--font-body); font-size: 13px; color: var(--dim); }
+h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group-heading.heading-navy {
+  display: flex; width: 100%; background: none; color: var(--text); border: none; border-bottom: 1px solid var(--line); border-radius: 0;
+  font-family: var(--font-body); font-size: 12.5px; font-weight: 600; text-transform: none; letter-spacing: 0;
+  padding: 12px 0 3px; margin: 0;
+}
+h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { margin-left: auto; }
+.status-group-heading.archive-month-heading, .archive-month-heading.heading-yellow, .archive-month-heading.heading-navy, .upcoming-subheading {
+  background: none; color: var(--dim); border: none; border-radius: 0; font-family: var(--font-body); font-size: 12.5px; font-weight: 400; text-transform: none; letter-spacing: 0; padding: 7px 0 1px; margin: 0;
+}
+.mini-list, .card-list { gap: 0; }
+.shoot-row, .shoot-row-compact { background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; padding: 8px 0; gap: 12px; align-items: center; overflow: visible; }
+.shoot-row .shoot-thumb { width: 64px; height: 64px; align-self: center; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--line); flex: none; }
+.shoot-row-body, .shoot-row-compact-body { min-height: 0; padding: 0; gap: 1px; }
+.shoot-row-title, .shoot-row-compact-title { font-family: var(--font-hand); font-size: 20px; line-height: 1.15; font-weight: 400; }
+.shoot-row-title strong { font-weight: 400; }
+.shoot-row-date-line, .shoot-row-due { font-size: 12.5px; font-weight: 400; color: var(--dim); }
+.shoot-row-status-pill, .shoot-row .badge, .badge { background: var(--accent); color: var(--on-accent); border-radius: 3px; padding: 1px 7px; font-size: 11px; font-weight: 600; line-height: 16px; text-transform: none; letter-spacing: 0; }
+.shoot-row-accent-strip { width: 30px; background: none; align-self: center; }
+.row-options-btn { font-size: 20px; font-weight: 400; }
+.filter-toggle { display: block; width: 100%; background: none; color: var(--text); border-radius: 0; padding: 0; min-height: 44px; font-family: var(--font-body); font-size: 13px; font-weight: 600; text-transform: none; letter-spacing: 0; text-align: center; margin: 0; }
+.chip { color: var(--text); border-color: var(--text); font-size: 13px; line-height: 18px; padding: 6px 11px; }
+.chip.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+.empty-state, .empty-hint { color: var(--dim); }
+
+/* ---- Fields: writing on a line, no boxes ---- */
+#shootForm label, #journalForm label, #locationForm label, #talentForm label, #teamMemberForm label, #photographerForm label {
+  gap: 0; font-size: 12.5px; font-weight: 400; color: var(--dim); letter-spacing: 0;
+}
+#shootForm input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.lighting-setup-name),
+#shootForm select, #shootForm textarea,
+#journalForm input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), #journalForm textarea,
+#locationForm input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), #locationForm select,
+#talentForm input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), #talentForm select,
+#teamMemberForm input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), #teamMemberForm select,
+#photographerForm input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), #photographerForm select {
+  background-color: transparent; border: none; border-bottom: 1px solid var(--line); border-radius: 0; padding: 2px 0 6px;
+  font-family: var(--font-title); font-size: 17px; font-weight: 400; line-height: 24px; color: var(--text);
+}
+#shootTitle { font-family: var(--font-hand) !important; font-size: 20px !important; }
+#shootForm ::placeholder, #journalForm ::placeholder { color: var(--dim); opacity: 1; }
+.status-swatch-wrap { text-align: center; width: fit-content; margin-left: auto; margin-right: auto; }
+.status-swatch-display { width: auto; display: inline-block; background: var(--accent); border: none; color: var(--on-accent); font-family: var(--font-body); font-weight: 600; font-size: 13px; line-height: 20px; padding: 3px 12px; text-transform: none; letter-spacing: 0; border-radius: 3px; }
+.primary, .secondary { font-family: var(--font-body); font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; border-radius: var(--radius-lg); }
+.primary.small-btn { display: block; width: 100%; background: none; border: none; color: var(--text); font-size: 14px !important; font-weight: 600; font-family: var(--font-body); text-align: left; padding: 12px 0 !important; min-height: 44px; letter-spacing: 0; text-transform: none; }
+#shootForm .subsection-heading { background: none; color: var(--text); border: none; border-radius: 0; font-family: var(--font-title); font-size: 19px; font-weight: 400; text-transform: none; letter-spacing: 0; padding: 18px 0 0; margin: 0; }
+
+/* Shoot mode's body type */
+.shoot-mode-section-heading, .shoot-mode-section-heading.heading-yellow, .shoot-mode-section-heading.heading-navy, .shoot-mode-body .shoot-mode-section-heading { background: none; color: var(--text); font-family: var(--font-head); font-size: 19px; font-weight: 400; text-transform: none; letter-spacing: 0; padding: 16px 20px 0; border: none; }
+
+/* ---- Small labels inside a page ---- */
+#shootForm .shoot-section-heading { align-self: stretch; width: 100%; }
+.team-question, .moodboard-label { font-family: var(--font-title); font-size: 19px; font-weight: 400; color: var(--text); letter-spacing: 0; text-transform: none; }
+.location-field-btn { background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; padding: 2px 0 6px; font-family: var(--font-title); font-size: 17px; font-weight: 400; line-height: 24px; letter-spacing: 0; text-align: left; color: var(--text); width: 100%; }

@@ -1,0 +1,69 @@
+/* ---- Form section dividers (Plan / Framework tags / Reflect) ---- */
+.form-section-label {
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 6px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.form-section-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.form-section-label-row .form-section-label {
+  padding-top: 0;
+  border-top: none;
+  margin: 0;
+}
+
+.form-section-heading-large {
+  font-size: 23px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 10px 0 0;
+  padding-top: 20px;
+  border-top: 2px solid var(--border);
+}
+
+.post-shoot-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--ink);
+  border: none;
+  border-radius: var(--radius-xl);
+  margin: 20px 0 0;
+  padding: 16px;
+  font-size: 19px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #fff;
+  text-align: left;
+}
+
+.toggle-chevron {
+  font-size: 18px;
+  transition: transform 0.15s ease;
+}
+
+.post-shoot-toggle.expanded .toggle-chevron {
+  transform: rotate(180deg);
+}
+
+.post-shoot-divider {
+  border-top: 2px solid var(--ink);
+  padding-top: 16px;
+}
+
+.inline-manage-link {
+  margin-top: 0 !important;
+}

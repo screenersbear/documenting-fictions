@@ -1,0 +1,75 @@
+/* Sits right above a sticky Save bar — small gap so it reads as its own
+   row, reachable only by scrolling, instead of crowding the sticky bar. */
+.pre-save-divider {
+  margin-bottom: 16px;
+}
+
+.modal-actions button {
+  flex: 1;
+  padding: 13px;
+  border-radius: var(--radius-xl);
+  border: none;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 1.5px;
+}
+
+#shootModalOverlay .modal-actions button,
+#journalModalOverlay .modal-actions button {
+  font-family: var(--font-title);
+  font-weight: 700;
+}
+
+/* The Save button's text is randomized (see SAVE_MESSAGES) and some
+   messages are much longer than others — fixed height plus centered,
+   wrapping text means the button always reads the same size no matter
+   which message lands, instead of growing/shrinking per message. */
+#saveShootBtn {
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.15;
+  font-size: 21px;
+  text-transform: uppercase;
+  border: 2px solid var(--ink);
+}
+
+.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.danger {
+  background: rgba(255,107,107,0.15);
+  color: var(--red);
+}
+
+.secondary {
+  background: var(--surface-2);
+  border: 1px solid var(--border) !important;
+  color: var(--text);
+}
+
+.small-btn {
+  flex: none !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+/* Every "+ Add X" button in the app uses .primary.small-btn together — a
+   shared class rule instead of an ID list, so a new one automatically
+   picks up the bold title font without needing to be added here by hand.
+   .secondary.small-btn is the same button at the same weight, just uncolored:
+   a section's own button is filled yellow (.primary), while a button belonging
+   to a sub-section inside it stays white so the nesting reads at a glance. */
+.primary.small-btn,
+.secondary.small-btn {
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 17px !important;
+}

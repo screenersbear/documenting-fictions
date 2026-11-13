@@ -1,0 +1,144 @@
+/* Stickers: on the cover, cropped by its edges. A soft, slightly faded print
+   with a paper edge and the book's own light across it. */
+.nb-stickers { position: absolute; inset: 0; overflow: hidden; border-radius: 0 calc(var(--W) * 0.044) calc(var(--W) * 0.044) 0; pointer-events: none; }
+.nb-sticker-set, .nb-sticker-body, .nb-cover-copy { position: absolute; inset: 0; }
+.nb-sticker { position: absolute; aspect-ratio: var(--r, 1); transform: translate(-50%, -50%); }
+.nb-sticker-face { position: absolute; inset: calc(var(--W) * -0.009); overflow: hidden; background: #f6f1e6; box-shadow: 0 calc(var(--W) * 0.005) calc(var(--W) * 0.016) rgba(60, 40, 20, 0.3); }
+.nb-sticker.is-circle .nb-sticker-face, .nb-sticker.is-circle .nb-sticker-face > img:first-child { border-radius: 50%; }
+.nb-sticker.is-square .nb-sticker-face, .nb-sticker.is-rect .nb-sticker-face { border-radius: calc(var(--W) * 0.018); }
+.nb-sticker.is-square .nb-sticker-face > img:first-child, .nb-sticker.is-rect .nb-sticker-face > img:first-child { border-radius: calc(var(--W) * 0.012); }
+.nb-sticker-face > img:first-child { position: absolute; left: calc(var(--W) * 0.009); top: calc(var(--W) * 0.009); width: calc(100% - var(--W) * 0.018); height: calc(100% - var(--W) * 0.018); object-fit: cover; opacity: 0.93; filter: saturate(0.74) contrast(0.9) brightness(1.05) sepia(0.1); -webkit-user-drag: none; }
+.nb-sticker-face::after { content: ''; position: absolute; inset: 0; background: linear-gradient(140deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.04) 42%, rgba(60, 40, 20, 0.16)); }
+.nb-sticker-creases { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; mix-blend-mode: multiply; -webkit-user-drag: none; }
+/* The last of a sticker curving over the cover's edge, and on round it. */
+.nb-bend { position: absolute; overflow: hidden; }
+.nb-bend[hidden], .nb-cover-copy[hidden] { display: none; }
+.nb-bend.is-left { left: 0; top: 0; bottom: 0; width: calc(var(--W) * 0.05); }
+.nb-bend.is-right { right: 0; top: 0; bottom: 0; width: calc(var(--W) * 0.05); }
+.nb-bend.is-top { top: 0; left: 0; right: 0; height: calc(var(--W) * 0.05); }
+.nb-bend.is-bottom { bottom: 0; left: 0; right: 0; height: calc(var(--W) * 0.05); }
+.nb-bend .nb-cover-copy { width: var(--W); height: var(--H); right: auto; bottom: auto; }
+.nb-bend.is-right .nb-cover-copy { left: auto; right: 0; }
+.nb-bend.is-bottom .nb-cover-copy { top: auto; bottom: 0; }
+.nb-bend-shade { position: absolute; z-index: 2; }
+.nb-bend-shade.is-right { background: linear-gradient(90deg, rgba(255, 255, 255, 0.5), rgba(44, 30, 18, 0.1) 22%, rgba(44, 30, 18, 0.62)); }
+.nb-bend-shade.is-left { background: linear-gradient(270deg, rgba(255, 255, 255, 0.5), rgba(44, 30, 18, 0.1) 22%, rgba(44, 30, 18, 0.62)); }
+.nb-bend-shade.is-bottom { background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(44, 30, 18, 0.1) 22%, rgba(44, 30, 18, 0.62)); }
+.nb-bend-shade.is-top { background: linear-gradient(0deg, rgba(255, 255, 255, 0.5), rgba(44, 30, 18, 0.1) 22%, rgba(44, 30, 18, 0.62)); }
+.nb-wraps { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+.nb:not(.closed) .nb-wraps { visibility: hidden; }
+/* Not until the cover has landed: they stand out from it as it swings. */
+.nb.closed .nb-wraps { transition: visibility 0s 0.82s; }
+.nb-wrap { position: absolute; overflow: hidden; background: var(--accent); }
+.nb-wrap-in { position: absolute; }
+.nb-wrap-in .nb-cover-copy { width: var(--W); height: var(--H); right: auto; bottom: auto; }
+.nb-wrap .nb-sticker-face::before { content: ''; position: absolute; z-index: 3; inset: 0; background: rgba(36, 24, 14, 0.34); }
+.nb-wrap.is-right { left: 100%; top: calc(var(--W) * 0.044); bottom: calc(var(--W) * 0.044); width: var(--T); transform-origin: 0 50%; transform: rotateY(90deg); }
+.nb-wrap.is-right .nb-wrap-in { left: calc(var(--W) * -1); top: calc(var(--W) * -0.044); }
+.nb-wrap.is-left { right: calc(100% + 0.5px); top: 0; bottom: 0; width: var(--D); transform-origin: 100% 50%; transform: rotateY(-90deg); background: none; }
+.nb-wrap.is-left .nb-wrap-in { left: var(--D); top: 0; }
+.nb-wrap.is-top { bottom: 100%; left: 0; right: calc(var(--W) * 0.044); height: var(--T); transform-origin: 50% 100%; transform: rotateX(90deg); }
+.nb-wrap.is-top .nb-wrap-in { top: var(--T); left: 0; }
+.nb-wrap.is-bottom { top: 100%; left: 0; right: calc(var(--W) * 0.044); height: var(--T); transform-origin: 50% 0; transform: rotateX(-90deg); }
+.nb-wrap.is-bottom .nb-wrap-in { top: calc(var(--H) * -1); left: 0; }
+/* The book's own sides, for when it's turned by hand. */
+.nb { --D: calc(var(--W) * 0.1904); --T: calc(var(--W) * 0.014); }
+.nb.closed { touch-action: none; }
+.nb-spin { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+.nb.placing .nb-spin { transform: none !important; }
+.nb:not(.closed) .nb-spin { transition: transform 0.3s ease-out; }
+.nb-sides { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+.nb:not(.closed) .nb-sides { visibility: hidden; }
+.nb-sides i { position: absolute; }
+/* Held clear of the spine's plane, or the two flicker where they meet. */
+.nb.closed .nb-block { left: 1.5px; }
+.nb-side-spine { right: 100%; top: 0; width: var(--D); height: 100%; transform-origin: 100% 50%; transform: translateZ(1px) rotateY(-90deg); background: linear-gradient(90deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.05) 28%, rgba(0, 0, 0, 0.05) 72%, rgba(0, 0, 0, 0.16)), var(--accent); }
+.nb-side-top { left: 0.5px; right: 1.2%; bottom: calc(99.1% + 0.6px); height: var(--D); transform-origin: 50% 100%; transform: rotateX(90deg); background: repeating-linear-gradient(0deg, #fff 0 3px, #e4e4e4 3px 4px); }
+.nb-side-bottom { left: 0.5px; right: 1.2%; top: calc(99.1% + 0.6px); height: var(--D); transform-origin: 50% 0; transform: rotateX(-90deg); background: repeating-linear-gradient(0deg, #fff 0 3px, #e4e4e4 3px 4px); }
+/* Fitting the photo into the shape. */
+.nb-crop { position: absolute; z-index: 9; inset: 0; overflow: hidden; background: #fff; touch-action: none; }
+.nb-crop[hidden] { display: none; }
+.nb-crop-photo { position: absolute; left: 50%; top: 50%; max-width: none; transform-origin: 50% 50%; -webkit-user-drag: none; pointer-events: none; }
+.nb-crop-window { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 200vmax rgba(255, 255, 255, 0.8); outline: 2px solid var(--text); pointer-events: none; }
+.nb-crop-window.is-circle { border-radius: 50%; }
+.nb-crop-window.is-square, .nb-crop-window.is-rect { border-radius: 6px; }
+.nb-crop-hint { position: absolute; left: 0; right: 0; top: calc(max(var(--sa-top), 10px) + 18px); margin: 0; text-align: center; font-family: var(--font-body); font-size: 17px; color: var(--text); pointer-events: none; }
+.nb-crop-actions { position: absolute; left: 0; right: 0; bottom: calc(var(--sa-bottom) + 16px); display: flex; justify-content: center; gap: 12px; }
+.nb-crop-back, .nb-crop-ok { min-height: 44px; padding: 8px 34px; border-radius: 3px; font-family: var(--font-body); font-size: 17px; letter-spacing: 0; text-transform: none; }
+.nb-crop-ok { border: none; background: var(--text); color: #fff; }
+.nb-crop-back { border: 1.5px solid var(--text); background: #fff; color: var(--text); }
+.nb.closed.placing .nb-book { transform: rotateY(0deg) translate(calc(var(--W) / -2), 0) scale(1); }
+.nb.placing .nb-float { animation: none; }
+.nb-sticker-stage { position: absolute; z-index: 8; inset: 0; touch-action: none; }
+.nb-sticker-stage[hidden] { display: none; }
+.nb-sticker-ok { position: absolute; left: 50%; bottom: calc(var(--sa-bottom) + 16px); transform: translateX(-50%); min-height: 44px; padding: 8px 34px; border: none; border-radius: 3px; background: var(--text); color: #fff; font-family: var(--font-body); font-size: 17px; letter-spacing: 0; text-transform: none; }
+
+/* Each page is a sheet of paper lying in the notebook, as in the other
+   notebook apps: rounder corners on its outer side, its own edge the end of
+   the page, and the notebook's color a shade deeper right around it, solid
+   again toward the notebook's outer edge. */
+:root { --pg-r: 16px; }
+.nb-board-page, .nb-turn, .nb-turn-under, #shootModalOverlay > .modal, #archiveModeOverlay > .modal { border-radius: 0 var(--pg-r) var(--pg-r) 0; }
+:root[data-side="verso"] .nb-board-page, :root[data-side="verso"] .nb-board > .nb-turn, :root[data-side="verso"] .nb-board > .nb-turn-under { border-radius: var(--pg-r) 0 0 var(--pg-r); }
+.nb-page-foot { border-bottom-right-radius: var(--pg-r); } /* its white mustn't square off the page's corner */
+@supports (color: color-mix(in oklab, red, blue)) {
+  :root { --rim-deep: color-mix(in oklab, var(--accent) 84%, #000); }
+  :root[data-book="ink"] { --rim-deep: color-mix(in oklab, var(--accent) 70%, #000); } /* navy needs more to show */
+  .nb-board-page { box-shadow: 0 0 3px 1px var(--rim-deep), 0 0 0 40px var(--accent); transition: box-shadow 0.3s; }
+  #shootModalOverlay > .modal, #archiveModeOverlay > .modal { box-shadow: 0 0 3px 1px var(--rim-deep); }
+  /* The opening book is a picture without the deeper shade, so it comes in
+     once the real page takes over rather than popping on. */
+  :root:has(#bookOverlay:not([hidden])) .nb-board-page { box-shadow: 0 0 3px 1px var(--accent), 0 0 0 40px var(--accent); transition: none; }
+}
+
+/* The page number always sits right under the navigator's icon: each page sits
+   a little off the middle of the screen (the spine on one side, the rim and
+   tabs on the other), so the number's strip is shifted by that difference.
+   Inside the frame percentages would be of the frame, so the frame's own
+   insets are written in vw here (recto: left max(-20px, 50% - 280px), right
+   --nb-edge; verso: left max(6px, 50% - 270px), right max(-20px, 50% - 280px)). */
+.nb-screen-foot { left: calc(var(--nb-rim) + max(22px, calc(calc(50 * var(--vw)) - 270px)) - max(-20px, calc(calc(50 * var(--vw)) - 280px))); right: var(--nb-rim); }
+:root[data-side="verso"] .nb-screen-foot { left: var(--nb-rim); right: calc(var(--nb-rim) + max(6px, calc(calc(50 * var(--vw)) - 270px)) - max(-20px, calc(calc(50 * var(--vw)) - 280px))); }
+/* A shoot's and Archive mode's foot spans the page for its fade, so only its
+   content moves over (padding percentages are of the overlay, the screen). */
+.nb-page-foot { padding-left: max(0px, calc(var(--nb-edge) + var(--nb-rim) - max(0px, calc(50% - 280px)))); padding-right: max(0px, calc(max(0px, calc(50% - 280px)) - var(--nb-edge) - var(--nb-rim))); box-sizing: border-box; }
+
+/* On the installed app the frame and the side tabs hang from the top like the
+   navigator, so the frame's bottom edge always lands right on the navigator's
+   top. Held by the real bottom, a stale --nb-h (iOS fixing its short layout
+   unseen) slid the frame's edge down behind the navigator: no edge at all. */
+:root.nb-installed .nb-board, :root.nb-installed .nb-screen-tabs:not(.nb-screen-tabs-shoot) { bottom: auto; height: calc(var(--nb-h) - var(--nb-top) - var(--nb-bar)); }
+
+/* Bigger text (user, 11-11): Overview grows all round, and the small text and
+   headings elsewhere come up; the big text stays. Pages are packed from what's
+   drawn, so this only means a little more turning. The Journal keeps its 28px
+   ruled lines, so nothing there passes about 22px. */
+.brand-title, .topbar h1 { font-size: 28px; }
+.new-shoot-cta { font-size: 17px; line-height: 24px; }
+.stat-num { font-size: 31px; }
+.stat-label { font-size: 13.5px; }
+.section-block h2, .section-block h2.heading-yellow, .section-block h2.heading-navy { font-size: 22px; }
+.section-block h2 span { font-size: 15px; }
+.shoot-row-title, .shoot-row-compact-title { font-size: 22px; }
+.shoot-row-date-line, .shoot-row-due { font-size: 14.5px; }
+.shoot-row-status-pill, .shoot-row .badge, .badge { font-size: 13px; line-height: 18px; }
+.filter-toggle { font-size: 15.5px; }
+.chip { font-size: 15px; line-height: 20px; }
+h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group-heading.heading-navy { font-size: 17px; }
+.status-group-heading.archive-month-heading, .archive-month-heading.heading-yellow, .archive-month-heading.heading-navy, .upcoming-subheading { font-size: 15px; }
+.stats-legend-row { font-size: 15.5px; }
+#journalList h2.status-group-heading { font-size: 17px; }
+#journalList .log-week-heading { font-size: 15px; }
+#journalList .journal-entry-date { font-size: 14.5px; }
+#journalList .log-takeaway-source { font-size: 14px; }
+#journalList .beat-chip.view-only { font-size: 14px; }
+#journalList .log-section-label { font-size: 15px; }
+.nb-screen-foot, .nb-page-foot { font-size: 15px; }
+.nb-screen-tabs > * > span { font-size: 13px; }
+#shootForm label, #journalForm label, #locationForm label, #talentForm label, #teamMemberForm label, #photographerForm label { font-size: 14px; }
+.primary.small-btn { font-size: 15px !important; }
+.status-swatch-display { font-size: 14px; }
+.field-hint { font-size: 15px; }
+.nb-tool { font-size: 12px; }
+.archive-summary .shoot-mode-review-label { font-size: 14px; }
+.archive-mode-details-btn { font-size: 13px; }

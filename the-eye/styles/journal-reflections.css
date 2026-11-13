@@ -1,0 +1,284 @@
+/* ---- Reflections entries, rendered inline on the same paper as the Log ---- */
+
+/* The banner above no longer carries an entry's title or date (see
+   .journal-entry-binding below) — both moved onto the page itself, in the
+   blank band .journal-paper.log-paper's --header-band creates above the
+   ruling, written on the first visible rule the way you'd head a notebook
+   page: the heading's bottom edge sits right on that line (the top margin
+   that pushes it there is set per card in applyJournalHeaderBand), with the
+   open space above it. Title left, date right, same arrangement the banner
+   used to have.
+
+   Locked to the same 28px ruling as everything else on the paper, one line
+   box per row, so a title that wraps takes whole rows and grows UPWARD into
+   the open space — the band grows to match, so no row of it can reach the
+   rule. align-items:flex-end puts the date on the title's last row (the one
+   sitting on the rule) rather than beside its first. No background/padding
+   of its own to carve out that space — the paper's own background already
+   reserves it, sized to this block's real height rather than guessed. */
+.journal-entry-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  line-height: 28px;
+}
+
+.journal-entry-title {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  min-width: 0;
+}
+
+.journal-entry-date {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  opacity: 0.6;
+  flex-shrink: 0;
+  /* A wrapped date would be a second row the band wasn't sized for. */
+  white-space: nowrap;
+}
+
+/* Collapses the banner to a thin binding strip once it's holding only the
+   options button — same accent-yellow/navy alternation as before, just
+   sized to the button instead of to whatever title used to be in it. */
+.log-week-heading.journal-entry-binding {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 8px 10px;
+}
+
+/* Inherits the banner's colour so it stays legible on both the yellow and the
+   navy variant, rather than picking a fixed ink that vanishes on one of them.
+   Sized to match .row-options-btn's 28px tap target, and weighted/sized to
+   match its glyph too — at the old 20px/400-weight the three dots read as
+   faint on the banner's fill. */
+.journal-entry-options {
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.journal-entry-card .journal-paper {
+  cursor: pointer;
+}
+
+.journal-entry-body {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Photos and hashtags sit a full ruled line clear of the writing above them. */
+.journal-entry-images:not([hidden]),
+.journal-entry-tags:not([hidden]) {
+  margin-top: 28px;
+}
+
+.journal-entry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.journal-entry-images[hidden],
+.journal-entry-tags[hidden] {
+  display: none;
+}
+
+.log-week-heading.heading-yellow {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.log-week-heading.heading-navy {
+  background: var(--ink);
+  color: #fff;
+}
+
+.log-shoot-category {
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+.log-section-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 12px 0 4px;
+}
+
+.log-takeaways {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 16px;
+}
+
+.log-shoots li[data-shoot-id],
+.log-takeaways li[data-shoot-id] {
+  cursor: pointer;
+}
+
+/* The shoot credit trailing each takeaway. Opacity rather than a grey: the
+   palette only has the one ink colour (--text-dim is the same value), so
+   fading it is the only way to set the attribution back from the takeaway
+   itself without introducing a colour that isn't in the scheme. */
+.log-takeaway-source {
+  opacity: 0.6;
+}
+
+/* The shoot name is the whole point of this popup, so it gets read as the
+   headline rather than as body copy under "Referring to". */
+#logShootRefName {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  margin: 6px 0 2px;
+}
+
+.log-no-takeaways {
+  font-size: 15px;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.shoot-row {
+  background: var(--surface);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-xl);
+  /* No padding of its own — the thumb and the new accent strip both go flush
+     to their respective edges, same as before; the gap below is what
+     separates them from the text in between. */
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.shoot-row .shoot-thumb {
+  width: 96px;
+  height: auto;
+  align-self: stretch;
+  position: relative;
+  border-radius: 0;
+  border: none;
+}
+
+.shoot-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 8px 8px 0;
+}
+
+/* Every shoot bubble on every page (Overview, Shoots, Archive, Stats) reserves
+   the same floor — calibrated to the realistic common case (1-line title,
+   shot date, due date, status pill — no badge), not the rare compound case
+   that also stacks a 2-line pending badge on top. That rarer combination
+   only occurs for a non-archived captured shoot with no reflection recorded,
+   surfaced through the Stats/Archive detail popups — min-height is a floor,
+   not a ceiling, so those rows simply grow past 120px rather than clipping;
+   that's fine, since more content genuinely earning more room reads better
+   than every row padding out to match the rarest case. See .crop-stage,
+   which the crop tool matches to this same value so what you frame is what
+   shows. Measured against the common case; adjust both together if this
+   ever changes. */
+.shoot-row-body {
+  min-height: 120px;
+}
+
+/* Single line + ellipsis — the thumbnail took the width that used to let
+   this wrap to 2 lines, so a long title/talent name now truncates instead
+   of wrapping. */
+.shoot-row-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 16px;
+}
+
+.shoot-row-date-line {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.shoot-row-due {
+  color: var(--accent);
+}
+
+.shoot-row-due.overdue {
+  color: var(--red);
+}
+
+/* The status pill is the one line that always gets a background when it's
+   shown at all ("active planning", "early idea", etc.) — distinct from the
+   plain .badge line below it, which is reminders (Pending: X), not status. */
+.shoot-row-status-pill {
+  display: inline-block;
+  align-self: flex-start;
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shoot-row .badge {
+  /* Base .badge's surface-2 background is white — identical to the row's
+     own background, so on a regular (non-compact) row it read as bare gray
+     text with no visible box at all. Matches .shoot-row-compact .badge
+     (the Overview counter popups) so a "Pending: X" reminder looks the same
+     bubble everywhere it shows up, not just there. */
+  background: var(--accent);
+  color: var(--on-accent);
+  align-self: flex-start;
+}
+
+/* Full-height strip on the side opposite the thumbnail — the kebab now sits
+   inside it rather than floating on plain background. */
+.shoot-row-accent-strip {
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 30px;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.row-options-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}

@@ -1,0 +1,56 @@
+/* ---- Stats detail slide-over ---- */
+.stats-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(49, 61, 69, 0.35);
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+
+.stats-detail-overlay[hidden] {
+  display: none;
+}
+
+.stats-detail-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.stats-detail-panel {
+  width: 82%;
+  max-width: 440px;
+  height: 100%;
+  background: var(--surface);
+  box-shadow: -4px 0 24px rgba(0,0,0,0.2);
+  padding: var(--sa-top) 20px calc(var(--sa-bottom) + 20px);
+  overflow-y: auto;
+  overscroll-behavior: none;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.stats-detail-overlay.open .stats-detail-panel {
+  transform: translateX(0);
+}
+
+.stats-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 16px 0 14px;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.stats-detail-header h2 {
+  font-size: 19px;
+  margin: 0;
+  text-transform: capitalize;
+}

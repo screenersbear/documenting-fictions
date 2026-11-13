@@ -1,0 +1,21 @@
+<!-- The reflection helper. -->
+<!-- ============ REFLECTION HELPER ("Need help reflecting?") ============ -->
+<!-- A few questions per Reflection field (see REFLECTION_FLOWS in app.js),
+     written straight into the fields on Finish or Close. -->
+<div id="reflectHelperOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal reflect-helper-modal">
+    <p class="mi-sub" id="reflectHelperStep"></p>
+    <h2 id="reflectHelperTitle"></h2>
+    <p id="reflectHelperText"></p>
+    <p class="field-hint concept-helper-hint" id="reflectHelperHint"></p>
+    <textarea id="reflectHelperInput" class="deadline-prompt-input" rows="3" maxlength="1000"></textarea>
+    <div class="modal-actions" id="reflectHelperNav">
+      <button type="button" class="secondary" id="reflectHelperBackBtn">Back</button>
+      <button type="button" class="primary" id="reflectHelperNextBtn">Next</button>
+    </div>
+    <div class="shoot-tour-skip-row">
+      <button type="button" class="secondary journal-block-btn" id="reflectHelperCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+

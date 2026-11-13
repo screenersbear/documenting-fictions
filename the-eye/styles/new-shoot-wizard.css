@@ -1,0 +1,203 @@
+/* ---- New-shoot planning wizard ----
+   A guided pass over a brand-new shoot, a few fields per slide (see
+   SHOOT_WIZARD_STEPS in app.js). It lives INSIDE #shootForm — the real field
+   blocks are moved into the card and back, so #shootForm's field styles and
+   listeners keep applying — which also keeps it inside #shootModalOverlay's
+   stacking context: every popup a slide can open (talent, location, team,
+   image viewer, crop, the status/multi-day/deadline prompts, toasts) is a
+   later body-level overlay and already paints above it. The 10 here only
+   has to clear the shoot modal's own sticky header/Save bar (2), the
+   shoot-mode button (1) and the in-form drag/suggestion layers (<=5).
+
+   Deliberately none of .modal-overlay/.intro-overlay/.modal/.intro-modal/
+   .modal-actions: inside the shoot modal those pick up the sticky Save-bar
+   and 2px-border rules, .intro-modal's centring and `p` sizing would restyle
+   the borrowed field hints, and a visible .modal-overlay switches off
+   pull-to-refresh and tab swipe app-wide. The values below copy the guided
+   tour's card instead.
+
+   Sized to the visual viewport via --wiz-vv-top/--wiz-vv-h (set from JS), so
+   with the iOS keyboard up the card re-centres in what's left above it and
+   only its body scrolls. */
+#shootWizard {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--wiz-vv-top, 0px);
+  height: var(--wiz-vv-h, 100%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--sa-top) + 16px) 16px calc(var(--sa-bottom) + 16px);
+  background: rgba(0,0,0,0.6);
+  /* A drag on the dim (or on the card's own header/footer) mustn't pan the
+     shoot page behind. The card body is its own scroller, so it still
+     scrolls — touch-action only applies up to the nearest scroller. */
+  touch-action: none;
+}
+
+#shootWizard[hidden] {
+  display: none;
+}
+
+/* Own stacking context, so a dragged shot row (z 5) or a lighting setup's
+   suggestions (z 5) stay layered inside the card. */
+#shootWizardCard {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  max-width: 380px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 3px solid var(--ink);
+  border-radius: 28px;
+  padding: 24px 22px;
+  animation: slideUp 0.15s ease;
+  /* Only ever scrolls when even the compact head + buttons + the body's
+     minimum don't fit (a phone on its side); normally just the body does. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#shootWizardCard:focus {
+  outline: none;
+}
+
+.shoot-wizard-head {
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.shoot-wizard-head h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.shoot-wizard-head p {
+  margin: 0 0 18px;
+  font-size: 16px;
+  color: var(--text);
+  line-height: 1.5;
+  text-align: left;
+}
+
+/* Same column + 14px gap as #shootForm itself, so borrowed blocks keep
+   their spacing. The 3px padding (cancelled by the negative margin) leaves
+   room for a focused field's outline, which the scroll box would clip. */
+#shootWizardBody {
+  flex: 1 1 auto;
+  /* Never squeezed away entirely: on a very short screen the card itself
+     scrolls instead (see #shootWizardCard's overflow). */
+  min-height: 120px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 -3px;
+  padding: 3px;
+}
+
+/* The notes fields are typed into directly on a slide (on the page they open
+   the expand popup), so they lose [readonly] while here — and with it the
+   resize:none from #shootForm textarea[readonly]. */
+#shootWizard textarea {
+  resize: none;
+}
+
+/* Its 10px top margin only spaces it from its heading, which stays on the page. */
+#shootWizardBody > #lightingSetupsBody {
+  margin-top: 0;
+}
+
+
+/* Same for each lighting setup card: always open there (see
+   renderLightingSetups), so no fold toggle in its bar. Its spot holds the
+   saved-setups chevron instead (toggleLightingBrowse in app.js), same
+   look, flagged hidden when no other shoot has a setup saved. */
+#shootWizardBody .lighting-setup-collapse-toggle:not(.lighting-setup-browse-toggle),
+.lighting-setup-browse-toggle[hidden] {
+  display: none;
+}
+
+/* The card is narrower than the page, so the grid's columns are too — let
+   the empty mood board's "No photos yet." run across the row instead of
+   wrapping word by word inside the first column. */
+#shootWizardBody .moodboard-grid .empty-hint {
+  grid-column: 1 / -1;
+}
+
+/* On the slide the "complete or not required" box comes before the photos
+   (the user's call, 2026-11-10), so a full board can't push it out of sight
+   under them. The section is a flex column, so the grid just goes last. */
+#shootWizardBody .moodboard-grid {
+  order: 1;
+}
+
+/* Same as the tour's .modal-actions row and buttons — copied, not reused,
+   since #shootModalOverlay .modal-actions is the sticky Save bar. */
+.shoot-wizard-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.shoot-wizard-actions button {
+  flex: 1;
+  padding: 13px;
+  border-radius: var(--radius-xl);
+  border: none;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 1.5px;
+}
+
+#shootWizardExitRow {
+  flex-shrink: 0;
+}
+
+/* "Don't show again" — first slide only, a small link under the buttons
+   rather than another full-size button. */
+#shootWizardDontShowBtn {
+  flex-shrink: 0;
+  align-self: center;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+#shootWizardDontShowBtn[hidden] {
+  display: none;
+}
+
+/* The multi-day notice's "Don't show again" — the same small link, centred
+   under its "got it!" button. */
+#multiDayNoticeHideBtn {
+  margin: 12px auto 0;
+  font-size: 13px;
+}
+
+/* The reflection prompt's "Walk me through it" — the same small link,
+   centred under its Later / Reflect now pair. */
+#postShootPromptWalkBtn {
+  margin: 12px auto 0;
+  font-size: 13px;
+}
+
+#postShootPromptWalkBtn[hidden] {
+  display: none;
+}
+
+/* "Leave the guide?" — the two answers stacked full width, so "Go to shoot
+   page" reads on one line instead of wrapping inside a half-width button. */
+#shootWizardLeaveActions {
+  flex-direction: column;
+}

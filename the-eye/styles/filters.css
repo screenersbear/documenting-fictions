@@ -1,0 +1,74 @@
+/* ---- Filters ---- */
+.filter-toggle {
+  display: inline-block;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+
+/* Journal's Table of contents button and its filter toggle share a row (wrapping
+   on a narrow screen) instead of stacking, each still carrying its own
+   bottom margin from .filter-toggle. */
+.journal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.filters[hidden] {
+  display: none;
+}
+
+@keyframes chip-pop-in {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.filters .chip {
+  animation: chip-pop-in 0.22s ease backwards;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  border-radius: var(--radius-pill);
+  padding: 7px 14px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.chip.active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.chip-manage {
+  border-style: dashed;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.chip-manage svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}

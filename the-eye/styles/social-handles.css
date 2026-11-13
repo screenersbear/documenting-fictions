@@ -1,0 +1,43 @@
+/* ---- Social media handles (dynamic list, nested inside a talent or
+   team member card) ---- */
+
+.social-handles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.social-handle-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.social-handle-platform,
+.social-handle-input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-body);
+  flex: 1;
+  min-width: 0;
+  text-transform: none;
+}
+
+.delete-social-handle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--red);
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

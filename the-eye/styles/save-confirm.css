@@ -1,0 +1,49 @@
+/* ---- Save confirmation dialog ---- */
+.confirm-overlay {
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  background: rgba(0,0,0,0.6);
+  padding: 24px;
+}
+
+.confirm-modal {
+  width: 100%;
+  max-width: 400px;
+  border: 3px solid var(--ink);
+  border-radius: 28px;
+  padding: 24px 20px;
+  text-align: center;
+  animation: slideUp 0.15s ease;
+}
+
+.confirm-message {
+  font-size: 16px;
+  margin: 0 0 18px;
+  color: var(--text);
+}
+
+.confirm-keep-editing {
+  margin-top: 14px;
+  text-align: center;
+}
+
+/* ---- First-time tab intro popup ---- */
+.intro-overlay {
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  background: rgba(0,0,0,0.6);
+  padding: 24px;
+}
+
+
+.shoot-tour-skip-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.shoot-tour-skip-row .journal-block-btn {
+  margin-bottom: 0;
+}

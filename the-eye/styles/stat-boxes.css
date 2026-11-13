@@ -1,0 +1,89 @@
+/* The accent band is a pseudo-element, not a border-top. As a border it met the
+   2px side borders at a mitre, so the yellow tapered diagonally at both top
+   corners and only touched the box's full width along its very outer edge.
+   Absolute positioning is relative to the padding box, so the -2px insets let
+   the band sit over the side borders and reach true edge to edge at a constant
+   8px. padding-top carries the 8px the border used to occupy, keeping the box
+   the same height as before. */
+.stat-box {
+  position: relative;
+  background: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-2xl);
+  padding: 12px 4px 6px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.stat-box::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  height: 8px;
+  background: var(--accent);
+}
+
+.stat-num {
+  font-size: 29px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  color: #fff;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 25px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* The "+" glyph (the Journal's add-entry button, the Shoots list's add-shoot
+   button) reads as hanging a little low of true center in this font/weight
+   once flex-centered — a small upward nudge, same em-scaled approach as
+   .close-btn's own × correction. */
+#addJournalBtn,
+#addShootBtn {
+  transform: translateY(-0.05em);
+}
+
+.icon-btn[hidden] {
+  display: none;
+}
+
+/* Shared × icon for every circular close/delete button. An inline SVG
+   centers exactly inside a flex-centered circle regardless of font/platform
+   — text glyphs (×, &times;) carry their own per-font vertical bias that
+   canvas-measured translateY nudges never matched reliably across real
+   devices, so this replaces that glyph everywhere it was used inside a
+   circle. Sized in em so it scales with each button's own font-size. */
+.x-icon {
+  width: 0.6em;
+  height: 0.6em;
+  display: block;
+  flex-shrink: 0;
+}

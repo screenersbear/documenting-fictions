@@ -1,0 +1,91 @@
+<!-- The journal's popups: an entry, the prompt picker, logging a shoot reference, and the contents. -->
+<!-- ============ JOURNAL ENTRY MODAL ============ -->
+<div id="journalModalOverlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Journal Entry</h2>
+      <button class="icon-btn close-btn" data-close="journal"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+
+    <div id="journalViewMode" hidden>
+      <div class="journal-view-header">
+        <h3 class="journal-view-title" id="journalViewTitle"></h3>
+        <button type="button" class="primary small-btn" id="editJournalBtn">Edit</button>
+      </div>
+      <p class="mi-sub" id="journalViewDate"></p>
+      <p class="field-hint" id="journalViewLinkedHint" hidden>Tap the text below to revisit and edit this shoot's reflection.</p>
+      <div class="journal-paper" id="journalViewBody"></div>
+      <div id="journalViewImagesGrid" class="moodboard-grid"></div>
+      <div class="beats-chips journal-view-tags" id="journalViewTags"></div>
+      <button type="button" class="plain-delete-btn pre-save-divider" id="deleteJournalViewBtn" hidden>Delete</button>
+      <div class="modal-actions">
+        <button type="button" class="primary journal-block-btn" id="journalViewDoneBtn"></button>
+      </div>
+    </div>
+
+    <div id="journalForm" hidden>
+      <label>Subject
+        <input type="text" id="journalSubject" maxlength="120" placeholder="What's this entry about" />
+      </label>
+      <label>Entry
+        <textarea id="journalBody" rows="12" placeholder="Write freely…"></textarea>
+      </label>
+      <button type="button" class="primary journal-block-btn" id="journalPromptBtn">Need a starting prompt?</button>
+      <div class="moodboard-section">
+        <span class="moodboard-label">Photos</span>
+        <button type="button" id="addJournalPhotos" class="primary small-btn">+ Add photos</button>
+        <input type="file" id="journalImagesFileInput" accept="image/*" multiple hidden />
+        <div id="journalImagesGrid" class="moodboard-grid"></div>
+      </div>
+      <div class="beats-block">
+        <label class="beats-label">Hashtags</label>
+        <div class="beats-chips" id="journalTagsChips"></div>
+        <input type="text" id="journalTagsInput" placeholder="Type a hashtag, press Enter" />
+        <div class="beats-suggestions" id="journalTagsSuggestions"></div>
+      </div>
+      <button type="button" class="plain-delete-btn pre-save-divider" id="deleteJournalBtn" hidden>Delete</button>
+      <div class="modal-actions">
+        <button type="button" class="primary" id="saveJournalBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ JOURNAL PROMPT PICKER ============ -->
+<div id="journalPromptOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal daily-report-modal">
+    <h2>Need a starting prompt?</h2>
+    <p id="journalPromptText"></p>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="journalPromptAnotherBtn">Try another one</button>
+      <button type="button" class="primary" id="journalPromptAcceptBtn">Accept</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LOG SHOOT REFERENCE ============ -->
+<div id="logShootRefOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal daily-report-modal">
+    <h2>Referring to</h2>
+    <p id="logShootRefName"></p>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="logShootRefCancelBtn">Close</button>
+      <button type="button" class="primary" id="logShootRefViewBtn">View shoot</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ REFLECTIONS TABLE OF CONTENTS ============ -->
+<div id="journalTocOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal journal-toc-modal">
+    <div class="modal-header">
+      <h2>Table of contents</h2>
+      <button class="icon-btn close-btn" data-close="journalToc"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="journal-toc-scroll">
+      <div id="journalTocList"></div>
+      <p class="empty-state" id="journalTocEmpty" hidden>Nothing in the journal yet.</p>
+    </div>
+  </div>
+</div>
+

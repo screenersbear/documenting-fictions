@@ -1,0 +1,281 @@
+/* ---- Card lists (shoots / content) ---- */
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+
+.status-group-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  margin: 16px 0 8px 4px;
+  cursor: pointer;
+}
+
+.shoot-status-group:first-child > .status-group-heading {
+  margin-top: 0;
+}
+
+/* Archive's month headings nest inside a year's rows — unlike the year
+   (which keeps the full pill/bubble look shared with the Shoots screen's
+   status groups), a month is plain text: indented, smaller, and colored per
+   the same yellow/navy alternation but with no background or radius, so the
+   bubble treatment stays reserved for the year level. */
+.archive-month-heading {
+  margin-left: 20px;
+  font-size: 13px;
+  padding: 4px 0;
+  border-radius: 0;
+}
+
+.archive-month-group:first-child > .archive-month-heading {
+  margin-top: 0;
+}
+
+.status-group-heading.heading-yellow {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.status-group-heading.heading-navy {
+  background: var(--ink);
+  color: #fff;
+}
+
+/* Strips the pill fill back off a month heading, leaving just the alternating
+   color as text. Declared after the .status-group-heading colors above rather
+   than before them: both selectors are two classes, so source order is what
+   decides the winner. Applies wherever .archive-month-heading is used — the
+   Archive list and the Journal's Reflections list both nest months under a
+   year this way, and only the year keeps the bubble treatment. */
+.archive-month-heading.heading-yellow {
+  background: none;
+  color: var(--accent);
+}
+
+.archive-month-heading.heading-navy {
+  background: none;
+  color: var(--text);
+}
+
+/* Decorative "file folder tab" — sits right above each top-level section
+   pill in the shoot form, like the pill's edge dips down out of a line that
+   runs the width of the screen. The line starts high on the left (level with
+   the section title), dips down once, then holds that lower level the rest
+   of the way to the right edge. The negative left/right margins bleed it
+   through the modal's own 20px side padding so it reaches the true screen
+   edges (mirroring the same trick .shoot-modal-header::before uses); the
+   negative bottom margin pulls it down to meet the pill instead of leaving a
+   gap. Purely decorative, so it's hidden from the a11y tree. */
+.folder-tab-deco {
+  display: block;
+  width: calc(100% + 40px);
+  height: 26px;
+  margin-left: -20px;
+  margin-right: -20px;
+  margin-bottom: -13px;
+  pointer-events: none;
+}
+
+/* Fill sits behind the line, shading the gap above it (between the raised
+   part of the line and whatever's above). Only Basic Info's tab has this
+   colored in — it uses a taller viewBox (see index.html) so the fill bleeds
+   up through the modal's top padding and the sticky header's own bottom
+   margin, reaching all the way to the header instead of just the sliver
+   inside the tab's own 26px box. */
+.folder-tab-fill {
+  fill: none;
+  stroke: none;
+}
+
+.folder-tab-deco.tab-fill-yellow .folder-tab-fill {
+  fill: var(--accent);
+}
+
+.folder-tab-deco.tab-fill-yellow {
+  height: 153px;
+  margin-top: -78px;
+}
+
+/* Status swatch button — the first thing in Basic Info, right above Title.
+   A normal full-width flow element like its sibling fields/buttons; the real
+   <select> stays functionally untouched — same id, same change handling —
+   just made invisible and stretched over the visible display span (which
+   needs .status-swatch-wrap's own position:relative as its containing
+   block) so a tap on the button opens the native status picker;
+   #statusSwatchDisplay is kept in sync via JS. */
+.status-swatch-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.status-swatch-display {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--ink);
+  border: 2px solid var(--accent);
+  color: #fff;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 17px;
+  text-align: center;
+  text-transform: uppercase;
+  padding: 13px;
+  border-radius: var(--radius-xl);
+  pointer-events: none;
+}
+
+.status-swatch-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: none;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.folder-tab-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.shoot-status-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shoot-status-rows[hidden] {
+  display: none;
+}
+
+/* Rows inside the Reflections table-of-contents popup (#journalTocList) —
+   shares the same .shoot-status-group/.archive-month-group year>month
+   nesting as the real list, so only the leaf row itself needs styling. */
+.journal-toc-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 2px;
+  font-size: 15px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.journal-toc-item:last-child {
+  border-bottom: none;
+}
+
+/* Auto-generated weekly log rows sit dimmer than written entries, so the
+   things you wrote yourself still stand out in a mixed list. */
+.journal-toc-item-log {
+  color: var(--text-dim);
+}
+
+.card {
+  background: var(--surface);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-3xl);
+  padding: 14px 40px 14px 16px;
+  cursor: pointer;
+  display: flex;
+  gap: 12px;
+  position: relative;
+  /* Reserves the height of the most a card's fixed content can hold: a
+     2-line title (clamped, see .card-title), date, due date, and a status
+     badge. Measured at 139px with that worst case; a little headroom on top.
+     A shoot with an unusually long premise/pending line can still grow
+     taller than this — this is a floor, not a hard cap. */
+  min-height: 140px;
+}
+
+.card-options-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-meta {
+  font-size: 15px;
+  color: var(--text-dim);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.badge {
+  display: inline-block;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge[hidden] {
+  display: none;
+}
+
+.card-concept {
+  font-size: 16px;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-dim);
+  margin-top: 60px;
+  font-size: 17px;
+}

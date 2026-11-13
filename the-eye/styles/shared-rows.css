@@ -1,0 +1,56 @@
+/* ---- Shared row styling (reused by the Manage Frameworks modal) ---- */
+.relationship-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.relationship-name-input {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 17px;
+  font-family: var(--font-body);
+}
+
+.delete-relationship {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--red);
+  font-size: 19px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quick-add-relationship {
+  display: flex;
+  gap: 8px;
+}
+
+.quick-add-relationship input {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 17px;
+  font-family: var(--font-body);
+}
+
+.quick-add-relationship button {
+  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}

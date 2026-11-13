@@ -1,0 +1,28 @@
+<!-- The frameworks popup and the category filters. -->
+<!-- ============ MANAGE FRAMEWORKS MODAL ============ -->
+<div id="frameworksModalOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2>Frameworks</h2>
+      <button class="icon-btn close-btn" data-close="frameworks"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div id="frameworksBody"></div>
+    <form id="newFrameworkForm" class="quick-add-relationship">
+      <input type="text" id="newFrameworkName" placeholder="New framework name" maxlength="60" />
+      <button type="submit" class="primary">Add</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ EDIT CATEGORY FILTERS ============ -->
+<div id="categoryVisibilityOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2>Shoot Categories</h2>
+      <button class="icon-btn close-btn" data-close="categoryVisibility"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <p class="field-hint">Choose which categories show up as filters on the Shoots and Archive tabs.</p>
+    <div class="tag-group" id="categoryVisibilityList"></div>
+  </div>
+</div>
+

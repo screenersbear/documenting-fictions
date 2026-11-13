@@ -1,0 +1,84 @@
+/* ---- Journal as a legal pad (user, 11-11): an open band at the top with
+   the contents, filter and + written on its first rule; titles in capitals
+   on the lines, no coloured band; two blank lines between entries. An entry
+   that runs over carries straight on (journalAtoms gives each heading only
+   to the first line under it). Everything stays on the 28px rules. ---- */
+#view-journal {
+  --jr-band: 84px; /* three ruled rows kept open; the buttons sit on the rule at its foot */
+  background-image:
+    linear-gradient(#fffdf7, #fffdf7),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 27px, #a9c9e8 27px, #a9c9e8 28px);
+  /* Covers every rule above the band's foot: the first one left showing is the band's last pixel. */
+  background-size: 100% calc(var(--nb-top) + 9px + var(--jr-band)), auto;
+  background-repeat: no-repeat, repeat;
+  background-position: 0 0, 0 calc(var(--nb-top) + 10px);
+}
+#view-journal .journal-toolbar { container: jt / inline-size; height: var(--jr-band); display: flex; flex-wrap: nowrap; align-items: flex-end; justify-content: flex-start; gap: 0; padding-right: 0; margin: 0; }
+/* The text row is the button's bottom 28px; the 6px drop puts the words' baseline just above the rule. */
+#view-journal .journal-toolbar > button { position: relative; top: 6px; height: 44px; min-height: 44px; padding: 16px 0 0; margin: 0; line-height: 28px; white-space: nowrap; }
+/* Too narrow for all three (a 320-wide phone): the filter shows just its name. */
+@container jt (max-width: 279px) { #view-journal .jt-word { display: none; } }
+#view-journal .journal-toolbar > #journalFilterToggle { margin-left: auto; }
+/* The "+" is taller, so it drops 3px to the same baseline. */
+#view-journal .journal-toolbar > #addJournalBtn { top: 3px; width: 44px; margin-right: -12px; display: block; border: none; border-radius: 0; background: none; color: var(--text); font-family: var(--font-body); font-size: 26px; font-weight: 400; text-align: center; transform: none; }
+
+/* Two blank ruled lines between entries, held above the next one, so the
+   last entry on a page leaves nothing under it (.pg-first drops the gap at
+   the top of a page). */
+#journalList .card, #journalList .log-card { margin-bottom: 0; }
+#journalList .log-card + .log-card,
+#journalList .archive-month-group + .archive-month-group,
+#journalList .shoot-status-group + .shoot-status-group { margin-top: 56px; }
+
+/* Titles, the entry's and the week's, in capitals on the line. */
+#journalList .journal-entry-title,
+#journalList .log-week-heading:not(.journal-entry-binding) {
+  position: relative; top: 4px; /* the baseline 1px above the row's rule */
+  font-family: var(--font-hand); font-size: 26px; font-weight: 400; line-height: 28px;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--text);
+}
+#journalList .log-week-heading:not(.journal-entry-binding),
+#journalList .log-week-heading.heading-yellow:not(.journal-entry-binding),
+#journalList .log-week-heading.heading-navy:not(.journal-entry-binding) { height: auto; margin: 0; padding: 0; background: none; border: none; }
+
+/* An entry carried over to the next page doesn't bring its ⋮ along. */
+#journalList .journal-entry-card:has(.journal-entry-heading.pg-off) > .journal-entry-binding { display: none; }
+
+/* The open filter row takes two whole rules, so the list stays on the lines. */
+#view-journal #journalFilters:not([hidden]) { min-height: 56px; margin: 0; align-items: center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+#view-journal #journalFilters::-webkit-scrollbar { display: none; }
+
+/* Shoot mode (user, 11-11): the mood board on a page of its own is sized to
+   fill it (fitShootModeBoard sets the columns and the cell). */
+#shootModeMoodboard.is-fitted .shoot-mode-moodboard-row { grid-template-columns: repeat(var(--mb-cols), var(--mb-w)); justify-content: center; }
+#shootModeMoodboard.is-fitted .moodboard-thumb { width: var(--mb-w); height: var(--mb-h); aspect-ratio: auto; }
+/* The bar is white, like the navigator: laid out short, iOS leaves the strip
+   under the page blank (white), and a white bar runs on into it. Full width,
+   its two buttons kept over the page's 560px. */
+#shootModeOverlay .shoot-mode-bottom-bar { max-width: none; padding: 0 max(0px, calc(50% - 280px)) var(--nb-foot); background: #fff; }
+
+/* Shoot mode in the book's colour (user, 11-11): a highlighter stroke in the
+   pale shade behind the titles, the wrap time and Wild card filled with it,
+   the review buttons outlined in it, the must-haves on a pale tag. Text stays
+   navy, or --on-accent on a fill. */
+#shootModeOverlay .shoot-mode-section-heading { width: fit-content; background: linear-gradient(transparent 50%, var(--tab-light) 50%, var(--tab-light) 86%, transparent 86%) content-box no-repeat; }
+#shootModeOverlay #shootModeWrapPill { background: var(--accent); color: var(--on-accent); }
+#shootModeOverlay #shootModeWildCardBtn { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+#shootModeOverlay .shoot-mode-quick-review .shoot-mode-quick-review-btn { border-color: var(--opt-ink); border-width: 1.5px; }
+#shootModeOverlay .shoot-mode-quick-review-btn:active { background: var(--tab-light); border-color: var(--tab-light); color: var(--text); }
+#shootModeOverlay #shootModeMustHaves:not([hidden]) { width: fit-content; padding: 0 6px; border-radius: 3px; background: var(--tab-light); color: var(--text); }
+
+/* Shoot mode's shot rows fitted close round their writing (user, 11-11):
+   the text keeps its 15px / 20px, with a few pixels above and below it and
+   the handle, tick box, star and × no taller than the line. */
+#shootModeOverlay .shoot-mode-shot-row { gap: 8px; padding: 4px 0; }
+#shootModeOverlay .shoot-mode-shot-row .shot-text { padding: 1px 2px 2px; min-height: 23px; }
+#shootModeOverlay .shoot-mode-shot-row .shoot-mode-shot-check { width: 20px; height: 20px; margin: 2px 2px 2px 3px; }
+#shootModeOverlay .shoot-mode-shot-row :is(.shot-drag-handle, .star-shot, .delete-shot) { width: 24px; height: 24px; padding: 0; }
+
+/* The 4px under the mood board's last row of photos moves onto "+ Add
+   photos" (the same gap; flow-root keeps the last row's own 6px inside
+   the board): a page of photos that ends mid-board then ends on a row, and
+   its fit can't run 4px past the foot of the page. */
+#shootModeOverlay #shootModeMoodboard:not(:empty) { display: flow-root; padding-bottom: 0; }
+#shootModeOverlay #shootModeMoodboard:not(:empty) ~ #shootModeAddMoodboardBtn { margin-top: 14px; }

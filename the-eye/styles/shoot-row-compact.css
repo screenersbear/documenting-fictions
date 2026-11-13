@@ -1,0 +1,178 @@
+/* Photo-free, fully-stacked alternative to .shoot-row — title, status, and
+   date each get their own line, so nothing ever competes for width with
+   anything else (used in the Overview counter popups, where .shoot-row's
+   side-by-side layout has too little room to work with). */
+.shoot-row-compact {
+  background: var(--surface);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-xl);
+  padding: 10px 2px 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.shoot-row-compact-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.shoot-row-compact-title {
+  font-size: 16px;
+  font-weight: 700;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shoot-row-compact .badge {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.section-block {
+  margin-bottom: 24px;
+}
+
+.section-block h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 19px;
+  text-transform: uppercase;
+  /* Tighter than the 1px used on monospace text — the bold display font
+     (--font-title) runs wider per character, and the extra tracking was
+     pushing the longest heading ("Upcoming deadlines") onto a second line. */
+  letter-spacing: -0.3px;
+  background: var(--ink);
+  color: #fff;
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  margin: 0 0 10px;
+  cursor: pointer;
+}
+
+/* Pins the collapse arrow to the header's right edge now that the header
+   is a full-width bar (matching the shoot bubbles below it) instead of a
+   content-sized pill — a plain flex row would otherwise leave it sitting
+   right up against the count. */
+.section-block h2 .collapse-arrow {
+  margin-left: auto;
+}
+
+/* Overview section headings alternate color dynamically (see renderOverview
+   in app.js) rather than each section owning a fixed color — which one
+   lands on yellow vs navy shifts depending on whether Today has any shoots
+   to show, so it's assigned by class instead of by section ID. */
+/* A stripe in the opposite color from the heading's own fill — same accent
+   treatment the mockup used, applied to both Overview's section headings
+   and the Shoots page's status-group headings (matched by tag so the Edit
+   Shoot modal's own h3 section headings, which share these same class
+   names for their folder-tab look, are left untouched). */
+.section-block h2.heading-yellow,
+h2.status-group-heading.heading-yellow {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-left: 11px solid var(--ink);
+}
+
+.section-block h2.heading-navy,
+h2.status-group-heading.heading-navy {
+  background: var(--ink);
+  color: #fff;
+  border-left: 11px solid var(--accent);
+}
+
+.collapse-arrow {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.section-block h2.collapsed .collapse-arrow,
+.status-group-heading.collapsed .collapse-arrow,
+.subsection-heading.collapsed .collapse-arrow,
+.upcoming-subheading.collapsed .collapse-arrow,
+.stats-region-heading.collapsed .collapse-arrow {
+  transform: rotate(-90deg);
+}
+
+.mini-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mini-list[hidden] {
+  display: none;
+}
+
+.upcoming-subheading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 6px 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.upcoming-subheading .collapse-arrow {
+  width: 11px;
+  height: 11px;
+}
+
+.upcoming-subheading:first-child {
+  margin-top: 0;
+}
+
+.upcoming-subheading-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upcoming-subheading-rows[hidden] {
+  display: none;
+}
+
+.mini-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 10px 14px;
+  font-size: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mini-item .mi-sub {
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+.mi-sub {
+  font-weight: 700;
+}
+
+.empty-hint {
+  color: var(--text-dim);
+  font-size: 16px;
+  padding: 4px;
+}
+
+.upcoming-empty-hint {
+  color: var(--text);
+}

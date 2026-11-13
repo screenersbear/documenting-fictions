@@ -1,0 +1,133 @@
+/* ---- Concept helper ("Need to think it through?") ---- */
+.concept-helper-modal #conceptHelperText {
+  margin-bottom: 8px;
+}
+
+.concept-helper-hint {
+  margin: 0 0 14px;
+  text-align: left;
+}
+
+.concept-helper-hint[hidden],
+#conceptHelperInput[hidden],
+#conceptHelperOutputs[hidden],
+.concept-helper-output[hidden],
+#conceptHelperYesNo[hidden],
+#conceptHelperNextRow[hidden],
+#conceptHelperEndRow[hidden],
+.concept-helper-link[hidden] {
+  display: none;
+}
+
+/* The compiled boxes, editable before they're used — each tall enough to
+   read the whole thing at once (the pitch is one line, so its two rows). */
+.concept-helper-output textarea {
+  resize: none;
+  height: auto;
+  min-height: 120px;
+  line-height: 1.4;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+#conceptHelperSummary {
+  min-height: 150px;
+}
+
+#conceptHelperPitch {
+  min-height: 0;
+}
+
+/* Under a box whose page field already has different text in it. Two
+   classes deep to get past .intro-modal p's own size and spacing. */
+.concept-helper-modal .concept-helper-keep {
+  margin: 0 0 4px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+
+.concept-helper-modal .concept-helper-keep[hidden] {
+  display: none;
+}
+
+/* Each box's name, in the same look as the shoot page's field labels. */
+.concept-helper-label {
+  display: block;
+  margin: 0 0 6px;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+/* "Use this" / "I'll write it myself" stacked full width, like the guide's
+   leave prompt, so neither label wraps inside a half-width button. */
+#conceptHelperEndRow {
+  flex-direction: column;
+}
+
+/* Labels never wrap inside a half-width button: one that doesn't fit
+   widens its button instead, which renderConceptHelper sees and stacks the
+   pair (where a label could wrap again if it ever outgrew the full row). */
+#conceptHelperYesNo button {
+  white-space: nowrap;
+}
+
+#conceptHelperYesNo.concept-helper-choice-stacked {
+  flex-direction: column;
+}
+
+#conceptHelperYesNo.concept-helper-choice-stacked button {
+  white-space: normal;
+}
+
+/* "Take me to the first one" / "Leave anyway", stacked full width like the
+   end screen's two buttons. */
+#conceptHelperLeaveRow {
+  flex-direction: column;
+}
+
+/* Back / Start over: the same gap below "I'll write it myself" as between
+   the two buttons above it. */
+#conceptHelperEndNavRow {
+  margin-top: 10px;
+}
+
+/* Less side padding than a full-width button, so "Start over" fits its
+   half on one line on a regular-size phone — and a touch smaller on a
+   narrow one (under ~370px), where it otherwise wraps. */
+#conceptHelperEndNavRow button {
+  padding-left: 6px;
+  padding-right: 6px;
+  white-space: nowrap;
+}
+
+@media (max-width: 369px) {
+  #conceptHelperEndNavRow button {
+    padding-left: 2px;
+    padding-right: 2px;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+  }
+}
+
+#conceptHelperCloseRow[hidden] {
+  display: none;
+}
+
+.concept-helper-count {
+  margin: 0 0 14px;
+  text-align: right;
+}
+
+.concept-helper-count.over {
+  color: var(--red);
+}
+
+/* Same small underlined link as "Don't show again". */
+.concept-helper-link {
+  margin: 12px auto 0;
+  font-size: 13px;
+}

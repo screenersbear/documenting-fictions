@@ -1,3 +1,8 @@
+/* Made by tools/join.mjs from the files listed in files.txt. Never edit it: change those files, then run node tools/join.mjs. */
+
+/* ---- styles/base.css ---- */
+/* The Eye's basics: colours, the page, buttons and how a tap looks.
+   The other stylesheets in this folder are listed in index.html, in the order they apply. */
 :root {
   --bg: #ffffff;
   --surface: #ffffff;
@@ -277,6 +282,7 @@ h1, h2, h3 {
   margin-bottom: 24px;
 }
 
+/* ---- styles/stat-boxes.css ---- */
 /* The accent band is a pseudo-element, not a border-top. As a border it met the
    2px side borders at a mitre, so the yellow tapered diagonally at both top
    corners and only touched the box's full width along its very outer edge.
@@ -367,6 +373,7 @@ h1, h2, h3 {
   flex-shrink: 0;
 }
 
+/* ---- styles/journal-log.css ---- */
 /* ---- Journal log entries (auto weekly recap) ---- */
 /* .card.log-card (not just .log-card) so this reliably beats the base .card
    rule's padding/cursor/min-height regardless of source order in this file —
@@ -469,6 +476,7 @@ h1, h2, h3 {
   margin-top: 28px;
 }
 
+/* ---- styles/journal-reflections.css ---- */
 /* ---- Reflections entries, rendered inline on the same paper as the Log ---- */
 
 /* The banner above no longer carries an entry's title or date (see
@@ -754,6 +762,7 @@ h1, h2, h3 {
   cursor: pointer;
 }
 
+/* ---- styles/shoot-row-compact.css ---- */
 /* Photo-free, fully-stacked alternative to .shoot-row — title, status, and
    date each get their own line, so nothing ever competes for width with
    anything else (used in the Overview counter popups, where .shoot-row's
@@ -933,6 +942,7 @@ h2.status-group-heading.heading-navy {
   color: var(--text);
 }
 
+/* ---- styles/filters.css ---- */
 /* ---- Filters ---- */
 .filter-toggle {
   display: inline-block;
@@ -1008,6 +1018,7 @@ h2.status-group-heading.heading-navy {
   flex-shrink: 0;
 }
 
+/* ---- styles/card-lists.css ---- */
 /* ---- Card lists (shoots / content) ---- */
 .card-list {
   display: flex;
@@ -1290,6 +1301,8 @@ h2.status-group-heading.heading-navy {
   font-size: 17px;
 }
 
+/* ---- styles/archive-slideshow.css ---- */
+/* The Archive's slideshow, and the Manage link. */
 .archive-slideshow {
   position: relative;
   width: 100%;
@@ -1349,6 +1362,7 @@ h2.status-group-heading.heading-navy {
   font-family: var(--font-body);
 }
 
+/* ---- styles/shoot-thumbnail.css ---- */
 /* ---- Shoot thumbnail (project photo) ---- */
 .shoot-thumb {
   width: 48px;
@@ -1404,6 +1418,7 @@ h2.status-group-heading.heading-navy {
   font-family: var(--font-body);
 }
 
+/* ---- styles/tab-bar.css ---- */
 /* ---- Tab bar ---- */
 .tabbar {
   position: fixed;
@@ -1457,6 +1472,7 @@ h2.status-group-heading.heading-navy {
   color: var(--text);
 }
 
+/* ---- styles/modal.css ---- */
 /* ---- Modal ---- */
 .modal-overlay {
   position: fixed;
@@ -1739,6 +1755,8 @@ h2.status-group-heading.heading-navy {
   height: 16px;
 }
 
+/* ---- styles/modal-title.css ---- */
+/* A popup's title: its jump menu, and the header's buttons. */
 .share-shoot-btn[hidden] {
   display: none;
 }
@@ -1940,6 +1958,7 @@ h2.status-group-heading.heading-navy {
   white-space: pre-line;
 }
 
+/* ---- styles/storage-usage.css ---- */
 /* ---------- Storage usage popup ---------- */
 #storageUsageBody {
   margin-top: 12px;
@@ -2163,6 +2182,7 @@ h2.status-group-heading.heading-navy {
   font-weight: 700;
 }
 
+/* ---- styles/lighting-setups.css ---- */
 /* ---- Lighting setups: drag-to-reorder ---- */
 /* .shot-drag-handle supplies touch-action:none, the callout/select
    suppression, the cursor and the grab pulse. Its colour is var(--text),
@@ -2330,6 +2350,7 @@ h2.status-group-heading.heading-navy {
   flex-shrink: 0;
 }
 
+/* ---- styles/export-previous.css ---- */
 /* ---- Export previous shoots: year/month checkbox picker ---- */
 .export-picker-year-heading {
   width: 100%;
@@ -2442,7 +2463,7 @@ h2.status-group-heading.heading-navy {
   padding: 12px 44px 12px 12px;
 }
 
-
+/* ---- styles/talents.css ---- */
 /* ---- Talents (dynamic list of talent cards, right under Title) ---- */
 .talents-section {
   display: flex;
@@ -2564,6 +2585,7 @@ h2.status-group-heading.heading-navy {
   cursor: pointer;
 }
 
+/* ---- styles/social-handles.css ---- */
 /* ---- Social media handles (dynamic list, nested inside a talent or
    team member card) ---- */
 
@@ -2608,6 +2630,7 @@ h2.status-group-heading.heading-navy {
   justify-content: center;
 }
 
+/* ---- styles/references.css ---- */
 /* ---- References (external link list) ---- */
 .references-block {
   display: flex;
@@ -2677,6 +2700,7 @@ h2.status-group-heading.heading-navy {
   border-bottom: 1px solid var(--border);
 }
 
+/* ---- styles/shot-list.css ---- */
 /* ---- Shot list (checklist inside Shoot-day notes) ---- */
 .subsection-heading {
   display: flex;
@@ -2958,6 +2982,7 @@ h2.status-group-heading.heading-navy {
   cursor: pointer;
 }
 
+/* ---- styles/buttons.css ---- */
 /* Sits right above a sticky Save bar — small gap so it reads as its own
    row, reachable only by scrolling, instead of crowding the sticky bar. */
 .pre-save-divider {
@@ -3034,6 +3059,7 @@ h2.status-group-heading.heading-navy {
   font-size: 17px !important;
 }
 
+/* ---- styles/mood-board.css ---- */
 /* ---- Mood board ---- */
 .moodboard-section {
   display: flex;
@@ -3097,6 +3123,7 @@ h2.status-group-heading.heading-navy {
   overflow: hidden;
 }
 
+/* ---- styles/form-sections.css ---- */
 /* ---- Form section dividers (Plan / Framework tags / Reflect) ---- */
 .form-section-label {
   font-size: 20px;
@@ -3167,6 +3194,7 @@ h2.status-group-heading.heading-navy {
   margin-top: 0 !important;
 }
 
+/* ---- styles/emotional-beats.css ---- */
 /* ---- Emotional beats ---- */
 .beats-block {
   display: flex;
@@ -3217,6 +3245,7 @@ h2.status-group-heading.heading-navy {
   padding: 5px 12px;
 }
 
+/* ---- styles/journal-entry-view.css ---- */
 /* ---- Journal entry view mode (read-only popup) ---- */
 #journalViewMode > * {
   margin-top: 12px;
@@ -3346,6 +3375,7 @@ h2.status-group-heading.heading-navy {
   gap: 6px;
 }
 
+/* ---- styles/shared-rows.css ---- */
 /* ---- Shared row styling (reused by the Manage Frameworks modal) ---- */
 .relationship-row {
   display: flex;
@@ -3403,6 +3433,7 @@ h2.status-group-heading.heading-navy {
   cursor: pointer;
 }
 
+/* ---- styles/image-viewer.css ---- */
 /* ---- Image viewer (mood board full view) ---- */
 .image-viewer-overlay {
   position: fixed;
@@ -3597,6 +3628,7 @@ h2.status-group-heading.heading-navy {
   margin: 0 0 14px;
 }
 
+/* ---- styles/pdf-preview.css ---- */
 /* ---- PDF preview (shown before sharing) ---- */
 .pdf-preview-overlay {
   align-items: center;
@@ -3782,6 +3814,7 @@ h2.status-group-heading.heading-navy {
   cursor: pointer;
 }
 
+/* ---- styles/save-confirm.css ---- */
 /* ---- Save confirmation dialog ---- */
 .confirm-overlay {
   align-items: center;
@@ -3832,6 +3865,7 @@ h2.status-group-heading.heading-navy {
   margin-bottom: 0;
 }
 
+/* ---- styles/new-shoot-wizard.css ---- */
 /* ---- New-shoot planning wizard ----
    A guided pass over a brand-new shoot, a few fields per slide (see
    SHOOT_WIZARD_STEPS in app.js). It lives INSIDE #shootForm — the real field
@@ -4036,6 +4070,7 @@ h2.status-group-heading.heading-navy {
   flex-direction: column;
 }
 
+/* ---- styles/concept-helper.css ---- */
 /* ---- Concept helper ("Need to think it through?") ---- */
 .concept-helper-modal #conceptHelperText {
   margin-bottom: 8px;
@@ -4170,6 +4205,7 @@ h2.status-group-heading.heading-navy {
   font-size: 13px;
 }
 
+/* ---- styles/reflection-helper.css ---- */
 /* ---- Reflection helper ("Need help reflecting?") ----
    Same card as the concept helper; its question box is a few lines tall,
    since reflections run longer than the concept's few-word answers. */
@@ -4323,6 +4359,7 @@ h2.status-group-heading.heading-navy {
   padding: 20px;
 }
 
+/* ---- styles/app-menu.css ---- */
 /* ---- App menu (hamburger) — centered on screen with the same outlined-
    card look as the intro/prompt popups, instead of the bottom-sheet drawer
    the per-shoot options menu uses. ---- */
@@ -4523,6 +4560,7 @@ h2.status-group-heading.heading-navy {
   color: var(--text-dim);
 }
 
+/* ---- styles/shoot-options.css ---- */
 /* ---- Shoot options sheet ---- */
 .options-overlay {
   z-index: 20;
@@ -4692,6 +4730,7 @@ h2.status-group-heading.heading-navy {
   display: none;
 }
 
+/* ---- styles/pull-to-refresh.css ---- */
 /* ---- Pull to refresh ---- */
 .pull-refresh-indicator {
   position: fixed;
@@ -4730,6 +4769,7 @@ h2.status-group-heading.heading-navy {
   40% { transform: translateY(-6px); opacity: 1; }
 }
 
+/* ---- styles/toast.css ---- */
 /* ---- Toast ---- */
 .toast {
   position: fixed;
@@ -4821,6 +4861,7 @@ h2.status-group-heading.heading-navy {
   display: none;
 }
 
+/* ---- styles/stats-tab.css ---- */
 /* ---- Stats tab ---- */
 .stats-fun-fact {
   background: var(--ink);
@@ -4981,6 +5022,7 @@ h2.status-group-heading.heading-navy {
   padding-top: 40px;
 }
 
+/* ---- styles/regions-map.css ---- */
 /* ---- Regions map ---- */
 .world-map-toolbar {
   display: flex;
@@ -5064,6 +5106,7 @@ h2.status-group-heading.heading-navy {
   75% { stroke-width: 3; stroke: var(--text); }
 }
 
+/* ---- styles/stats-detail.css ---- */
 /* ---- Stats detail slide-over ---- */
 .stats-detail-overlay {
   position: fixed;
@@ -5121,6 +5164,7 @@ h2.status-group-heading.heading-navy {
   text-transform: capitalize;
 }
 
+/* ---- styles/stat-box-detail.css ---- */
 /* ---- Stat box detail (Overview counters — centered, not a slide-over) ---- */
 /* z-index stays below .modal-overlay/.options-overlay so a shoot edit modal
    or its three-dot options sheet, opened from a row in here, stacks on top
@@ -5192,6 +5236,8 @@ h2.status-group-heading.heading-navy {
 .stat-box-detail-modal .empty-state {
   padding: 0 20px 20px;
 }
+
+/* ---- styles/project-popup.css ---- */
 /* ---- Project popup (reuses the stat box popup above wholesale) ---- */
 /* A project name is user-typed and can be one long unbroken word — without
    this it would shove the close X off the header instead of wrapping. */
@@ -5226,6 +5272,7 @@ h2.status-group-heading.heading-navy {
   display: none;
 }
 
+/* ---- styles/shoot-mode.css ---- */
 /* ---------- Shoot mode ---------- */
 
 /* The entry point lives just under the shoot modal's sticky header, in the
@@ -5506,6 +5553,8 @@ h2.status-group-heading.heading-navy {
   padding-bottom: 8px;
 }
 
+/* ---- styles/shoot-mode-body.css ---- */
+/* Shoot mode's body: its section headings and the shot list. */
 .shoot-mode-section-heading {
   margin: 0;
   padding: 11px 20px;
@@ -5734,6 +5783,7 @@ h2.status-group-heading.heading-navy {
   border-bottom-color: var(--accent);
 }
 
+/* ---- styles/shoot-mode-done.css ---- */
 /* ---------- Shoot mode: Done button, Quick review ---------- */
 /* The Quick review row itself is laid out near the end of the file
    (`#shootModeOverlay .shoot-mode-quick-review`). */
@@ -5921,6 +5971,7 @@ h2.status-group-heading.heading-navy {
   cursor: pointer;
 }
 
+/* ---- styles/popup-rounding.css ---- */
 /* ---------- Popup rounding pass ----------
    Every ordinary prompt/menu/form popup in the app, given the same rounded-
    card-with-ink-border language Shoot mode introduced — the app is otherwise
@@ -5985,12 +6036,13 @@ h2.status-group-heading.heading-navy {
   overscroll-behavior: none;
 }
 
+/* ---- styles/notebook.css ---- */
 /* ---------- The notebook ---------- */
 /* Documenting Fictions as a notebook: a mango card book with white pages,
    plain serif titles, clean sans labels, shoot names handwritten. */
 @font-face {
   font-family: "Klee One";
-  src: url("fonts/klee-one-latin.woff") format("woff"); /* Klee One, resized inside the file to Mansalva's width and line height (Safari has no ascent-override), so no layout moved */
+  src: url("../fonts/klee-one-latin.woff") format("woff"); /* Klee One, resized inside the file to Mansalva's width and line height (Safari has no ascent-override), so no layout moved */
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -6058,6 +6110,7 @@ h2.status-group-heading.heading-navy {
 .tab .tab-icon svg { width: 25px; height: 25px; stroke-width: 1.6; }
 .tab.active .tab-icon svg { stroke-width: 2.8; }
 
+/* ---- styles/notebook-shut.css ---- */
 /* ---- The shut book and the first spread ---- */
 .book-overlay { background: #fff; }
 .book-overlay:not([hidden]) { display: block; }
@@ -6159,6 +6212,7 @@ h2.status-group-heading.heading-navy {
   .nb.closed .nb-float, .nb-ground::before { animation: none; }
 }
 
+/* ---- styles/notebook-shoot.css ---- */
 /* ---- A shoot: one section to a page, swiped through ---- */
 #shootModalOverlay { background: #fff; }
 #shootModalOverlay:not([hidden]) { display: block; }
@@ -6248,6 +6302,7 @@ h2.status-group-heading.heading-navy {
 .shoot-mode-header h2 { font-family: var(--font-hand); font-weight: 400; font-size: 32px; line-height: 1.1; text-transform: none; letter-spacing: 0; }
 .shoot-mode-header .close-btn { color: var(--on-accent); }
 
+/* ---- styles/notebook-pages.css ---- */
 /* ---- Pages: titles, sections and rows ---- */
 .hero-band { background: none; width: auto; margin: 0; padding: 0; border-bottom: none; }
 .topbar { position: relative; justify-content: center; padding: 0 0 9px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
@@ -6329,6 +6384,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 .team-question, .moodboard-label { font-family: var(--font-title); font-size: 19px; font-weight: 400; color: var(--text); letter-spacing: 0; text-transform: none; }
 .location-field-btn { background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; padding: 2px 0 6px; font-family: var(--font-title); font-size: 17px; font-weight: 400; line-height: 24px; letter-spacing: 0; text-align: left; color: var(--text); width: 100%; }
 
+/* ---- styles/notebook-journal.css ---- */
 /* ---- Journal: the one ruled paper, the whole page of it ---- */
 #view-journal {
   position: relative;
@@ -6370,6 +6426,7 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 .stats-legend-row { background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; font-family: var(--font-body); font-size: 14px; font-weight: 400; letter-spacing: 0; min-height: 40px; padding: 8px 0; text-transform: none; }
 .archive-slideshow { border: none; border-radius: 2px; }
 
+/* ---- styles/notebook-popups.css ---- */
 /* ---- Popups ---- */
 .modal-overlay h2 { text-transform: none; letter-spacing: 0; font-weight: 400; }
 #appMenuOverlay .app-menu-header { font-family: var(--font-head); font-weight: 400; color: var(--text); background: none; text-transform: none; letter-spacing: 0; }
@@ -6625,15 +6682,15 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
 :root {
   --on-accent: var(--text);
   --accent-on-ink: var(--accent);
-  --book-cover: url(art/df-mango-cover.webp);
-  --book-block: url(art/df-mango-block.webp);
+  --book-cover: url(../art/df-mango-cover.webp);
+  --book-block: url(../art/df-mango-block.webp);
   --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23313d45' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E");
 }
-:root[data-book="orange"] { --accent: #ec701e; --tab-light: #f6b98f; --book-cover: url(art/df-orange-cover.webp); --book-block: url(art/df-orange-block.webp); }
-:root[data-book="berry"] { --accent-on-ink: #fff; --accent: #bf0b83; --tab-light: #e8a0d0; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(art/df-berry-cover.webp); --book-block: url(art/df-berry-block.webp); }
-:root[data-book="fern"] { --accent-on-ink: #fff; --accent: #2e7a55; --tab-light: #9fc8b3; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(art/df-fern-cover.webp); --book-block: url(art/df-fern-block.webp); }
-:root[data-book="ocean"] { --accent-on-ink: #fff; --accent: #245caa; --tab-light: #9dbbe2; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(art/df-ocean-cover.webp); --book-block: url(art/df-ocean-block.webp); }
-:root[data-book="ink"] { --accent-on-ink: #fff; --accent: #313d45; --tab-light: #a3adb4; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(art/df-ink-cover.webp); --book-block: url(art/df-ink-block.webp); }
+:root[data-book="orange"] { --accent: #ec701e; --tab-light: #f6b98f; --book-cover: url(../art/df-orange-cover.webp); --book-block: url(../art/df-orange-block.webp); }
+:root[data-book="berry"] { --accent-on-ink: #fff; --accent: #bf0b83; --tab-light: #e8a0d0; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(../art/df-berry-cover.webp); --book-block: url(../art/df-berry-block.webp); }
+:root[data-book="fern"] { --accent-on-ink: #fff; --accent: #2e7a55; --tab-light: #9fc8b3; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(../art/df-fern-cover.webp); --book-block: url(../art/df-fern-block.webp); }
+:root[data-book="ocean"] { --accent-on-ink: #fff; --accent: #245caa; --tab-light: #9dbbe2; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(../art/df-ocean-cover.webp); --book-block: url(../art/df-ocean-block.webp); }
+:root[data-book="ink"] { --accent-on-ink: #fff; --accent: #313d45; --tab-light: #a3adb4; --on-accent: #fff; --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4.5 4.5L19 7'/%3E%3C/svg%3E"); --book-cover: url(../art/df-ink-cover.webp); --book-block: url(../art/df-ink-block.webp); }
 
 /* The sun on the shut book, as in Contact Sheet. */
 .nb-sun { position: absolute; z-index: 7; left: 50%; bottom: calc(var(--sa-bottom) + 16px); width: 48px; height: 48px; min-height: 0; margin-left: -24px; padding: 10px; border: none; background: none; color: var(--text); transition: opacity 0.25s; }
@@ -6649,6 +6706,7 @@ h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-headi
 .sun-remove-photo.is-circle { border-radius: 50%; }
 .sun-remove-photo.is-square, .sun-remove-photo.is-rect { border-radius: 5px; }
 
+/* ---- styles/notebook-stickers.css ---- */
 /* Stickers: on the cover, cropped by its edges. A soft, slightly faded print
    with a paper edge and the book's own light across it. */
 .nb-stickers { position: absolute; inset: 0; overflow: hidden; border-radius: 0 calc(var(--W) * 0.044) calc(var(--W) * 0.044) 0; pointer-events: none; }
@@ -6794,6 +6852,7 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 .archive-summary .shoot-mode-review-label { font-size: 14px; }
 .archive-mode-details-btn { font-size: 13px; }
 
+/* ---- styles/notebook-shoot-mode.css ---- */
 /* ---- Shoot mode: a page of the notebook, the notebook around it dimmed ----
    Laid out as Archive mode's page. The dim is the app's own (the new-shoot
    steps' rgba(49, 61, 69, .42)) over the white and over the notebook's color,
@@ -6975,6 +7034,7 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 /* Where a page's field is typed out: the same size as on the page. */
 #expandFieldOverlay.from-page #expandFieldTextarea { font-size: 20px; line-height: 28px; }
 
+/* ---- styles/journal-legal-pad.css ---- */
 /* ---- Journal as a legal pad (user, 11-11): an open band at the top with
    the contents, filter and + written on its first rule; titles in capitals
    on the lines, no coloured band; two blank lines between entries. An entry
@@ -7060,6 +7120,7 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 #shootModeOverlay #shootModeMoodboard:not(:empty) { display: flow-root; padding-bottom: 0; }
 #shootModeOverlay #shootModeMoodboard:not(:empty) ~ #shootModeAddMoodboardBtn { margin-top: 14px; }
 
+/* ---- styles/plain-pages.css ---- */
 /* ======================================================================
    Open, the notebook is plain pages (user, 11-12)
    ----------------------------------------------------------------------
@@ -7069,7 +7130,7 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
    scrolls (a shoot, Shoot mode and Archive mode too); only going from one
    section to the next turns a page, over the whole screen.
    ====================================================================== */
-@font-face { font-family: "Kaisei Decol"; src: url("fonts/kaisei-decol-500-latin.woff2") format("woff2"); font-weight: 500; font-display: swap; size-adjust: 85.4%; } /* the headers, in capitals: Kaisei Decol Medium, sized so its capitals stand as tall as Klee One's */
+@font-face { font-family: "Kaisei Decol"; src: url("../fonts/kaisei-decol-500-latin.woff2") format("woff2"); font-weight: 500; font-display: swap; size-adjust: 85.4%; } /* the headers, in capitals: Kaisei Decol Medium, sized so its capitals stand as tall as Klee One's */
 :root {
   --head: "Kaisei Decol", "Klee One", Georgia, serif; /* headers, always in capitals */
   --font-head: var(--head);
@@ -7161,6 +7222,7 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 #view-overview .brand-title { position: relative; }
 .brand-eye { position: absolute; right: calc(100% + 10px); top: 50%; width: 30px; height: 30px; margin-top: -14px; color: var(--text); pointer-events: none; }
 
+/* ---- styles/new-shoot-guide-type.css ---- */
 /* ---- The new-shoot guide's own type (user, 11-12: bigger fonts, and bold
    or bigger titles, since it "just looks like text") ----
    Its fields are the shoot page's own, at the page's sizes (see "Bigger text
@@ -7200,6 +7262,7 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
    (app.js adds .settled), so they never show high and then drop. */
 @media (display-mode: standalone) { :root:not(.settled) :is(.tabbar, .nb-sun) { visibility: hidden; } }
 
+/* ---- styles/header-band.css ---- */
 /* ======================================================================
    Archivo Black capitals over Inter, under a band of colour (user, 11-12)
    ----------------------------------------------------------------------
@@ -7212,8 +7275,8 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
      3  labels and sub-headings                   Inter semibold, spaced
    Names you wrote (a shoot's, a setup's) stay as you wrote them.
    ====================================================================== */
-@font-face { font-family: "Figtree"; src: url("fonts/figtree-latin.woff2") format("woff2"); font-weight: 300 900; font-display: swap; size-adjust: 96.5%; } /* sized, like Inter before it, to take Klee One's width, so every line still fits where it did */
-@font-face { font-family: "Archivo Black"; src: url("fonts/archivo-black-latin.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Figtree"; src: url("../fonts/figtree-latin.woff2") format("woff2"); font-weight: 300 900; font-display: swap; size-adjust: 96.5%; } /* sized, like Inter before it, to take Klee One's width, so every line still fits where it did */
+@font-face { font-family: "Archivo Black"; src: url("../fonts/archivo-black-latin.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 :root {
   --ui: "Figtree", "Helvetica Neue", Arial, sans-serif;
   --display: "Archivo Black", "Arial Black", "Helvetica Neue", Arial, sans-serif;

@@ -1,0 +1,67 @@
+<!-- The concept helper (Need to think it through?). -->
+<!-- ============ CONCEPT HELPER ("Need to think it through?") ============ -->
+<!-- A short decision tree of yes/no and short-answer questions (see
+     CONCEPT_FLOWS in app.js), compiled at the end into a concept, an
+     elevator pitch and — when asked for — Character/World notes. -->
+<div id="conceptHelperOverlay" class="modal-overlay intro-overlay" hidden>
+  <div class="modal intro-modal concept-helper-modal">
+    <p class="mi-sub" id="conceptHelperStep"></p>
+    <h2 id="conceptHelperTitle"></h2>
+    <p id="conceptHelperText"></p>
+    <p class="field-hint concept-helper-hint" id="conceptHelperHint"></p>
+    <input type="text" id="conceptHelperInput" class="deadline-prompt-input" maxlength="40" autocomplete="off" autocapitalize="none" />
+    <!-- One box per page field it fills (CONCEPT_HELPER_OUTPUTS). -->
+    <div id="conceptHelperOutputs">
+      <div class="concept-helper-output">
+        <label class="concept-helper-label" for="conceptHelperSummary">Concept</label>
+        <textarea id="conceptHelperSummary" class="deadline-prompt-input" rows="5"></textarea>
+        <p class="concept-helper-keep" hidden>Already filled in on the page. You'll be asked before it's replaced.</p>
+        <p class="mi-sub concept-helper-count" id="conceptHelperCount"></p>
+      </div>
+      <div class="concept-helper-output">
+        <label class="concept-helper-label" for="conceptHelperCharacter">Character/Personality</label>
+        <textarea id="conceptHelperCharacter" class="deadline-prompt-input" rows="5"></textarea>
+        <p class="concept-helper-keep" hidden>Already filled in on the page. You'll be asked before it's replaced.</p>
+        <p class="mi-sub concept-helper-count" id="conceptHelperCharacterCount"></p>
+      </div>
+      <div class="concept-helper-output">
+        <label class="concept-helper-label" for="conceptHelperWorld">World-building notes</label>
+        <textarea id="conceptHelperWorld" class="deadline-prompt-input" rows="5"></textarea>
+        <p class="concept-helper-keep" hidden>Already filled in on the page. You'll be asked before it's replaced.</p>
+        <p class="mi-sub concept-helper-count" id="conceptHelperWorldCount"></p>
+      </div>
+      <div class="concept-helper-output">
+        <label class="concept-helper-label" for="conceptHelperPitch">Elevator pitch</label>
+        <textarea id="conceptHelperPitch" class="deadline-prompt-input" rows="2"></textarea>
+        <p class="concept-helper-keep" hidden>Already filled in on the page. You'll be asked before it's replaced.</p>
+        <p class="mi-sub concept-helper-count" id="conceptHelperPitchCount"></p>
+      </div>
+    </div>
+    <div class="modal-actions" id="conceptHelperYesNo">
+      <button type="button" class="secondary" id="conceptHelperNoBtn">No</button>
+      <button type="button" class="primary" id="conceptHelperYesBtn">Yes</button>
+    </div>
+    <div class="modal-actions" id="conceptHelperNextRow">
+      <button type="button" class="primary" id="conceptHelperNextBtn">Next</button>
+    </div>
+    <div class="modal-actions" id="conceptHelperEndRow">
+      <button type="button" class="primary" id="conceptHelperUseBtn">Use this</button>
+      <button type="button" class="secondary" id="conceptHelperWriteBtn">I'll write it myself</button>
+    </div>
+    <!-- End screen only: side by side, together as wide as one button above. -->
+    <div class="modal-actions" id="conceptHelperEndNavRow" hidden>
+      <button type="button" class="secondary" id="conceptHelperEndBackBtn">Back</button>
+      <button type="button" class="secondary" id="conceptHelperRestartBtn">Start over</button>
+    </div>
+    <!-- Leaving with questions unanswered (see askConceptHelperLeave). -->
+    <div class="modal-actions" id="conceptHelperLeaveRow" hidden>
+      <button type="button" class="primary" id="conceptHelperLeaveFirstBtn">Go to the first one</button>
+      <button type="button" class="secondary" id="conceptHelperLeaveAnywayBtn">Leave anyway</button>
+    </div>
+    <button type="button" class="manage-link concept-helper-link" id="conceptHelperBackBtn">Back</button>
+    <div class="shoot-tour-skip-row" id="conceptHelperCloseRow">
+      <button type="button" class="secondary journal-block-btn" id="conceptHelperCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+

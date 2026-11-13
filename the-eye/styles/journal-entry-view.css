@@ -1,0 +1,128 @@
+/* ---- Journal entry view mode (read-only popup) ---- */
+#journalViewMode > * {
+  margin-top: 12px;
+}
+
+#journalViewMode > *:first-child {
+  margin-top: 0;
+}
+
+.journal-view-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.journal-view-title {
+  font-family: var(--font-title);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  margin: 0;
+}
+
+.journal-view-tags[hidden] {
+  display: none;
+}
+
+/* Classic lined-notebook paper: blue ruled lines with a red margin line
+   down the left, deliberately real blue/red rather than the app's usual
+   navy/yellow/white — the whole point is to read as actual notebook paper. */
+.journal-paper {
+  position: relative;
+  background-color: #fffdf7;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 27px,
+    #a9c9e8 27px,
+    #a9c9e8 28px
+  );
+  background-position: 0 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 14px 14px 44px;
+  line-height: 28px;
+  font-size: 15px;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  min-height: 160px;
+}
+
+.journal-paper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 32px;
+  width: 2px;
+  background: #d9534f;
+}
+
+.journal-block-btn {
+  display: block;
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: var(--radius-xl);
+  font-size: 17px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+
+.beats-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.beat-suggestion {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: var(--radius-pill);
+  padding: 5px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+
+.card-beats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.beat-badge {
+  background: rgba(255, 209, 3, 0.3);
+  color: var(--text);
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+  font-size: 13px;
+}
+
+.framework-block {
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.framework-name-input {
+  font-weight: 700;
+}
+
+.framework-tags-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

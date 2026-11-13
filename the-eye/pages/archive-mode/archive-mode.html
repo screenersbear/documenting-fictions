@@ -1,0 +1,23 @@
+<!-- Archive mode. -->
+<!-- Archive mode: a condensed, read-only report of a completed shoot — the
+     same working-view shape as Shoot mode, but every field is plain typed
+     text instead of an editable one, since nothing here is meant to change. -->
+<div id="archiveModeOverlay" class="modal-overlay" hidden>
+  <div class="nb-chapter-board" aria-hidden="true"></div>
+  <div class="modal">
+    <p class="nb-run" id="archiveModeTitle"></p>
+    <button type="button" class="nb-corner-btn" id="archiveModeShootDetailsBtn">shoot details</button>
+    <div id="archiveModeBody" class="archive-summary"></div>
+  </div>
+  <div class="nb-turn-layer" aria-hidden="true"></div>
+  <div class="nb-page-foot">
+    <button type="button" class="nb-page-step" id="archiveModePrev" aria-label="Previous page"></button>
+    <span id="archiveModeFoot"></span>
+    <button type="button" class="nb-page-step" id="archiveModeNext" aria-label="Next page"></button>
+  </div>
+  <div class="nb-screen-tabs nb-screen-tabs-shoot"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Weekly</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></div>
+  <nav class="nb-shoot-bar" aria-label="This shoot">
+    <button type="button" class="nb-tool" id="archiveModeExitBtn" aria-label="Back"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  </nav>
+</div>
+

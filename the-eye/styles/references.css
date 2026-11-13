@@ -1,0 +1,68 @@
+/* ---- References (external link list) ---- */
+.references-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.references-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reference-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.reference-input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--font-body);
+  flex: 1;
+  min-width: 0;
+  text-transform: none;
+}
+
+.reference-open,
+.delete-reference,
+.delete-manage-location {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+  /* Without this, centering fell back to the browser's own default button
+     text layout, which isn't reliably centered either way. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reference-open {
+  color: var(--text);
+}
+
+.delete-reference,
+.delete-manage-location {
+  color: var(--red);
+  font-size: 16px;
+}
+
+.manage-location-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}

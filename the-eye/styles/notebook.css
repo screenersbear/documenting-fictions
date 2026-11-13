@@ -1,0 +1,72 @@
+/* ---------- The notebook ---------- */
+/* Documenting Fictions as a notebook: a mango card book with white pages,
+   plain serif titles, clean sans labels, shoot names handwritten. */
+@font-face {
+  font-family: "Klee One";
+  src: url("../fonts/klee-one-latin.woff") format("woff"); /* Klee One, resized inside the file to Mansalva's width and line height (Safari has no ascent-override), so no layout moved */
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --font-title: "Iowan Old Style", Georgia, serif;
+  --font-body: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-hand: "Klee One", "Bradley Hand", "Noteworthy", cursive;
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-2xl: 10px;
+  --radius-3xl: 12px;
+  --radius-4xl: 14px;
+  --radius-pill: 6px;
+  --dim: rgba(49, 61, 69, 0.74);
+  --line: #d6dadd;
+  --nb-top: max(var(--sa-top), 10px);
+  --nb-bar: calc(58px + var(--sa-bottom));
+  --book-shadow: 0 16px 34px rgba(60, 40, 20, 0.2), 0 3px 8px rgba(60, 40, 20, 0.14);
+}
+
+/* The page frame over the scrolling views. A hole with a mango rim and white
+   beyond it: the content slides under the rim while the window scrolls. */
+.nb-board {
+  position: fixed;
+  z-index: 8;
+  top: var(--nb-top);
+  left: max(-20px, calc(50% - 280px));
+  right: max(10px, calc(50% - 270px));
+  bottom: calc(var(--nb-bar) - var(--bar-drift, 0px));
+  border-radius: 0 18px 18px 0;
+  box-shadow: 0 0 0 100vmax #fff;
+  overflow: hidden;
+  pointer-events: none;
+}
+.nb-board-page {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  bottom: 10px;
+  left: 0;
+  border-radius: 0 12px 12px 0;
+  box-shadow: 0 0 0 40px var(--accent);
+}
+:root[data-side="verso"] .nb-board { left: max(6px, calc(50% - 270px)); right: max(-20px, calc(50% - 280px)); border-radius: 18px 0 0 18px; }
+:root[data-side="verso"] .nb-board-page { left: 12px; right: 0; border-radius: 12px 0 0 12px; }
+
+#app {
+  padding: calc(var(--nb-top) + 22px) 34px calc(var(--nb-bar) + 34px) 20px;
+}
+:root[data-side="verso"] #app { padding-left: 29px; padding-right: 29px; }
+
+/* The row of app screens: no border, just the icons in berry blade black. */
+.tabbar {
+  z-index: 9;
+  border-top: none;
+  background: #fff;
+  padding: 6px 0 calc(6px + var(--sa-bottom));
+}
+.tab { color: var(--text); padding: 8px 4px; min-height: 44px; justify-content: center; }
+.tab > span:not(.tab-icon) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.tab .tab-icon svg { width: 25px; height: 25px; stroke-width: 1.6; }
+.tab.active .tab-icon svg { stroke-width: 2.8; }

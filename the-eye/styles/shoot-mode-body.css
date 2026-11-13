@@ -1,0 +1,228 @@
+/* Shoot mode's body: its section headings and the shot list. */
+.shoot-mode-section-heading {
+  margin: 0;
+  padding: 11px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.shoot-mode-section-heading.heading-yellow {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.shoot-mode-section-heading.heading-navy {
+  background: var(--ink);
+  color: #fff;
+}
+
+/* Used to skip the first heading (Quick review) so it wouldn't stack a
+   margin on top of .shoot-mode-body's own padding — but with no padding
+   of its own above it either, that left Quick review sitting flush against
+   the header banner while every section after it got real breathing room.
+   Applying to every heading, first included, gives it that same breathing
+   room from the banner. */
+.shoot-mode-body .shoot-mode-section-heading {
+  margin-top: 14px;
+}
+
+/* Archive mode's header bar already has its own bottom padding/border, so
+   its first heading ("Basic info") doesn't need the breathing room above
+   that Shoot mode's flush-against-the-banner "Quick review" does — that
+   14px was just showing up as unwanted white space here instead. */
+.archive-summary .shoot-mode-section-heading:first-child {
+  margin-top: 0;
+}
+
+.shoot-mode-shots {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 20px 0;
+}
+
+/* The edit form's shot-list parts (.shot-drag-handle, .shot-text, the star
+   and .delete-shot) plus a checkbox for ticking a shot off during the
+   actual shoot — the one thing the planning-only list on the edit page
+   doesn't need. Drawn smaller in Shoot mode: see `#shootModeOverlay
+   .shoot-mode-shot-row` near the end of the file. */
+.shoot-mode-shot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.shoot-mode-shot-row:last-child {
+  border-bottom: 0;
+}
+
+.shoot-mode-shot-row.shot-dragging {
+  z-index: 5;
+}
+
+.shoot-mode-shot-check {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  accent-color: var(--ink);
+}
+
+.shoot-mode-empty {
+  margin: 0;
+  padding: 4px 20px 14px;
+  font-size: 14px;
+  color: var(--text-dim);
+  opacity: 0.75;
+}
+
+.shoot-mode-add-shot-btn {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 10px 20px 14px;
+}
+
+/* Same field the main edit form's Shot list section has (#shootShootingNotes)
+   — Shoot Mode had no way to see or add to it before, even though it's
+   exactly the kind of thing you'd want mid-shoot. Written directly here
+   rather than through the tap-to-expand pattern the main form uses, same
+   as the shot rows above it — everything in Shoot Mode edits in place. */
+.shoot-mode-shooting-notes-label {
+  display: block;
+  margin: 0 20px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+}
+
+/* Plain text on the page, not a bounded box — same treatment as the shot
+   rows above it (border/background dropped, just a rule underneath), and
+   auto-grown via autoSizeTextarea (see openShootMode/autoSizeAllListText-
+   areas and the input listener) so a long note is never clipped behind a
+   fixed height, unlike the tap-to-expand fields on the main edit form. */
+.shoot-mode-shooting-notes-label textarea {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  background: none;
+  border: 0;
+  border-bottom: 2px dashed var(--border);
+  border-radius: 0;
+  padding: 4px 2px 8px;
+  color: var(--text);
+  font-size: 15px;
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: normal;
+  resize: none;
+  overflow: hidden;
+}
+
+.shoot-mode-shooting-notes-label textarea:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+#shootModeMoodboard {
+  padding: 4px 20px 4px;
+}
+
+/* Shared by #shootModeDoneBtn and the Quick review popup's OK button — a
+   fixed bottom action that closes out whatever Shoot-Mode screen it's on.
+   padding-bottom used to be 16px PLUS the safe-area inset added on top,
+   which on a home-indicator device (~34px) made the bottom padding more
+   than 3x the top and left the label looking like it was riding high in
+   the button. max() instead of + makes the safe area a floor rather than
+   an addition, so it only grows past the visual 20px baseline on devices
+   that actually need it, and even then not by nearly as much. */
+.shoot-mode-bottom-cta {
+  flex-shrink: 0;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 20px 16px;
+  padding-bottom: max(20px, var(--sa-bottom));
+  border: none;
+  border-top: 2px solid var(--ink);
+  border-radius: 0;
+  text-align: center;
+  font-size: 21px;
+  font-family: var(--font-title);
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+
+/* Shoot mode's bottom bar: "Exit" and "Done shooting" side by side in what
+   was Done shooting's own full-width bar — same height, type and ink top
+   rule, split by an ink rule. Exit only takes its word's width, so Done
+   shooting keeps most of the bar. Exit is white like a .secondary button,
+   without the class itself, whose !important border would replace the
+   ink rules. */
+.shoot-mode-bottom-bar {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.shoot-mode-bottom-bar .shoot-mode-bottom-cta {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.shoot-mode-bottom-bar .shoot-mode-bottom-cta-secondary {
+  flex: 0 0 auto;
+  background: var(--surface-2);
+  color: var(--text);
+  border-right: 2px solid var(--ink);
+}
+
+#shootModeStartBtn,
+#shootModeSkipBtn {
+  width: 100%;
+  padding: 13px;
+  border-radius: var(--radius-xl);
+  font-size: 17px;
+  font-family: var(--font-title);
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+
+#shootModeSkipBtn {
+  margin-top: 10px;
+  border: none;
+}
+
+/* ---------- Filled shoot-form fields shed their box, same as the shot list ----------
+   Once there's real text in a field, the box that says "put something here"
+   stops being the true statement — this reads it back as written-in prose
+   instead. It never goes bare, though: a rule underneath is what still says
+   "tap this to change it," which matters most for the readonly fields that
+   open the bigger tap-to-expand editor rather than typing in place. */
+#shootForm input.is-filled,
+#shootForm textarea.is-filled {
+  background: none;
+  border: none;
+  border-bottom: 2px dashed var(--border);
+  border-radius: 0;
+  padding: 6px 2px;
+}
+
+#shootForm textarea.is-filled {
+  padding: 4px 2px 8px;
+  resize: none;
+  overflow: hidden;
+}
+
+#shootForm input.is-filled:focus,
+#shootForm textarea.is-filled:focus {
+  outline: none;
+  border-bottom-style: solid;
+  border-bottom-color: var(--accent);
+}

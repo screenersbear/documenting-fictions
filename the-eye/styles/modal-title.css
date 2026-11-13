@@ -1,0 +1,201 @@
+/* A popup's title: its jump menu, and the header's buttons. */
+.share-shoot-btn[hidden] {
+  display: none;
+}
+
+#formSection2[hidden],
+#narrativeFieldsBlock[hidden],
+#shootPremiseField[hidden],
+#shootElevatorPitchField[hidden],
+#conceptHelperBtn[hidden],
+#videoDeliverablesBlock[hidden],
+#finalImagesSection[hidden],
+#postShootContent[hidden],
+#postShootBody[hidden],
+#basicInfoBody[hidden],
+#logisticsBody[hidden],
+#directionBody[hidden],
+#visualsBody[hidden],
+#teamBody[hidden],
+#shotListBody[hidden],
+#lightingSetupsBody[hidden] {
+  display: none;
+}
+
+#journalForm[hidden] {
+  display: none;
+}
+
+#shootForm,
+#journalForm,
+#formSection2,
+#locationForm,
+#talentForm,
+#teamMemberForm,
+#photographerForm,
+#narrativeFieldsBlock,
+#videoDeliverablesBlock,
+#postShootContent,
+#postShootBody,
+#basicInfoBody,
+#logisticsBody,
+#directionBody,
+#visualsBody,
+#teamBody,
+#shotListBody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#postShootContent {
+  scroll-margin-top: 68px;
+}
+
+/* Lets the jump-menu's scrollIntoView land each heading just below the
+   sticky shoot-modal header instead of partly hidden behind it. */
+.shoot-section-heading {
+  scroll-margin-top: 68px;
+}
+
+#shootForm label,
+#journalForm label,
+#locationForm label,
+#talentForm label,
+#teamMemberForm label,
+#photographerForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+#shootForm input,
+#shootForm select,
+#shootForm textarea,
+#journalForm input,
+#journalForm textarea,
+#locationForm input,
+#locationForm select,
+#talentForm input,
+#talentForm select,
+#teamMemberForm input,
+#teamMemberForm select,
+#photographerForm input,
+#photographerForm select,
+#expandFieldTextarea {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 18px;
+  font-family: var(--font-body);
+  resize: vertical;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+#shootForm textarea[readonly] {
+  cursor: pointer;
+  resize: none;
+}
+
+#expandFieldTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 260px;
+  resize: vertical;
+}
+
+#expandFieldOkBtn {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 15px;
+  border: none;
+  border-radius: var(--radius-xl);
+  font-size: 17px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+
+#saveLocationBtn {
+  width: 100%;
+  padding: 13px;
+  border-radius: var(--radius-xl);
+  border: none;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 1.5px;
+  margin-top: 4px;
+}
+
+/* The standard full-width "do the thing" button at the bottom of a modal.
+   Same shape the id-specific rules above already use — as a class so new
+   modals can reach for it by name instead of growing another id rule. */
+.modal-cta {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 15px;
+  border: none;
+  border-radius: var(--radius-xl);
+  font-size: 17px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+
+.location-field-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 10px 12px;
+  color: var(--text-dim);
+  font-size: 18px;
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+
+.location-field-btn.has-value {
+  color: var(--text);
+}
+
+.bold-select,
+.bold-select option {
+  font-weight: 700;
+}
+
+.bold-select:invalid {
+  font-weight: 400;
+}
+
+.field-hint {
+  font-size: 14px;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+/* "Last time" under a returning-talent / past-location pick and on the
+   guide's Goals slide (see showLastTimeNote): a plain .field-hint with its
+   optional button, spaced like .talent-social-section. The quoted lessons
+   keep their own line breaks. */
+.last-time-note {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.last-time-note .field-hint {
+  white-space: pre-line;
+}

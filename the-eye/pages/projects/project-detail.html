@@ -1,0 +1,29 @@
+<!-- A project's shoots. -->
+<!-- ============ PROJECT DETAIL (a project's shoots, same centered popup as the stat boxes) ============ -->
+<!-- Reuses .stat-box-detail-overlay/.stat-box-detail-modal wholesale, so it
+     inherits that popup's look, its z-index (under the shoot modal and the
+     kebab sheet, so a row's shoot or ⋮ opened from here stacks on top), its
+     [hidden] rule and both anyModalOpen() checks. Must stay AFTER
+     #statBoxDetailOverlay: they share z-index 5, so a project opened from a
+     stat box list sits above that list purely by source order. -->
+<div id="projectDetailOverlay" class="stat-box-detail-overlay" hidden>
+  <div class="stat-box-detail-modal">
+    <div class="modal-header">
+      <h2 id="projectDetailTitle"></h2>
+      <button type="button" class="icon-btn close-btn" id="projectDetailCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <p class="field-hint" id="projectDetailSummary"></p>
+    <div id="projectDetailList" class="mini-list"></div>
+    <div class="project-detail-actions">
+      <button type="button" class="primary small-btn" id="projectAddDayBtn">+ Add a day</button>
+      <div class="project-rename-row" id="projectRenameRow" hidden>
+        <input type="text" id="projectRenameInput" class="options-rename-input" maxlength="120" placeholder="Name for the project" />
+        <button type="button" class="options-item primary" id="saveProjectRenameBtn">Save</button>
+      </div>
+      <button type="button" class="secondary small-btn" id="projectRenameBtn">Rename</button>
+      <button type="button" class="secondary small-btn" id="projectArchiveBtn">Archive project</button>
+      <button type="button" class="secondary small-btn" id="projectUngroupBtn">Ungroup</button>
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,280 @@
+/* ---- Shot list (checklist inside Shoot-day notes) ---- */
+.subsection-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 19px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.shot-list-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shot-list-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  position: relative;
+}
+
+.shot-list-row.shot-checked {
+  margin-left: 20px;
+}
+
+.shot-list-row.shot-dragging {
+  z-index: 5;
+}
+
+.shot-drag-handle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+  cursor: grab;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.shot-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* A stand-in for haptics on the grab: iOS Safari has no Vibration API, so
+   this quick scale/color flash on the handle is the only "felt" acknowledgment
+   that actually reaches an iPhone. */
+@keyframes shot-drag-pulse {
+  0% { transform: scale(1); color: var(--text); }
+  40% { transform: scale(1.4); color: var(--accent); }
+  100% { transform: scale(1); color: var(--text); }
+}
+
+.shot-drag-handle.shot-drag-pulse {
+  animation: shot-drag-pulse 220ms ease-out;
+}
+
+.shot-check {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* A shot reads as a written line, not a filled-in form field — so no box, no
+   fill, just the text sitting on a rule. The rule is what keeps it obviously
+   typeable: a bare line of text with nothing under it looks like a label, and
+   there'd be no cue that tapping does anything. Dashed rather than solid so it
+   reads as "space to write" instead of as the underline of a real input.
+
+   #shootForm-qualified so this beats the generic `#shootForm textarea` rule,
+   which has an id and would otherwise win on specificity and restore the box.
+   Height is set inline by growShotText(); min-height keeps an empty or
+   not-yet-measured row tappable. */
+#shootForm .shot-text,
+#shootModeShotList .shot-text {
+  background: none;
+  border: 0;
+  border-bottom: 2px dashed var(--border);
+  border-radius: 0;
+  padding: 2px 2px 4px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 20px;
+  font-family: var(--font-body);
+  flex: 1;
+  min-width: 0;
+  min-height: 26px;
+  text-transform: none;
+  resize: none;
+  overflow: hidden;
+}
+
+/* Focus turns the rule solid and accent-coloured — the row you're writing on is
+   the one that looks like a field. Only the style and colour change: the border
+   width and padding stay put, because growShotText() measures the box once and
+   any geometry change on focus would leave that height wrong and clip a line. */
+#shootForm .shot-text:focus,
+#shootModeShotList .shot-text:focus {
+  outline: none;
+  border-bottom-style: solid;
+  border-bottom-color: var(--accent);
+}
+
+#shootForm .shot-text::placeholder,
+#shootModeShotList .shot-text::placeholder {
+  opacity: 0.5;
+}
+
+.shot-checked .shot-text {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.delete-shot,
+.star-shot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--red);
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The must-have star beside each shot's × (see shotStarButtonHtml): the
+   same circle, but a navy star rather than red, so it doesn't read as a
+   second delete. A must-have fills it yellow; the navy outline keeps it
+   visible on the white. Only the star changes — the row looks as it did. */
+.star-shot {
+  color: var(--text);
+}
+
+.star-icon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+}
+
+.star-shot.starred .star-icon {
+  fill: var(--accent);
+}
+
+.modal-actions[hidden] {
+  display: none;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+#shootModalOverlay .modal {
+  padding-bottom: 0;
+  border: 2px solid var(--surface);
+  border-bottom: none;
+}
+
+#shootModalOverlay .modal-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--surface);
+  padding-bottom: calc(var(--sa-bottom) + 16px);
+}
+
+/* The sticky Save bar doesn't span the modal's own full width (it sits
+   inside the modal's normal padding, same as the buttons it holds), but the
+   folder-tab lines above each section now bleed edge-to-edge. Without this,
+   a section's line could peek through the narrow gaps on either side of the
+   bar as it scrolls past — this backfills those gaps with the same
+   background so nothing shows through. */
+#shootModalOverlay .modal-actions::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -20px;
+  right: -20px;
+  bottom: 0;
+  background: var(--surface);
+  z-index: -1;
+}
+
+#journalModalOverlay .modal {
+  padding-bottom: 0;
+}
+
+/* Second, independent solid layer behind the header's own text/close button
+   — belt-and-suspenders for the exact iOS WKWebView sticky-repaint bug
+   .modal-header's own comment already describes, specifically for the case
+   that comment calls out as the worst offender (a long journal entry with
+   photos). Its own translateZ makes this its own GPU layer, so even if the
+   header element's own background layer is the one that fails to repaint
+   mid-scroll, this one — compositing independently — still reliably covers
+   whatever's scrolling underneath. */
+#journalModalOverlay .modal-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--surface);
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+#journalModalOverlay .modal-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--surface);
+  /* Extra bottom padding so the bar's own footprint roughly matches the
+     app's persistent tab bar — otherwise the Save button sits right at the
+     modal's bottom edge and content scrolling up from below (e.g. the Add
+     photos button) can visually crowd it as it approaches. */
+  padding-top: 10px;
+  padding-bottom: calc(var(--sa-bottom) + 34px);
+}
+
+.complete-shoot-btn[hidden] {
+  display: none;
+}
+
+.complete-shoot-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  background: var(--ink);
+  border: none;
+  border-radius: var(--radius-xl);
+  padding: 13px;
+  font-size: 17px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  letter-spacing: 1.5px;
+  color: #fff;
+  cursor: pointer;
+}
+
+#shootModalOverlay .modal-actions .complete-shoot-btn {
+  width: auto;
+  margin-top: 0;
+}
+
+.plain-delete-btn[hidden] {
+  display: none;
+}
+
+.plain-delete-btn {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 13px;
+  font-size: 17px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  color: var(--red);
+  cursor: pointer;
+}

@@ -1,0 +1,59 @@
+/* The Archive's slideshow, and the Manage link. */
+.archive-slideshow {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  border-radius: var(--radius-3xl);
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.archive-slideshow img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 22%;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 1.2s ease, transform 4.2s ease;
+  cursor: pointer;
+}
+
+.archive-slideshow img.active {
+  opacity: 1;
+  transform: scale(1.12);
+}
+
+.archive-slideshow-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 24px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 15px;
+}
+
+.archive-slideshow-empty[hidden] {
+  display: none;
+}
+
+.manage-link {
+  display: block;
+  margin-top: 10px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 15px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font-body);
+}

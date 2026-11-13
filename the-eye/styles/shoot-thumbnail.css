@@ -1,0 +1,54 @@
+/* ---- Shoot thumbnail (project photo) ---- */
+.shoot-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shoot-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* The row's thumb has height:auto + stretch (so it matches whatever height
+   the row's text content ends up needing) — but a plain height:100% img
+   inside can't resolve against an auto-height parent, so it silently falls
+   back to the source photo's own aspect ratio instead. That's invisible for
+   roughly-square photos but balloons the whole row for anything odly-shaped
+   (e.g. an un-cropped phone-screenshot-sized project photo). Taking the img
+   out of flow with absolute positioning removes it from that height
+   calculation entirely, so the row's height always comes from its text only. */
+.shoot-row .shoot-thumb img {
+  position: absolute;
+  inset: 0;
+}
+
+.shoot-thumb-empty {
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+.shoot-thumb-empty svg {
+  width: 22px;
+  height: 22px;
+}
+
+.set-project-photo-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  text-decoration: underline;
+  font-size: 13px;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-body);
+}

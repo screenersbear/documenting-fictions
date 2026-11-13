@@ -1,0 +1,280 @@
+/* The Eye's basics: colours, the page, buttons and how a tap looks.
+   The other stylesheets in this folder are listed in index.html, in the order they apply. */
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #ffffff;
+  --text: #313d45;
+  --text-dim: #313d45;
+  --accent: #ffd103;
+  --green: #2f8f63;
+  --red: #c0392b;
+  --border: #d9d9d9;
+  /* Every background/border/fill/stroke that used to be "berry blade black"
+     points here instead of --text now, so a color theme can restyle all of
+     that chrome — --text itself stays fixed navy everywhere, since these
+     theme colors are pastel and too low-contrast to use for readable text. */
+  --ink: #313d45;
+
+  --font-title: "Arial Black", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Courier New", Courier, monospace;
+
+  /* Shared corner-radius scale — every border-radius in the file
+     references one of these instead of a repeated magic number. Flipped to
+     0 for the sharp-cornered, logo-matched look (mockup direction); circular
+     elements (50%) and the couple of already-flat 0 cases aren't tokenized
+     here since they were never part of the rounded-corner scale to begin
+     with. */
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+  --radius-pill: 0;
+}
+
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  /* No rubber-band past the top or bottom of the page. Pull-to-refresh is its
+     own touch gesture (see setupPullToRefresh) and doesn't rely on it. */
+  overscroll-behavior-y: none;
+}
+
+/* Pull-to-refresh's rubber-band overscroll reveals whatever sits behind the
+   page, above the header — that's <html>'s own background, not <body>'s
+   (which stays var(--bg) for the actual page content). Matching it to the
+   header's ink color means that overscroll gap reads as more of the theme
+   instead of flashing white. */
+html {
+  background: var(--ink);
+}
+
+/* Launch: a plain white screen (the same white as the page, and as the
+   launch screen before it) until the first paint can include the photos —
+   app.js removes .booting from <html>. The animation is only a backstop:
+   if that never happens, the page shows itself after 1.5s anyway. */
+html.booting {
+  background: var(--bg);
+}
+
+html.booting body {
+  visibility: hidden;
+  animation: boot-reveal 0s linear 1.5s forwards;
+}
+
+@keyframes boot-reveal {
+  to { visibility: visible; }
+}
+
+/* An update reload at launch (reloadForUpdate in app.js): the page about to
+   be replaced stays hidden, past the 1.5s backstop above too, so the app
+   doesn't show itself twice. app.js drops this after 5s in case the reload
+   never happens. */
+html.update-reloading body {
+  visibility: hidden !important;
+  animation: none !important;
+}
+
+/* Form controls don't inherit page font by default in most browsers —
+   catch any that a more specific rule hasn't already set to Courier. */
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+/* Baseline tracking for buttons. Class-level rules that set their own
+   letter-spacing win over this (element selectors lose to classes), so each
+   of those carries its own value already bumped by the same 1px. */
+button {
+  letter-spacing: 1px;
+}
+
+::placeholder {
+  color: var(--text);
+  opacity: 0.5;
+}
+
+button,
+.card,
+.shoot-row,
+.pie-slice,
+.stat-box,
+.daily-report-item {
+  transition: opacity 0.1s ease;
+}
+
+button:active,
+.card:active,
+.shoot-row:active,
+.pie-slice:active,
+.stat-box:active,
+.daily-report-item:not(.daily-report-fact):active {
+  opacity: 0.55;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-head);
+  font-weight: 700;
+}
+
+#app {
+  max-width: 560px;
+  margin: 0 auto;
+  min-height: calc(100 * var(--dvh));
+  padding: var(--sa-top) 16px 0;
+  padding-bottom: calc(72px + var(--sa-bottom));
+}
+
+.view { padding-top: 4px; }
+
+#view-overview { padding-top: 0; }
+
+.hero-band {
+  background: var(--ink);
+  width: calc(100 * var(--vw));
+  margin-left: calc(50% - calc(50 * var(--vw)));
+  margin-top: calc(-1 * var(--sa-top));
+  margin-bottom: 20px;
+  padding: var(--sa-top) 16px 20px;
+  border-bottom: 4px solid var(--accent);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 4px 8px;
+}
+
+.topbar h1 {
+  font-size: 25px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  margin: 2px 0 0;
+  font-size: 15px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.app-menu-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.app-menu-btn svg {
+  width: 26px;
+  height: 26px;
+}
+
+.brand-logo-wrap {
+  width: 48px;
+  height: 48px;
+  box-sizing: border-box;
+  border: 0 solid var(--text);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.shine-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+/* The sweep animates transform, never `left`. One of these lives on the header
+   logo, so it runs on every screen for as long as the app is open — animating
+   a layout property there would re-run layout and paint on the main thread
+   every frame, forever. transform is composited on the GPU instead, so the
+   loop costs essentially nothing. translateX is in % of the element's own
+   width (50% of the parent), hence the larger numbers than the old `left`
+   values, which were % of the parent. */
+.shine-sweep::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
+  animation: shine-sweep-move 8s ease-in-out infinite;
+  will-change: transform;
+  pointer-events: none;
+}
+
+@keyframes shine-sweep-move {
+  0% { transform: translateX(-150%) skewX(-20deg); }
+  12% { transform: translateX(260%) skewX(-20deg); }
+  100% { transform: translateX(260%) skewX(-20deg); }
+}
+
+.brand-title {
+  font-size: 19px;
+  font-weight: 900;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.new-shoot-cta {
+  display: block;
+  width: 100%;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: 2px solid var(--text);
+  border-radius: var(--radius-2xl);
+  padding: 16px;
+  font-size: 19px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin-bottom: 0;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}

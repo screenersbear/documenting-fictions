@@ -1,0 +1,71 @@
+/* ---- Stat box detail (Overview counters — centered, not a slide-over) ---- */
+/* z-index stays below .modal-overlay/.options-overlay so a shoot edit modal
+   or its three-dot options sheet, opened from a row in here, stacks on top
+   instead of being trapped behind this overlay. */
+.stat-box-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(49, 61, 69, 0.55);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.stat-box-detail-overlay[hidden] {
+  display: none;
+}
+
+.stat-box-detail-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.stat-box-detail-modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: calc(80 * var(--vh));
+  background: var(--surface);
+  border: 3px solid var(--ink);
+  border-radius: 28px;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  transform: scale(0.94);
+  transition: transform 0.2s ease;
+}
+
+.stat-box-detail-overlay.open .stat-box-detail-modal {
+  transform: scale(1);
+}
+
+/* The scroll container itself carries no padding (see above) — a sticky
+   header inside a padded scroll container leaves a gap above the header
+   equal to that padding, and scrolled-past content shows through the gap
+   since it's still inside the scrollport. Padding lives on the header and
+   list/empty-state instead, so the sticky header sits flush with the true
+   top of the scrollport and fully covers anything scrolling past it. */
+/* Its header is an accent-coloured band (like App options' header) — the
+   modal's rounded corners clip it. Shared by the stat box and project
+   popups, both opened from boxes on the main pages. */
+.stat-box-detail-modal .modal-header {
+  margin: 0 0 14px;
+  padding: 16px 20px;
+  background: var(--accent);
+  border-bottom: none;
+}
+
+.stat-box-detail-modal .modal-header h2 {
+  color: var(--on-accent);
+}
+
+.stat-box-detail-modal .mini-list {
+  padding: 0 20px 20px;
+}
+
+.stat-box-detail-modal .empty-state {
+  padding: 0 20px 20px;
+}

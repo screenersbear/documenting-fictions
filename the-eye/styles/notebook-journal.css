@@ -1,0 +1,40 @@
+/* ---- Journal: the one ruled paper, the whole page of it ---- */
+#view-journal {
+  position: relative;
+  margin: calc((var(--nb-top) + 22px) * -1) -34px 0 -20px;
+  padding: calc(var(--nb-top) + 10px) 34px 56px 46px;
+  min-height: calc(var(--nb-h) - max(var(--nb-bar), var(--screen-gap)));
+  background-color: #fffdf7;
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 27px, #a9c9e8 27px, #a9c9e8 28px);
+  background-position: 0 calc(var(--nb-top) + 10px);
+}
+#view-journal::before { content: ''; position: absolute; top: 0; bottom: 0; left: 36px; width: 2px; background: #d9534f; }
+#view-journal .topbar { position: absolute; top: calc(var(--nb-top) + 10px); right: 28px; height: 56px; padding: 0; margin: 0; border: none; z-index: 1; }
+#view-journal .topbar h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#view-journal .topbar .icon-btn { position: static; margin-top: 6px; }
+.journal-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 56px; padding-right: 38px; margin: 0; }
+.journal-toolbar .filter-toggle { width: auto; line-height: 28px; }
+#journalList h2.status-group-heading { border: none; line-height: 28px; padding: 0; font-size: 13px; }
+#journalList .status-group-heading.archive-month-heading { line-height: 28px; padding: 0; }
+#journalList .card, #journalList .log-card { position: relative; background: none; border: none; border-radius: 0; box-shadow: none; padding: 0; margin: 0 0 28px; overflow: visible; }
+#journalList .journal-paper { background: none; border: none; border-radius: 0; padding: 0; min-height: 0; line-height: 28px; }
+#journalList .journal-paper::before { display: none; }
+#journalList .log-week-heading { height: 28px; line-height: 28px; margin: 0 -34px 0 -46px; padding: 0 0 0 46px; border: none; border-radius: 0; font-family: var(--font-body); font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+#journalList .log-week-heading.journal-entry-binding { position: absolute; top: 0; right: -10px; left: auto; width: 44px; height: 28px; margin: 0; padding: 0; background: none; color: var(--text); z-index: 1; }
+#journalList .journal-entry-heading { display: block; margin: 0 !important; padding: 0 28px 0 0; }
+#journalList .journal-entry-title { display: block; font-family: var(--font-hand); font-size: 24px; font-weight: 400; line-height: 28px; }
+#journalList .journal-entry-date { display: block; font-family: var(--font-body); font-size: 12.5px; font-weight: 400; line-height: 28px; color: var(--dim); }
+#journalList .journal-entry-body { font-family: var(--font-hand); font-size: 19px; line-height: 28px; margin: 0; }
+#journalList .log-takeaway-source { font-family: var(--font-body); font-size: 12.5px; }
+#journalList .journal-entry-tags:not([hidden]) { display: flex; flex-wrap: wrap; gap: 0 10px; margin: 0; line-height: 28px; }
+#journalList .beat-chip.view-only { background: none; border: none; padding: 0; font-family: var(--font-body); font-size: 12.5px; line-height: 28px; color: var(--dim); }
+#journalList .log-section-label { font-family: var(--font-body); font-size: 13px; font-weight: 600; line-height: 28px; text-transform: none; letter-spacing: 0; margin: 0; }
+#journalList .log-shoots, #journalList .log-takeaways { list-style: none; margin: 0; padding: 0; line-height: 28px; font-size: 15px; }
+#journalList .log-no-takeaways { margin: 0; line-height: 28px; font-size: 15px; }
+#journalList .log-shoots li, #journalList .log-takeaways li { padding: 0; margin: 0; }
+
+/* ---- Stats and Archive ---- */
+.stats-fun-fact { background: none; color: var(--text); font-family: var(--font-title); font-size: 16px; text-align: center; padding: 11px 6px 0; border: none; }
+.stats-page-title { font-family: var(--font-head); font-weight: 400; font-size: 19px; text-transform: none; letter-spacing: 0; }
+.stats-legend-row { background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; font-family: var(--font-body); font-size: 14px; font-weight: 400; letter-spacing: 0; min-height: 40px; padding: 8px 0; text-transform: none; }
+.archive-slideshow { border: none; border-radius: 2px; }

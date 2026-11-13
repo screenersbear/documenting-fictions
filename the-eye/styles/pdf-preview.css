@@ -1,0 +1,184 @@
+/* ---- PDF preview (shown before sharing) ---- */
+.pdf-preview-overlay {
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 30;
+}
+
+.pdf-preview-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: calc(90 * var(--dvh));
+  max-height: calc(90 * var(--dvh));
+  /* Overrides the base .modal's overflow-y: auto — this modal's content is
+     sized to fit exactly (flex column, no overflow of its own), so without
+     this the outer modal competes with the PDF viewer inside the iframe
+     for scroll/touch gestures, which is what stopped multi-page PDFs from
+     scrolling at all. */
+  overflow: hidden;
+  border-radius: var(--radius-4xl);
+  padding: 16px 16px calc(var(--sa-bottom) + 16px);
+  animation: slideUp 0.2s ease;
+}
+
+.pdf-preview-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 14px;
+}
+
+/* Scrolls natively (so panning has normal momentum) at every zoom level;
+   the pages inside are laid out at a width that makes one whole page fit,
+   and zoom just widens them (see the PDF viewer in app.js). touch-action
+   leaves panning to the browser while pinch is handled in JS — the page
+   itself opts out of browser zoom. */
+.pdf-preview-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+  padding: 8px;
+  background: #d9dcdf;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.pdf-preview-pages {
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pdf-page {
+  width: 100%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.pdf-page canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pdf-preview-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 16px;
+  text-align: center;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.pdf-preview-status[hidden] {
+  display: none;
+}
+
+.pdf-zoom-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.pdf-page-indicator {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(49, 61, 69, 0.85);
+  color: #fff;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.pdf-page-indicator[hidden] {
+  display: none;
+}
+
+#pdfPreviewShareBtn {
+  flex-shrink: 0;
+  width: 100%;
+  padding: 13px;
+  border-radius: var(--radius-xl);
+  border: none;
+  font-size: 17px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+
+.crop-stage {
+  position: relative;
+  width: 100%;
+  /* Matches the shoot bubble's thumbnail shape (96px wide against the
+     bubble's ~120px floor height — same 4:5 ratio as the talent photo box
+     below, just a different absolute size), so what you frame here is what
+     actually shows on every shoot bubble. */
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: var(--radius-2xl);
+  background: #000;
+  touch-action: none;
+}
+
+/* Talent photos crop to 4:5 instead — matching .talent-photo-thumb's box, so
+   what gets framed here is what shows on the talent card. openProjectPhotoCrop
+   measures the live stage box, so swapping this class is all it takes to
+   retarget the ratio (the output canvas size is picked in JS to match). */
+.crop-stage.crop-stage-talent {
+  aspect-ratio: 4 / 5;
+}
+
+.crop-stage img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.crop-zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 18px;
+}
+
+.crop-zoom-icon {
+  font-size: 18px;
+  color: var(--text-dim);
+  line-height: 1;
+}
+
+.crop-zoom-row input[type="range"] {
+  flex: 1;
+}
+
+#cropConfirmBtn {
+  display: block;
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: var(--radius-xl);
+  font-size: 17px;
+  font-weight: 700;
+  font-family: var(--font-title);
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}

@@ -1,0 +1,166 @@
+/* ---- Lighting setups: drag-to-reorder ---- */
+/* .shot-drag-handle supplies touch-action:none, the callout/select
+   suppression, the cursor and the grab pulse. Its colour is var(--text),
+   which is the same navy as this bar's --ink background by default, so it's
+   forced to white here like the collapse arrow and the delete button. */
+.lighting-setup-card-bar .lighting-drag-handle {
+  width: 28px;
+  height: 34px;
+  border-radius: 0;
+  color: #fff;
+  font-size: 20px;
+}
+
+.lighting-setup-card-bar .lighting-drag-handle.shot-drag-pulse {
+  animation: lighting-drag-pulse 220ms ease-out;
+}
+
+@keyframes lighting-drag-pulse {
+  0% { transform: scale(1); color: #fff; }
+  40% { transform: scale(1.25); color: var(--accent); }
+  100% { transform: scale(1); color: #fff; }
+}
+
+/* z-index 1: above sibling cards but under the sticky modal header and Save
+   bar (z-index 2). The card itself is never scaled — the drag math reads its
+   rect — and has no transform transition, which would lag behind the finger. */
+.lighting-setup-card.lighting-dragging {
+  z-index: 1;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
+#shootForm .lighting-setup-card-bar .lighting-setup-name::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+  opacity: 1;
+}
+
+#shootForm .lighting-setup-card-bar .lighting-setup-name:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.lighting-setup-collapse-toggle {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  color: #fff;
+  cursor: pointer;
+}
+
+.lighting-setup-card-collapsed .lighting-setup-collapse-toggle .collapse-arrow {
+  transform: rotate(-90deg);
+}
+
+.lighting-setup-card .lighting-setup-card-bar .delete-lighting-setup {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.lighting-setup-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.lighting-setup-card-body[hidden] {
+  display: none;
+}
+
+#shootForm .lighting-setup-characteristics,
+#shootForm .lighting-setup-description {
+  font-size: 14px;
+}
+
+.tag-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-check {
+  flex-direction: row !important;
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 6px 12px !important;
+  font-size: 14px !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  gap: 6px !important;
+  cursor: pointer;
+}
+
+.tag-check input {
+  width: auto;
+}
+
+/* Video's Aspect ratios chips in the shoot form. */
+.aspect-ratio-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Same look as a #shootForm label. It's a span because a <label> wrapping
+   four checkboxes would toggle the first one when its text is tapped. */
+.aspect-ratio-field-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+.tag-other-input {
+  flex-basis: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 6px 8px;
+  font-size: 14px;
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+/* ---- Simple boolean checkbox rows (mood board complete, team toggles) ---- */
+.checkbox-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px !important;
+  font-weight: 700;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+/* .checkbox-row's own display:flex !important beats the browser's built-in
+   [hidden]{display:none}, so without this a row hidden via the hidden
+   attribute (e.g. #moodboardCompleteRow once a shoot is past planning)
+   stayed fully visible. */
+.checkbox-row[hidden] {
+  display: none !important;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}

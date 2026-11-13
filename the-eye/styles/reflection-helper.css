@@ -1,0 +1,152 @@
+/* ---- Reflection helper ("Need help reflecting?") ----
+   Same card as the concept helper; its question box is a few lines tall,
+   since reflections run longer than the concept's few-word answers. */
+.reflect-helper-modal #reflectHelperText {
+  margin-bottom: 8px;
+}
+
+#reflectHelperInput {
+  resize: none;
+  height: auto;
+  min-height: 96px;
+  line-height: 1.4;
+  font-size: 16px;
+}
+
+#reflectHelperBackBtn[hidden] {
+  display: none;
+}
+
+#conceptHelperUseBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The "All set" slide has no fields — same gap above its buttons as the
+   tour's card, rather than the body's empty box plus the usual margin. */
+#shootWizardBody:empty {
+  min-height: 0;
+}
+
+#shootWizardBody:empty + .shoot-wizard-actions {
+  margin-top: 6px;
+}
+
+/* The last slide's only button is the shoot page's Save, so it takes that
+   button's look: full width (Back is hidden there), the same varying text
+   in the title font, upper case, fixed height so a long message wraps
+   inside it rather than resizing it. */
+.shoot-wizard-actions .shoot-wizard-save {
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.15;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 21px;
+  text-transform: uppercase;
+  border: 2px solid var(--ink);
+}
+
+/* Keyboard up (see syncShootWizardViewport): the step count and hint go and
+   the spacing tightens, so the field being typed in keeps some room. The
+   bottom safe-area inset sits under the keyboard then, so it's dropped too. */
+#shootWizard.shoot-wizard-compact {
+  padding-bottom: 12px;
+}
+
+#shootWizard.shoot-wizard-compact #shootWizardCard {
+  padding: 16px 18px;
+}
+
+#shootWizard.shoot-wizard-compact #shootWizardStep,
+#shootWizard.shoot-wizard-compact #shootWizardHint {
+  display: none;
+}
+
+#shootWizard.shoot-wizard-compact .shoot-wizard-head h2 {
+  margin-bottom: 10px;
+}
+
+#shootWizard.shoot-wizard-compact .shoot-wizard-actions {
+  margin-top: 12px;
+}
+
+#shootWizard.shoot-wizard-compact .shoot-tour-skip-row {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.intro-modal {
+  width: 100%;
+  max-width: 380px;
+  border: 3px solid var(--ink);
+  /* Hardcoded rather than var(--radius-4xl) — that token is 0 under every
+     theme (the app is square-cornered everywhere on purpose), and popups are
+     the one deliberate exception, same reasoning as Shoot mode's own card. */
+  border-radius: 28px;
+  padding: 24px 22px;
+  text-align: center;
+  animation: slideUp 0.15s ease;
+}
+
+.intro-modal h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Delete-all-data's 2nd confirmation step — reuses the standard
+   .intro-modal card but flips to a red warning look while it's asking
+   "are you SURE sure"; .danger-state is removed again once the delete
+   actually happens so the follow-up success message reads normal. Opaque
+   fill, not a low-alpha rgba() — a semi-transparent background here shows
+   through to the dark 0.9-opacity overlay backdrop behind the card, not a
+   white page, so a low-alpha red renders as near-illegible dark red rather
+   than the intended light warning tint. */
+#deleteAllConfirmModal.danger-state {
+  border-color: var(--red);
+  background: #fbe1df;
+}
+
+#deleteAllConfirmModal.danger-state h2 {
+  color: var(--red);
+}
+
+/* Export previous shoots' 2nd delete-confirmation step — same danger-state
+   treatment as the "Delete all shoot data" modal above, kept as its own
+   rule since it's a different modal id. */
+#exportDeleteConfirmModal.danger-state {
+  border-color: var(--red);
+  background: #fbe1df;
+}
+
+#exportDeleteConfirmModal.danger-state h2 {
+  color: var(--red);
+}
+
+.intro-modal p {
+  margin: 0 0 18px;
+  font-size: 16px;
+  color: var(--text);
+  line-height: 1.5;
+  text-align: left;
+}
+
+/* Tapping a country on the Regions map — a centered outlined card (same
+   look as the app menu/intro popups) instead of the bottom-sheet .modal
+   default, since this is a quick lookup, not a form. */
+.region-country-popup-modal {
+  width: 100%;
+  max-width: 380px;
+  max-height: calc(70 * var(--vh));
+  overflow-y: auto;
+  border: 3px solid var(--ink);
+  border-radius: 28px;
+  padding: 20px;
+}

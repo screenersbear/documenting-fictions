@@ -1,0 +1,279 @@
+/* ---------- Shoot mode ---------- */
+
+/* The entry point lives just under the shoot modal's sticky header, in the
+   gap formed by the first section's folder-tab graphic — not among the ?
+   / share / close icons in the header itself, which are already crowded.
+   Positioned relative to the shoot modal's own box (see the
+   #shootModalOverlay .modal rule below) rather than the header, so it scrolls
+   away with the rest of the form instead of following you down the page —
+   this is a landmark near the top, not a persistent control. */
+#shootModalOverlay .modal {
+  position: relative;
+}
+
+.enter-shoot-mode-btn {
+  position: absolute;
+  z-index: 1;
+  /* Measured against the sticky header's actual height (66px for a one-line
+     title) plus its own top offset within the modal, with a small gap so the
+     button clears it rather than kissing the edge. A title that wraps to a
+     second or third line grows the header taller than this accounts for —
+     same known tradeoff as the folder-tab/scroll-margin approximations
+     elsewhere in this modal, not something this fixes generally. */
+  top: 96px;
+  right: 33px;
+  padding: 9px 20px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.enter-shoot-mode-btn[hidden] {
+  display: none;
+}
+
+/* .shine-sweep's default sweep is white, meant for the dark/accent surfaces
+   it already runs on elsewhere (header logo, "+ New Shoot") — on this
+   button's own white background that would be invisible, and this button
+   sits over the folder-tab's accent-yellow band, so filling it accent
+   yellow to fix that would just blend into what's behind it instead. Tinted
+   navy (matching --text, which stays fixed across every color theme) reads
+   as a visible glint against the white pill without changing its color.
+   ID-scoped so #enterArchiveModeBtn, sharing the base class, is untouched. */
+#enterShootModeBtn::after {
+  background: linear-gradient(115deg, transparent 0%, rgba(49, 61, 69, 0.3) 50%, transparent 100%);
+}
+
+/* Archive mode's header is its own, much shorter banner: just the shoot's
+   name (no "Archive" eyebrow above it — that's the tab it came from, not
+   something worth repeating here) with the mode-switch and close buttons
+   beside it, rather than Shoot mode's taller stacked eyebrow+title. */
+.archive-mode-header {
+  align-items: center;
+  padding: 12px 12px 10px 18px;
+}
+
+
+.archive-mode-header-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Same pill look as .enter-shoot-mode-btn, recolored for sitting directly on
+   the header's own --ink fill instead of the light form background it
+   normally floats over. */
+.archive-mode-details-btn {
+  padding: 7px 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* The one deliberately rounded, bordered surface in an otherwise square-cornered
+   app (every --radius-* token is 0 under every theme) — shoot mode is a
+   distinct working mode you drop into for the day, and looking different on
+   purpose is the point. border-color is var(--ink), so the outline still
+   follows whichever colour theme is active rather than fighting it. */
+.shoot-mode-overlay {
+  align-items: center;
+  padding: 16px;
+}
+
+.shoot-mode-modal {
+  width: 100%;
+  max-width: 480px;
+  /* svh, not dvh — see the base .modal rule's comment. dvh shrinks with the
+     keyboard, and since the Done button is a plain flex child (not sticky)
+     the whole centered modal — button included — rides up with it. */
+  height: min(calc(92 * var(--svh)), 880px);
+  max-height: calc(92 * var(--svh));
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: 3px solid var(--ink);
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.shoot-mode-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 18px 16px 14px 20px;
+  background: var(--ink);
+}
+
+.shoot-mode-heading-wrap {
+  min-width: 0;
+}
+
+.shoot-mode-eyebrow {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+#shootModeTitle {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+/* Matches #shootModeTitle's own treatment (same header shape, one screen
+   over) rather than the plain white/19px it had before — same bigger
+   accent-coloured title both places, not a look unique to this one popup. */
+#shootModeReviewTitle,
+#mondayBriefTitle {
+  margin: 0;
+  font-family: var(--font-head);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+/* The "Quick review" eyebrow right above #shootModeReviewTitle — bigger and
+   accent-coloured to match, rather than the small dim-white treatment
+   .shoot-mode-eyebrow otherwise has everywhere else (e.g. "Shoot mode"
+   above the talent name) — scoped to this one popup so that shared
+   treatment elsewhere is untouched. */
+.shoot-mode-review-modal .shoot-mode-eyebrow {
+  font-size: 14px;
+  color: var(--accent);
+  opacity: 1;
+}
+
+.shoot-mode-header .close-btn {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+/* Shoot mode's clock under the shoot's name (see renderShootModeClock): the
+   wrap time in Archive mode's header pill (.archive-mode-details-btn, the
+   one tappable thing an ink header already has), the time left beside it,
+   and golden hour and the must-haves on lines of their own. White on the
+   ink, like the eyebrow; the must-haves take the title's yellow, being the
+   one line that asks for something. */
+.shoot-mode-clock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 10px;
+}
+
+.shoot-mode-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Lies invisibly over the pill at its exact size, so a tap lands on the
+   input itself: the one way iOS opens its time picker (showPicker() doesn't
+   for a time input there). 16px so focusing it doesn't zoom the page. */
+.shoot-mode-wrap-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  font-size: 16px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.shoot-mode-clock-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.shoot-mode-clock-line {
+  margin: 6px 0 0;
+}
+
+.shoot-mode-clock-line.shoot-mode-must-haves {
+  color: var(--accent);
+}
+
+/* "Last time" at the top of Shoot mode (see showShootModeLastTime): the
+   shoot page's own .field-hint line, given the body's 20px gutter (it has
+   none of its own). The Quick review heading under it keeps its 14px. */
+.shoot-mode-last-time {
+  padding: 14px 20px 0;
+  overflow-wrap: anywhere;
+}
+
+/* A lesson that's been cut short: a small pill closing the quote — "…",
+   then an up arrow once it's open — the one sign there's more to read,
+   with no words added for it. The quote itself can be tapped too. */
+.shoot-mode-last-time-quote {
+  cursor: pointer;
+}
+
+.shoot-mode-last-time-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 20px;
+  margin: 0 2px 0 4px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.shoot-mode-last-time-less {
+  width: 12px;
+  height: 12px;
+}
+
+/* Shoot mode and Archive mode each start right at a heading bar, so a pull
+   down at the top bounced the content away from the header and showed the
+   card's white above it (Quick review shares this, so it doesn't bounce
+   either). none, not contain: contain only keeps the scroll from reaching
+   the page, and still bounces. */
+.shoot-mode-body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  padding-bottom: 8px;
+}

@@ -1,0 +1,281 @@
+/* ---- Modal ---- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(49, 61, 69, 0.9);
+  display: flex;
+  align-items: flex-end;
+  z-index: 10;
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+/* svh (smallest viewport height) rather than dvh (dynamic viewport height),
+   which tracks the CURRENT visual viewport — on iOS Safari that shrinks the
+   instant the keyboard opens, dragging a sticky Save bar at a modal's bottom
+   up along with the now-shorter modal so it visually floats over whatever
+   field just got focused/scrolled into view. svh is pinned to the
+   viewport's smallest-ever size, so a modal's height (and anything stuck to
+   its bottom) stays put; the keyboard covers whatever's low enough on
+   screen instead of a sticky bar relocating on top of it. Universal so
+   every popup with a persistent bottom action gets this for free — don't
+   special-case it back to dvh per-modal. */
+.modal {
+  background: var(--surface);
+  width: 100%;
+  max-height: calc(92 * var(--svh));
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-4xl) var(--radius-4xl) 0 0;
+  padding: 16px 20px calc(var(--sa-bottom) + 20px);
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Anchored to the top instead of the bottom sheet default so the on-screen
+   keyboard (which covers the bottom of the screen) never hides it. Also
+   opened from Shoot Mode's Quick review popup (a .modal-overlay in its own
+   right, further down the DOM) to edit a Direction/Lighting-setup field —
+   without a z-index above the plain .modal-overlay 10 they share, DOM order
+   alone would put that already-open popup on top instead, leaving this one
+   opening but invisible behind it (tapping "Tap to add" would silently do
+   nothing visible). */
+#expandFieldOverlay {
+  align-items: flex-start;
+  z-index: 15;
+}
+
+#expandFieldOverlay .modal {
+  /* Top-anchored, so it's the BOTTOM corners that sit in open space —
+     the reverse of every other bottom-sheet's top-only rounding. */
+  border-radius: 0 0 28px 28px;
+  padding: calc(var(--sa-top) + 16px) 20px 20px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  /* iOS WKWebView (the engine behind an installed/home-screen PWA, not just
+     Safari) can fail to repaint a sticky element's own background layer
+     mid-scroll, letting whatever's scrolling underneath show through it —
+     worse the longer the scroll (journal entries with photos/tags are the
+     usual culprit). Forcing its own GPU compositing layer keeps it painted
+     independently of the content scrolling behind it. backface-visibility is
+     the usual companion to translateZ for this exact WebKit repaint bug —
+     translateZ alone still let it recur on the Journal entry view
+     specifically, the case the comment above already flagged as the worst
+     offender (see also #journalModalOverlay .modal-header::before, a second,
+     belt-and-suspenders layer of insurance scoped to just that modal). */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.modal-header h2 {
+  font-size: 19px;
+  margin: 0;
+  text-transform: none;
+  letter-spacing: 0.5px;
+}
+
+.shoot-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: none;
+  padding: 16px 13px 10px;
+  margin-bottom: 10px;
+  border-bottom: none;
+}
+
+/* The line along the bottom keeps the header readable as its own band while
+   content scrolls underneath it — without it, a yellow section pill or a navy
+   heading passing just beneath the sticky header blends into the header's own
+   fill. White specifically: it's the only colour that separates from every
+   --ink theme value AND from Basic Info's yellow folder-tab fill, which bleeds
+   up to meet the header (an accent-coloured line vanishes against that). */
+.shoot-modal-header::before {
+  content: '';
+  position: absolute;
+  top: -16px;
+  left: -20px;
+  right: -20px;
+  bottom: 0;
+  background: var(--ink);
+  border-bottom: 3px solid #fff;
+  border-radius: var(--radius-4xl) var(--radius-4xl) 0 0;
+}
+
+.shoot-modal-header h2 {
+  position: relative;
+  color: var(--accent);
+  font-size: 23px;
+}
+
+.modal-title-jump-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.modal-title-jump-btn {
+  display: inline-flex;
+  /* Top-aligned so the chevron sits beside the title's first line rather than
+     drifting to the vertical middle of a wrapped block. */
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Wraps instead of truncating. The randomised new-shoot titles run long, and
+   clipping one mid-word reads as a bug rather than as style — better to keep
+   the type size and let the header grow. The title column is only ~197px on a
+   375px screen, and at 23px that puts half of NEW_SHOOT_TITLES ("oh yeah,
+   booked and blessed", "we're up (planning shoots)") onto three lines, so the
+   clamp has to be 3 or those still get cut. It's a ceiling, not a target —
+   nothing in the list goes past it, and "Edit Shoot" stays on one line. */
+.modal-title-jump-btn span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  text-align: left;
+}
+
+.modal-title-jump-btn .collapse-arrow,
+.modal-title-jump-btn svg {
+  margin-top: 6px;
+}
+
+.modal-title-jump-arrow {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.modal-title-jump-btn.open .modal-title-jump-arrow {
+  transform: rotate(180deg);
+}
+
+.modal-title-jump-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  z-index: 5;
+  min-width: 210px;
+}
+
+.modal-title-jump-menu[hidden] {
+  display: none;
+}
+
+.modal-title-jump-item {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+
+.modal-title-jump-item:first-child {
+  border-top: none;
+}
+
+.modal-title-jump-item[hidden] {
+  display: none;
+}
+
+.modal-header-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shoot-modal-header .close-btn,
+.shoot-modal-header .icon-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  width: 40px;
+  height: 40px;
+}
+
+.shoot-modal-header .close-btn {
+  font-size: 28px;
+}
+
+.shoot-modal-header #shootTourBtn {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.shoot-modal-header .share-shoot-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.close-btn {
+  background: var(--surface-2);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  font-size: 23px;
+}
+
+.share-shoot-btn {
+  background: var(--surface-2);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+}
+
+.share-shoot-btn svg {
+  width: 16px;
+  height: 16px;
+}

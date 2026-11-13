@@ -1,0 +1,49 @@
+/* ---- Emotional beats ---- */
+.beats-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.beats-label {
+  font-size: 19px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+#shootForm .references-block .beats-label {
+  font-size: 20px;
+}
+
+.beats-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.beat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 209, 3, 0.3);
+  color: var(--text);
+  border-radius: var(--radius-pill);
+  padding: 5px 6px 5px 12px;
+  font-size: 15px;
+}
+
+.beat-chip-remove {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+/* No remove button on a read-only chip, so both sides match instead of the
+   editable version's lopsided padding (built to leave room for the ×). */
+.beat-chip.view-only {
+  padding: 5px 12px;
+}

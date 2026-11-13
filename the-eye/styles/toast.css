@@ -1,0 +1,90 @@
+/* ---- Toast ---- */
+.toast {
+  position: fixed;
+  bottom: calc(90px + var(--sa-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: #fff;
+  padding: 14px 20px;
+  border-radius: var(--radius-xl);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  z-index: 40;
+  max-width: calc(100% - 48px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+.toast[hidden] {
+  display: none;
+}
+
+/* "Undo" inside a toast (showUndoToast): a plain underlined word in the
+   accent colour, so the toast still reads as one line. */
+.toast-undo-btn {
+  background: none;
+  border: none;
+  padding: 0 0 0 8px;
+  margin: 0;
+  color: var(--accent-on-ink);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* askConfirm's popup: a notch above every other popup (intro 30, crop 30,
+   image viewer 20) so it shows over whichever one asked; still under the
+   toast (40). */
+.app-confirm-overlay {
+  z-index: 35;
+}
+
+/* fitButtonPair: labels stay on one line, and a pair that won't fit side
+   by side stacks full width with the action (the last button) on top. */
+.modal-actions.fit-pair button {
+  white-space: nowrap;
+}
+
+.modal-actions.modal-actions-stacked {
+  flex-direction: column-reverse;
+}
+
+.modal-actions.modal-actions-stacked button {
+  white-space: normal;
+}
+
+/* Floating scroll-to-top button for the Journal list — it can run long, so
+   this offers a quick way back up without hunting for the top of the page.
+   JS shows it once scrolled down a bit and only while the Journal is the
+   active view. */
+.scroll-top-btn {
+  position: fixed;
+  right: 20px;
+  bottom: calc(90px + var(--sa-bottom));
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  z-index: 6;
+}
+
+.scroll-top-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.scroll-top-btn:active {
+  opacity: 0.65;
+}
+
+.scroll-top-btn[hidden] {
+  display: none;
+}

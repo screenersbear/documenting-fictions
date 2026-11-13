@@ -1,0 +1,199 @@
+/* ---- App menu (hamburger) — centered on screen with the same outlined-
+   card look as the intro/prompt popups, instead of the bottom-sheet drawer
+   the per-shoot options menu uses. ---- */
+.app-menu-overlay {
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 24px;
+}
+
+.app-menu-modal {
+  width: 100%;
+  max-width: 380px;
+  border: 3px solid var(--ink);
+  border-radius: 28px;
+}
+
+/* "App options" band across the top of the menu, in the accent colour; the
+   modal's rounded corners clip it. Stays put while the panes slide below. */
+.app-menu-header {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 16px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-title);
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+/* Team Member — centered like the app menu/intro popups rather than a
+   bottom sheet: unlike Talent/Location (longer, scrolling forms), its
+   content is short and fixed, so floating it in the middle reads as a
+   quick dialog rather than something you'd pull up from the bottom. */
+.team-member-overlay {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal.team-member-modal {
+  width: 100%;
+  max-width: 380px;
+  border-radius: 28px;
+}
+
+#tabIntroCloseBtn,
+#postShootPromptDismissBtn,
+#dayAfterOkBtn,
+#dailyReportCloseBtn,
+#statusSwatchIntroCloseBtn,
+#exportPreviousIntroCloseBtn,
+#shootWizardOffOkBtn,
+#multiDayNoticeOkBtn {
+  width: 100%;
+  padding: 13px;
+  border-radius: var(--radius-xl);
+  border: none;
+  font-size: 19px;
+  font-family: var(--font-title);
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 1.5px;
+}
+
+/* A noticeably bigger entrance than the quick 0.15s slideUp shared by other
+   intro modals — this one should visibly settle/pop into place rather than
+   just appear, since it's the one popup meant to feel like a "notification"
+   landing rather than a screen the user just navigated to. */
+@keyframes dailyReportPopIn {
+  0% { transform: scale(0.85) translateY(24px); opacity: 0; }
+  60% { transform: scale(1.03) translateY(-3px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.daily-report-modal {
+  max-height: calc(80 * var(--vh));
+  overflow-y: auto;
+  background: var(--ink);
+  border-color: var(--surface);
+}
+
+/* The pop-in is the daily report's alone. The popups that borrow its card
+   (Add deadline, Multi-day, the journal's starting prompt, "Referring to")
+   aren't notifications landing, so they keep .intro-modal's quiet slideUp
+   like every other intro popup. */
+#dailyReportOverlay .daily-report-modal {
+  animation: dailyReportPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.daily-report-modal h2 {
+  color: var(--surface);
+}
+
+.daily-report-modal p {
+  color: var(--surface);
+}
+
+.deadline-prompt-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+  color: var(--text);
+  font-size: 18px;
+  font-family: var(--font-body);
+  margin-bottom: 18px;
+  /* Without this, iOS Safari renders native date inputs with its own OS
+     chrome instead of the custom background/border/radius above — on this
+     popup's dark modal background that shows up as a stark, unstyled white
+     box that looks like it's stretching edge-to-edge. */
+  -webkit-appearance: none;
+  appearance: none;
+  /* iOS Safari sizes an empty date input's internal mm/dd/yyyy segments to
+     a shorter line box than a filled one, so without a fixed height the
+     field visibly grows the moment a date is picked. Explicit height keeps
+     it identical (and comfortably tappable) in both states. */
+  height: 44px;
+}
+
+/* The native calendar icon doesn't reliably respect padding-right on its
+   own — left unset, it crowds the input's right edge while the typed date
+   on the left sits properly inset, reading as lopsided. */
+.deadline-prompt-input::-webkit-calendar-picker-indicator {
+  margin-left: 8px;
+}
+
+/* "Set deadline" until a date's picked — same dimmed look as the concept
+   helper's disabled button. */
+#deadlinePromptOkBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+#dailyReportList {
+  margin-bottom: 18px;
+}
+
+.daily-report-item {
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-xl);
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.daily-report-fact {
+  cursor: default;
+  font-style: italic;
+  border-left: 3px solid var(--accent);
+}
+
+.daily-report-item-list {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.daily-report-item-list li {
+  margin-top: 2px;
+}
+
+/* Next-day check-in: a row per shoot, its name over its two answers
+   (Postponed / Shot it) or, once answered, the status it was set to. */
+.day-after-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 18px;
+  text-align: left;
+}
+
+.day-after-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.day-after-name {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.day-after-result {
+  font-size: 15px;
+  color: var(--text-dim);
+}

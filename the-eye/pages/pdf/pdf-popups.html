@@ -1,0 +1,44 @@
+<!-- Choosing a PDF's sections, and its preview. -->
+<!-- ============ PDF SECTIONS CHOICE ============ -->
+<div id="pdfSectionsOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2>Share as PDF</h2>
+      <button type="button" class="icon-btn close-btn" id="pdfSectionsCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <p class="field-hint">Choose which sections to include.</p>
+    <div class="pdf-sections-list">
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionTalent" checked /> Talent</label>
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionLogistics" checked /> Logistics</label>
+      <label class="checkbox-row" id="pdfSectionDeliverablesRow" hidden><input type="checkbox" id="pdfSectionDeliverables" checked /> Deliverables</label>
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionDirection" /> Direction</label>
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionReferences" /> References</label>
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionTeam" checked /> Team</label>
+      <label class="checkbox-row"><input type="checkbox" id="pdfSectionMoodboard" checked /> <span id="pdfSectionMoodboardLabel">Mood board</span></label>
+    </div>
+    <button type="button" class="primary modal-cta" id="pdfSectionsBuildBtn">Build PDF</button>
+  </div>
+</div>
+
+<!-- ============ PDF PREVIEW ============ -->
+<div id="pdfPreviewOverlay" class="modal-overlay pdf-preview-overlay" hidden>
+  <div class="modal pdf-preview-modal">
+    <div class="modal-header">
+      <h2>Shoot PDF</h2>
+      <button type="button" class="icon-btn close-btn" id="pdfPreviewCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="pdf-preview-stage">
+      <div class="pdf-preview-viewport" id="pdfPreviewViewport">
+        <div class="pdf-preview-pages" id="pdfPreviewPages"></div>
+      </div>
+      <p class="pdf-preview-status" id="pdfPreviewStatus">Loading preview…</p>
+      <span class="pdf-page-indicator" id="pdfPageIndicator" hidden></span>
+      <div class="pdf-zoom-controls">
+        <button type="button" class="map-zoom-btn" id="pdfZoomOutBtn" aria-label="Zoom out">&minus;</button>
+        <button type="button" class="map-zoom-btn" id="pdfZoomInBtn" aria-label="Zoom in">+</button>
+      </div>
+    </div>
+    <button type="button" class="primary" id="pdfPreviewShareBtn">Share</button>
+  </div>
+</div>
+

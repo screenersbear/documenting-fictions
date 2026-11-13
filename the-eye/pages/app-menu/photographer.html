@@ -1,0 +1,54 @@
+<!-- The photographer's details popup, and how much space the app takes. -->
+<!-- ============ LOCATION MODAL ============ -->
+<!-- ============ PHOTOGRAPHER INFORMATION ============ -->
+<!-- One editor serving two entry points: the first-run prompt (which shows the
+     intro line explaining what it's for) and the app menu's "Photographer
+     information" (which doesn't). Every field is optional. -->
+<div id="photographerModalOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2 id="photographerModalTitle">Photographer information</h2>
+      <button type="button" class="icon-btn close-btn" id="photographerCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <p class="field-hint" id="photographerIntroText" hidden>
+      This gets referenced on your call sheets. Leave anything blank if you'd
+      rather not add it. You can change all of it later from the menu.
+    </p>
+    <div id="photographerForm">
+      <label>Your name
+        <input type="text" id="photographerNameInput" maxlength="120" placeholder="e.g. Starky Morillo" />
+      </label>
+      <label>Business name
+        <input type="text" id="photographerBusinessInput" maxlength="120" placeholder="Optional" />
+      </label>
+      <label>Key social media
+        <div class="social-handle-row">
+          <select id="photographerPlatformSelect" class="social-handle-platform">
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+            <option value="youtube">YouTube</option>
+            <option value="other">Other</option>
+          </select>
+          <input type="text" id="photographerHandleInput" class="social-handle-input" maxlength="80" placeholder="@handle" />
+        </div>
+      </label>
+      <label>Phone number
+        <input type="tel" id="photographerPhoneInput" maxlength="40" placeholder="Optional" />
+      </label>
+      <button type="button" class="primary modal-cta" id="photographerSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ STORAGE USAGE ============ -->
+<div id="storageUsageOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2>Storage usage</h2>
+      <button type="button" class="icon-btn close-btn" id="storageUsageCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <p class="field-hint">Roughly how much space this app and everything you've added to it (photos especially) are taking up on your phone.</p>
+    <div id="storageUsageBody"></div>
+  </div>
+</div>
+

@@ -1,0 +1,100 @@
+/* ======================================================================
+   Open, the notebook is plain pages (user, 11-12)
+   ----------------------------------------------------------------------
+   The shut book and its opening stay. Once it's open nothing of a notebook
+   is left: no frame or rim, no paper colour, no ruled lines, no side tabs
+   and no page numbers. Each section is one page the size of the screen that
+   scrolls (a shoot, Shoot mode and Archive mode too); only going from one
+   section to the next turns a page, over the whole screen.
+   ====================================================================== */
+@font-face { font-family: "Kaisei Decol"; src: url("../fonts/kaisei-decol-500-latin.woff2") format("woff2"); font-weight: 500; font-display: swap; size-adjust: 85.4%; } /* the headers, in capitals: Kaisei Decol Medium, sized so its capitals stand as tall as Klee One's */
+:root {
+  --head: "Kaisei Decol", "Klee One", Georgia, serif; /* headers, always in capitals */
+  --font-head: var(--head);
+  --page-side: 20px;
+}
+
+/* Headers: Kaisei Decol capitals, every one (the old per-screen rules set
+   their own case, hence the !important). Names the user wrote (a shoot's,
+   an entry's, a lighting setup's) stay in their handwriting, and so do the
+   team questions, which are questions. */
+:is(h1, h2, h3, h4, h5, h6, .brand-title, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .moodboard-label, .app-menu-header, .stats-region-heading, #shootModeReviewTitle, #mondayBriefTitle):not(#projectDetailTitle, #shootModeTitle, #journalViewTitle, .journal-entry-title, .shoot-mode-review-setup-name, .modal-title-jump-wrap) {
+  font-family: var(--head) !important; font-weight: 500; text-transform: uppercase !important; letter-spacing: .08em !important; text-shadow: none;
+}
+:is(#appMenuOverlay, #sunMenuOverlay) .opt-sheet-head .app-menu-header { font-family: var(--head); font-weight: 500; text-transform: uppercase; letter-spacing: .08em; text-shadow: none; }
+
+/* No frame, no side tabs, no page numbers. The frame's box stays, over the
+   whole screen down to the navigator, as the layer a turning page swings in. */
+.nb-board, :root[data-side="verso"] .nb-board { left: 0; right: 0; top: var(--layer-shift, 0px); border-radius: 0; box-shadow: none; }
+.nb-board-page, .nb-screen-foot, .nb-page-foot, .nb-screen-tabs, .nb-chapter-board { display: none !important; }
+.nb-board > .nb-turn, .nb-board > .nb-turn-under, :root[data-side="verso"] .nb-board > .nb-turn, :root[data-side="verso"] .nb-board > .nb-turn-under { inset: 0; border-radius: 0; }
+.nb-turn::after { border-radius: 0; }
+
+/* The screens: the window scrolls them, clear of the navigator. */
+#app, :root[data-side="verso"] #app, :root.pg-tall #app { padding: calc(var(--nb-top) + 12px) var(--page-side) calc(var(--nb-bar) + 28px); }
+
+/* Journal: white, no rules and no margin line, and no open band at the top
+   for them: the contents, filter and + are an ordinary row. Its titles stay
+   in capitals, its entries as far apart. */
+#view-journal { margin: 0; padding: 0 0 28px; min-height: 0; background: none; }
+#view-journal::before { display: none; }
+#view-journal .topbar { top: 0; right: 0; }
+#view-journal .journal-toolbar { height: 48px; align-items: center; }
+#view-journal .journal-toolbar > button, #view-journal .journal-toolbar > #addJournalBtn { top: 0; padding-top: 0; }
+#journalList .log-week-heading { margin: 0; padding: 0; }
+:root[data-view="journal"] #nbScreenNum { background: none; }
+
+/* Stats: every breakdown on the page, one under another. */
+.stats-carousel { overflow: visible; height: auto !important; }
+.stats-track { display: block; transform: none !important; }
+.stats-page { width: auto; padding-bottom: 36px; }
+.stats-dots { display: none; }
+
+/* A shoot, Archive mode and Shoot mode: the screen, white, down to their bar. */
+#shootModalOverlay > .modal, #archiveModeOverlay > .modal, #shootModeOverlay > .modal.shoot-mode-modal {
+  top: var(--nb-top); left: 0; right: 0; width: auto;
+  height: calc(var(--nb-h) - var(--nb-top) - var(--nb-bar));
+  padding: 8px max(var(--page-side), calc(50% - 280px)) 28px;
+  border-radius: 0; box-shadow: none; background: #fff;
+}
+#shootModeOverlay, #archiveModeOverlay, #shootModalOverlay { background: #fff; }
+/* A shoot's sections follow on, each heading clear of the one before. */
+#shootForm .shoot-section-heading:not(#basicInfoHeading) { margin-top: 36px; }
+
+/* Visual language and framework tags, while they're hidden (App options). */
+.no-look-tags #frameworkTagsContainerEarly, .no-look-tags #frameworkTagsContainer, .no-look-tags #visualsBody > .form-section-label-row { display: none !important; }
+
+/* Under a shoot's talent: lessons from past shoots with them, and notes about this shoot from Overthoughts. */
+.past-lessons { margin-top: 18px; }
+.past-lesson { display: block; margin: 8px 0 0; color: inherit; text-decoration: none; }
+.past-lesson-head { display: block; font-size: 0.85em; opacity: 0.7; }
+.past-lesson-text { display: block; white-space: pre-wrap; }
+.past-lesson-link .past-lesson-head { text-decoration: underline; text-underline-offset: 3px; }
+
+/* The Weekly tab (the Journal before) is the weekly log: entries of your own are written in Overthoughts. */
+#addJournalBtn { display: none !important; }
+
+/* Boards from Ref on the shoot page (Send to shoot, or + Import board) */
+.ref-boards { display: flex; flex-direction: column; gap: 10px; }
+.ref-board { display: flex; gap: 12px; align-items: flex-start; }
+.ref-board-cover { flex: 0 0 auto; width: 88px; aspect-ratio: 1; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: none; cursor: pointer; }
+.ref-board-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ref-board-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
+.ref-board-name { font-size: 18px; color: var(--text); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: none; border: none; padding: 0; text-align: left; font-family: inherit; cursor: pointer; }
+.ref-board-meta { font-size: 14px; color: var(--text-dim); }
+.ref-board-actions { display: flex; gap: 16px; }
+.ref-board-actions .manage-link { margin-top: 4px; }
+.has-ref-boards #moodboardGrid .empty-hint { display: none; }
+
+/* App options' Notebook button, there only inside Documenting Fictions. */
+#appMenuOverlay .opt-label[hidden], #appMenuOverlay .opt-wide[hidden] { display: none; }
+/* The tour's cards and the first visit's (app.js eyeCards): a dot for each card. */
+.eye-cards-dots { display: flex; justify-content: center; gap: 6px; margin: -4px 0 18px; }
+.eye-cards-dots[hidden] { display: none; }
+.eye-cards-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(49, 61, 69, .2); }
+.eye-cards-dots i.on { background: var(--text); }
+
+/* An eye left of OVERVIEW (user, 11-12): it hangs off the word, so the word
+   stays centred where every section's title sits. */
+#view-overview .brand-title { position: relative; }
+.brand-eye { position: absolute; right: calc(100% + 10px); top: 50%; width: 30px; height: 30px; margin-top: -14px; color: var(--text); pointer-events: none; }

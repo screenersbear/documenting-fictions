@@ -1,0 +1,100 @@
+/* ---- The shut book and the first spread ---- */
+.book-overlay { background: #fff; }
+.book-overlay:not([hidden]) { display: block; }
+.nb {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  perspective: 1100px;
+  perspective-origin: 50% 28%;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+.nb.no-anim, .nb.no-anim * { transition: none !important; }
+.nb-float { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; }
+.nb.closed .nb-float { animation: nb-float 5.2s ease-in-out infinite; }
+@keyframes nb-float {
+  0%, 100% { transform: translateY(-7px) rotateZ(-0.7deg) rotateY(-2deg); }
+  50% { transform: translateY(7px) rotateZ(0.7deg) rotateY(2deg); }
+}
+.nb-ground {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--W);
+  height: calc(var(--W) * 0.36);
+  transform-origin: 0 0;
+  transform: rotateY(-20deg) translate3d(calc(var(--W) / -2 + var(--shut-x, 0px)), calc(var(--H) / 2 + var(--W) * 0.11), calc(var(--W) * -0.26)) rotateX(90deg);
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+.nb-ground::before {
+  content: '';
+  position: absolute;
+  inset: 6% 3%;
+  border-radius: 10px;
+  background: rgba(40, 42, 48, 0.36);
+  filter: blur(calc(var(--W) * 0.04));
+  animation: nb-ground 5.2s ease-in-out infinite;
+}
+.nb.opened .nb-ground { opacity: 0; }
+.nb.opened .nb-ground::before { animation: none; }
+@keyframes nb-ground {
+  0%, 100% { transform: scale(1.04); opacity: 0.62; }
+  50% { transform: scale(0.97); opacity: 0.92; }
+}
+.nb-book {
+  position: absolute;
+  left: 0;
+  top: calc(var(--H) / -2);
+  width: var(--W);
+  height: var(--H);
+  transform-origin: 0 50%;
+  transform-style: preserve-3d;
+  transition: transform 0.72s cubic-bezier(0.45, 0.05, 0.25, 1);
+}
+.nb.closed .nb-book { transform: rotateY(-20deg) translate(calc(var(--W) / -2 + var(--shut-x, 0px)), 0) scale(1); }
+.nb.opened .nb-book { transform: rotateY(0deg) translate(0, 0) scale(var(--k)); }
+.nb.opened.zoom-l .nb-book { transform: rotateY(0deg) translate(var(--zoom-x), var(--zoom-y)) scale(var(--zoom-sx), var(--zoom-sy)); }
+.nb-block, .nb-leaf, .nb-front, .nb-inside { position: absolute; inset: 0; }
+.nb-block { background: var(--book-block) center / 100% 100% no-repeat; border-radius: 0 calc(var(--W) * 0.044) calc(var(--W) * 0.044) 0; transition: box-shadow 0.3s; }
+.nb.opened .nb-block { box-shadow: var(--book-shadow); }
+.nb-leaf { transform: rotateY(0deg) translateZ(1px); transform-origin: 0 50%; transform-style: preserve-3d; transition: transform 0.82s cubic-bezier(0.45, 0.05, 0.25, 1); }
+.nb.opened .nb-leaf { transform: rotateY(-180deg) translateZ(1px); }
+.nb-front { background: var(--book-cover) center / 100% 100% no-repeat; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.nb-inside { transform: rotateY(180deg); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.nb-inside::before { content: ''; position: absolute; inset: 0; background: var(--book-block) center / 100% 100% no-repeat; border-radius: 0 calc(var(--W) * 0.044) calc(var(--W) * 0.044) 0; box-shadow: var(--book-shadow); transform: scaleX(-1); }
+.nb-stack { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+.nb-stack i, .nb-stack b { position: absolute; transform: translateZ(calc(var(--i) * var(--W) * -0.0112)); transition: transform 0.6s, visibility 0s 0.6s; }
+.nb-stack i { top: 0.9%; bottom: 0.9%; right: 1.2%; width: 26%; border-radius: 0 calc(var(--W) * 0.034) calc(var(--W) * 0.034) 0; background: #fff; }
+.nb-stack i:nth-child(even) { background: #e4e4e4; }
+.nb-stack b { inset: 0; border-radius: 0 calc(var(--W) * 0.044) calc(var(--W) * 0.044) 0; background: var(--accent); }
+.nb.closed .nb-stack i, .nb.closed .nb-stack b { transition: transform 0.6s, visibility 0s; }
+.nb.opened .nb-stack i, .nb.opened .nb-stack b { transform: translateZ(-1px); visibility: hidden; }
+/* The section tabs, seen from outside: the same seven down the side of the
+   pages, each on its own sheet, with no words on them. */
+.nb-side-tabs { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; transition: opacity 0.25s; }
+.nb-side-tabs i {
+  position: absolute;
+  left: 98%;
+  top: calc(21% + var(--t) * 9.2%);
+  width: calc(2% + var(--W) * 0 + 6%);
+  height: 8.5%;
+  border-radius: 0 calc(var(--W) * 0.018) calc(var(--W) * 0.018) 0;
+  transform: translateZ(calc(var(--i) * var(--W) * -0.0112));
+}
+.nb-side-tabs i.y { background: var(--tab-light); }
+.nb-side-tabs i.n { background: var(--text); }
+.nb.opened .nb-side-tabs { opacity: 0; visibility: hidden; }
+.nb-words { position: absolute; z-index: 1; inset: 8% 10%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--text); transition: opacity 0.3s; }
+.nb.zoom-l .nb-words { opacity: 0; }
+.nb-word { font-family: var(--font-head); font-size: calc(var(--W) * 0.088); line-height: 1.15; }
+.nb-plus svg { width: calc(var(--W) * 0.09); height: calc(var(--W) * 0.09); display: block; }
+.nb-hit { position: absolute; display: none; z-index: 5; border: none; padding: 0; background: none; }
+.nb.closed .nb-hit-book { display: block; left: calc(50% - var(--W) / 2); top: calc(50% - var(--H) / 2); width: var(--W); height: var(--H); }
+@media (prefers-reduced-motion: reduce) {
+  .nb.closed .nb-float, .nb-ground::before { animation: none; }
+}

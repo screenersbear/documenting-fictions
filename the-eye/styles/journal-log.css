@@ -1,0 +1,101 @@
+/* ---- Journal log entries (auto weekly recap) ---- */
+/* .card.log-card (not just .log-card) so this reliably beats the base .card
+   rule's padding/cursor/min-height regardless of source order in this file —
+   equal-specificity selectors resolve by whichever is declared later, and
+   .card's own rule lives further down. */
+/* The card is only a frame now: a full-bleed colour banner on top and a sheet
+   of lined paper filling everything below it. .card is display:flex, which
+   would stand those two side by side — block stacks them. overflow:hidden lets
+   the banner and the paper run to the card's edge and still be clipped by its
+   rounded corners, so neither needs its own radius. */
+.card.log-card {
+  cursor: default;
+  min-height: 0;
+  padding: 0;
+  display: block;
+  overflow: hidden;
+}
+
+.log-card:active {
+  opacity: 1;
+}
+
+.log-shoots {
+  list-style: disc;
+  margin: 8px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 16px;
+}
+
+.log-week-heading {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* The paper fills the card below the banner, so it drops the standalone
+   popup's own border and corners — the card frame already supplies both.
+   white-space:normal is the important one: .journal-paper sets pre-wrap for
+   plain-text entry bodies, and left on, it would render the indentation of the
+   markup built here as visible whitespace. Entry bodies get pre-wrap back on
+   .journal-entry-body, where it's actually wanted.
+
+   Doubled up as .journal-paper.log-paper rather than plain .log-paper: both are
+   single-class selectors, so on equal specificity the later declaration wins,
+   and .journal-paper is defined further down this file. Naming both makes the
+   override independent of where either rule sits. */
+.journal-paper.log-paper {
+  border: 0;
+  border-radius: 0;
+  min-height: 0;
+  white-space: normal;
+  padding: 14px 14px 20px 44px;
+  /* Two background layers instead of .journal-paper's single ruled one: a
+     solid block matching the paper's own cream, sized to --header-band, in
+     front of the same repeating ruled-line pattern. A repeating-linear-
+     gradient repeats infinitely in both directions, so there's no way to
+     shift its position to leave a genuinely blank region for a Reflections
+     entry's title to sit in above the ruling (see .journal-entry-heading) —
+     it can only be painted over. --header-band is set per card in JS
+     (applyJournalHeaderBand), measured from the actual title/date height so
+     a long wrapped title still gets full coverage; it defaults to 0 here so
+     Log's own week cards — same markup, but with nothing to cover, since
+     their heading never moves onto the page — render with no gap at all,
+     exactly as before this existed. */
+  background-image:
+    linear-gradient(#fffdf7, #fffdf7),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 27px, #a9c9e8 27px, #a9c9e8 28px);
+  background-size: 100% var(--header-band, 0px), auto;
+  background-repeat: no-repeat, repeat;
+  background-position: 0 0, 0 22px;
+}
+
+/* Everything on the paper is locked to the 28px ruling. .journal-paper draws a
+   line every 28px, so any margin, gap or line-height that isn't a multiple of
+   it walks the text off the lines a little further with each row. */
+.log-paper .log-section-label,
+.log-paper .log-shoots,
+.log-paper .log-takeaways,
+.log-paper .log-no-takeaways,
+.log-paper .journal-entry-body {
+  line-height: 28px;
+}
+
+.log-paper .log-section-label,
+.log-paper .log-no-takeaways {
+  margin: 0;
+}
+
+.log-paper .log-shoots,
+.log-paper .log-takeaways {
+  margin: 0;
+  gap: 0;
+}
+
+.log-paper > * + .log-section-label {
+  margin-top: 28px;
+}

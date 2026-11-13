@@ -1,0 +1,26 @@
+<!-- What a shoot's More button offers, and the popup that shows a field full size. -->
+<!-- What a shoot's More button offers. -->
+<div id="shootMoreOverlay" class="modal-overlay options-overlay" hidden>
+  <div class="modal options-modal">
+    <button type="button" class="options-item" id="shootMoreGuideBtn">Guide me through this shoot</button>
+    <div class="menu-divider" aria-hidden="true"></div>
+    <button type="button" class="options-item" id="shootMoreShareBtn">Share as PDF</button>
+    <div class="menu-divider" aria-hidden="true" id="shootMoreShareDivider"></div>
+    <button type="button" class="options-item options-delete" id="shootMoreDeleteBtn">Delete shoot</button>
+    <div class="menu-divider" aria-hidden="true" id="shootMoreDeleteDivider"></div>
+    <button type="button" class="options-item options-cancel" id="shootMoreCancelBtn">Go back</button>
+  </div>
+</div>
+
+<!-- ============ EXPAND FIELD MODAL ============ -->
+<div id="expandFieldOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal">
+    <div class="modal-header">
+      <h2 id="expandFieldTitle"></h2>
+      <button class="icon-btn close-btn" id="expandFieldCloseBtn"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <textarea id="expandFieldTextarea" rows="12"></textarea>
+    <button type="button" class="primary" id="expandFieldOkBtn">Okay</button>
+  </div>
+</div>
+

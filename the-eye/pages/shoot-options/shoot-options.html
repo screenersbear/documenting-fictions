@@ -1,0 +1,45 @@
+<!-- A shoot's Options sheet. -->
+<!-- ============ SHOOT OPTIONS ============ -->
+<div id="shootOptionsOverlay" class="modal-overlay options-overlay" hidden>
+  <div class="modal options-modal options-modal-slider rounded-modal">
+    <div class="options-pane-track" id="shootOptionsPaneTrack">
+      <div class="options-pane">
+        <!-- Alphabetical, with Delete and Cancel pinned last (see the app
+             menu's pane for the same reasoning). -->
+        <!-- "Add to project" keeps its slot when it relabels to "Project:
+             <name>" for a shoot that's already in one, same as Archive/
+             Unarchive keeps its slot. -->
+        <button type="button" class="options-item" id="projectShootOptionBtn">Add to project</button>
+        <button type="button" class="options-item" id="archiveShootOptionBtn">Archive shoot</button>
+        <button type="button" class="options-item" id="changeDeadlineOptionBtn">Change deadline</button>
+        <button type="button" class="options-item" id="changeProjectPhotoOptionBtn">Change cover photo</button>
+        <button type="button" class="options-item" id="changeTitleOptionBtn">Change shoot title</button>
+        <button type="button" class="options-item" id="changeStatusOptionBtn">Change status</button>
+        <button type="button" class="options-item" id="shareShootOptionBtn">Share as PDF</button>
+        <button type="button" class="options-item options-delete" id="deleteShootOptionBtn">Delete</button>
+        <button type="button" class="options-item options-cancel" id="shootOptionsCancelBtn">Cancel</button>
+      </div>
+      <div class="options-pane">
+        <button type="button" class="options-item options-back" id="statusOptionsBackBtn">&larr; Back</button>
+        <div id="statusOptionsList"></div>
+      </div>
+      <div class="options-pane">
+        <button type="button" class="options-item options-back" id="titleOptionsBackBtn">&larr; Back</button>
+        <input type="text" id="shootTitleRenameInput" class="options-rename-input" maxlength="120" placeholder="Name for the shoot" />
+        <button type="button" class="options-item primary" id="saveTitleOptionBtn">Save</button>
+      </div>
+      <div class="options-pane">
+        <button type="button" class="options-item options-back" id="projectPhotoBackBtn">&larr; Back</button>
+        <button type="button" id="addProjectPhotoFromDeviceBtn" class="primary small-btn">+ Add from phone</button>
+        <input type="file" id="projectPhotoFileInput" accept="image/*" hidden />
+        <div id="projectPhotoPickerGrid" class="moodboard-grid project-photo-picker-grid"></div>
+      </div>
+      <div class="options-pane">
+        <button type="button" class="options-item options-back" id="deadlineOptionsBackBtn">&larr; Back</button>
+        <input type="date" id="shootDeadlineRenameInput" class="options-rename-input" />
+        <button type="button" class="options-item primary" id="saveDeadlineOptionBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+

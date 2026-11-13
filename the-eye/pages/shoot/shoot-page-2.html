@@ -1,0 +1,180 @@
+<!-- A shoot's page, second part: direction, visuals and what follows (it starts in shoot-page.html). -->
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
+      <h3 class="shoot-section-heading status-group-heading heading-navy" id="directionHeading">Direction</h3>
+      <div id="directionBody">
+        <div id="formSection2">
+          <label>Shoot goals
+            <textarea id="shootGoals" rows="6" maxlength="1000" placeholder="What this shoot needs to accomplish" readonly></textarea>
+          </label>
+
+          <div id="videoDeliverablesBlock" hidden>
+            <label>Deliverables
+              <textarea id="shootDeliverables" rows="3" maxlength="1000" placeholder="How many videos and how long each runs, e.g. 1 x 60s brand film, 3 x 15s cutdowns" readonly></textarea>
+            </label>
+            <div class="aspect-ratio-field">
+              <span class="aspect-ratio-field-label">Aspect ratios</span>
+              <div class="tag-group" id="shootAspectRatios">
+                <label class="tag-check"><input type="checkbox" value="16:9" /> 16:9</label>
+                <label class="tag-check"><input type="checkbox" value="9:16" /> 9:16</label>
+                <label class="tag-check"><input type="checkbox" value="1:1" /> 1:1</label>
+                <label class="tag-check"><input type="checkbox" value="4:5" /> 4:5</label>
+              </div>
+            </div>
+            <label>Where it's going
+              <input type="text" id="shootDeliverableDestinations" maxlength="200" placeholder="Reels, YouTube, client website..." />
+            </label>
+          </div>
+
+          <!-- The concept helper (see CONCEPT_FLOWS in app.js); The idea
+               slide of the new-shoot guide borrows it from here. -->
+          <button type="button" class="primary small-btn" id="conceptHelperBtn">Need to think it through?</button>
+
+          <label id="shootPremiseField"><span id="shootPremiseLabelText">Concept</span>
+            <textarea id="shootPremise" rows="6" maxlength="300" placeholder="visual narrative or message" readonly></textarea>
+          </label>
+
+          <div id="narrativeFieldsBlock">
+            <label>Character/<wbr>Personality
+              <textarea id="shootCharacter" rows="6" maxlength="1000" placeholder="Who the talent is being, even loosely" readonly></textarea>
+            </label>
+
+            <label>World-building notes
+              <textarea id="shootWorldNotes" rows="6" maxlength="1000" placeholder="Setting, implied time or backstory, what's just happened or about to" readonly></textarea>
+            </label>
+          </div>
+
+          <label id="shootElevatorPitchField">Elevator pitch
+            <textarea id="shootElevatorPitch" rows="2" maxlength="150" placeholder="One line description of your story." readonly></textarea>
+          </label>
+        </div>
+      </div>
+
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
+      <h3 class="shoot-section-heading status-group-heading heading-yellow" id="visualsHeading">Visuals</h3>
+      <div id="visualsBody">
+        <div class="form-section-label-row">
+          <button type="button" class="manage-link inline-manage-link" id="manageFrameworksBtn">Manage</button>
+        </div>
+        <div id="frameworkTagsContainerEarly"></div>
+
+        <div class="references-block">
+          <label class="beats-label">References</label>
+          <p class="field-hint">Links to webpages, articles, YouTube videos, other inspiration</p>
+          <div id="referencesList" class="references-list"></div>
+          <button type="button" id="addReferenceBtn" class="primary small-btn">+ Add link</button>
+        </div>
+
+        <div class="moodboard-section">
+          <span class="moodboard-label" id="moodboardSectionLabel">Mood board</span>
+          <button type="button" id="addMoodboardPhotos" class="primary small-btn">+ Add photos</button>
+          <button type="button" id="importRefBoardBtn" class="primary small-btn">+ Import board</button>
+          <input type="file" id="moodboardFileInput" accept="image/*" multiple hidden />
+          <div id="refBoards" class="ref-boards" hidden></div>
+          <div id="moodboardGrid" class="moodboard-grid"></div>
+          <label class="checkbox-row" id="moodboardCompleteRow"><input type="checkbox" id="shootMoodboardComplete" /> <span id="moodboardCompleteLabel">Mood board complete or not required?</span></label>
+        </div>
+
+        <div id="frameworkTagsContainer"></div>
+        <div class="lighting-setups-section" id="lightingSetupsSection">
+          <h4 class="subsection-heading" id="lightingSetupsHeading">Lighting setups</h4>
+          <div id="lightingSetupsBody">
+            <p class="field-hint">Log your specific setups for reference on the day of, as well as to review what worked in each image.</p>
+            <div id="lightingSetupsItems" class="lighting-setups-list"></div>
+            <button type="button" id="addLightingSetupBtn" class="primary small-btn">+ Add lighting setup</button>
+          </div>
+        </div>
+      </div>
+
+      <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
+      <h3 class="shoot-section-heading status-group-heading heading-navy" id="shotListHeading">Shot list</h3>
+      <div id="shotListBody">
+        <div id="shotListItems" class="shot-list-items"></div>
+        <button type="button" id="addShotBtn" class="primary small-btn">+ Add shot</button>
+        <label>Shooting notes
+          <textarea id="shootShootingNotes" rows="6" maxlength="6000" placeholder="Anything to remember on the day: settings, timings, things to try" readonly></textarea>
+        </label>
+        <label>Directions for talent
+          <textarea id="shootTalentDirections" rows="6" maxlength="1000" placeholder="notes, reminders, directions for the day of the shoot..." readonly></textarea>
+        </label>
+        <label id="shootTeamDirectionsField">Directions for team
+          <textarea id="shootTeamDirections" rows="6" maxlength="1000" placeholder="notes, reminders, directions for the day of the shoot..." readonly></textarea>
+        </label>
+      </div>
+
+      <div id="postShootContent" hidden>
+        <svg class="folder-tab-deco" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path class="folder-tab-fill" d="M0,4 L192,4 L208,26 L400,26 L400,0 L0,0 Z"/><path class="folder-tab-line" d="M0,4 L192,4 L208,26 L400,26"/></svg>
+        <h3 class="shoot-section-heading status-group-heading heading-yellow" id="postShootHeading">Reflection</h3>
+        <div id="postShootBody">
+          <!-- The reflection helper (see REFLECTION_FLOWS in app.js). -->
+          <button type="button" class="primary small-btn" id="reflectHelperBtn">Need help reflecting?</button>
+          <label>What went right
+            <textarea id="shootWentRight" rows="3" maxlength="4000" readonly></textarea>
+          </label>
+          <label>What could've gone better
+            <textarea id="shootCouldBeBetter" rows="3" maxlength="4000" readonly></textarea>
+          </label>
+          <label>Lessons for next time
+            <textarea id="shootLessonsLearned" rows="3" maxlength="4000" readonly></textarea>
+          </label>
+
+          <div class="moodboard-section" id="finalImagesSection">
+            <span class="moodboard-label">Final images</span>
+            <button type="button" id="addFinalPhotos" class="primary small-btn">+ Add photos</button>
+            <input type="file" id="finalImagesFileInput" accept="image/*" multiple hidden />
+            <div id="finalImagesGrid" class="moodboard-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="plain-delete-btn pre-save-divider" id="deleteShootBtn" hidden>Delete shoot</button>
+      <div class="modal-actions post-shoot-divider">
+        <button type="button" class="primary" id="unarchiveShootBtn" hidden>Unarchive</button>
+        <button type="button" class="primary" id="saveShootBtn">Save</button>
+        <button type="button" class="complete-shoot-btn" id="completeShootBtn" hidden>Complete Shoot</button>
+      </div>
+
+      <!-- New-shoot planning wizard. Inside the form on purpose: each slide
+           borrows the real field blocks from the page above (see
+           SHOOT_WIZARD_STEPS in app.js), so the form's autosave listeners and
+           #shootForm field styles keep working on them. Last in the form so
+           first-match lookups (the Save bar's .modal-actions) still find the
+           page's own elements first. Every button is type="button": a
+           submit-type one would be "clicked" by Enter in any text field. -->
+      <div id="shootWizard" hidden>
+        <div id="shootWizardCard" role="dialog" aria-modal="true" aria-labelledby="shootWizardTitle" tabindex="-1">
+          <div class="shoot-wizard-head">
+            <p class="mi-sub" id="shootWizardStep"></p>
+            <h2 id="shootWizardTitle"></h2>
+            <p id="shootWizardHint"></p>
+          </div>
+          <div id="shootWizardBody"></div>
+          <div class="shoot-wizard-actions">
+            <button type="button" class="secondary" id="shootWizardBackBtn">Back</button>
+            <button type="button" class="primary" id="shootWizardNextBtn">Next</button>
+          </div>
+          <div class="shoot-tour-skip-row" id="shootWizardExitRow">
+            <button type="button" class="secondary journal-block-btn" id="shootWizardExitBtn">Skip to shoot page</button>
+          </div>
+          <!-- First slide only (see renderShootWizardChrome); the same small
+               underlined link look as the Visuals "Manage" link. -->
+          <button type="button" class="manage-link" id="shootWizardDontShowBtn" hidden>Don't show again</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="nb-turn-layer" aria-hidden="true"></div>
+  <div class="nb-page-foot">
+    <button type="button" class="nb-page-step" id="nbPagePrev" aria-label="Previous page"></button>
+    <span id="nbPageFoot"></span>
+    <button type="button" class="nb-page-step" id="nbPageNext" aria-label="Next page"></button>
+  </div>
+  <div class="nb-screen-tabs nb-screen-tabs-shoot"><button type="button" class="y" data-view="overview"><span>Overview</span></button><button type="button" class="n" data-view="shoots"><span>Shoots</span></button><button type="button" class="y" data-view="journal"><span>Weekly</span></button><button type="button" class="n" data-view="archive"><span>Archive</span></button><button type="button" class="y" data-view="stats"><span>Stats</span></button></div>
+  <nav class="nb-shoot-bar" aria-label="This shoot">
+    <button type="button" class="nb-tool" id="nbBarBack" aria-label="Back"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button type="button" class="nb-tool" id="nbBarShootMode" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Shoot mode</span></button>
+    <button type="button" class="nb-tool" id="nbBarComplete" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Complete</span></button>
+    <button type="button" class="nb-tool" id="nbBarUnarchive" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span>Unarchive</span></button>
+    <button type="button" class="nb-tool" id="nbBarMore" aria-label="More"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+  </nav>
+</div>
+
