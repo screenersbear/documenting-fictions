@@ -22,3 +22,8 @@ Keep every app (the shelf, Ref, The Eye, Contact Sheet, Overthoughts) organized 
 5. No file over 300 lines. When a file gets near 300, split it by job. Third-party files (`lib/`, `ml/`, `vendor/`, `*.min.js`) aren't ours and don't count.
 6. Before writing anything new, check if it already exists (in this app, in `shared/`, or in another notebook) and use that instead of writing a second copy.
 7. Moving code around never changes how an app works: same screens, buttons, words, look and saved data. Check with `npm run test:quick` and in the browser before saying it's done.
+
+## How it looks (Starky, 2026-11-13)
+
+The look of every app is in `DESIGN.md`, the STKY design rulebook. Read it before any change you can see. Follow its **Live**
+rules; build its **Decided** ones only when Starky asks to bring an app up to the rulebook; don't build **Proposed** ones.
