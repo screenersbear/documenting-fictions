@@ -101,6 +101,9 @@ button { font: inherit; color: inherit; }
 html.ios-nudge, html.ios-hold { overflow-x: clip; overflow-y: visible; }
 html.ios-nudge body, html.ios-hold body { height: auto; min-height: calc(var(--screen-h, 100vh) + 160px); overflow-x: clip; overflow-y: visible; }
 html.is-short .shelf-bar { bottom: calc(3px + max(10px, calc(var(--safe-b) - var(--short-by, 0px)))); }
+/* Installed, the bar shows once iOS has its height right (home.js adds
+   .settled), so it never shows high and then drops. */
+@media (display-mode: standalone) { html:not(.settled) .shelf-bar { opacity: 0; pointer-events: none; } }
 
 .sheet-dim { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-end; justify-content: center; background: rgba(51, 64, 69, 0); transition: background .2s; }
 .sheet-dim.in { background: rgba(51, 64, 69, .28); }

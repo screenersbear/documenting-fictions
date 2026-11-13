@@ -7191,6 +7191,10 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 /* Short on an iPhone (see measureScreenGap), iOS is made to measure again
    (app.js nudgeShortScreen): for a moment the page is taller than the screen. */
 :root.nb-nudge body { min-height: calc(100vh + 160px); }
+:root.nb-hold body { min-height: calc(100vh + 1px); }
+/* Installed, the navigator and the sun show once iOS has its height right
+   (app.js adds .settled), so they never show high and then drop. */
+@media (display-mode: standalone) { :root:not(.settled) :is(.tabbar, .nb-sun) { visibility: hidden; } }
 
 /* ======================================================================
    Archivo Black capitals over Inter, under a band of colour (user, 11-12)

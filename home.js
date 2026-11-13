@@ -65,6 +65,16 @@
   const shelf = document.getElementById('shelf');
   const stage = document.getElementById('stage');
   const bar = document.getElementById('shelfBar');
+  // Installed on an iPhone, iOS can open the page a status bar short at the
+  // bottom and put it right a moment later (see fitScreen below). The books
+  // are placed from the real screen, known from the first moment, so they
+  // don't jump when it does.
+  const root = document.documentElement;
+  const iPhoneApp = /iPhone|iPod/.test(navigator.userAgent) && (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches);
+  const screenH = () => {
+    if (!iPhoneApp) return window.innerHeight;
+    return Math.abs(window.innerWidth - screen.width) < 2 ? screen.height : screen.width;
+  };
   const logoBtn = document.getElementById('logoBtn');
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -102,7 +112,7 @@
   // ---------- Size ----------
   let W = 242;
   function size() {
-    const vw = window.innerWidth, vh = window.innerHeight;
+    const vw = window.innerWidth, vh = screenH();
     // Zoomed out a little from the first shelf (vw * 0.62, 300 at most), so the
     // wider ring below still shows all four books at once.
     W = Math.round(Math.max(130, Math.min(vw * SIZE, (vh - 240) / 1.36 / 1.1, MAX_W)));
@@ -112,7 +122,7 @@
     // over the middle of the screen, its foot well clear of the bar. The
     // camera's eye moves down with it, so the books are seen from the same
     // height as before.
-    const barTop = vh - bar.getBoundingClientRect().top;
+    const barTop = window.innerHeight - bar.getBoundingClientRect().top; // from the laid-out bottom, where the bar is held
     const y = Math.max(vh * 0.4, Math.min(vh * 0.64, vh - barTop - 44 - W * 0.68));
     stage.style.setProperty('--y', `${y.toFixed(1)}px`);
     stage.style.perspectiveOrigin = `50% ${(y - vh * 0.2).toFixed(1)}px`;
@@ -590,9 +600,8 @@
   // film roll then sat that much higher than the bar's icon in the notebooks.
   // Put right the notebooks' way (ref/js/ui.js): iOS is made to measure again
   // by making the page a moment taller and scrolling a pixel and back. If it
-  // stays short, the bar comes down by that much less instead.
-  const root = document.documentElement;
-  const iPhoneApp = /iPhone|iPod/.test(navigator.userAgent) && (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches);
+  // stays short, the bar comes down by that much less instead. The bar waits
+  // unseen until then (html.settled), so it never shows high and drops.
   let probe = null;
   // How far short of the screen's real bottom iOS has its bottom edge, in px (0 when it's right).
   function screenGap() {
@@ -618,6 +627,7 @@
   async function fitScreen() {
     if (nudging) return;
     nudging = true;
+    if (screenGap()) root.classList.remove('settled'); // short again (coming back): out of sight while it's put right
     for (let i = 0; i < 3 && screenGap(); i++) {
       root.classList.add('ios-nudge');
       await pause(30);
@@ -649,7 +659,10 @@
     nudging = false;
     size();
     render();
+    root.classList.add('settled');
   }
+  if (!iPhoneApp) root.classList.add('settled');
+  else setTimeout(() => root.classList.add('settled'), 3500); // whatever happens, it shows
   if (iPhoneApp) {
     let soonTimer = 0; // load, pageshow and coming back can all land together
     const soon = (ms) => { clearTimeout(soonTimer); soonTimer = setTimeout(fitScreen, ms); };

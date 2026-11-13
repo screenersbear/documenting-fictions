@@ -21798,6 +21798,11 @@
     // page, and it waits out a swipe or a jump to a saved place.
     let nudgeRestUntil = 0; // after a round that didn't take, touches leave it be this long
     let nudgeWaitTimer = 0;
+    // Installed, the navigator and the sun show once iOS has its height right
+    // (:root.settled in style.css), so they never show high and then drop.
+    const settle = () => document.documentElement.classList.add('settled');
+    if (!document.documentElement.classList.contains('nb-installed')) settle();
+    else setTimeout(settle, 3500); // whatever happens, they show
     function nudgeShortScreen(tries = 3) {
       if (nudging || !tries || !screenShortHeight) return;
       const field = document.activeElement;
@@ -21812,6 +21817,13 @@
       nudging = true;
       const root = document.documentElement;
       root.classList.add('nb-nudge');
+      // The page grows by 160px however long it already is. A long page only
+      // given a min-height didn't change at all, so iOS never measured again
+      // and the navigator stayed high (user, 11-12).
+      const grow = document.createElement('div');
+      grow.setAttribute('aria-hidden', 'true');
+      grow.style.cssText = 'height: 160px; pointer-events: none;';
+      document.body.appendChild(grow);
       setTimeout(() => {
         const y = window.scrollY;
         // Toward the side with room: at the foot of a long page there's none below.
@@ -21822,17 +21834,54 @@
           if (Math.abs(window.scrollY - to) < 1.5) window.scrollTo(0, y);
           setTimeout(() => {
             root.classList.remove('nb-nudge');
+            grow.remove();
             setTimeout(() => {
               nudging = false;
               settleScreenGap();
-              if (tries > 1) nudgeShortScreen(tries - 1);
-              else if (screenShortHeight) nudgeRestUntil = performance.now() + 5000;
+              if (!screenShortHeight) settle();
+              else if (tries > 1) nudgeShortScreen(tries - 1);
+              else holdScreen();
             }, 200);
           }, 120);
         }, 40);
       }, 30);
     }
-    const settleAndNudge = () => { settleScreenGap(); nudgeShortScreen(); };
+    // Still short after the nudges: as in Ref, iOS can fall short again the
+    // moment the page can't scroll, so it's left a pixel taller than the
+    // screen (:root.nb-hold), if that's what keeps it right.
+    function holdScreen() {
+      const root = document.documentElement;
+      nudging = true;
+      root.classList.add('nb-hold');
+      setTimeout(() => {
+        const y = window.scrollY;
+        const to = y > 0 ? y - 1 : y + 1;
+        window.scrollTo(0, to);
+        setTimeout(() => {
+          if (Math.abs(window.scrollY - to) < 1.5) window.scrollTo(0, y);
+          setTimeout(() => {
+            nudging = false;
+            settleScreenGap();
+            if (screenShortHeight) {
+              root.classList.remove('nb-hold');
+              nudgeRestUntil = performance.now() + 5000;
+            }
+            settle();
+          }, 200);
+        }, 60);
+      }, 40);
+    }
+    const settleAndNudge = () => {
+      settleScreenGap();
+      if (!screenShortHeight) { settle(); return; }
+      // Short again (coming back): out of sight while it's put right, and
+      // back in sight soon whatever happens (a nudge can wait on a popup).
+      if (!nudging) {
+        document.documentElement.classList.remove('settled');
+        setTimeout(settle, 2500);
+      }
+      nudgeShortScreen();
+    };
     onPageLetGo = settleAndNudge;
     // A launching app can report its height late, and a reading skipped for
     // the keyboard is due once it's gone.
