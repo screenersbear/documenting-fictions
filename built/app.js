@@ -42,9 +42,9 @@ window.ShelfColors = {
     },
     {
       id: 'the-eye', name: 'The Eye', short: 'The Eye', line: 'Plan and run your shoots', key: 'df-app-color', color: 'mango',
-      colors: ['mango', 'orange', 'berry', 'fern', 'ocean', 'ink'], mark: MARKS.eye,
+      colors: ['mango', 'orange', 'berry', 'fern', 'ocean', 'leaf', 'ink'], mark: MARKS.eye,
       block: (c) => `the-eye/art/df-${c}-block.webp`,
-      tabs: [['Overview', 4.4, 18.2, .1, .3, true, 'overview'], ['Shoots', 23.3, 18.2, .105, .15, false, 'shoots'], ['Weekly', 42.2, 18.2, .11, 0, true, 'journal'], ['Archive', 61.5, 18.2, .115, -.15, false, 'archive'], ['Stats', 80.4, 18.2, .12, -.3, true, 'stats']],
+      tabs: [['Overview', 4.4, 18.2, .1, .3, true, 'overview'], ['Shoots', 23.3, 18.2, .105, .15, false, 'shoots'], ['Reflections', 42.2, 18.2, .11, 0, true, 'journal'], ['Archive', 61.5, 18.2, .115, -.15, false, 'archive'], ['Stats', 80.4, 18.2, .12, -.3, true, 'stats']],
     },
     {
       id: 'contact-sheet', name: 'Contact Sheet', short: 'Contact Sheet', line: 'Lay out carousels and Stories', key: 'contact-sheet-book', color: 'orange',

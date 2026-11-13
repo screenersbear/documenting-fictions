@@ -106,12 +106,8 @@
 :is(#appMenuOverlay, #sunMenuOverlay) .opt-wide.opt-danger { border-color: var(--text); background: var(--text); color: #fff; }
 :is(#appMenuOverlay, #sunMenuOverlay) .opt-hint { display: block; margin: 6px 0 0; font-size: 17px; line-height: 1.3; color: var(--dim); }
 
-/* The sun's Options, as ref's: the covers to pick from, the sticker kinds,
-   and a three-way start choice whose parts fit their words. */
-#sunMenuOverlay .opt-colors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px; margin-top: 10px; }
-#sunMenuOverlay .opt-color { display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 0; padding: 8px 0; border: none; border-radius: 0; background: none; color: var(--text); font-size: 17px; }
-#sunMenuOverlay .opt-book { width: 48px; height: 65px; border-radius: 0 5px 5px 0; background: center / 100% 100% no-repeat; }
-#sunMenuOverlay .opt-color[aria-pressed="true"] .opt-book { outline: 1.5px solid var(--text); outline-offset: 3px; }
+/* The sun's Options, as ref's: the sticker kinds, and a three-way start
+   choice whose parts fit their words (the colours: options-sheet.css). */
 #sunMenuOverlay .opt-seg-fit button { flex: 1 1 auto; height: auto; min-height: 38px; padding: 3px 8px; white-space: normal; line-height: 1.05; }
 #sunMenuOverlay .opt-sticker-kinds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 #sunMenuOverlay .opt-sticker-kind { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; min-height: 0; padding: 14px 0 10px; border: 2px solid var(--opt-ink); border-radius: 0; background: #fff; color: var(--text); font-size: 18px; }

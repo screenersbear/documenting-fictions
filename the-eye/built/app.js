@@ -5459,7 +5459,7 @@ window.EyeParts.addDefaultState = function addDefaultState(ed) {
     ];
   }
 
-  const APP_COLORS = [['mango', 'Mango'], ['orange', 'Orange'], ['berry', 'Berry'], ['fern', 'Fern'], ['ocean', 'Ocean'], ['ink', 'Black']]; ed.APP_COLORS = APP_COLORS;
+  const APP_COLORS = [['mango', 'Mango'], ['orange', 'Orange'], ['berry', 'Berry'], ['fern', 'Fern'], ['ocean', 'Ocean'], ['leaf', 'Leaf'], ['ink', 'Black']]; ed.APP_COLORS = APP_COLORS;
   const APP_COLOR_KEY = 'df-app-color'; // also read in index.html, before the first paint
 
   function firstAppColor() {
@@ -6448,7 +6448,7 @@ window.EyeParts.addPhotoStore = function addPhotoStore(ed) {
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addAppMenuStorageUsage = function addAppMenuStorageUsage(ed) {
-  Object.assign(ed, { categorizeStorageKey, hydratePhotos, carryPhotosOver, migrateInlinePhotos });
+  Object.assign(ed, { categorizeStorageKey, hydratePhotos, carryPhotosOver, migrateInlinePhotos, formatStorageBytes });
   // ---------- Storage usage (App menu) ----------
   // Every image key in the store matches exactly one of these suffix
   // patterns except mood board images, which were the original, un-suffixed
@@ -10385,7 +10385,7 @@ window.EyeParts.addShootOverthoughtsNotes = function addShootOverthoughtsNotes(e
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootPastTalents = function addShootPastTalents(ed) {
-  Object.assign(ed, { refreshPastTalentsSelect });
+  Object.assign(ed, { refreshPastTalentsSelect, openManageTalentsModal });
   // ---------- Talent popup (name/handles/photo + a "returning talent" picker) ----------
   // talentModalTargetIdx: index into currentTalents being edited, or null
   // while adding a new one. talentModalDraft holds the in-progress edits —
@@ -10434,7 +10434,7 @@ window.EyeParts.addShootPastTalents = function addShootPastTalents(ed) {
     const select = document.getElementById('pastTalentsSelect');
     select.innerHTML = '<option value="">Select a past talent…</option>'
       + ed.pastTalentSamples.map((t, i) => `<option value="${i}">${ed.escapeHtml(t.name)}</option>`).join('')
-      + '<option value="__manage__">Manage saved…</option>';
+      + '<option value="__manage__">Edit saved talent…</option>';
   }
 
   document.getElementById('pastTalentsSelect').addEventListener('change', (e) => {
@@ -10750,7 +10750,7 @@ window.EyeParts.addShootTeam = function addShootTeam(ed) {
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootTeamMemberPopup = function addShootTeamMemberPopup(ed) {
-  Object.assign(ed, { openTeamMemberModal, getTeamRequiredChoice, setTeamRequiredChoice });
+  Object.assign(ed, { openTeamMemberModal, getTeamRequiredChoice, setTeamRequiredChoice, openManageTeamMembersModal });
   // ---------- Team member popup (name/role/handle + a "returning member" picker) ----------
   // The member being edited (null when adding one) — the member itself, not
   // its place in the list: an Undo of a removal can put someone back in
@@ -10802,7 +10802,7 @@ window.EyeParts.addShootTeamMemberPopup = function addShootTeamMemberPopup(ed) {
     const select = document.getElementById('pastTeamMembersSelect');
     select.innerHTML = '<option value="">Select a past team member…</option>'
       + pastTeamMemberSamples.map((tm, i) => `<option value="${i}">${ed.escapeHtml(tm.name)}</option>`).join('')
-      + '<option value="__manage__">Manage saved…</option>';
+      + '<option value="__manage__">Edit saved team…</option>';
   }
 
   document.getElementById('pastTeamMembersSelect').addEventListener('change', (e) => {
@@ -11678,7 +11678,7 @@ window.EyeParts.addShootLightingSuggestions = function addShootLightingSuggestio
     }
     // Manage leads the list, and every match is listed (the box scrolls past
     // its max-height) rather than a capped handful with Manage buried last.
-    box.innerHTML = '<button type="button" class="lighting-setup-suggestion lighting-setup-suggestion-manage">Manage saved…</button>'
+    box.innerHTML = '<button type="button" class="lighting-setup-suggestion lighting-setup-suggestion-manage">Edit saved lighting…</button>'
       + matches.map((item, i) => `
       <button type="button" class="lighting-setup-suggestion" data-idx="${idx}" data-match="${i}">${ed.escapeHtml(item.name)}</button>
     `).join('');
@@ -12083,7 +12083,7 @@ window.EyeParts.addShootLighting = function addShootLighting(ed) {
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootLocation = function addShootLocation(ed) {
-  Object.assign(ed, { updateLocationBtnDisplay });
+  Object.assign(ed, { updateLocationBtnDisplay, openManageLocationsModal });
   // ---------- Location (popup with name/street/city/zip/country + past locations) ----------
   ed.currentShootLocation = { name: '', street: '', city: '', state: '', zip: '', country: '' };
   ed.pastLocationSamples = [];
@@ -12161,7 +12161,7 @@ window.EyeParts.addShootLocation = function addShootLocation(ed) {
     const select = document.getElementById('pastLocationsSelect');
     select.innerHTML = '<option value="">Select a past location…</option>'
       + ed.pastLocationSamples.map((loc, i) => `<option value="${i}">${ed.escapeHtml(ed.formatLocationDisplay(loc))}</option>`).join('')
-      + '<option value="__manage__">Manage locations…</option>';
+      + '<option value="__manage__">Edit saved locations…</option>';
   }
 
   function openLocationModal() {
@@ -19388,7 +19388,7 @@ window.EyeParts.addPdfAfterExport = function addPdfAfterExport(ed) {
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addAppMenuFrameworks = function addAppMenuFrameworks(ed) {
-  Object.assign(ed, { renderFrameworksList, closeFrameworksModal });
+  Object.assign(ed, { renderFrameworksList, closeFrameworksModal, openFrameworksModal });
   // ---------- Manage Frameworks modal ----------
   const frameworksModalOverlay = document.getElementById('frameworksModalOverlay'); ed.frameworksModalOverlay = frameworksModalOverlay;
   const frameworksBody = document.getElementById('frameworksBody');
@@ -19594,8 +19594,61 @@ window.EyeParts.addModalClose = function addModalClose(ed) {
 };
 ;
 
+// ---- pages/app-menu/look-choices.js ----
+// The notebook's colour and where the app starts: the choices drawn on
+// Options (round 2, 08-options) and on the standalone sun menu, and what a
+// tap on one of them does. Saved in state.presentation, as before.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addAppMenuLookChoices = function addAppMenuLookChoices(ed) {
+  Object.assign(ed, { colorChoicesHtml, startChoicesHtml, pickLookChoice });
+  const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="5 12.5 10 17 19 7"/></svg>';
+  // Inside Documenting Fictions the shelf is the shut notebook, so there's
+  // no starting on it.
+  const START_CHOICES = [['last', 'Where I left off'], ['notebook', 'Notebook'], ['first', 'Overview']]
+    .filter(([key]) => !window.DF_SUITE || key !== 'notebook');
+
+  // A swatch for each colour: the band with its partner's line and half
+  // circle (styles/options-sheet.css draws them), ticked when it's the one.
+  function colorChoicesHtml() {
+    const now = ed.state.presentation.color;
+    return `<div class="opt-colors" role="radiogroup" aria-label="Notebook color">${ed.APP_COLORS.map(([key, name]) => `
+      <button type="button" class="opt-color" role="radio" data-color="${key}" aria-checked="${key === now}">
+        <span class="opt-swatch" data-swatch="${key}"><span class="opt-swatch-line"></span><span class="opt-swatch-sun"></span>${key === now ? `<span class="opt-swatch-tick">${TICK}</span>` : ''}</span>
+        <span class="opt-color-name">${name}</span>
+      </button>`).join('')}</div>`;
+  }
+
+  function startChoicesHtml() {
+    const now = ed.state.presentation.start;
+    return `<div class="opt-seg opt-seg-fit">${START_CHOICES.map(([key, name]) => `
+      <button type="button" data-start="${key}" class="${now === key ? 'active' : ''}" aria-pressed="${now === key}">${name}</button>`).join('')}</div>`;
+  }
+
+  // A tap on a colour or a start: saved, shown, and true; anything else false.
+  // `redraw` puts the choices back with the new one marked.
+  function pickLookChoice(button, redraw) {
+    if (button.dataset.color) {
+      ed.state.presentation.color = button.dataset.color;
+      ed.saveState();
+      ed.applyAppColor(ed.state.presentation.color);
+    } else if (button.dataset.start) {
+      ed.state.presentation.start = button.dataset.start;
+      ed.state.presentation.startPicked = true;
+      ed.saveState();
+    } else {
+      return false;
+    }
+    redraw();
+    return true;
+  }
+};
+;
+
 // ---- pages/app-menu/app-menu.js ----
-// The App menu.
+// Options, the app menu (round 2, 08-options): opening and closing it, the
+// notebook colour and start choices on it (look-choices.js), and how much
+// room the app takes, under Storage usage.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addAppMenu = function addAppMenu(ed) {
@@ -19604,6 +19657,22 @@ window.EyeParts.addAppMenu = function addAppMenu(ed) {
   // One sheet, laid out like ref's Options (user, 11-11): every setting is
   // on it at once, each choice marked where it stands, so nothing slides in.
   const appMenuOverlay = document.getElementById('appMenuOverlay');
+  const colorChoices = document.getElementById('appColorChoices');
+  const startChoices = document.getElementById('appStartChoices');
+
+  function drawLookChoices() {
+    colorChoices.innerHTML = ed.colorChoicesHtml();
+    startChoices.innerHTML = ed.startChoicesHtml();
+  }
+
+  // The storage used, under its row; left empty where the browser can't say.
+  function showStorageUsed() {
+    const hint = document.getElementById('storageUsageHint');
+    if (!(navigator.storage && navigator.storage.estimate)) return;
+    navigator.storage.estimate().then((est) => {
+      if (est && est.usage != null) hint.textContent = ed.formatStorageBytes(est.usage);
+    }).catch(() => {});
+  }
 
   function closeAppMenu() {
     appMenuOverlay.hidden = true;
@@ -19614,6 +19683,8 @@ window.EyeParts.addAppMenu = function addAppMenu(ed) {
     ed.updateNewShootGuideChoice();
     ed.updateDailyReportChoice();
     ed.updateLookTagsChoice();
+    drawLookChoices();
+    showStorageUsed();
     appMenuOverlay.hidden = false;
     appMenuOverlay.querySelector('.opt-sheet-body').scrollTop = 0;
   });
@@ -19625,7 +19696,58 @@ window.EyeParts.addAppMenu = function addAppMenu(ed) {
   document.getElementById('appMenuCancelBtn').addEventListener('click', closeAppMenu);
 
   appMenuOverlay.addEventListener('click', (e) => {
-    if (e.target === appMenuOverlay) closeAppMenu();
+    if (e.target === appMenuOverlay) { closeAppMenu(); return; }
+    const choice = e.target.closest('#appColorChoices button, #appStartChoices button');
+    if (choice) ed.pickLookChoice(choice, drawLookChoices);
+  });
+};
+;
+
+// ---- pages/app-menu/saved-lists.js ----
+// Saved lists, from Options (round 2, 08-options): one row for each list
+// the pickers offer. A row opens that list's own editor (the same one its
+// picker's "Edit saved" opens); closing the editor comes back here.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addAppMenuSavedLists = function addAppMenuSavedLists(ed) {
+  const overlay = document.getElementById('savedListsOverlay');
+  // Each list: how to open its editor, and the editor's own popup.
+  const LISTS = {
+    talent: ['openManageTalentsModal', 'manageTalentsOverlay'],
+    team: ['openManageTeamMembersModal', 'manageTeamMembersOverlay'],
+    locations: ['openManageLocationsModal', 'manageLocationsOverlay'],
+    lighting: ['openManageLightingSetupsModal', 'manageLightingSetupsOverlay'],
+    categories: ['openCategoryVisibilityModal', 'categoryVisibilityOverlay'],
+    frameworks: ['openFrameworksModal', 'frameworksModalOverlay'],
+  };
+
+  // Back to Options.
+  function closeSavedLists() {
+    overlay.hidden = true;
+    document.getElementById('appMenuOverlay').hidden = false;
+  }
+
+  document.getElementById('savedListsBtn').addEventListener('click', () => {
+    document.getElementById('appMenuOverlay').hidden = true;
+    overlay.hidden = false;
+  });
+  document.getElementById('savedListsCloseBtn').addEventListener('click', closeSavedLists);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeSavedLists(); });
+
+  document.getElementById('savedListsRows').addEventListener('click', (e) => {
+    const row = e.target.closest('[data-list]');
+    if (!row) return;
+    const [open, popupId] = LISTS[row.dataset.list];
+    const popup = document.getElementById(popupId);
+    overlay.hidden = true;
+    ed[open]();
+    // However the editor is closed, this list comes back.
+    const watch = new MutationObserver(() => {
+      if (!popup.hidden) return;
+      watch.disconnect();
+      overlay.hidden = false;
+    });
+    watch.observe(popup, { attributes: true, attributeFilter: ['hidden'] });
   });
 };
 ;
@@ -23901,26 +24023,19 @@ window.EyeParts.addSunMenu = function addSunMenu(ed) {
   window.EyeParts.addSunStickerCreases(ed, sun);
   window.EyeParts.addSunCoverStickers(ed, sun);
 
-    // Laid out like ref's Options sheet: the book's color, Stickers (its own
-    // part, as ref's own sheet), and where the app starts. On Stickers and
-    // Remove sticker the X goes one step back, as closing ref's sheet on top.
-    // Inside Documenting Fictions the shelf is the shut notebook, so there's no starting on it.
-    const START_CHOICES = [['last', 'Where I left off'], ['notebook', 'Notebook'], ['first', 'First page']].filter(([key]) => !window.DF_SUITE || key !== 'notebook');
+    // Laid out like Options: the book's colour, Stickers (its own part), and
+    // where the app starts (the same choices as Options, look-choices.js).
+    // On Stickers and Remove sticker the X goes one step back.
     const BACK_TO = { main: null, stickers: 'main', remove: 'stickers' };
     let paneNow = 'main';
     const PANES = {
       main: () => ['Options', `
-        <span class="opt-label">App color</span>
-        <div class="opt-colors">${ed.APP_COLORS.map(([key, name]) => `
-          <button type="button" class="opt-color" data-color="${key}" aria-pressed="${key === ed.state.presentation.color}">
-            <span class="opt-book" style="background-image:url(art/df-${key}-cover.webp)"></span>
-            <span>${name}</span>
-          </button>`).join('')}</div>
+        <span class="opt-label">Notebook color</span>
+        ${ed.colorChoicesHtml()}
         ${window.DF_SUITE ? '' : `<span class="opt-label opt-gap">Stickers</span>
         <button type="button" class="opt-wide" data-pane="stickers">Stickers</button>`}
-        <span class="opt-label opt-gap">Always start in</span>
-        <div class="opt-seg opt-seg-fit">${START_CHOICES.map(([key, name]) => `
-          <button type="button" data-start="${key}" class="${ed.state.presentation.start === key ? 'active' : ''}" aria-pressed="${ed.state.presentation.start === key}">${name}</button>`).join('')}</div>`],
+        <span class="opt-label opt-gap">Start in</span>
+        ${ed.startChoicesHtml()}`],
       stickers: () => ['Stickers', `
         <div class="opt-sticker-kinds">
           <button type="button" class="opt-sticker-kind" data-shape="circle"><span class="opt-shape is-circle"></span><span>Circle</span></button>
@@ -23959,39 +24074,15 @@ window.EyeParts.addSunMenu = function addSunMenu(ed) {
       body.scrollTop = 0;
       overlay.hidden = false;
     });
-    // Inside Documenting Fictions the shelf is the shut book, so App options
-    // opens these (the color and where it starts) itself. (The shelf's
-    // stickers aren't drawn, so they're left out in there.)
-    const lookBtn = document.getElementById('appLookBtn');
-    lookBtn.hidden = !window.DF_SUITE;
-    document.getElementById('appLookLabel').hidden = !window.DF_SUITE;
-    lookBtn.addEventListener('click', () => {
-      document.getElementById('appMenuOverlay').hidden = true;
-      showPane('main');
-      body.scrollTop = 0;
-      overlay.hidden = false;
-    });
     closeBtn.addEventListener('click', stepBack);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) stepBack(); });
 
     body.addEventListener('click', (e) => {
       const hit = e.target.closest('button');
       if (!hit) return;
+      if (ed.pickLookChoice(hit, () => showPane('main'))) return;
       if (hit.dataset.pane) showPane(hit.dataset.pane);
-      else if (hit.dataset.color) {
-        ed.state.presentation.color = hit.dataset.color;
-        ed.saveState();
-        ed.applyAppColor(ed.state.presentation.color);
-        body.querySelectorAll('[data-color]').forEach(b => b.setAttribute('aria-pressed', String(b === hit)));
-      } else if (hit.dataset.start) {
-        ed.state.presentation.start = hit.dataset.start;
-        ed.state.presentation.startPicked = true;
-        ed.saveState();
-        body.querySelectorAll('[data-start]').forEach((b) => {
-          b.classList.toggle('active', b === hit);
-          b.setAttribute('aria-pressed', String(b === hit));
-        });
-      } else if (hit.dataset.shape) {
+      else if (hit.dataset.shape) {
         pendingShape = hit.dataset.shape;
         fileInput.value = '';
         fileInput.click();
@@ -25403,7 +25494,9 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addAppMenuFrameworks(ed);
   window.EyeParts.addAppMenuCategoryVisibility(ed);
   window.EyeParts.addModalClose(ed);
+  window.EyeParts.addAppMenuLookChoices(ed);
   window.EyeParts.addAppMenu(ed);
+  window.EyeParts.addAppMenuSavedLists(ed);
   window.EyeParts.addTour(ed);
   window.EyeParts.addAppMenuOptions(ed);
   window.EyeParts.addAppMenuDeleteAll(ed);

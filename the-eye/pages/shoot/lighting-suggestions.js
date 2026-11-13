@@ -67,7 +67,7 @@ window.EyeParts.addShootLightingSuggestions = function addShootLightingSuggestio
     }
     // Manage leads the list, and every match is listed (the box scrolls past
     // its max-height) rather than a capped handful with Manage buried last.
-    box.innerHTML = '<button type="button" class="lighting-setup-suggestion lighting-setup-suggestion-manage">Manage saved…</button>'
+    box.innerHTML = '<button type="button" class="lighting-setup-suggestion lighting-setup-suggestion-manage">Edit saved lighting…</button>'
       + matches.map((item, i) => `
       <button type="button" class="lighting-setup-suggestion" data-idx="${idx}" data-match="${i}">${ed.escapeHtml(item.name)}</button>
     `).join('');

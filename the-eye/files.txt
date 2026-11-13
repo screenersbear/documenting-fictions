@@ -93,6 +93,7 @@ built/app.css
   styles/not-sure.css
   styles/shoot-mode-dark.css
   styles/shoot-mode-dark-popups.css
+  styles/options-sheet.css
 
 # The screens and popups, in the order they sit in the page. Each piece starts
 # with a line saying what it is, which isn't joined.
@@ -117,6 +118,7 @@ built/markup.js
   pages/projects/add-to-project.html
   pages/sun-menu/sun-menu.html
   pages/app-menu/app-menu.html
+  pages/app-menu/saved-lists.html
   pages/app-menu/delete-all.html
   pages/concept-helper/helper.html
   pages/reflection-helper/helper.html
@@ -287,7 +289,9 @@ built/app.js
   pages/app-menu/frameworks.js
   pages/app-menu/category-visibility.js
   components/modal-close.js
+  pages/app-menu/look-choices.js
   pages/app-menu/app-menu.js
+  pages/app-menu/saved-lists.js
   components/tour.js
   pages/app-menu/options.js
   pages/app-menu/delete-all.js

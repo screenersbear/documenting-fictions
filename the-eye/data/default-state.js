@@ -13,7 +13,7 @@ window.EyeParts.addDefaultState = function addDefaultState(ed) {
     ];
   }
 
-  const APP_COLORS = [['mango', 'Mango'], ['orange', 'Orange'], ['berry', 'Berry'], ['fern', 'Fern'], ['ocean', 'Ocean'], ['ink', 'Black']]; ed.APP_COLORS = APP_COLORS;
+  const APP_COLORS = [['mango', 'Mango'], ['orange', 'Orange'], ['berry', 'Berry'], ['fern', 'Fern'], ['ocean', 'Ocean'], ['leaf', 'Leaf'], ['ink', 'Black']]; ed.APP_COLORS = APP_COLORS;
   const APP_COLOR_KEY = 'df-app-color'; // also read in index.html, before the first paint
 
   function firstAppColor() {

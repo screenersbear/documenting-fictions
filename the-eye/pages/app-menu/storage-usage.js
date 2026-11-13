@@ -2,7 +2,7 @@
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addAppMenuStorageUsage = function addAppMenuStorageUsage(ed) {
-  Object.assign(ed, { categorizeStorageKey, hydratePhotos, carryPhotosOver, migrateInlinePhotos });
+  Object.assign(ed, { categorizeStorageKey, hydratePhotos, carryPhotosOver, migrateInlinePhotos, formatStorageBytes });
   // ---------- Storage usage (App menu) ----------
   // Every image key in the store matches exactly one of these suffix
   // patterns except mood board images, which were the original, un-suffixed

@@ -2,7 +2,7 @@
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootPastTalents = function addShootPastTalents(ed) {
-  Object.assign(ed, { refreshPastTalentsSelect });
+  Object.assign(ed, { refreshPastTalentsSelect, openManageTalentsModal });
   // ---------- Talent popup (name/handles/photo + a "returning talent" picker) ----------
   // talentModalTargetIdx: index into currentTalents being edited, or null
   // while adding a new one. talentModalDraft holds the in-progress edits —
@@ -51,7 +51,7 @@ window.EyeParts.addShootPastTalents = function addShootPastTalents(ed) {
     const select = document.getElementById('pastTalentsSelect');
     select.innerHTML = '<option value="">Select a past talent…</option>'
       + ed.pastTalentSamples.map((t, i) => `<option value="${i}">${ed.escapeHtml(t.name)}</option>`).join('')
-      + '<option value="__manage__">Manage saved…</option>';
+      + '<option value="__manage__">Edit saved talent…</option>';
   }
 
   document.getElementById('pastTalentsSelect').addEventListener('change', (e) => {

@@ -2,7 +2,7 @@
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootTeamMemberPopup = function addShootTeamMemberPopup(ed) {
-  Object.assign(ed, { openTeamMemberModal, getTeamRequiredChoice, setTeamRequiredChoice });
+  Object.assign(ed, { openTeamMemberModal, getTeamRequiredChoice, setTeamRequiredChoice, openManageTeamMembersModal });
   // ---------- Team member popup (name/role/handle + a "returning member" picker) ----------
   // The member being edited (null when adding one) — the member itself, not
   // its place in the list: an Undo of a removal can put someone back in
@@ -54,7 +54,7 @@ window.EyeParts.addShootTeamMemberPopup = function addShootTeamMemberPopup(ed) {
     const select = document.getElementById('pastTeamMembersSelect');
     select.innerHTML = '<option value="">Select a past team member…</option>'
       + pastTeamMemberSamples.map((tm, i) => `<option value="${i}">${ed.escapeHtml(tm.name)}</option>`).join('')
-      + '<option value="__manage__">Manage saved…</option>';
+      + '<option value="__manage__">Edit saved team…</option>';
   }
 
   document.getElementById('pastTeamMembersSelect').addEventListener('change', (e) => {

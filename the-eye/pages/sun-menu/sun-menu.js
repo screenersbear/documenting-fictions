@@ -29,26 +29,19 @@ window.EyeParts.addSunMenu = function addSunMenu(ed) {
   window.EyeParts.addSunStickerCreases(ed, sun);
   window.EyeParts.addSunCoverStickers(ed, sun);
 
-    // Laid out like ref's Options sheet: the book's color, Stickers (its own
-    // part, as ref's own sheet), and where the app starts. On Stickers and
-    // Remove sticker the X goes one step back, as closing ref's sheet on top.
-    // Inside Documenting Fictions the shelf is the shut notebook, so there's no starting on it.
-    const START_CHOICES = [['last', 'Where I left off'], ['notebook', 'Notebook'], ['first', 'First page']].filter(([key]) => !window.DF_SUITE || key !== 'notebook');
+    // Laid out like Options: the book's colour, Stickers (its own part), and
+    // where the app starts (the same choices as Options, look-choices.js).
+    // On Stickers and Remove sticker the X goes one step back.
     const BACK_TO = { main: null, stickers: 'main', remove: 'stickers' };
     let paneNow = 'main';
     const PANES = {
       main: () => ['Options', `
-        <span class="opt-label">App color</span>
-        <div class="opt-colors">${ed.APP_COLORS.map(([key, name]) => `
-          <button type="button" class="opt-color" data-color="${key}" aria-pressed="${key === ed.state.presentation.color}">
-            <span class="opt-book" style="background-image:url(art/df-${key}-cover.webp)"></span>
-            <span>${name}</span>
-          </button>`).join('')}</div>
+        <span class="opt-label">Notebook color</span>
+        ${ed.colorChoicesHtml()}
         ${window.DF_SUITE ? '' : `<span class="opt-label opt-gap">Stickers</span>
         <button type="button" class="opt-wide" data-pane="stickers">Stickers</button>`}
-        <span class="opt-label opt-gap">Always start in</span>
-        <div class="opt-seg opt-seg-fit">${START_CHOICES.map(([key, name]) => `
-          <button type="button" data-start="${key}" class="${ed.state.presentation.start === key ? 'active' : ''}" aria-pressed="${ed.state.presentation.start === key}">${name}</button>`).join('')}</div>`],
+        <span class="opt-label opt-gap">Start in</span>
+        ${ed.startChoicesHtml()}`],
       stickers: () => ['Stickers', `
         <div class="opt-sticker-kinds">
           <button type="button" class="opt-sticker-kind" data-shape="circle"><span class="opt-shape is-circle"></span><span>Circle</span></button>
@@ -87,39 +80,15 @@ window.EyeParts.addSunMenu = function addSunMenu(ed) {
       body.scrollTop = 0;
       overlay.hidden = false;
     });
-    // Inside Documenting Fictions the shelf is the shut book, so App options
-    // opens these (the color and where it starts) itself. (The shelf's
-    // stickers aren't drawn, so they're left out in there.)
-    const lookBtn = document.getElementById('appLookBtn');
-    lookBtn.hidden = !window.DF_SUITE;
-    document.getElementById('appLookLabel').hidden = !window.DF_SUITE;
-    lookBtn.addEventListener('click', () => {
-      document.getElementById('appMenuOverlay').hidden = true;
-      showPane('main');
-      body.scrollTop = 0;
-      overlay.hidden = false;
-    });
     closeBtn.addEventListener('click', stepBack);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) stepBack(); });
 
     body.addEventListener('click', (e) => {
       const hit = e.target.closest('button');
       if (!hit) return;
+      if (ed.pickLookChoice(hit, () => showPane('main'))) return;
       if (hit.dataset.pane) showPane(hit.dataset.pane);
-      else if (hit.dataset.color) {
-        ed.state.presentation.color = hit.dataset.color;
-        ed.saveState();
-        ed.applyAppColor(ed.state.presentation.color);
-        body.querySelectorAll('[data-color]').forEach(b => b.setAttribute('aria-pressed', String(b === hit)));
-      } else if (hit.dataset.start) {
-        ed.state.presentation.start = hit.dataset.start;
-        ed.state.presentation.startPicked = true;
-        ed.saveState();
-        body.querySelectorAll('[data-start]').forEach((b) => {
-          b.classList.toggle('active', b === hit);
-          b.setAttribute('aria-pressed', String(b === hit));
-        });
-      } else if (hit.dataset.shape) {
+      else if (hit.dataset.shape) {
         pendingShape = hit.dataset.shape;
         fileInput.value = '';
         fileInput.click();

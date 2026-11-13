@@ -2,7 +2,7 @@
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootLocation = function addShootLocation(ed) {
-  Object.assign(ed, { updateLocationBtnDisplay });
+  Object.assign(ed, { updateLocationBtnDisplay, openManageLocationsModal });
   // ---------- Location (popup with name/street/city/zip/country + past locations) ----------
   ed.currentShootLocation = { name: '', street: '', city: '', state: '', zip: '', country: '' };
   ed.pastLocationSamples = [];
@@ -80,7 +80,7 @@ window.EyeParts.addShootLocation = function addShootLocation(ed) {
     const select = document.getElementById('pastLocationsSelect');
     select.innerHTML = '<option value="">Select a past location…</option>'
       + ed.pastLocationSamples.map((loc, i) => `<option value="${i}">${ed.escapeHtml(ed.formatLocationDisplay(loc))}</option>`).join('')
-      + '<option value="__manage__">Manage locations…</option>';
+      + '<option value="__manage__">Edit saved locations…</option>';
   }
 
   function openLocationModal() {

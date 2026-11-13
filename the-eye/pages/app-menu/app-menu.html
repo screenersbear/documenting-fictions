@@ -1,16 +1,20 @@
 <!-- The app's Options sheet. -->
-<!-- App options, laid out like ref's Options sheet (user, 11-11): a sheet
-     with its name and an X, then one labelled part for each setting. Only
-     what's this app's own is here; the book's color, stickers and where it
-     starts are on the sun. The ids are the ones app.js has always wired. -->
+<!-- Options (round 2, 08-options): a sheet with its name and an X, then
+     the notebook's colour and where it starts (look-choices.js), the
+     choices as two-way switches, and the rest as rows: You, Backups, Help.
+     The ids are the ones the app has always wired. -->
 <div id="appMenuOverlay" class="modal-overlay options-overlay app-menu-overlay" hidden>
   <div class="modal app-menu-modal opt-sheet" role="dialog" aria-modal="true" aria-labelledby="appMenuTitle">
     <header class="opt-sheet-head">
-      <h2 class="app-menu-header" id="appMenuTitle">App options</h2>
+      <h2 class="app-menu-header" id="appMenuTitle">Options</h2>
       <button type="button" class="icon-btn close-btn opt-close" id="appMenuCancelBtn" aria-label="Close"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </header>
     <div class="opt-sheet-body">
-      <span class="opt-label">Shoot display options</span>
+      <span class="opt-label">Notebook color</span>
+      <div id="appColorChoices"></div>
+      <span class="opt-label opt-gap">Start in</span>
+      <div id="appStartChoices"></div>
+      <span class="opt-label opt-gap">Show shoots by</span>
       <div class="opt-seg">
         <button type="button" id="displayModeTalentBtn">Talent name</button>
         <button type="button" id="displayModeTitleBtn">Shoot title</button>
@@ -30,26 +34,28 @@
         <button type="button" id="lookTagsOffBtn">Hidden</button>
         <button type="button" id="lookTagsOnBtn">On the shoot page</button>
       </div>
-      <!-- Inside Documenting Fictions only (app.js setupSunMenu): the color and where it starts. -->
-      <span class="opt-label opt-gap" id="appLookLabel" hidden>Notebook</span>
-      <button type="button" class="opt-wide" id="appLookBtn" hidden>App color and start</button>
-      <span class="opt-label opt-gap">Photographer</span>
-      <button type="button" class="opt-wide" id="photographerInfoBtn">Photographer information</button>
+      <span class="opt-label opt-gap">You</span>
+      <div class="opt-rows">
+        <button type="button" class="opt-row" id="photographerInfoBtn"><span class="opt-row-words"><span class="opt-row-name">Photographer information</span><span class="opt-row-sub">Prints first on every PDF</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
+        <button type="button" class="opt-row" id="savedListsBtn"><span class="opt-row-words"><span class="opt-row-name">Saved lists</span><span class="opt-row-sub">Talent, team, locations, lighting, categories, frameworks</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
+      </div>
       <span class="opt-label opt-gap">Backups</span>
-      <!-- "Last backup: …" is kept current by renderLastBackupHint in app.js. -->
-      <button type="button" class="opt-wide" id="exportDataBtn">Save a backup</button>
-      <span class="field-hint opt-hint" id="lastBackupHint">Last backup: never</span>
-      <button type="button" class="opt-wide" id="importDataBtn">Restore a backup</button>
-      <span class="opt-label opt-gap">Export</span>
-      <button type="button" class="opt-wide" id="exportPreviousShootsBtn">Export previous shoots</button>
-      <span class="opt-label opt-gap">Storage</span>
-      <button type="button" class="opt-wide" id="storageUsageBtn">Storage usage</button>
+      <!-- "Last backup: ..." is kept current by renderLastBackupHint (backup.js);
+           the storage used is read when the sheet opens (app-menu.js). -->
+      <div class="opt-rows">
+        <button type="button" class="opt-row" id="exportDataBtn"><span class="opt-row-words"><span class="opt-row-name">Save a backup</span><span class="opt-row-sub" id="lastBackupHint">Last backup: never</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
+        <button type="button" class="opt-row" id="importDataBtn"><span class="opt-row-words"><span class="opt-row-name">Restore a backup</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
+        <button type="button" class="opt-row" id="exportPreviousShootsBtn"><span class="opt-row-words"><span class="opt-row-name">Export previous shoots</span><span class="opt-row-sub">One PDF of archived months</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
+        <button type="button" class="opt-row" id="storageUsageBtn"><span class="opt-row-words"><span class="opt-row-name">Storage usage</span><span class="opt-row-sub" id="storageUsageHint"></span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
+      </div>
       <span class="opt-label opt-gap">Help</span>
-      <button type="button" class="opt-wide" id="appTourBtn">How it works</button>
+      <div class="opt-rows">
+        <button type="button" class="opt-row" id="appTourBtn"><span class="opt-row-words"><span class="opt-row-name">How it works</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
+      </div>
       <!-- The one that can't be undone stays last, away from the rest. -->
-      <span class="opt-label opt-gap">Shoot data</span>
-      <button type="button" class="opt-wide opt-danger" id="deleteAllShootDataBtn">Delete all shoot data</button>
+      <div class="opt-rows opt-rows-apart">
+        <button type="button" class="opt-row opt-danger" id="deleteAllShootDataBtn"><span class="opt-row-words"><span class="opt-row-name">Delete all shoot data</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
+      </div>
     </div>
   </div>
 </div>
-

@@ -2,7 +2,7 @@
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addAppMenuFrameworks = function addAppMenuFrameworks(ed) {
-  Object.assign(ed, { renderFrameworksList, closeFrameworksModal });
+  Object.assign(ed, { renderFrameworksList, closeFrameworksModal, openFrameworksModal });
   // ---------- Manage Frameworks modal ----------
   const frameworksModalOverlay = document.getElementById('frameworksModalOverlay'); ed.frameworksModalOverlay = frameworksModalOverlay;
   const frameworksBody = document.getElementById('frameworksBody');

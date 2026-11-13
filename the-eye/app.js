@@ -145,7 +145,9 @@
   window.EyeParts.addAppMenuFrameworks(ed);
   window.EyeParts.addAppMenuCategoryVisibility(ed);
   window.EyeParts.addModalClose(ed);
+  window.EyeParts.addAppMenuLookChoices(ed);
   window.EyeParts.addAppMenu(ed);
+  window.EyeParts.addAppMenuSavedLists(ed);
   window.EyeParts.addTour(ed);
   window.EyeParts.addAppMenuOptions(ed);
   window.EyeParts.addAppMenuDeleteAll(ed);
