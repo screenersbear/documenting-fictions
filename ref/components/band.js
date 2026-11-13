@@ -33,7 +33,7 @@ export function wireBand(view, onAdd) {
   view.querySelector('[data-band-add]')?.addEventListener('click', onAdd);
 }
 
-const BACK = line('<polyline points="15 5 8 12 15 19"/>');
+export const BACK = line('<polyline points="15 5 8 12 15 19"/>');
 const MORE = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>';
 // The short band on a page inside a section (a tag): back, its name on the
 // hairline, and its ... menu (more: that button's name; none for Incoming,

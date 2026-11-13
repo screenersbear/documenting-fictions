@@ -16,7 +16,8 @@ const emit = (tagged = false) => window.dispatchEvent(new CustomEvent('ref-scan'
 let worker = null, running = false, nextId = 1;
 const waiting = new Map();
 const skip = new Set();
-const todo = () => lib.photos.filter((p) => p.tagsV !== VERSION && !skip.has(p.id));
+// A photo whose labels were changed by hand (the viewer's WHAT IS IN IT) keeps them.
+const todo = () => lib.photos.filter((p) => p.tagsV !== VERSION && !p.tagsEdited && !skip.has(p.id));
 function ask(type, bytes) {
   return new Promise((resolve, reject) => {
     const id = nextId++;

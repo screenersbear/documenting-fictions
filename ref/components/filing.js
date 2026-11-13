@@ -17,6 +17,15 @@ export async function newFolder() {
   return f;
 }
 
+// What Ref found in a photo, changed by hand in the viewer: saved, kept
+// from the tagger from now on, and undoable.
+export async function relabel(p, tags) {
+  const before = { tags: p.tags, tagsEdited: p.tagsEdited };
+  await db.patchPhoto(p.id, { tags, tagsEdited: true });
+  await refresh();
+  remember('changing what is in it', () => db.patchPhoto(p.id, before));
+}
+
 // Saves new folders or favorites for some photos, and remembers how to undo it.
 export async function changePhotos(photos, change, label) {
   const before = photos.map((p) => ({ id: p.id, folderIds: p.folderIds, favorite: p.favorite }));
