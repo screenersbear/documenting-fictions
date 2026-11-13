@@ -51,8 +51,9 @@ body { font-family: var(--ui); }
 /* The notebooks button is the suite's: a copy of The Eye on its own has no shelf to go back to. */
 html:not(.df-suite) .band-books { display: none; }
 
-/* 2: headings on the page, and the titles of sheets. */
-:is(.shoot-section-heading, .status-group-heading, .log-week-heading, .stats-page-title, .modal h2, .app-menu-header, .shoot-wizard-head h2, .shoot-mode-review h2):not(#df-x):not(#df-y), :is(#shootModeReviewTitle, #mondayBriefTitle):not(#df-x) {
+/* 2: headings on the page, and the titles of sheets (not on the screens
+   already in the round 2 look: styles/list-head.css, reflections.css). */
+:is(.shoot-section-heading, .status-group-heading, .log-week-heading, .stats-page-title, .modal h2, .app-menu-header, .shoot-wizard-head h2, .shoot-mode-review h2):not(#df-x):not(#df-y):not(#view-shoots *, #view-archive *, #view-journal *, .log-card *), :is(#shootModeReviewTitle, #mondayBriefTitle):not(#df-x) {
   font-family: var(--display) !important; font-weight: 400 !important; font-size: 18px; line-height: 1.25; letter-spacing: .02em !important;
 }
 .shoot-wizard-head h2:not(#df-x):not(#df-y) { font-size: 22px; }

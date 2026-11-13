@@ -1,0 +1,50 @@
+/* Reflections (DESIGN.md 9): a white card a week (radius 12), its title
+   (THIS WEEK) and dates in small capitals, then a row per shoot between
+   hairlines: its cover, its name and day in dim capitals, the lesson in 18px
+   light, and VIEW SHOOT. An entry written by hand sits in its week's card:
+   what it is and when, its words in 16px, its photos (56 square), its tags,
+   then SHARE AS PDF and DELETE. The Monday brief uses the same rows. */
+/* With the lists' ids, to beat the lined paper's #journalList rules. */
+:is(#journalList, #mondayBriefBody) .log-card, #journalList .log-card + .log-card {
+  margin: 12px 0 0; padding: 16px; border: 0; border-radius: 12px; background: #FFFFFF; box-shadow: none; color: var(--text);
+}
+.log-week-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 10px; }
+:is(#journalList, #mondayBriefBody) .log-card .log-week-heading:not(#df-x) {
+  position: static; height: auto; margin: 0; padding: 0; border: 0; background: none; color: var(--text); text-shadow: none;
+  font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+.log-week-meta { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.log-shoot-row { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.log-card > .log-shoot-row:last-child { padding-bottom: 0; }
+.log-thumb { flex: none; }
+.log-thumb .shoot-thumb { position: relative; display: block; width: 36px; height: 46px; border: 0; border-radius: 5px; overflow: hidden; background: #EFEFEA; }
+.log-thumb .shoot-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.log-thumb .shoot-thumb-empty { color: var(--off); opacity: 1; }
+.log-thumb .shoot-thumb-empty svg { width: 16px; height: 16px; }
+.log-shoot-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.log-label { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.log-lesson { font: 300 18px/24px var(--ui); color: var(--text); white-space: normal; }
+.log-lesson-none { color: var(--dim); }
+.log-view-shoot, .journal-entry-act {
+  display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; height: 36px; min-height: 0; margin: -8px 0 -10px -8px; padding: 0 8px;
+  border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--text);
+  font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+}
+.log-view-shoot svg, .journal-entry-act svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.journal-entry-card { margin: 0; padding: 12px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; box-shadow: none; }
+.log-week-head + .journal-entry-card { border-top: 1px solid var(--line); }
+.log-card > .journal-entry-card + .log-shoot-row, .log-card > .journal-entry-card + .journal-entry-card { margin-top: 12px; }
+.journal-entry-words { cursor: pointer; }
+.journal-entry-words .log-label { display: block; }
+.log-card .journal-entry-title { margin: 4px 0 0; font: 500 16px/22px var(--ui); color: var(--text); text-transform: none; letter-spacing: 0; text-shadow: none; }
+.journal-entry-text { margin: 4px 0 8px; font: 400 16px/22px var(--ui); color: var(--text); white-space: pre-wrap; }
+.log-card .journal-entry-images { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; }
+.log-card .journal-entry-images[hidden] { display: none; }
+.log-card .journal-entry-images > * { width: 56px; height: 56px; margin: 0; border-radius: 4px; overflow: hidden; }
+.log-card .journal-entry-images img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+.journal-entry-tags { margin: 8px 0 0; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.journal-entry-tags[hidden] { display: none; }
+.journal-entry-actions { display: flex; gap: 8px; margin: 4px 0 -6px -8px; }
+.journal-entry-act { height: 44px; margin: 0; padding: 0 8px; gap: 6px; font-size: 13px; line-height: 16px; }
+.journal-entry-act-quiet { color: var(--dim); }

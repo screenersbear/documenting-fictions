@@ -1,8 +1,11 @@
-// The Journal's weekly log (a recap it writes itself).
+// Reflections' weekly log (a recap it writes itself): the weeks with a shoot
+// in them, and each week as a card (This week, Last week, else its dates)
+// with a row per shoot: its cover, its name and day, the lesson it left, and
+// View shoot. The Monday brief shows last week's rows too.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addJournalWeeklyLog = function addJournalWeeklyLog(ed) {
-  Object.assign(ed, { weekRangeLabel, computeWeeklyLog, logTakeaways, showLogShootRef, logWeekPaperHtml, wireLogShootRefs, renderLogWeekCard });
+  Object.assign(ed, { shootWeekWindow, weekRangeLabel, computeWeeklyLog, logTakeaways, showLogShootRef, openLogShoot, logShootRowsHtml, wireLogShootRefs, renderWeekCard });
   // ---------- Journal weekly log (auto-generated recap) ----------
   // Fully derived from state.shoots — nothing here is persisted, so editing
   // a shoot's category or lessons-learned later just updates the log the
@@ -18,13 +21,9 @@ window.EyeParts.addJournalWeeklyLog = function addJournalWeeklyLog(ed) {
     return { start, end };
   }
 
+  // "2 to 8 Nov" (row-words.js), the year added when it isn't this one.
   function weekRangeLabel(start, end) {
-    const startMonth = ed.MONTH_NAMES[start.getMonth()].slice(0, 3);
-    const endMonth = ed.MONTH_NAMES[end.getMonth()].slice(0, 3);
-    if (start.getMonth() === end.getMonth()) {
-      return `${startMonth} ${start.getDate()}–${end.getDate()}, ${end.getFullYear()}`;
-    }
-    return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${end.getFullYear()}`;
+    return ed.rowDateRange(ed.formatDate(start), ed.formatDate(end), ed.todayStr());
   }
 
   function computeWeeklyLog() {
@@ -82,8 +81,11 @@ window.EyeParts.addJournalWeeklyLog = function addJournalWeeklyLog(ed) {
 
   document.getElementById('logShootRefViewBtn').addEventListener('click', () => {
     document.getElementById('logShootRefOverlay').hidden = true;
-    const shootId = logShootRefId;
-    if (!shootId) return;
+    if (logShootRefId) openLogShoot(logShootRefId);
+  });
+
+  // A shoot from the log, opened on its Reflection page.
+  function openLogShoot(shootId) {
     const s = ed.state.shoots.find(x => x.id === shootId);
     if (!s) return;
     // Asked from the Monday brief's copy of the week, which would otherwise
@@ -97,60 +99,75 @@ window.EyeParts.addJournalWeeklyLog = function addJournalWeeklyLog(ed) {
     ed.showPostShootContentExpanded();
     ed.showShootPage('postShootHeading');
     ed.updateShootModalTitleFromScroll();
-  });
+  }
 
   document.getElementById('logShootRefOverlay').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) e.currentTarget.hidden = true;
   });
 
-  // A week's page of the Log: its shoots and takeaways on the lined paper.
-  // The Monday brief shows last week's too, under labels of its own (on a
-  // Monday, "this week" is the new one).
-  function logWeekPaperHtml(w, shootsLabel, noTakeawaysText) {
-    const shootsHtml = w.shoots.map(s =>
-      `<li data-shoot-id="${s.id}">${ed.escapeHtml(ed.shootDisplayName(s))} <span class="log-shoot-category">(${ed.escapeHtml(ed.CATEGORY_LABELS[s.category] || 'Uncategorized')})</span></li>`
-    ).join('');
-    const takeawaysHtml = w.takeaways.length
-      // Each takeaway is credited to its shoot inline, so the list still reads
-      // as attributed even before you tap through to confirm which one.
-      ? `<ul class="log-takeaways">${w.takeaways.map(t => {
-          const from = ed.shootDisplayName(ed.state.shoots.find(x => x.id === t.shootId) || {});
-          const credit = from ? `<span class="log-takeaway-source"> --- ${ed.escapeHtml(from)}</span>` : '';
-          return `<li data-shoot-id="${t.shootId}">${ed.escapeHtml(t.text)}${credit}</li>`;
-        }).join('')}</ul>`
-      : `<p class="log-no-takeaways">${noTakeawaysText}</p>`;
-    return `
-      <div class="journal-paper log-paper">
-        <p class="log-section-label">${shootsLabel}</p>
-        <ul class="log-shoots">${shootsHtml}</ul>
-        <p class="log-section-label">Takeaways</p>
-        ${takeawaysHtml}
-      </div>
-    `;
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+  // A week's shoots, a row each: its cover, its name and day, the lesson it
+  // left (one line breaks collapsed, as in logTakeaways) or that there isn't
+  // one yet, and View shoot.
+  function logShootRowsHtml(w) {
+    const today = ed.todayStr();
+    return w.shoots.map((s) => {
+      const lesson = (s.lessonsLearned || '').replace(/\s*\n+\s*/g, ' ').trim();
+      return `
+        <div class="log-shoot-row">
+          <span class="log-thumb">${ed.shootThumbHtml(s)}</span>
+          <div class="log-shoot-body">
+            <span class="log-label">${ed.escapeHtml(ed.metaLine([ed.shootDisplayName(s), ed.rowDate(s.date, today, false)]))}</span>
+            <span class="log-lesson${lesson ? '' : ' log-lesson-none'}">${ed.escapeHtml(lesson || 'No lesson written yet.')}</span>
+            <button type="button" class="log-view-shoot" data-shoot-id="${ed.escapeHtml(s.id)}">View shoot ${CHEVRON}</button>
+          </div>
+        </div>`;
+    }).join('');
   }
 
   function wireLogShootRefs(card) {
-    card.querySelectorAll('.log-shoots li[data-shoot-id], .log-takeaways li[data-shoot-id]').forEach(li => {
-      li.addEventListener('click', () => showLogShootRef(li.dataset.shootId));
+    card.querySelectorAll('.log-view-shoot[data-shoot-id]').forEach(btn => {
+      btn.addEventListener('click', () => openLogShoot(btn.dataset.shootId));
     });
   }
 
-  // One week of the Log, on the same lined notebook paper the written entries
-  // use — the Log is the other half of the same journal, so it reads as
-  // written on the same pad rather than as a report about it.
-  function renderLogWeekCard(container, w) {
+  // The card's title: This week, Last week, else its dates ("2 to 8 Nov").
+  function weekTitle(start, range) {
+    const thisWeek = shootWeekWindow(ed.todayStr()).start;
+    const lastWeek = new Date(thisWeek);
+    lastWeek.setDate(thisWeek.getDate() - 7);
+    const startStr = ed.formatDate(start);
+    if (startStr === ed.formatDate(thisWeek)) return 'This week';
+    if (startStr === ed.formatDate(lastWeek)) return 'Last week';
+    return range;
+  }
+
+  // One week as a card: This week, Last week, or its dates, with its dates
+  // or how many shoots (or entries) beside; its shoots, then the entries
+  // written that week (renderJournalEntryCard). week is null for a week
+  // with entries and no shoot; start is null for entries with no date.
+  // Resolves once the entries' photos are in.
+  function renderWeekCard(container, start, week, entries) {
+    let range = '';
+    if (start) {
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      range = weekRangeLabel(start, end);
+    }
+    const startStr = start ? ed.formatDate(start) : '';
+    const title = start ? weekTitle(start, range) : 'Undated';
+    const count = week ? plural(week.shoots.length, 'shoot', 'shoots') : plural(entries.length, 'entry', 'entries');
     const card = document.createElement('div');
     card.className = 'card log-card';
     // Anchor the table of contents scrolls to (see scrollToJournalItem).
-    card.dataset.weekKey = ed.formatDate(w.start);
-    // Alternates within the month it lands in, so collapsing a month never
-    // leaves two same-coloured banners stacked against each other.
-    const headingColorClass = container.children.length % 2 === 0 ? 'heading-yellow' : 'heading-navy';
+    if (week) card.dataset.weekKey = startStr;
     card.innerHTML = `
-      <p class="log-week-heading ${headingColorClass}">${ed.escapeHtml(w.label)}</p>
-      ${logWeekPaperHtml(w, 'Shoots this week', 'No takeaways logged this week.')}
-    `;
+      <div class="log-week-head"><h3 class="log-week-heading">${ed.escapeHtml(title)}</h3><span class="log-week-meta">${ed.escapeHtml(range && title !== range ? range : count)}</span></div>
+      ${week ? logShootRowsHtml(week) : ''}`;
     wireLogShootRefs(card);
     container.appendChild(card);
+    return Promise.all(entries.map(e => ed.renderJournalEntryCard(card, e)));
   }
 };

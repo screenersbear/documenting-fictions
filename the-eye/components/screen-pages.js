@@ -68,67 +68,11 @@ window.EyeParts.addScreenPages = function addScreenPages(ed) {
     .filter(el => !el.hidden)
     .map(el => ({ el, heads: headsAbove(el, root) }));
 
-  function journalAtoms(root) {
-    const atoms = [];
-    root.querySelectorAll('.journal-entry-images:not([hidden])').forEach((grid) => {
-      // Photo rows take whole ruled lines, so what follows stays on the rules.
-      const thumb = grid.querySelector('.moodboard-thumb');
-      if (!thumb) return;
-      grid.style.gridAutoRows = `${Math.ceil(thumb.offsetHeight / ed.LINE) * ed.LINE}px`;
-      grid.style.rowGap = '0';
-      grid.style.alignItems = 'start';
-    });
-    // Like a real notebook, nothing is written twice: a heading goes with the
-    // first line under it (so it's never left alone at the foot of a page), and
-    // a card that runs over just carries on at the top of the next page.
-    const claimed = new Set();
-    root.querySelectorAll('#journalList .log-card').forEach((card) => {
-      const above = headsAbove(card, root).filter(h => !claimed.has(h));
-      above.forEach(h => claimed.add(h));
-      let pending = null;
-      const lead = () => { const h = pending || []; pending = null; return h; };
-      if (card.classList.contains('journal-entry-card')) {
-        const heading = card.querySelector('.journal-entry-heading');
-        pending = [...above, heading];
-        const before = atoms.length;
-        const body = card.querySelector('.journal-entry-body');
-        const rows = Math.round(body.offsetHeight / ed.LINE);
-        for (let row = 0; row < rows; row++) atoms.push({ el: body, heads: lead(), row, rows });
-        const grid = card.querySelector('.journal-entry-images');
-        if (grid && !grid.hidden) {
-          const lines = new Map();
-          [...grid.children].forEach((thumb) => {
-            const top = Math.round(thumb.getBoundingClientRect().top);
-            if (!lines.has(top)) lines.set(top, []);
-            lines.get(top).push(thumb);
-          });
-          lines.forEach(([el, ...also]) => atoms.push({ el, also, heads: lead() }));
-        }
-        const tags = card.querySelector('.journal-entry-tags');
-        if (tags && !tags.hidden) atoms.push({ el: tags, heads: lead() });
-        if (atoms.length === before) atoms.push({ el: heading, heads: above });
-        atoms[atoms.length - 1].hang = true;
-        return;
-      }
-      const week = card.querySelector(':scope > .log-week-heading');
-      pending = [...above, week];
-      [...card.querySelector('.journal-paper').children].forEach((child) => {
-        if (child.matches('.log-section-label')) { pending = [...(pending || []), child]; return; }
-        if (child.matches('ul')) [...child.children].forEach(el => atoms.push({ el, heads: lead() }));
-        else atoms.push({ el: child, heads: lead() });
-      });
-      if (atoms.length) atoms[atoms.length - 1].hang = true;
-    });
-    const empty = document.getElementById('journalEmpty');
-    if (!empty.hidden) atoms.push({ el: empty, heads: [] });
-    return atoms;
-  }
-
   const SCREEN_ATOMS = {
     overview: root => listAtoms(root, '#todayCard, .section-block:not([hidden]) :is(.next-shoot, .shoot-row)'),
     shoots: root => listAtoms(root, '#shootSortToggle, #shootSortOptions, #shootList .shoot-row, #shootEmpty'),
-    archive: root => listAtoms(root, '#archiveSlideshow, #archiveFilterToggle, #archiveFilters, #archiveList .shoot-row, #archiveEmpty'),
-    journal: journalAtoms,
+    archive: root => listAtoms(root, '#archiveSlideshow, #archiveCaption, #archiveFilters, #archiveList .archive-month, #archiveList .shoot-status-rows:not([hidden]) > .shoot-row, #archiveEmpty'),
+    journal: root => listAtoms(root, '#view-journal .list-intro, .journal-toolbar, #journalFilters, #journalList > .log-card, #journalEmpty'),
   };
 
   function statsAtoms(page) {

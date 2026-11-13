@@ -68,8 +68,9 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
     return 'future';
   }
 
+  const CHEVRON_DOWN = '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
   function renderShootSortOptions() {
-    document.getElementById('shootSortToggle').textContent = `Sort: ${SHOOT_SORT_LABELS[shootSort]}`;
+    document.getElementById('shootSortToggle').innerHTML = `Sort: ${SHOOT_SORT_LABELS[shootSort]} ${CHEVRON_DOWN}`;
     document.querySelectorAll('#shootSortOptions .chip').forEach(chip => {
       chip.classList.toggle('active', chip.dataset.sort === shootSort);
     });
@@ -89,28 +90,31 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
     renderShoots();
   });
 
-  function renderCategoryFilterChips(containerId, toggleId, activeFilter) {
+  // The category chips: All, each category you show (Edit picks them) that
+  // has a shoot in the list (and the one picked), then Edit.
+  function renderCategoryFilterChips(containerId, toggleId, activeFilter, usedCats) {
     const container = document.getElementById(containerId);
-    const visibleCats = ed.CATEGORY_FILTER_ORDER.filter(ed.isCategoryVisible);
+    const visibleCats = ed.CATEGORY_FILTER_ORDER.filter(cat => ed.isCategoryVisible(cat) && (!usedCats || usedCats.has(cat) || cat === activeFilter));
     container.innerHTML = `
       <button type="button" class="chip ${activeFilter === 'all' ? 'active' : ''}" data-filter="all">All</button>
       ${visibleCats.map(cat => `<button type="button" class="chip ${activeFilter === cat ? 'active' : ''}" data-filter="${cat}">${ed.CATEGORY_LABELS[cat]}</button>`).join('')}
-      <button type="button" class="chip chip-manage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Edit</button>
+      <button type="button" class="chip chip-manage">Edit</button>
     `;
     document.getElementById(toggleId).textContent = `Filter: ${activeFilter === 'all' ? 'All' : (ed.CATEGORY_LABELS[activeFilter] || 'All')}`;
   }
 
   // Shared renderer for one nested group (status / date bucket / category)
-  // on the Shoots page — same collapsible pill-heading + rows-wrap structure
-  // regardless of which sort mode built the group. Takes collapseProjects()
-  // items, so a project shows as one box (see renderListItem).
-  function renderShootGroup(list, groupKey, label, items, visibleIndex) {
+  // on the Shoots page — the same title (with how many rows it has) and
+  // rows regardless of which sort mode built the group. Takes
+  // collapseProjects() items, so a project shows as one box (see
+  // renderListItem).
+  function renderShootGroup(list, groupKey, label, items) {
     const groupEl = document.createElement('div');
     groupEl.className = 'shoot-status-group';
 
     const heading = document.createElement('h2');
-    heading.className = `status-group-heading ${visibleIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}`;
-    heading.textContent = label;
+    heading.className = 'status-group-heading';
+    heading.innerHTML = `${ed.escapeHtml(label)} <span>${items.length}</span>`;
 
     const rowsWrap = document.createElement('div');
     rowsWrap.className = 'shoot-status-rows';
@@ -128,7 +132,6 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
   // goes in the group of its least-advanced listed day (listItemStatusKey)
   // and sorts by its rep, through the same comparators.
   function renderShootsByStatus(list, items) {
-    let visibleIndex = 0;
     Object.keys(ed.STATUS_LABELS).forEach(statusKey => {
       const group = items.filter(item => ed.listItemStatusKey(item) === statusKey)
         .sort((a, b) => {
@@ -141,8 +144,7 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
             : ed.dateTimeSortKey(repA).localeCompare(ed.dateTimeSortKey(repB));
         });
       if (!group.length) return;
-      renderShootGroup(list, statusKey, ed.STATUS_LABELS[statusKey], group, visibleIndex);
-      visibleIndex++;
+      renderShootGroup(list, statusKey, ed.STATUS_LABELS[statusKey], group);
     });
   }
 
@@ -158,13 +160,11 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
       if (!buckets.has(bucket)) buckets.set(bucket, []);
       buckets.get(bucket).push(item);
     });
-    let visibleIndex = 0;
     SHOOT_DATE_BUCKET_ORDER.forEach(bucketKey => {
       const group = buckets.get(bucketKey);
       if (!group || !group.length) return;
       group.sort((a, b) => ed.dateTimeSortKey(ed.listItemRep(a)).localeCompare(ed.dateTimeSortKey(ed.listItemRep(b))));
-      renderShootGroup(list, `date:${bucketKey}`, SHOOT_DATE_BUCKET_LABELS[bucketKey], group, visibleIndex);
-      visibleIndex++;
+      renderShootGroup(list, `date:${bucketKey}`, SHOOT_DATE_BUCKET_LABELS[bucketKey], group);
     });
   }
 
@@ -179,13 +179,11 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
       if (!buckets.has(cat)) buckets.set(cat, []);
       buckets.get(cat).push(item);
     });
-    let visibleIndex = 0;
     ed.CATEGORY_FILTER_ORDER.forEach(cat => {
       const group = buckets.get(cat);
       if (!group || !group.length) return;
       group.sort((a, b) => ed.dateTimeSortKey(ed.listItemRep(a)).localeCompare(ed.dateTimeSortKey(ed.listItemRep(b))));
-      renderShootGroup(list, `cat:${cat}`, ed.CATEGORY_LABELS[cat] || 'Other', group, visibleIndex);
-      visibleIndex++;
+      renderShootGroup(list, `cat:${cat}`, ed.CATEGORY_LABELS[cat] || 'Other', group);
     });
   }
 
@@ -203,6 +201,9 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
 
     list.innerHTML = '';
     document.getElementById('shootEmpty').hidden = items.length !== 0;
+    // Every shoot listed, a project's days each counted.
+    const count = ed.state.shoots.filter(s => !s.archived).length;
+    document.getElementById('shootCount').textContent = count ? `${count} ${count === 1 ? 'shoot' : 'shoots'}` : '';
 
     if (shootSort === 'shoot_date') renderShootsByDate(list, items);
     else if (shootSort === 'category') renderShootsByCategory(list, items);

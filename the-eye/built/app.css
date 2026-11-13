@@ -6377,10 +6377,10 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 
 /* One weight of handwriting: only headings are bold. Not in the parts already
    in the round 2 look, which use Figtree's own weights (the band, the section
-   bar, the Overview's cards and lists, the shoot rows); this goes once every
-   screen is. */
-body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, .tabbar *, #view-overview *, .shoot-row *) { font-weight: 400 !important; }
-:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, #view-overview *) { text-shadow: 0 0 0.6px; }
+   bar, Overview, Shoots, the Archive, Reflections, the shoot rows); this
+   goes once every screen is. */
+body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, .tabbar *, #view-overview *, .shoot-row *, #view-shoots *, #view-archive *, #view-journal *, .log-card *) { font-weight: 400 !important; }
+:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, #view-overview *, #view-shoots *, #view-archive *, #view-journal *, .log-card *) { text-shadow: 0 0 0.6px; }
 
 /* The button in a page's top right corner that swaps a shoot and its summary. */
 .nb-corner-btn { position: absolute; z-index: 2; top: 6px; right: 8px; min-height: 0; height: auto; width: auto; padding: 4px 12px; border: none; border-radius: 3px; background: var(--text); color: #fff; font-family: var(--font-body); font-size: 14px; line-height: 20px; letter-spacing: 0; text-transform: none; }
@@ -6844,8 +6844,9 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
    their own case, hence the !important). Names the user wrote (a shoot's,
    an entry's, a lighting setup's) stay in their handwriting, and so do the
    team questions, which are questions. Not in the parts already in the
-   round 2 look (the band, the Overview), whose titles are Figtree's. */
-:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .moodboard-label, .app-menu-header, .stats-region-heading, #shootModeReviewTitle, #mondayBriefTitle):not(#projectDetailTitle, #shootModeTitle, #journalViewTitle, .journal-entry-title, .shoot-mode-review-setup-name, .modal-title-jump-wrap, .band *, #view-overview *) {
+   round 2 look (the band, Overview, Shoots, the Archive, Reflections), whose
+   titles are Figtree's. */
+:is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .moodboard-label, .app-menu-header, .stats-region-heading, #shootModeReviewTitle, #mondayBriefTitle):not(#projectDetailTitle, #shootModeTitle, #journalViewTitle, .journal-entry-title, .shoot-mode-review-setup-name, .modal-title-jump-wrap, .band *, #view-overview *, #view-shoots *, #view-archive *, #view-journal *, .log-card *) {
   font-family: var(--head) !important; font-weight: 500; text-transform: uppercase !important; letter-spacing: .08em !important; text-shadow: none;
 }
 :is(#appMenuOverlay, #sunMenuOverlay) .opt-sheet-head .app-menu-header { font-family: var(--head); font-weight: 500; text-transform: uppercase; letter-spacing: .08em; text-shadow: none; }
@@ -7015,8 +7016,9 @@ body { font-family: var(--ui); }
 /* The notebooks button is the suite's: a copy of The Eye on its own has no shelf to go back to. */
 html:not(.df-suite) .band-books { display: none; }
 
-/* 2: headings on the page, and the titles of sheets. */
-:is(.shoot-section-heading, .status-group-heading, .log-week-heading, .stats-page-title, .modal h2, .app-menu-header, .shoot-wizard-head h2, .shoot-mode-review h2):not(#df-x):not(#df-y), :is(#shootModeReviewTitle, #mondayBriefTitle):not(#df-x) {
+/* 2: headings on the page, and the titles of sheets (not on the screens
+   already in the round 2 look: styles/list-head.css, reflections.css). */
+:is(.shoot-section-heading, .status-group-heading, .log-week-heading, .stats-page-title, .modal h2, .app-menu-header, .shoot-wizard-head h2, .shoot-mode-review h2):not(#df-x):not(#df-y):not(#view-shoots *, #view-archive *, #view-journal *, .log-card *), :is(#shootModeReviewTitle, #mondayBriefTitle):not(#df-x) {
   font-family: var(--display) !important; font-weight: 400 !important; font-size: 18px; line-height: 1.25; letter-spacing: .02em !important;
 }
 .shoot-wizard-head h2:not(#df-x):not(#df-y) { font-size: 22px; }
@@ -7159,3 +7161,122 @@ html:not(.df-suite) .band-books { display: none; }
 .next-shoot-meta { font: 500 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
 .next-shoot-status { margin-top: auto; }
 .next-shoot-status:empty { display: none; }
+
+/* ---- styles/list-head.css ---- */
+/* The top of a list (DESIGN.md 9): on Shoots, the sort button (ink) and how
+   many shoots (dim), in small capitals; on Reflections, a line saying what it
+   is, then its contents and filter buttons in the same small capitals. The
+   section titles in Shoots and the Archive (a status, a year) are the
+   Overview's: 13px capitals with their count in dim. */
+.list-head { display: flex; align-items: center; justify-content: space-between; margin-top: -4px; }
+.list-sort-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 44px; min-height: 0; margin: 0 0 0 -8px; padding: 0 8px;
+  border: 0; border-radius: 0; background: none; color: var(--text);
+  font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+.list-sort-btn svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.list-count { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.list-intro { margin: -2px 0 0; font: 400 15px/21px var(--ui); color: var(--dim); }
+
+#view-shoots .shoot-status-group, #view-archive .shoot-status-group { margin: 0; padding: 0; background: none; border: 0; }
+:is(#view-shoots, #view-archive) .status-group-heading {
+  display: flex; align-items: center; gap: .4em; min-height: 44px; margin: 24px 0 0; padding: 0; border: 0; background: none; color: var(--text);
+  font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; text-shadow: none;
+}
+#view-shoots .shoot-status-group:first-child .status-group-heading { margin-top: 8px; }
+:is(#view-shoots, #view-archive) .status-group-heading > span { font: 500 13px/16px var(--ui); letter-spacing: .12em; color: var(--dim); font-variant-numeric: tabular-nums; }
+#view-shoots .shoot-status-rows, #view-archive .shoot-status-rows { margin: 0; padding: 0; background: none; border: 0; }
+
+/* Reflections' contents and filter: quiet buttons under the line. */
+#view-journal .journal-toolbar { display: flex; align-items: center; gap: 8px; margin: 4px 0 0 -8px; padding: 0; background: none; border: 0; }
+#view-journal .journal-toolbar .filter-toggle {
+  height: 44px; min-height: 0; margin: 0; padding: 0 8px; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--text);
+  font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+
+/* ---- styles/archive-list.css ---- */
+/* The Archive (DESIGN.md 9): the slideshow (radius 10) with the picture's
+   shoot under it, the category chips (32px, the notebook colour when picked),
+   then each year as a section title and each month as a row: its name in
+   18px light, how many shoots in small dim capitals, and up to three covers
+   overlapping at the right. A month opens to show its shoots. */
+#view-archive .archive-slideshow { height: 268px; margin: 0; border: 0; border-radius: 10px; background: #EFEFEA; }
+.archive-caption { display: flex; flex-direction: column; margin: 10px 0 0; }
+.archive-caption[hidden] { display: none; }
+#archiveCaptionLabel { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+#archiveCaptionName { font: 300 18px/22px var(--ui); color: var(--text); }
+#archiveFilterToggle[hidden] { display: none; }
+#view-archive #archiveFilters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 20px 0 0; padding: 0; }
+#view-archive #archiveFilters .chip {
+  height: 32px; min-height: 0; margin: 0; padding: 0 12px; border: 0; border-radius: 16px; box-shadow: none;
+  background: #EFEFEA; color: var(--text); font: 700 11px/14px var(--ui); letter-spacing: .1em; text-transform: uppercase;
+}
+#view-archive #archiveFilters .chip.active { background: var(--band); color: var(--band-small); }
+#view-archive #archiveFilters .chip-manage { padding: 0 6px; background: none; }
+
+.archive-month {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 64px; height: auto; margin: 0; padding: 0;
+  border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; color: var(--text); text-align: left; text-transform: none; letter-spacing: 0; cursor: pointer;
+}
+.archive-month-words { display: flex; flex-direction: column; }
+.archive-month-name { font: 300 18px/22px var(--ui); }
+.archive-month-count { font: 500 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.archive-month-covers { display: flex; }
+.archive-month-cover { display: block; margin-left: -14px; border-radius: 5px; box-shadow: 0 0 0 2px var(--paper); }
+.archive-month-cover:first-child { margin-left: 0; }
+.archive-month-cover .shoot-thumb { position: relative; display: block; width: 34px; height: 44px; border: 0; border-radius: 5px; overflow: hidden; background: #EFEFEA; }
+.archive-month-cover .shoot-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.archive-month-rows[hidden] { display: none; }
+.archive-month-rows .shoot-row { padding-left: 0; }
+
+/* ---- styles/reflections.css ---- */
+/* Reflections (DESIGN.md 9): a white card a week (radius 12), its title
+   (THIS WEEK) and dates in small capitals, then a row per shoot between
+   hairlines: its cover, its name and day in dim capitals, the lesson in 18px
+   light, and VIEW SHOOT. An entry written by hand sits in its week's card:
+   what it is and when, its words in 16px, its photos (56 square), its tags,
+   then SHARE AS PDF and DELETE. The Monday brief uses the same rows. */
+/* With the lists' ids, to beat the lined paper's #journalList rules. */
+:is(#journalList, #mondayBriefBody) .log-card, #journalList .log-card + .log-card {
+  margin: 12px 0 0; padding: 16px; border: 0; border-radius: 12px; background: #FFFFFF; box-shadow: none; color: var(--text);
+}
+.log-week-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 10px; }
+:is(#journalList, #mondayBriefBody) .log-card .log-week-heading:not(#df-x) {
+  position: static; height: auto; margin: 0; padding: 0; border: 0; background: none; color: var(--text); text-shadow: none;
+  font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+.log-week-meta { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.log-shoot-row { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.log-card > .log-shoot-row:last-child { padding-bottom: 0; }
+.log-thumb { flex: none; }
+.log-thumb .shoot-thumb { position: relative; display: block; width: 36px; height: 46px; border: 0; border-radius: 5px; overflow: hidden; background: #EFEFEA; }
+.log-thumb .shoot-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.log-thumb .shoot-thumb-empty { color: var(--off); opacity: 1; }
+.log-thumb .shoot-thumb-empty svg { width: 16px; height: 16px; }
+.log-shoot-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.log-label { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.log-lesson { font: 300 18px/24px var(--ui); color: var(--text); white-space: normal; }
+.log-lesson-none { color: var(--dim); }
+.log-view-shoot, .journal-entry-act {
+  display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; height: 36px; min-height: 0; margin: -8px 0 -10px -8px; padding: 0 8px;
+  border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--text);
+  font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+}
+.log-view-shoot svg, .journal-entry-act svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.journal-entry-card { margin: 0; padding: 12px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; box-shadow: none; }
+.log-week-head + .journal-entry-card { border-top: 1px solid var(--line); }
+.log-card > .journal-entry-card + .log-shoot-row, .log-card > .journal-entry-card + .journal-entry-card { margin-top: 12px; }
+.journal-entry-words { cursor: pointer; }
+.journal-entry-words .log-label { display: block; }
+.log-card .journal-entry-title { margin: 4px 0 0; font: 500 16px/22px var(--ui); color: var(--text); text-transform: none; letter-spacing: 0; text-shadow: none; }
+.journal-entry-text { margin: 4px 0 8px; font: 400 16px/22px var(--ui); color: var(--text); white-space: pre-wrap; }
+.log-card .journal-entry-images { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; }
+.log-card .journal-entry-images[hidden] { display: none; }
+.log-card .journal-entry-images > * { width: 56px; height: 56px; margin: 0; border-radius: 4px; overflow: hidden; }
+.log-card .journal-entry-images img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+.journal-entry-tags { margin: 8px 0 0; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.journal-entry-tags[hidden] { display: none; }
+.journal-entry-actions { display: flex; gap: 8px; margin: 4px 0 -6px -8px; }
+.journal-entry-act { height: 44px; margin: 0; padding: 0 8px; gap: 6px; font-size: 13px; line-height: 16px; }
+.journal-entry-act-quiet { color: var(--dim); }

@@ -1,105 +1,48 @@
-// The Journal list: the header band, an entry's card, entries by year and month.
+// Reflections: an entry's block (inside its week's card), and items by year
+// and month (the table of contents).
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addJournalCards = function addJournalCards(ed) {
-  Object.assign(ed, { applyJournalHeaderBand, renderJournalEntryCard, renderYearMonthGroups });
-  // Sizes .journal-paper's --header-band (see the CSS) to this specific
-  // entry's actual title/date height, so the blank band above the ruling
-  // always fully covers it — a fixed guess would either crop a long wrapped
-  // title or leave excess blank space under a short one — and sits the
-  // heading on the first visible rule, at the bottom of that band. Reads as 0 (and is
-  // skipped) whenever the card isn't laid out yet — not just inside a
-  // collapsed month/year group, but even a fully-visible one: renderYear-
-  // MonthGroups builds a whole year's months and cards in memory before
-  // attaching that year to the live list in one shot, so every card is still
-  // a detached, unlaid-out node at the moment renderItem builds it,
-  // regardless of collapse state. Never call this from inside renderItem —
-  // it always reads 0 there. renderJournal's own post-pass (after
-  // renderYearMonthGroups returns, once the list is genuinely in the
-  // document) is what actually measures correctly for a visible entry;
-  // onReveal covers the collapsed-group case for everything left over.
-  function applyJournalHeaderBand(card) {
-    const heading = card.querySelector('.journal-entry-heading');
-    const paper = card.querySelector('.journal-paper');
-    if (!heading || !paper || !heading.offsetHeight) return;
-    // .journal-paper's own 14px top padding sits above the heading, plus a
-    // little extra room for open space above the title, snapped up to the
-    // ruled-line pattern's own existing line positions (21, 49, 77, 105px,
-    // ... — see .journal-paper's 22px background-position) so the band's
-    // bottom edge lands exactly on a real rule instead of slicing one in half.
-    const headingBottom = 14 + heading.offsetHeight;
-    const minBand = headingBottom + 8;
-    const band = Math.ceil((minBand - 21) / 28) * 28 + 21;
-    paper.style.setProperty('--header-band', band + 'px');
-    // The heading is whole 28px rows (see .journal-entry-heading), so this
-    // margin drops it to the bottom of the band: its last row sits right on
-    // the first visible rule, any extra title rows stack above it, and the
-    // entry's own text — which follows directly — starts on the first row
-    // below that rule. The leftover space lands above the title.
-    heading.style.marginTop = (band - headingBottom) + 'px';
-  }
-
-  // One entry, rendered inline on lined notebook paper under a coloured title
-  // banner — the same card shape the Log uses for a week, so the two kinds of
-  // entry read as one continuous scrolling page rather than a list of things
-  // to open.
+  Object.assign(ed, { renderJournalEntryCard, renderYearMonthGroups });
+  // An entry written by hand, inside the card of the week it was written in:
+  // "Journal entry, 28 Oct" (or the shoot it came from), its title and words,
+  // its photos, its tags, then Share as PDF and Delete (the same as its old
+  // options menu). Tap the words to open it. Resolves once its photos are in.
   function renderJournalEntryCard(container, e) {
-    const card = document.createElement('div');
-    card.className = 'card log-card journal-entry-card';
-    // Anchor the table of contents scrolls to (see scrollToJournalItem).
-    card.dataset.entryId = e.id;
-    // Alternates within the month it lands in, so collapsing a month never
-    // leaves two same-coloured banners stacked against each other.
-    const headingColorClass = container.children.length % 2 === 0 ? 'heading-yellow' : 'heading-navy';
+    const block = document.createElement('div');
+    block.className = 'journal-entry-card';
+    block.dataset.entryId = e.id;
     const linkedShoot = e.sourceShootId ? ed.state.shoots.find(s => s.id === e.sourceShootId) : null;
-    // Same "--- shoot name" credit the Log puts after each takeaway; this entry
-    // was compiled from that shoot's reflection, so it's the same attribution.
-    const credit = linkedShoot
-      ? `<span class="log-takeaway-source"> --- ${ed.escapeHtml(ed.shootDisplayName(linkedShoot))}</span>`
-      : '';
-    const tagsHtml = (e.tags || []).map(t => `<span class="beat-chip view-only">${ed.escapeHtml(t)}</span>`).join('');
-
-    card.innerHTML = `
-      <div class="log-week-heading ${headingColorClass} journal-entry-binding">
-        <button type="button" class="journal-entry-options" aria-label="Options">&#8942;</button>
+    const when = e.createdAt ? ed.rowDate(e.createdAt, ed.todayStr(), false) : '';
+    const label = ed.metaLine([linkedShoot ? `From ${ed.shootDisplayName(linkedShoot)}` : 'Journal entry', when]);
+    const tags = (e.tags || []).map(t => `#${String(t).replace(/^#/, '')}`).join(' ');
+    block.innerHTML = `
+      <div class="journal-entry-words">
+        <span class="log-label">${ed.escapeHtml(label)}</span>
+        ${e.title ? `<p class="journal-entry-title">${ed.escapeHtml(e.title)}</p>` : ''}
+        <p class="journal-entry-text">${ed.escapeHtml(e.body || '')}</p>
       </div>
-      <div class="journal-paper log-paper">
-        <div class="journal-entry-heading">
-          <span class="journal-entry-title">${ed.escapeHtml(e.title || 'Untitled entry')}</span>
-          <span class="journal-entry-date">${ed.prettyDate(e.createdAt)}</span>
-        </div>
-        <div class="journal-entry-body"><div class="jb-in">${ed.escapeHtml(e.body || '')}${credit}</div></div>
-        <div class="journal-entry-images moodboard-grid" hidden></div>
-        <div class="journal-entry-tags"${tagsHtml ? '' : ' hidden'}>${tagsHtml}</div>
+      <div class="journal-entry-images moodboard-grid" hidden></div>
+      <p class="journal-entry-tags"${tags ? '' : ' hidden'}>${ed.escapeHtml(tags)}</p>
+      <div class="journal-entry-actions">
+        <button type="button" class="journal-entry-act" data-act="pdf"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v12"/><polyline points="7 8 12 3 17 8"/><path d="M5 13v7h14v-7"/></svg>Share as PDF</button>
+        <button type="button" class="journal-entry-act journal-entry-act-quiet" data-act="delete">Delete</button>
       </div>
     `;
-
-    const paper = card.querySelector('.journal-paper');
-    if (linkedShoot) {
-      // Auto-compiled entries are never edited here — they route back to the
-      // shoot's own reflection fields so the two stay in sync. Reuses the Log's
-      // "this refers to" popup rather than a confirm(), so tapping a reflection
-      // behaves exactly like tapping a weekly log takeaway.
-      paper.addEventListener('click', () => ed.showLogShootRef(e.sourceShootId));
-    } else {
-      // Hand-written entries open straight into the editor: the body is already
-      // fully readable right here, so a read-only stop on the way would be a
-      // popup that shows you what you're already looking at.
-      paper.addEventListener('click', () => ed.openJournalModal(e.id, 'edit'));
-    }
-
-    card.querySelector('.journal-entry-options').addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      ed.openJournalOptions(e.id);
+    block.querySelector('.journal-entry-words').addEventListener('click', () => {
+      if (linkedShoot) ed.showLogShootRef(e.sourceShootId);
+      else ed.openJournalModal(e.id, 'edit');
     });
-
-    container.appendChild(card);
-    // Returned (not fire-and-forget) so scrollToJournalItem can wait for
-    // every card's cover photos to finish loading before it scrolls — those
-    // load from IndexedDB asynchronously and would otherwise grow cards
-    // above the target after the scroll already landed, shoving it back out
-    // of view.
-    return ed.renderJournalListImages(card.querySelector('.journal-entry-images'), ed.journalEntryImagesKey(e));
+    // Through the options sheet's own buttons (pages/journal/entry-options.js,
+    // entry-pdf.js), so they work the same: Delete still asks first.
+    block.querySelector('.journal-entry-actions').addEventListener('click', (ev) => {
+      const btn = ev.target.closest('[data-act]');
+      if (!btn) return;
+      ed.optionsJournalEntryId = e.id;
+      document.getElementById(btn.dataset.act === 'pdf' ? 'shareJournalOptionBtn' : 'deleteJournalOptionBtn').click();
+    });
+    container.appendChild(block);
+    return ed.renderJournalListImages(block.querySelector('.journal-entry-images'), ed.journalEntryImagesKey(e));
   }
 
   // Collapsible year > month nesting for the Journal (and its table of

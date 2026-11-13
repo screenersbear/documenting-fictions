@@ -1,4 +1,4 @@
-// The Journal list: its order, filters and feed, and drawing it.
+// Reflections: its order, filter and feed, and drawing it week by week.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addJournalList = function addJournalList(ed) {
@@ -75,25 +75,16 @@ window.EyeParts.addJournalList = function addJournalList(ed) {
     return merged;
   }
 
-  function renderJournalFeedItem(container, item) {
-    if (item.type === 'week') return ed.renderLogWeekCard(container, item.week);
-    return ed.renderJournalEntryCard(container, item.entry);
-  }
-
-  // Nested by year > month of each item's own date (an entry's createdAt, a
-  // log week's start) — same grouping structure Archive uses for shoots.
-  // Returns a promise that resolves once every card's cover photos have
-  // finished loading (see renderJournalEntryCard) — most callers can ignore
-  // it, but scrollToJournalItem needs it so the layout has stopped shifting
-  // before it scrolls.
+  // One card per week, newest first (weekly-log.js): its shoots' rows, then
+  // anything written by hand that week. Returns a promise that resolves once
+  // every entry's photos are in: scrollToJournalItem waits for it so the page
+  // has stopped moving before it scrolls.
   function renderJournal() {
     const photos = drawJournal();
     ed.repaginate('journal');
     return photos.then((done) => { ed.repaginate('journal'); return done; });
   }
   function drawJournal() {
-    // Sorted before grouping, because renderYearMonthGroups keeps whatever
-    // order it's handed.
     const items = journalFeedItems();
 
     const list = document.getElementById('journalList');
@@ -109,21 +100,19 @@ window.EyeParts.addJournalList = function addJournalList(ed) {
           : "No weekly log yet. It fills in on its own once a shoot is marked captured.";
     }
 
-    const imagePromises = ed.renderYearMonthGroups(list, items, {
-      dateOf: item => item.date,
-      keyPrefix: 'journal',
-      renderItem: renderJournalFeedItem,
-      // Covers a card in a month/year that's still collapsed at this point —
-      // it stays genuinely unmeasurable (real height 0) until the group
-      // holding it is actually opened, which is what this re-runs for.
-      onReveal: wrap => wrap.querySelectorAll('.journal-entry-card').forEach(ed.applyJournalHeaderBand),
+    // The items are newest first already, so each week turns up in order.
+    const weeks = new Map();
+    const undated = [];
+    items.forEach((item) => {
+      if (!item.date) { undated.push(item.entry); return; }
+      const start = ed.shootWeekWindow(item.date).start;
+      const key = ed.formatDate(start);
+      if (!weeks.has(key)) weeks.set(key, { start, week: null, entries: [] });
+      if (item.type === 'week') weeks.get(key).week = item.week;
+      else weeks.get(key).entries.push(item.entry);
     });
-    // Every card just built is a real, attached, laid-out node now — each
-    // year's whole subtree (months, cards, all of it) only gets appended to
-    // `list` at the very end of building that year (see renderYearMonth-
-    // Groups), so nothing in it could be measured correctly any earlier than
-    // this, not even a card in a section that's expanded by default.
-    list.querySelectorAll('.journal-entry-card').forEach(ed.applyJournalHeaderBand);
+    const imagePromises = [...weeks.values()].map(w => ed.renderWeekCard(list, w.start, w.week, w.entries));
+    if (undated.length) imagePromises.push(ed.renderWeekCard(list, null, null, undated));
     return Promise.all(imagePromises);
   }
 };

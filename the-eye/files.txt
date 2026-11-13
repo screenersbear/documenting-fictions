@@ -83,6 +83,9 @@ built/app.css
   styles/shoot-rows.css
   styles/today-card.css
   styles/next-shoot.css
+  styles/list-head.css
+  styles/archive-list.css
+  styles/reflections.css
 
 # The screens and popups, in the order they sit in the page. Each piece starts
 # with a line saying what it is, which isn't joined.
@@ -190,6 +193,7 @@ built/app.js
   pages/overview/next-shoot.js
   pages/shoots/shoot-log.js
   pages/archive/archive.js
+  pages/archive/archive-list.js
   pages/journal/journal.js
   pages/journal/journal-cards.js
   pages/journal/journal-list.js

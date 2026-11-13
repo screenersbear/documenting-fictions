@@ -48,7 +48,11 @@
       <svg class="band-mark" viewBox="0 0 80 40" aria-hidden="true"><circle cx="40" cy="40" r="35" fill="none" stroke-width="10"/><circle cx="40" cy="40" r="13.3"/></svg>
       <p class="band-line"><b>The Eye</b><span class="band-rule"></span><span class="band-date"></span></p>
     </header>
-    <button type="button" class="filter-toggle" id="shootSortToggle">Sort: Status</button>
+    <!-- The list's head: the sort (a text button that opens its choices) and how many shoots there are. -->
+    <div class="list-head">
+      <button type="button" class="list-sort-btn" id="shootSortToggle">Sort: Status</button>
+      <span class="list-count" id="shootCount"></span>
+    </div>
     <div class="filters" id="shootSortOptions" hidden>
       <button type="button" class="chip active" data-sort="status">Status</button>
       <button type="button" class="chip" data-sort="shoot_date">Shoot date</button>
@@ -70,8 +74,11 @@
     <div class="archive-slideshow" id="archiveSlideshow">
       <p class="archive-slideshow-empty" id="archiveSlideshowEmpty" hidden>final images shown here</p>
     </div>
-    <button type="button" class="filter-toggle" id="archiveFilterToggle">Filter: All</button>
-    <div class="filters" id="archiveFilters" hidden></div>
+    <!-- Under the photo: the shoot it's from (pages/archive/archive.js). -->
+    <p class="archive-caption" id="archiveCaption" hidden><span id="archiveCaptionLabel"></span><span id="archiveCaptionName"></span></p>
+    <!-- Kept for the filter code; the chips under it are always out now, so it isn't shown (styles/archive-list.css). -->
+    <button type="button" class="filter-toggle" id="archiveFilterToggle" hidden>Filter: All</button>
+    <div class="filters" id="archiveFilters"></div>
     <div id="archiveList" class="card-list"></div>
     <p class="empty-state" id="archiveEmpty" hidden>No completed shoots yet.</p>
   </section>
@@ -86,6 +93,7 @@
       <p class="band-line"><b>The Eye</b><span class="band-rule"></span><span class="band-date"></span></p>
     </header>
 
+    <p class="list-intro">Fills in on its own. Each week collects the lessons from the shoots you reflected on.</p>
     <div class="journal-toolbar">
       <button type="button" class="filter-toggle" id="journalTocBtn">Table of contents</button>
       <button type="button" class="filter-toggle" id="journalFilterToggle">Filter: All</button>

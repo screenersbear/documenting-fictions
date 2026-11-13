@@ -86,7 +86,7 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
       body.appendChild(sectionHeading('Last week'));
       const card = document.createElement('div');
       card.className = 'card log-card monday-brief-log';
-      card.innerHTML = ed.logWeekPaperHtml(week, 'Shoots', 'No takeaways logged last week.');
+      card.innerHTML = ed.logShootRowsHtml(week);
       ed.wireLogShootRefs(card);
       body.appendChild(card);
     }

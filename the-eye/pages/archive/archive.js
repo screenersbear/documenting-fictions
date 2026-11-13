@@ -1,8 +1,9 @@
-// The Archive tab.
+// The Archive tab: its slideshow of final images (with the shoot each is
+// from under it) and its category filter. The list is archive-list.js.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addArchive = function addArchive(ed) {
-  Object.assign(ed, { startArchiveSlideshow, stopArchiveSlideshow, loadArchiveSlideshow, renderArchiveSlideshow, renderArchive });
+  Object.assign(ed, { startArchiveSlideshow, stopArchiveSlideshow, loadArchiveSlideshow, renderArchiveSlideshow });
   // ---------- Archive view ----------
   ed.archiveFilter = 'all';
   let archiveSlideshowTimer = null;
@@ -42,7 +43,19 @@ window.EyeParts.addArchive = function addArchive(ed) {
       current[idx].classList.remove('active');
       idx = (idx + 1) % current.length;
       current[idx].classList.add('active');
+      showCaption(current[idx]);
     }, 4200);
+  }
+
+  // Under the photo: which shoot it's from, and when ("Final image, Nov").
+  function showCaption(img) {
+    const caption = document.getElementById('archiveCaption');
+    const shoot = img && ed.state.shoots.find(s => s.id === img.dataset.shootId);
+    caption.hidden = !shoot;
+    if (!shoot) return;
+    const month = shoot.date ? ed.rowDate(shoot.date, ed.todayStr(), false).replace(/^\d+ /, '') : '';
+    document.getElementById('archiveCaptionLabel').textContent = ed.metaLine(['Final image', month]);
+    document.getElementById('archiveCaptionName').textContent = ed.shootDisplayName(shoot);
   }
 
   function stopArchiveSlideshow() {
@@ -113,7 +126,7 @@ window.EyeParts.addArchive = function addArchive(ed) {
       const showing = images.length ? container.querySelector('img.active') : null;
       container.querySelectorAll('img').forEach(img => { if (img !== showing) img.remove(); });
       document.getElementById('archiveSlideshowEmpty').hidden = images.length > 0;
-      if (!images.length) return;
+      if (!images.length) { showCaption(null); return; }
 
       let first = null;
       images.forEach(entry => {
@@ -128,6 +141,7 @@ window.EyeParts.addArchive = function addArchive(ed) {
       // Archive's hidden, it's simply there when you get to it).
       void first.offsetWidth;
       first.classList.add('active');
+      showCaption(first);
       if (showing) {
         showing.classList.remove('active');
         // The rotation starts once the old photo's gone, so it counts from
@@ -163,115 +177,16 @@ window.EyeParts.addArchive = function addArchive(ed) {
     ed.openShootModal(shoot.id);
   });
 
-  document.getElementById('archiveFilterToggle').addEventListener('click', () => {
-    const filters = document.getElementById('archiveFilters');
-    filters.hidden = !filters.hidden;
-  });
-
+  // The category chips are always out (round 2): All, each category, and
+  // Edit (which categories show).
   document.getElementById('archiveFilters').addEventListener('click', (e) => {
     if (e.target.closest('.chip-manage')) {
-      document.getElementById('archiveFilters').hidden = true;
       ed.openCategoryVisibilityModal();
       return;
     }
     const chip = e.target.closest('.chip');
     if (!chip || !chip.dataset.filter) return;
     ed.archiveFilter = chip.dataset.filter;
-    document.getElementById('archiveFilters').hidden = true;
-    renderArchive();
+    ed.renderArchive();
   });
-
-  // Groups archived shoots into year > month buckets, most recent first, so
-  // a growing archive stays browsable instead of one long flat list.
-  // Undated shoots (no shoot date recorded) fall into their own trailing
-  // "Undated" bucket rather than disappearing. Same collapsible pill
-  // heading as the Shoots screen's status groups, nested one level for
-  // months — collapse state persists per year and per year+month.
-  function renderArchive() {
-    drawArchive();
-    ed.repaginate('archive');
-  }
-  function drawArchive() {
-    renderArchiveSlideshow();
-    ed.renderCategoryFilterChips('archiveFilters', 'archiveFilterToggle', ed.archiveFilter);
-    const list = document.getElementById('archiveList');
-    // Filter first, then collapse: a project box stands for the members that
-    // match the active category filter (its date span covers just those).
-    // It's filed by its rep's date (for a fully past project, its first day),
-    // so it shows once, under one month, even when its days straddle a month
-    // or year boundary. Newest first, same as before.
-    let shoots = ed.state.shoots.filter(s => s.archived);
-    if (ed.archiveFilter !== 'all') shoots = shoots.filter(s => s.category === ed.archiveFilter);
-    const items = ed.collapseProjects(shoots)
-      .sort((a, b) => ed.dateSortKey(ed.listItemRep(b).date).localeCompare(ed.dateSortKey(ed.listItemRep(a).date)));
-
-    list.innerHTML = '';
-    document.getElementById('archiveEmpty').hidden = items.length !== 0;
-
-    const years = new Map();
-    items.forEach(item => {
-      const date = ed.listItemRep(item).date;
-      const year = date ? date.slice(0, 4) : 'Undated';
-      const month = date ? date.slice(5, 7) : '00';
-      if (!years.has(year)) years.set(year, new Map());
-      const months = years.get(year);
-      if (!months.has(month)) months.set(month, []);
-      months.get(month).push(item);
-    });
-
-    const sortedYears = [...years.keys()].sort((a, b) => {
-      if (a === 'Undated') return 1;
-      if (b === 'Undated') return -1;
-      return b.localeCompare(a);
-    });
-
-    let visibleYearIndex = 0;
-    sortedYears.forEach(year => {
-      const months = years.get(year);
-      const sortedMonths = [...months.keys()].sort((a, b) => b.localeCompare(a));
-
-      const yearGroupEl = document.createElement('div');
-      yearGroupEl.className = 'shoot-status-group';
-
-      const yearHeading = document.createElement('h2');
-      yearHeading.className = `status-group-heading ${visibleYearIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}`;
-      yearHeading.textContent = year;
-
-      const yearRowsWrap = document.createElement('div');
-      yearRowsWrap.className = 'shoot-status-rows';
-
-      if (year === 'Undated') {
-        // Undated only ever has the one '00' month bucket anyway — a
-        // second "Undated" sub-heading under the "Undated" year heading
-        // is pure redundancy, so just list the shoots directly.
-        sortedMonths.forEach(month => {
-          months.get(month).forEach(item => ed.renderListItem(yearRowsWrap, item, { showBadge: false, openArchiveMode: true }));
-        });
-      } else {
-        let visibleMonthIndex = 0;
-        sortedMonths.forEach(month => {
-          const monthGroupEl = document.createElement('div');
-          monthGroupEl.className = 'archive-month-group';
-
-          const monthHeading = document.createElement('h3');
-          monthHeading.className = `status-group-heading archive-month-heading ${visibleMonthIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}`;
-          monthHeading.textContent = ed.monthLabel(month);
-
-          const monthRowsWrap = document.createElement('div');
-          monthRowsWrap.className = 'shoot-status-rows';
-          months.get(month).forEach(item => ed.renderListItem(monthRowsWrap, item, { showBadge: false, openArchiveMode: true }));
-
-          monthGroupEl.appendChild(monthHeading);
-          monthGroupEl.appendChild(monthRowsWrap);
-          yearRowsWrap.appendChild(monthGroupEl);
-          visibleMonthIndex++;
-        });
-      }
-
-      yearGroupEl.appendChild(yearHeading);
-      yearGroupEl.appendChild(yearRowsWrap);
-      list.appendChild(yearGroupEl);
-      visibleYearIndex++;
-    });
-  }
 };

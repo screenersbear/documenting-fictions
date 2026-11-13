@@ -1,0 +1,33 @@
+/* The Archive (DESIGN.md 9): the slideshow (radius 10) with the picture's
+   shoot under it, the category chips (32px, the notebook colour when picked),
+   then each year as a section title and each month as a row: its name in
+   18px light, how many shoots in small dim capitals, and up to three covers
+   overlapping at the right. A month opens to show its shoots. */
+#view-archive .archive-slideshow { height: 268px; margin: 0; border: 0; border-radius: 10px; background: #EFEFEA; }
+.archive-caption { display: flex; flex-direction: column; margin: 10px 0 0; }
+.archive-caption[hidden] { display: none; }
+#archiveCaptionLabel { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+#archiveCaptionName { font: 300 18px/22px var(--ui); color: var(--text); }
+#archiveFilterToggle[hidden] { display: none; }
+#view-archive #archiveFilters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 20px 0 0; padding: 0; }
+#view-archive #archiveFilters .chip {
+  height: 32px; min-height: 0; margin: 0; padding: 0 12px; border: 0; border-radius: 16px; box-shadow: none;
+  background: #EFEFEA; color: var(--text); font: 700 11px/14px var(--ui); letter-spacing: .1em; text-transform: uppercase;
+}
+#view-archive #archiveFilters .chip.active { background: var(--band); color: var(--band-small); }
+#view-archive #archiveFilters .chip-manage { padding: 0 6px; background: none; }
+
+.archive-month {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 64px; height: auto; margin: 0; padding: 0;
+  border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; color: var(--text); text-align: left; text-transform: none; letter-spacing: 0; cursor: pointer;
+}
+.archive-month-words { display: flex; flex-direction: column; }
+.archive-month-name { font: 300 18px/22px var(--ui); }
+.archive-month-count { font: 500 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.archive-month-covers { display: flex; }
+.archive-month-cover { display: block; margin-left: -14px; border-radius: 5px; box-shadow: 0 0 0 2px var(--paper); }
+.archive-month-cover:first-child { margin-left: 0; }
+.archive-month-cover .shoot-thumb { position: relative; display: block; width: 34px; height: 44px; border: 0; border-radius: 5px; overflow: hidden; background: #EFEFEA; }
+.archive-month-cover .shoot-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.archive-month-rows[hidden] { display: none; }
+.archive-month-rows .shoot-row { padding-left: 0; }

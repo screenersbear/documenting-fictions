@@ -7436,67 +7436,11 @@ window.EyeParts.addScreenPages = function addScreenPages(ed) {
     .filter(el => !el.hidden)
     .map(el => ({ el, heads: headsAbove(el, root) }));
 
-  function journalAtoms(root) {
-    const atoms = [];
-    root.querySelectorAll('.journal-entry-images:not([hidden])').forEach((grid) => {
-      // Photo rows take whole ruled lines, so what follows stays on the rules.
-      const thumb = grid.querySelector('.moodboard-thumb');
-      if (!thumb) return;
-      grid.style.gridAutoRows = `${Math.ceil(thumb.offsetHeight / ed.LINE) * ed.LINE}px`;
-      grid.style.rowGap = '0';
-      grid.style.alignItems = 'start';
-    });
-    // Like a real notebook, nothing is written twice: a heading goes with the
-    // first line under it (so it's never left alone at the foot of a page), and
-    // a card that runs over just carries on at the top of the next page.
-    const claimed = new Set();
-    root.querySelectorAll('#journalList .log-card').forEach((card) => {
-      const above = headsAbove(card, root).filter(h => !claimed.has(h));
-      above.forEach(h => claimed.add(h));
-      let pending = null;
-      const lead = () => { const h = pending || []; pending = null; return h; };
-      if (card.classList.contains('journal-entry-card')) {
-        const heading = card.querySelector('.journal-entry-heading');
-        pending = [...above, heading];
-        const before = atoms.length;
-        const body = card.querySelector('.journal-entry-body');
-        const rows = Math.round(body.offsetHeight / ed.LINE);
-        for (let row = 0; row < rows; row++) atoms.push({ el: body, heads: lead(), row, rows });
-        const grid = card.querySelector('.journal-entry-images');
-        if (grid && !grid.hidden) {
-          const lines = new Map();
-          [...grid.children].forEach((thumb) => {
-            const top = Math.round(thumb.getBoundingClientRect().top);
-            if (!lines.has(top)) lines.set(top, []);
-            lines.get(top).push(thumb);
-          });
-          lines.forEach(([el, ...also]) => atoms.push({ el, also, heads: lead() }));
-        }
-        const tags = card.querySelector('.journal-entry-tags');
-        if (tags && !tags.hidden) atoms.push({ el: tags, heads: lead() });
-        if (atoms.length === before) atoms.push({ el: heading, heads: above });
-        atoms[atoms.length - 1].hang = true;
-        return;
-      }
-      const week = card.querySelector(':scope > .log-week-heading');
-      pending = [...above, week];
-      [...card.querySelector('.journal-paper').children].forEach((child) => {
-        if (child.matches('.log-section-label')) { pending = [...(pending || []), child]; return; }
-        if (child.matches('ul')) [...child.children].forEach(el => atoms.push({ el, heads: lead() }));
-        else atoms.push({ el: child, heads: lead() });
-      });
-      if (atoms.length) atoms[atoms.length - 1].hang = true;
-    });
-    const empty = document.getElementById('journalEmpty');
-    if (!empty.hidden) atoms.push({ el: empty, heads: [] });
-    return atoms;
-  }
-
   const SCREEN_ATOMS = {
     overview: root => listAtoms(root, '#todayCard, .section-block:not([hidden]) :is(.next-shoot, .shoot-row)'),
     shoots: root => listAtoms(root, '#shootSortToggle, #shootSortOptions, #shootList .shoot-row, #shootEmpty'),
-    archive: root => listAtoms(root, '#archiveSlideshow, #archiveFilterToggle, #archiveFilters, #archiveList .shoot-row, #archiveEmpty'),
-    journal: journalAtoms,
+    archive: root => listAtoms(root, '#archiveSlideshow, #archiveCaption, #archiveFilters, #archiveList .archive-month, #archiveList .shoot-status-rows:not([hidden]) > .shoot-row, #archiveEmpty'),
+    journal: root => listAtoms(root, '#view-journal .list-intro, .journal-toolbar, #journalFilters, #journalList > .log-card, #journalEmpty'),
   };
 
   function statsAtoms(page) {
@@ -8567,8 +8511,9 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
     return 'future';
   }
 
+  const CHEVRON_DOWN = '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
   function renderShootSortOptions() {
-    document.getElementById('shootSortToggle').textContent = `Sort: ${SHOOT_SORT_LABELS[shootSort]}`;
+    document.getElementById('shootSortToggle').innerHTML = `Sort: ${SHOOT_SORT_LABELS[shootSort]} ${CHEVRON_DOWN}`;
     document.querySelectorAll('#shootSortOptions .chip').forEach(chip => {
       chip.classList.toggle('active', chip.dataset.sort === shootSort);
     });
@@ -8588,28 +8533,31 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
     renderShoots();
   });
 
-  function renderCategoryFilterChips(containerId, toggleId, activeFilter) {
+  // The category chips: All, each category you show (Edit picks them) that
+  // has a shoot in the list (and the one picked), then Edit.
+  function renderCategoryFilterChips(containerId, toggleId, activeFilter, usedCats) {
     const container = document.getElementById(containerId);
-    const visibleCats = ed.CATEGORY_FILTER_ORDER.filter(ed.isCategoryVisible);
+    const visibleCats = ed.CATEGORY_FILTER_ORDER.filter(cat => ed.isCategoryVisible(cat) && (!usedCats || usedCats.has(cat) || cat === activeFilter));
     container.innerHTML = `
       <button type="button" class="chip ${activeFilter === 'all' ? 'active' : ''}" data-filter="all">All</button>
       ${visibleCats.map(cat => `<button type="button" class="chip ${activeFilter === cat ? 'active' : ''}" data-filter="${cat}">${ed.CATEGORY_LABELS[cat]}</button>`).join('')}
-      <button type="button" class="chip chip-manage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Edit</button>
+      <button type="button" class="chip chip-manage">Edit</button>
     `;
     document.getElementById(toggleId).textContent = `Filter: ${activeFilter === 'all' ? 'All' : (ed.CATEGORY_LABELS[activeFilter] || 'All')}`;
   }
 
   // Shared renderer for one nested group (status / date bucket / category)
-  // on the Shoots page — same collapsible pill-heading + rows-wrap structure
-  // regardless of which sort mode built the group. Takes collapseProjects()
-  // items, so a project shows as one box (see renderListItem).
-  function renderShootGroup(list, groupKey, label, items, visibleIndex) {
+  // on the Shoots page — the same title (with how many rows it has) and
+  // rows regardless of which sort mode built the group. Takes
+  // collapseProjects() items, so a project shows as one box (see
+  // renderListItem).
+  function renderShootGroup(list, groupKey, label, items) {
     const groupEl = document.createElement('div');
     groupEl.className = 'shoot-status-group';
 
     const heading = document.createElement('h2');
-    heading.className = `status-group-heading ${visibleIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}`;
-    heading.textContent = label;
+    heading.className = 'status-group-heading';
+    heading.innerHTML = `${ed.escapeHtml(label)} <span>${items.length}</span>`;
 
     const rowsWrap = document.createElement('div');
     rowsWrap.className = 'shoot-status-rows';
@@ -8627,7 +8575,6 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
   // goes in the group of its least-advanced listed day (listItemStatusKey)
   // and sorts by its rep, through the same comparators.
   function renderShootsByStatus(list, items) {
-    let visibleIndex = 0;
     Object.keys(ed.STATUS_LABELS).forEach(statusKey => {
       const group = items.filter(item => ed.listItemStatusKey(item) === statusKey)
         .sort((a, b) => {
@@ -8640,8 +8587,7 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
             : ed.dateTimeSortKey(repA).localeCompare(ed.dateTimeSortKey(repB));
         });
       if (!group.length) return;
-      renderShootGroup(list, statusKey, ed.STATUS_LABELS[statusKey], group, visibleIndex);
-      visibleIndex++;
+      renderShootGroup(list, statusKey, ed.STATUS_LABELS[statusKey], group);
     });
   }
 
@@ -8657,13 +8603,11 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
       if (!buckets.has(bucket)) buckets.set(bucket, []);
       buckets.get(bucket).push(item);
     });
-    let visibleIndex = 0;
     SHOOT_DATE_BUCKET_ORDER.forEach(bucketKey => {
       const group = buckets.get(bucketKey);
       if (!group || !group.length) return;
       group.sort((a, b) => ed.dateTimeSortKey(ed.listItemRep(a)).localeCompare(ed.dateTimeSortKey(ed.listItemRep(b))));
-      renderShootGroup(list, `date:${bucketKey}`, SHOOT_DATE_BUCKET_LABELS[bucketKey], group, visibleIndex);
-      visibleIndex++;
+      renderShootGroup(list, `date:${bucketKey}`, SHOOT_DATE_BUCKET_LABELS[bucketKey], group);
     });
   }
 
@@ -8678,13 +8622,11 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
       if (!buckets.has(cat)) buckets.set(cat, []);
       buckets.get(cat).push(item);
     });
-    let visibleIndex = 0;
     ed.CATEGORY_FILTER_ORDER.forEach(cat => {
       const group = buckets.get(cat);
       if (!group || !group.length) return;
       group.sort((a, b) => ed.dateTimeSortKey(ed.listItemRep(a)).localeCompare(ed.dateTimeSortKey(ed.listItemRep(b))));
-      renderShootGroup(list, `cat:${cat}`, ed.CATEGORY_LABELS[cat] || 'Other', group, visibleIndex);
-      visibleIndex++;
+      renderShootGroup(list, `cat:${cat}`, ed.CATEGORY_LABELS[cat] || 'Other', group);
     });
   }
 
@@ -8702,6 +8644,9 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
 
     list.innerHTML = '';
     document.getElementById('shootEmpty').hidden = items.length !== 0;
+    // Every shoot listed, a project's days each counted.
+    const count = ed.state.shoots.filter(s => !s.archived).length;
+    document.getElementById('shootCount').textContent = count ? `${count} ${count === 1 ? 'shoot' : 'shoots'}` : '';
 
     if (shootSort === 'shoot_date') renderShootsByDate(list, items);
     else if (shootSort === 'category') renderShootsByCategory(list, items);
@@ -8711,11 +8656,12 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
 ;
 
 // ---- pages/archive/archive.js ----
-// The Archive tab.
+// The Archive tab: its slideshow of final images (with the shoot each is
+// from under it) and its category filter. The list is archive-list.js.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addArchive = function addArchive(ed) {
-  Object.assign(ed, { startArchiveSlideshow, stopArchiveSlideshow, loadArchiveSlideshow, renderArchiveSlideshow, renderArchive });
+  Object.assign(ed, { startArchiveSlideshow, stopArchiveSlideshow, loadArchiveSlideshow, renderArchiveSlideshow });
   // ---------- Archive view ----------
   ed.archiveFilter = 'all';
   let archiveSlideshowTimer = null;
@@ -8755,7 +8701,19 @@ window.EyeParts.addArchive = function addArchive(ed) {
       current[idx].classList.remove('active');
       idx = (idx + 1) % current.length;
       current[idx].classList.add('active');
+      showCaption(current[idx]);
     }, 4200);
+  }
+
+  // Under the photo: which shoot it's from, and when ("Final image, Nov").
+  function showCaption(img) {
+    const caption = document.getElementById('archiveCaption');
+    const shoot = img && ed.state.shoots.find(s => s.id === img.dataset.shootId);
+    caption.hidden = !shoot;
+    if (!shoot) return;
+    const month = shoot.date ? ed.rowDate(shoot.date, ed.todayStr(), false).replace(/^\d+ /, '') : '';
+    document.getElementById('archiveCaptionLabel').textContent = ed.metaLine(['Final image', month]);
+    document.getElementById('archiveCaptionName').textContent = ed.shootDisplayName(shoot);
   }
 
   function stopArchiveSlideshow() {
@@ -8826,7 +8784,7 @@ window.EyeParts.addArchive = function addArchive(ed) {
       const showing = images.length ? container.querySelector('img.active') : null;
       container.querySelectorAll('img').forEach(img => { if (img !== showing) img.remove(); });
       document.getElementById('archiveSlideshowEmpty').hidden = images.length > 0;
-      if (!images.length) return;
+      if (!images.length) { showCaption(null); return; }
 
       let first = null;
       images.forEach(entry => {
@@ -8841,6 +8799,7 @@ window.EyeParts.addArchive = function addArchive(ed) {
       // Archive's hidden, it's simply there when you get to it).
       void first.offsetWidth;
       first.classList.add('active');
+      showCaption(first);
       if (showing) {
         showing.classList.remove('active');
         // The rotation starts once the old photo's gone, so it counts from
@@ -8876,44 +8835,64 @@ window.EyeParts.addArchive = function addArchive(ed) {
     ed.openShootModal(shoot.id);
   });
 
-  document.getElementById('archiveFilterToggle').addEventListener('click', () => {
-    const filters = document.getElementById('archiveFilters');
-    filters.hidden = !filters.hidden;
-  });
-
+  // The category chips are always out (round 2): All, each category, and
+  // Edit (which categories show).
   document.getElementById('archiveFilters').addEventListener('click', (e) => {
     if (e.target.closest('.chip-manage')) {
-      document.getElementById('archiveFilters').hidden = true;
       ed.openCategoryVisibilityModal();
       return;
     }
     const chip = e.target.closest('.chip');
     if (!chip || !chip.dataset.filter) return;
     ed.archiveFilter = chip.dataset.filter;
-    document.getElementById('archiveFilters').hidden = true;
-    renderArchive();
+    ed.renderArchive();
   });
+};
+;
 
-  // Groups archived shoots into year > month buckets, most recent first, so
-  // a growing archive stays browsable instead of one long flat list.
-  // Undated shoots (no shoot date recorded) fall into their own trailing
-  // "Undated" bucket rather than disappearing. Same collapsible pill
-  // heading as the Shoots screen's status groups, nested one level for
-  // months — collapse state persists per year and per year+month.
+// ---- pages/archive/archive-list.js ----
+// The Archive's list: archived shoots by year, then by month, newest first.
+// Each year is a section title with how many shoots it has; each month is
+// one row (its name, how many shoots, a few of their covers). Tap a month to
+// see its shoots under it (each opens its recap), tap again to fold them
+// away. Undated shoots come last, listed under their own title.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addArchiveList = function addArchiveList(ed) {
+  Object.assign(ed, { renderArchive });
+  // The months showing their shoots, for as long as the app's open.
+  const openMonths = new Set();
+  const ROW_OPTS = { showBadge: false, openArchiveMode: true };
+
+  // A project box stands for several shoots.
+  const shootCount = items => items.reduce((n, item) => n + (item.kind === 'project' ? item.members.length : 1), 0);
+  const plural = n => `${n} ${n === 1 ? 'shoot' : 'shoots'}`;
+
+  // Up to three covers, overlapping, from the month's shoots that have one.
+  function coversHtml(items) {
+    const withPhoto = items.map((item) => {
+      if (item.kind !== 'project') return item.shoot;
+      return (item.rep && item.rep.projectPhoto) ? item.rep : item.members.find(s => s.projectPhoto);
+    }).filter(s => s && s.projectPhoto).slice(0, 3);
+    return withPhoto.map(s => `<span class="archive-month-cover">${ed.shootThumbHtml(s)}</span>`).join('');
+  }
+
   function renderArchive() {
     drawArchive();
     ed.repaginate('archive');
   }
+
   function drawArchive() {
-    renderArchiveSlideshow();
-    ed.renderCategoryFilterChips('archiveFilters', 'archiveFilterToggle', ed.archiveFilter);
+    ed.renderArchiveSlideshow();
+    const archived = ed.state.shoots.filter(s => s.archived);
+    ed.renderCategoryFilterChips('archiveFilters', 'archiveFilterToggle', ed.archiveFilter, new Set(archived.map(s => s.category)));
     const list = document.getElementById('archiveList');
     // Filter first, then collapse: a project box stands for the members that
     // match the active category filter (its date span covers just those).
     // It's filed by its rep's date (for a fully past project, its first day),
     // so it shows once, under one month, even when its days straddle a month
-    // or year boundary. Newest first, same as before.
-    let shoots = ed.state.shoots.filter(s => s.archived);
+    // or year boundary.
+    let shoots = archived;
     if (ed.archiveFilter !== 'all') shoots = shoots.filter(s => s.category === ed.archiveFilter);
     const items = ed.collapseProjects(shoots)
       .sort((a, b) => ed.dateSortKey(ed.listItemRep(b).date).localeCompare(ed.dateSortKey(ed.listItemRep(a).date)));
@@ -8931,60 +8910,64 @@ window.EyeParts.addArchive = function addArchive(ed) {
       if (!months.has(month)) months.set(month, []);
       months.get(month).push(item);
     });
-
     const sortedYears = [...years.keys()].sort((a, b) => {
       if (a === 'Undated') return 1;
       if (b === 'Undated') return -1;
       return b.localeCompare(a);
     });
 
-    let visibleYearIndex = 0;
     sortedYears.forEach(year => {
       const months = years.get(year);
       const sortedMonths = [...months.keys()].sort((a, b) => b.localeCompare(a));
-
+      const yearItems = [].concat(...sortedMonths.map(m => months.get(m)));
       const yearGroupEl = document.createElement('div');
       yearGroupEl.className = 'shoot-status-group';
-
       const yearHeading = document.createElement('h2');
-      yearHeading.className = `status-group-heading ${visibleYearIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}`;
-      yearHeading.textContent = year;
-
+      yearHeading.className = 'status-group-heading';
+      yearHeading.innerHTML = `${ed.escapeHtml(year)} <span>${shootCount(yearItems)}</span>`;
       const yearRowsWrap = document.createElement('div');
       yearRowsWrap.className = 'shoot-status-rows';
 
       if (year === 'Undated') {
-        // Undated only ever has the one '00' month bucket anyway — a
-        // second "Undated" sub-heading under the "Undated" year heading
-        // is pure redundancy, so just list the shoots directly.
-        sortedMonths.forEach(month => {
-          months.get(month).forEach(item => ed.renderListItem(yearRowsWrap, item, { showBadge: false, openArchiveMode: true }));
-        });
+        // Undated only ever has the one '00' month, so its shoots are listed
+        // straight under the title.
+        yearItems.forEach(item => ed.renderListItem(yearRowsWrap, item, ROW_OPTS));
       } else {
-        let visibleMonthIndex = 0;
         sortedMonths.forEach(month => {
+          const key = `${year}-${month}`;
+          const monthItems = months.get(month);
+          const open = openMonths.has(key);
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.className = 'archive-month';
+          row.setAttribute('aria-expanded', String(open));
+          row.innerHTML = `
+            <span class="archive-month-words">
+              <span class="archive-month-name">${ed.escapeHtml(ed.monthLabel(month))}</span>
+              <span class="archive-month-count">${plural(shootCount(monthItems))}</span>
+            </span>
+            <span class="archive-month-covers">${coversHtml(monthItems)}</span>`;
+          const rows = document.createElement('div');
+          rows.className = 'shoot-status-rows archive-month-rows';
+          rows.hidden = !open;
+          monthItems.forEach(item => ed.renderListItem(rows, item, ROW_OPTS));
+          row.addEventListener('click', () => {
+            const nowOpen = rows.hidden;
+            rows.hidden = !nowOpen;
+            row.setAttribute('aria-expanded', String(nowOpen));
+            if (nowOpen) openMonths.add(key);
+            else openMonths.delete(key);
+            ed.repaginate('archive');
+          });
           const monthGroupEl = document.createElement('div');
           monthGroupEl.className = 'archive-month-group';
-
-          const monthHeading = document.createElement('h3');
-          monthHeading.className = `status-group-heading archive-month-heading ${visibleMonthIndex % 2 === 0 ? 'heading-yellow' : 'heading-navy'}`;
-          monthHeading.textContent = ed.monthLabel(month);
-
-          const monthRowsWrap = document.createElement('div');
-          monthRowsWrap.className = 'shoot-status-rows';
-          months.get(month).forEach(item => ed.renderListItem(monthRowsWrap, item, { showBadge: false, openArchiveMode: true }));
-
-          monthGroupEl.appendChild(monthHeading);
-          monthGroupEl.appendChild(monthRowsWrap);
+          monthGroupEl.append(row, rows);
           yearRowsWrap.appendChild(monthGroupEl);
-          visibleMonthIndex++;
         });
       }
 
-      yearGroupEl.appendChild(yearHeading);
-      yearGroupEl.appendChild(yearRowsWrap);
+      yearGroupEl.append(yearHeading, yearRowsWrap);
       list.appendChild(yearGroupEl);
-      visibleYearIndex++;
     });
   }
 };
@@ -9155,108 +9138,51 @@ window.EyeParts.addJournal = function addJournal(ed) {
 ;
 
 // ---- pages/journal/journal-cards.js ----
-// The Journal list: the header band, an entry's card, entries by year and month.
+// Reflections: an entry's block (inside its week's card), and items by year
+// and month (the table of contents).
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addJournalCards = function addJournalCards(ed) {
-  Object.assign(ed, { applyJournalHeaderBand, renderJournalEntryCard, renderYearMonthGroups });
-  // Sizes .journal-paper's --header-band (see the CSS) to this specific
-  // entry's actual title/date height, so the blank band above the ruling
-  // always fully covers it — a fixed guess would either crop a long wrapped
-  // title or leave excess blank space under a short one — and sits the
-  // heading on the first visible rule, at the bottom of that band. Reads as 0 (and is
-  // skipped) whenever the card isn't laid out yet — not just inside a
-  // collapsed month/year group, but even a fully-visible one: renderYear-
-  // MonthGroups builds a whole year's months and cards in memory before
-  // attaching that year to the live list in one shot, so every card is still
-  // a detached, unlaid-out node at the moment renderItem builds it,
-  // regardless of collapse state. Never call this from inside renderItem —
-  // it always reads 0 there. renderJournal's own post-pass (after
-  // renderYearMonthGroups returns, once the list is genuinely in the
-  // document) is what actually measures correctly for a visible entry;
-  // onReveal covers the collapsed-group case for everything left over.
-  function applyJournalHeaderBand(card) {
-    const heading = card.querySelector('.journal-entry-heading');
-    const paper = card.querySelector('.journal-paper');
-    if (!heading || !paper || !heading.offsetHeight) return;
-    // .journal-paper's own 14px top padding sits above the heading, plus a
-    // little extra room for open space above the title, snapped up to the
-    // ruled-line pattern's own existing line positions (21, 49, 77, 105px,
-    // ... — see .journal-paper's 22px background-position) so the band's
-    // bottom edge lands exactly on a real rule instead of slicing one in half.
-    const headingBottom = 14 + heading.offsetHeight;
-    const minBand = headingBottom + 8;
-    const band = Math.ceil((minBand - 21) / 28) * 28 + 21;
-    paper.style.setProperty('--header-band', band + 'px');
-    // The heading is whole 28px rows (see .journal-entry-heading), so this
-    // margin drops it to the bottom of the band: its last row sits right on
-    // the first visible rule, any extra title rows stack above it, and the
-    // entry's own text — which follows directly — starts on the first row
-    // below that rule. The leftover space lands above the title.
-    heading.style.marginTop = (band - headingBottom) + 'px';
-  }
-
-  // One entry, rendered inline on lined notebook paper under a coloured title
-  // banner — the same card shape the Log uses for a week, so the two kinds of
-  // entry read as one continuous scrolling page rather than a list of things
-  // to open.
+  Object.assign(ed, { renderJournalEntryCard, renderYearMonthGroups });
+  // An entry written by hand, inside the card of the week it was written in:
+  // "Journal entry, 28 Oct" (or the shoot it came from), its title and words,
+  // its photos, its tags, then Share as PDF and Delete (the same as its old
+  // options menu). Tap the words to open it. Resolves once its photos are in.
   function renderJournalEntryCard(container, e) {
-    const card = document.createElement('div');
-    card.className = 'card log-card journal-entry-card';
-    // Anchor the table of contents scrolls to (see scrollToJournalItem).
-    card.dataset.entryId = e.id;
-    // Alternates within the month it lands in, so collapsing a month never
-    // leaves two same-coloured banners stacked against each other.
-    const headingColorClass = container.children.length % 2 === 0 ? 'heading-yellow' : 'heading-navy';
+    const block = document.createElement('div');
+    block.className = 'journal-entry-card';
+    block.dataset.entryId = e.id;
     const linkedShoot = e.sourceShootId ? ed.state.shoots.find(s => s.id === e.sourceShootId) : null;
-    // Same "--- shoot name" credit the Log puts after each takeaway; this entry
-    // was compiled from that shoot's reflection, so it's the same attribution.
-    const credit = linkedShoot
-      ? `<span class="log-takeaway-source"> --- ${ed.escapeHtml(ed.shootDisplayName(linkedShoot))}</span>`
-      : '';
-    const tagsHtml = (e.tags || []).map(t => `<span class="beat-chip view-only">${ed.escapeHtml(t)}</span>`).join('');
-
-    card.innerHTML = `
-      <div class="log-week-heading ${headingColorClass} journal-entry-binding">
-        <button type="button" class="journal-entry-options" aria-label="Options">&#8942;</button>
+    const when = e.createdAt ? ed.rowDate(e.createdAt, ed.todayStr(), false) : '';
+    const label = ed.metaLine([linkedShoot ? `From ${ed.shootDisplayName(linkedShoot)}` : 'Journal entry', when]);
+    const tags = (e.tags || []).map(t => `#${String(t).replace(/^#/, '')}`).join(' ');
+    block.innerHTML = `
+      <div class="journal-entry-words">
+        <span class="log-label">${ed.escapeHtml(label)}</span>
+        ${e.title ? `<p class="journal-entry-title">${ed.escapeHtml(e.title)}</p>` : ''}
+        <p class="journal-entry-text">${ed.escapeHtml(e.body || '')}</p>
       </div>
-      <div class="journal-paper log-paper">
-        <div class="journal-entry-heading">
-          <span class="journal-entry-title">${ed.escapeHtml(e.title || 'Untitled entry')}</span>
-          <span class="journal-entry-date">${ed.prettyDate(e.createdAt)}</span>
-        </div>
-        <div class="journal-entry-body"><div class="jb-in">${ed.escapeHtml(e.body || '')}${credit}</div></div>
-        <div class="journal-entry-images moodboard-grid" hidden></div>
-        <div class="journal-entry-tags"${tagsHtml ? '' : ' hidden'}>${tagsHtml}</div>
+      <div class="journal-entry-images moodboard-grid" hidden></div>
+      <p class="journal-entry-tags"${tags ? '' : ' hidden'}>${ed.escapeHtml(tags)}</p>
+      <div class="journal-entry-actions">
+        <button type="button" class="journal-entry-act" data-act="pdf"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v12"/><polyline points="7 8 12 3 17 8"/><path d="M5 13v7h14v-7"/></svg>Share as PDF</button>
+        <button type="button" class="journal-entry-act journal-entry-act-quiet" data-act="delete">Delete</button>
       </div>
     `;
-
-    const paper = card.querySelector('.journal-paper');
-    if (linkedShoot) {
-      // Auto-compiled entries are never edited here — they route back to the
-      // shoot's own reflection fields so the two stay in sync. Reuses the Log's
-      // "this refers to" popup rather than a confirm(), so tapping a reflection
-      // behaves exactly like tapping a weekly log takeaway.
-      paper.addEventListener('click', () => ed.showLogShootRef(e.sourceShootId));
-    } else {
-      // Hand-written entries open straight into the editor: the body is already
-      // fully readable right here, so a read-only stop on the way would be a
-      // popup that shows you what you're already looking at.
-      paper.addEventListener('click', () => ed.openJournalModal(e.id, 'edit'));
-    }
-
-    card.querySelector('.journal-entry-options').addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      ed.openJournalOptions(e.id);
+    block.querySelector('.journal-entry-words').addEventListener('click', () => {
+      if (linkedShoot) ed.showLogShootRef(e.sourceShootId);
+      else ed.openJournalModal(e.id, 'edit');
     });
-
-    container.appendChild(card);
-    // Returned (not fire-and-forget) so scrollToJournalItem can wait for
-    // every card's cover photos to finish loading before it scrolls — those
-    // load from IndexedDB asynchronously and would otherwise grow cards
-    // above the target after the scroll already landed, shoving it back out
-    // of view.
-    return ed.renderJournalListImages(card.querySelector('.journal-entry-images'), ed.journalEntryImagesKey(e));
+    // Through the options sheet's own buttons (pages/journal/entry-options.js,
+    // entry-pdf.js), so they work the same: Delete still asks first.
+    block.querySelector('.journal-entry-actions').addEventListener('click', (ev) => {
+      const btn = ev.target.closest('[data-act]');
+      if (!btn) return;
+      ed.optionsJournalEntryId = e.id;
+      document.getElementById(btn.dataset.act === 'pdf' ? 'shareJournalOptionBtn' : 'deleteJournalOptionBtn').click();
+    });
+    container.appendChild(block);
+    return ed.renderJournalListImages(block.querySelector('.journal-entry-images'), ed.journalEntryImagesKey(e));
   }
 
   // Collapsible year > month nesting for the Journal (and its table of
@@ -9370,7 +9296,7 @@ window.EyeParts.addJournalCards = function addJournalCards(ed) {
 ;
 
 // ---- pages/journal/journal-list.js ----
-// The Journal list: its order, filters and feed, and drawing it.
+// Reflections: its order, filter and feed, and drawing it week by week.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addJournalList = function addJournalList(ed) {
@@ -9447,25 +9373,16 @@ window.EyeParts.addJournalList = function addJournalList(ed) {
     return merged;
   }
 
-  function renderJournalFeedItem(container, item) {
-    if (item.type === 'week') return ed.renderLogWeekCard(container, item.week);
-    return ed.renderJournalEntryCard(container, item.entry);
-  }
-
-  // Nested by year > month of each item's own date (an entry's createdAt, a
-  // log week's start) — same grouping structure Archive uses for shoots.
-  // Returns a promise that resolves once every card's cover photos have
-  // finished loading (see renderJournalEntryCard) — most callers can ignore
-  // it, but scrollToJournalItem needs it so the layout has stopped shifting
-  // before it scrolls.
+  // One card per week, newest first (weekly-log.js): its shoots' rows, then
+  // anything written by hand that week. Returns a promise that resolves once
+  // every entry's photos are in: scrollToJournalItem waits for it so the page
+  // has stopped moving before it scrolls.
   function renderJournal() {
     const photos = drawJournal();
     ed.repaginate('journal');
     return photos.then((done) => { ed.repaginate('journal'); return done; });
   }
   function drawJournal() {
-    // Sorted before grouping, because renderYearMonthGroups keeps whatever
-    // order it's handed.
     const items = journalFeedItems();
 
     const list = document.getElementById('journalList');
@@ -9481,21 +9398,19 @@ window.EyeParts.addJournalList = function addJournalList(ed) {
           : "No weekly log yet. It fills in on its own once a shoot is marked captured.";
     }
 
-    const imagePromises = ed.renderYearMonthGroups(list, items, {
-      dateOf: item => item.date,
-      keyPrefix: 'journal',
-      renderItem: renderJournalFeedItem,
-      // Covers a card in a month/year that's still collapsed at this point —
-      // it stays genuinely unmeasurable (real height 0) until the group
-      // holding it is actually opened, which is what this re-runs for.
-      onReveal: wrap => wrap.querySelectorAll('.journal-entry-card').forEach(ed.applyJournalHeaderBand),
+    // The items are newest first already, so each week turns up in order.
+    const weeks = new Map();
+    const undated = [];
+    items.forEach((item) => {
+      if (!item.date) { undated.push(item.entry); return; }
+      const start = ed.shootWeekWindow(item.date).start;
+      const key = ed.formatDate(start);
+      if (!weeks.has(key)) weeks.set(key, { start, week: null, entries: [] });
+      if (item.type === 'week') weeks.get(key).week = item.week;
+      else weeks.get(key).entries.push(item.entry);
     });
-    // Every card just built is a real, attached, laid-out node now — each
-    // year's whole subtree (months, cards, all of it) only gets appended to
-    // `list` at the very end of building that year (see renderYearMonth-
-    // Groups), so nothing in it could be measured correctly any earlier than
-    // this, not even a card in a section that's expanded by default.
-    list.querySelectorAll('.journal-entry-card').forEach(ed.applyJournalHeaderBand);
+    const imagePromises = [...weeks.values()].map(w => ed.renderWeekCard(list, w.start, w.week, w.entries));
+    if (undated.length) imagePromises.push(ed.renderWeekCard(list, null, null, undated));
     return Promise.all(imagePromises);
   }
 };
@@ -9554,11 +9469,14 @@ window.EyeParts.addJournalContents = function addJournalContents(ed) {
 ;
 
 // ---- pages/journal/weekly-log.js ----
-// The Journal's weekly log (a recap it writes itself).
+// Reflections' weekly log (a recap it writes itself): the weeks with a shoot
+// in them, and each week as a card (This week, Last week, else its dates)
+// with a row per shoot: its cover, its name and day, the lesson it left, and
+// View shoot. The Monday brief shows last week's rows too.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addJournalWeeklyLog = function addJournalWeeklyLog(ed) {
-  Object.assign(ed, { weekRangeLabel, computeWeeklyLog, logTakeaways, showLogShootRef, logWeekPaperHtml, wireLogShootRefs, renderLogWeekCard });
+  Object.assign(ed, { shootWeekWindow, weekRangeLabel, computeWeeklyLog, logTakeaways, showLogShootRef, openLogShoot, logShootRowsHtml, wireLogShootRefs, renderWeekCard });
   // ---------- Journal weekly log (auto-generated recap) ----------
   // Fully derived from state.shoots — nothing here is persisted, so editing
   // a shoot's category or lessons-learned later just updates the log the
@@ -9574,13 +9492,9 @@ window.EyeParts.addJournalWeeklyLog = function addJournalWeeklyLog(ed) {
     return { start, end };
   }
 
+  // "2 to 8 Nov" (row-words.js), the year added when it isn't this one.
   function weekRangeLabel(start, end) {
-    const startMonth = ed.MONTH_NAMES[start.getMonth()].slice(0, 3);
-    const endMonth = ed.MONTH_NAMES[end.getMonth()].slice(0, 3);
-    if (start.getMonth() === end.getMonth()) {
-      return `${startMonth} ${start.getDate()}–${end.getDate()}, ${end.getFullYear()}`;
-    }
-    return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${end.getFullYear()}`;
+    return ed.rowDateRange(ed.formatDate(start), ed.formatDate(end), ed.todayStr());
   }
 
   function computeWeeklyLog() {
@@ -9638,8 +9552,11 @@ window.EyeParts.addJournalWeeklyLog = function addJournalWeeklyLog(ed) {
 
   document.getElementById('logShootRefViewBtn').addEventListener('click', () => {
     document.getElementById('logShootRefOverlay').hidden = true;
-    const shootId = logShootRefId;
-    if (!shootId) return;
+    if (logShootRefId) openLogShoot(logShootRefId);
+  });
+
+  // A shoot from the log, opened on its Reflection page.
+  function openLogShoot(shootId) {
     const s = ed.state.shoots.find(x => x.id === shootId);
     if (!s) return;
     // Asked from the Monday brief's copy of the week, which would otherwise
@@ -9653,61 +9570,76 @@ window.EyeParts.addJournalWeeklyLog = function addJournalWeeklyLog(ed) {
     ed.showPostShootContentExpanded();
     ed.showShootPage('postShootHeading');
     ed.updateShootModalTitleFromScroll();
-  });
+  }
 
   document.getElementById('logShootRefOverlay').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) e.currentTarget.hidden = true;
   });
 
-  // A week's page of the Log: its shoots and takeaways on the lined paper.
-  // The Monday brief shows last week's too, under labels of its own (on a
-  // Monday, "this week" is the new one).
-  function logWeekPaperHtml(w, shootsLabel, noTakeawaysText) {
-    const shootsHtml = w.shoots.map(s =>
-      `<li data-shoot-id="${s.id}">${ed.escapeHtml(ed.shootDisplayName(s))} <span class="log-shoot-category">(${ed.escapeHtml(ed.CATEGORY_LABELS[s.category] || 'Uncategorized')})</span></li>`
-    ).join('');
-    const takeawaysHtml = w.takeaways.length
-      // Each takeaway is credited to its shoot inline, so the list still reads
-      // as attributed even before you tap through to confirm which one.
-      ? `<ul class="log-takeaways">${w.takeaways.map(t => {
-          const from = ed.shootDisplayName(ed.state.shoots.find(x => x.id === t.shootId) || {});
-          const credit = from ? `<span class="log-takeaway-source"> --- ${ed.escapeHtml(from)}</span>` : '';
-          return `<li data-shoot-id="${t.shootId}">${ed.escapeHtml(t.text)}${credit}</li>`;
-        }).join('')}</ul>`
-      : `<p class="log-no-takeaways">${noTakeawaysText}</p>`;
-    return `
-      <div class="journal-paper log-paper">
-        <p class="log-section-label">${shootsLabel}</p>
-        <ul class="log-shoots">${shootsHtml}</ul>
-        <p class="log-section-label">Takeaways</p>
-        ${takeawaysHtml}
-      </div>
-    `;
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+  // A week's shoots, a row each: its cover, its name and day, the lesson it
+  // left (one line breaks collapsed, as in logTakeaways) or that there isn't
+  // one yet, and View shoot.
+  function logShootRowsHtml(w) {
+    const today = ed.todayStr();
+    return w.shoots.map((s) => {
+      const lesson = (s.lessonsLearned || '').replace(/\s*\n+\s*/g, ' ').trim();
+      return `
+        <div class="log-shoot-row">
+          <span class="log-thumb">${ed.shootThumbHtml(s)}</span>
+          <div class="log-shoot-body">
+            <span class="log-label">${ed.escapeHtml(ed.metaLine([ed.shootDisplayName(s), ed.rowDate(s.date, today, false)]))}</span>
+            <span class="log-lesson${lesson ? '' : ' log-lesson-none'}">${ed.escapeHtml(lesson || 'No lesson written yet.')}</span>
+            <button type="button" class="log-view-shoot" data-shoot-id="${ed.escapeHtml(s.id)}">View shoot ${CHEVRON}</button>
+          </div>
+        </div>`;
+    }).join('');
   }
 
   function wireLogShootRefs(card) {
-    card.querySelectorAll('.log-shoots li[data-shoot-id], .log-takeaways li[data-shoot-id]').forEach(li => {
-      li.addEventListener('click', () => showLogShootRef(li.dataset.shootId));
+    card.querySelectorAll('.log-view-shoot[data-shoot-id]').forEach(btn => {
+      btn.addEventListener('click', () => openLogShoot(btn.dataset.shootId));
     });
   }
 
-  // One week of the Log, on the same lined notebook paper the written entries
-  // use — the Log is the other half of the same journal, so it reads as
-  // written on the same pad rather than as a report about it.
-  function renderLogWeekCard(container, w) {
+  // The card's title: This week, Last week, else its dates ("2 to 8 Nov").
+  function weekTitle(start, range) {
+    const thisWeek = shootWeekWindow(ed.todayStr()).start;
+    const lastWeek = new Date(thisWeek);
+    lastWeek.setDate(thisWeek.getDate() - 7);
+    const startStr = ed.formatDate(start);
+    if (startStr === ed.formatDate(thisWeek)) return 'This week';
+    if (startStr === ed.formatDate(lastWeek)) return 'Last week';
+    return range;
+  }
+
+  // One week as a card: This week, Last week, or its dates, with its dates
+  // or how many shoots (or entries) beside; its shoots, then the entries
+  // written that week (renderJournalEntryCard). week is null for a week
+  // with entries and no shoot; start is null for entries with no date.
+  // Resolves once the entries' photos are in.
+  function renderWeekCard(container, start, week, entries) {
+    let range = '';
+    if (start) {
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      range = weekRangeLabel(start, end);
+    }
+    const startStr = start ? ed.formatDate(start) : '';
+    const title = start ? weekTitle(start, range) : 'Undated';
+    const count = week ? plural(week.shoots.length, 'shoot', 'shoots') : plural(entries.length, 'entry', 'entries');
     const card = document.createElement('div');
     card.className = 'card log-card';
     // Anchor the table of contents scrolls to (see scrollToJournalItem).
-    card.dataset.weekKey = ed.formatDate(w.start);
-    // Alternates within the month it lands in, so collapsing a month never
-    // leaves two same-coloured banners stacked against each other.
-    const headingColorClass = container.children.length % 2 === 0 ? 'heading-yellow' : 'heading-navy';
+    if (week) card.dataset.weekKey = startStr;
     card.innerHTML = `
-      <p class="log-week-heading ${headingColorClass}">${ed.escapeHtml(w.label)}</p>
-      ${logWeekPaperHtml(w, 'Shoots this week', 'No takeaways logged this week.')}
-    `;
+      <div class="log-week-head"><h3 class="log-week-heading">${ed.escapeHtml(title)}</h3><span class="log-week-meta">${ed.escapeHtml(range && title !== range ? range : count)}</span></div>
+      ${week ? logShootRowsHtml(week) : ''}`;
     wireLogShootRefs(card);
     container.appendChild(card);
+    return Promise.all(entries.map(e => ed.renderJournalEntryCard(card, e)));
   }
 };
 ;
@@ -22474,7 +22406,7 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
       body.appendChild(sectionHeading('Last week'));
       const card = document.createElement('div');
       card.className = 'card log-card monday-brief-log';
-      card.innerHTML = ed.logWeekPaperHtml(week, 'Shoots', 'No takeaways logged last week.');
+      card.innerHTML = ed.logShootRowsHtml(week);
       ed.wireLogShootRefs(card);
       body.appendChild(card);
     }
@@ -24703,6 +24635,7 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addOverviewNextShoot(ed);
   window.EyeParts.addShootsShootLog(ed);
   window.EyeParts.addArchive(ed);
+  window.EyeParts.addArchiveList(ed);
   window.EyeParts.addJournal(ed);
   window.EyeParts.addJournalCards(ed);
   window.EyeParts.addJournalList(ed);

@@ -1,0 +1,30 @@
+/* The top of a list (DESIGN.md 9): on Shoots, the sort button (ink) and how
+   many shoots (dim), in small capitals; on Reflections, a line saying what it
+   is, then its contents and filter buttons in the same small capitals. The
+   section titles in Shoots and the Archive (a status, a year) are the
+   Overview's: 13px capitals with their count in dim. */
+.list-head { display: flex; align-items: center; justify-content: space-between; margin-top: -4px; }
+.list-sort-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 44px; min-height: 0; margin: 0 0 0 -8px; padding: 0 8px;
+  border: 0; border-radius: 0; background: none; color: var(--text);
+  font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+.list-sort-btn svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.list-count { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.list-intro { margin: -2px 0 0; font: 400 15px/21px var(--ui); color: var(--dim); }
+
+#view-shoots .shoot-status-group, #view-archive .shoot-status-group { margin: 0; padding: 0; background: none; border: 0; }
+:is(#view-shoots, #view-archive) .status-group-heading {
+  display: flex; align-items: center; gap: .4em; min-height: 44px; margin: 24px 0 0; padding: 0; border: 0; background: none; color: var(--text);
+  font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; text-shadow: none;
+}
+#view-shoots .shoot-status-group:first-child .status-group-heading { margin-top: 8px; }
+:is(#view-shoots, #view-archive) .status-group-heading > span { font: 500 13px/16px var(--ui); letter-spacing: .12em; color: var(--dim); font-variant-numeric: tabular-nums; }
+#view-shoots .shoot-status-rows, #view-archive .shoot-status-rows { margin: 0; padding: 0; background: none; border: 0; }
+
+/* Reflections' contents and filter: quiet buttons under the line. */
+#view-journal .journal-toolbar { display: flex; align-items: center; gap: 8px; margin: 4px 0 0 -8px; padding: 0; background: none; border: 0; }
+#view-journal .journal-toolbar .filter-toggle {
+  height: 44px; min-height: 0; margin: 0; padding: 0 8px; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--text);
+  font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}

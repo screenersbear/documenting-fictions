@@ -60,6 +60,7 @@
   window.EyeParts.addOverviewNextShoot(ed);
   window.EyeParts.addShootsShootLog(ed);
   window.EyeParts.addArchive(ed);
+  window.EyeParts.addArchiveList(ed);
   window.EyeParts.addJournal(ed);
   window.EyeParts.addJournalCards(ed);
   window.EyeParts.addJournalList(ed);
