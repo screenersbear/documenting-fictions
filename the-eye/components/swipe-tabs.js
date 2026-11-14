@@ -4,10 +4,15 @@ window.EyeParts = window.EyeParts || {};
 window.EyeParts.addSwipeTabs = function addSwipeTabs(ed) {
   // ---------- swipe between tabs ----------
   (function setupTabSwipe() {
-    // A swipe on the page turns a page of this screen; the navigator changes screens.
+    // A swipe on the page goes to the next section (or a page of this one,
+    // if it has more): the page follows the finger and slides over
+    // (components/section-slide.js, 14 Nov). Up and down, it scrolls.
     let startX = null;
     let startY = null;
     let tracking = false;
+    let sliding = false;
+    let axis = '';
+    let last = null; // the latest finger point, and the one before, for its speed
 
     // No tab swipes under any popup (the photo viewer and Stats' slide-over
     // included), so the screen behind one can't change.
@@ -26,7 +31,32 @@ window.EyeParts.addSwipeTabs = function addSwipeTabs(ed) {
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       tracking = true;
+      sliding = false;
+      axis = '';
+      last = { x: startX, t: e.timeStamp, before: null };
     }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!tracking || startX === null || !e.touches.length) return;
+      const x = e.touches[0].clientX;
+      const dx = x - startX;
+      const dy = e.touches[0].clientY - startY;
+      last = { x, t: e.timeStamp, before: last };
+      // The first 10px decide: sideways (and clearly so) slides, else it scrolls.
+      if (!axis) {
+        if (Math.hypot(dx, dy) < 10) return;
+        axis = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'x' : 'y';
+        if (axis === 'x') sliding = ed.startSlideDrag(dx < 0 ? 1 : -1);
+      }
+      if (sliding) ed.moveSlideDrag(dx);
+    }, { passive: true });
+
+    // How fast the finger was going when it let go, in px/ms.
+    const speedAt = (e) => {
+      const b = last && last.before;
+      if (!b || e.timeStamp - last.t > 80 || last.t <= b.t) return 0;
+      return (last.x - b.x) / (last.t - b.t);
+    };
 
     document.addEventListener('touchend', (e) => {
       if (!tracking || startX === null) return;
@@ -35,9 +65,17 @@ window.EyeParts.addSwipeTabs = function addSwipeTabs(ed) {
       const dy = e.changedTouches[0].clientY - startY;
       startX = null;
       startY = null;
-      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (sliding) { sliding = false; ed.endSlideDrag(dx, speedAt(e)); return; }
+      if (axis === 'y' || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
 
       ed.stepScreenPage(dx < 0 ? 1 : -1);
+    }, { passive: true });
+
+    // The system took the finger (a call, a gesture of its own): back where it was.
+    document.addEventListener('touchcancel', () => {
+      tracking = false;
+      startX = null;
+      if (sliding) { sliding = false; ed.endSlideDrag(0, 0); }
     }, { passive: true });
   })();
 

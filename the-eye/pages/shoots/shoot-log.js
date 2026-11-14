@@ -203,7 +203,7 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
     document.getElementById('shootEmpty').hidden = items.length !== 0;
     // Every shoot listed, a project's days each counted.
     const count = ed.state.shoots.filter(s => !s.archived).length;
-    document.getElementById('shootCount').textContent = count ? `${count} ${count === 1 ? 'shoot' : 'shoots'}` : '';
+    document.getElementById('shootCount').textContent = count ? String(count) : '';
 
     if (shootSort === 'shoot_date') renderShootsByDate(list, items);
     else if (shootSort === 'category') renderShootsByCategory(list, items);

@@ -189,7 +189,7 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
       list.appendChild(row);
     }
 
-    // It only opens when asked for (the bell, the Today card's N MORE), so it always
+    // It only opens when asked for (the Today card's N MORE or FULL REPORT), so it always
     // says something.
     if (!today.length && !items.length && !nudge && !fact) {
       const row = document.createElement('div');
@@ -201,7 +201,7 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
     document.getElementById('dailyReportOverlay').hidden = false;
   }
 
-  // The bell and the Today card's N MORE: the daily report, shown when
+  // The Today card's N MORE and FULL REPORT: the daily report, shown when
   // asked for (it used to open once a day on its own; the Today card took
   // that over). It always shows something (a "nothing to report" line if
   // today's report is genuinely empty).

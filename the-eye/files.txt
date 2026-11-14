@@ -77,6 +77,7 @@ built/app.css
   styles/notebook-shoot-mode.css
   styles/journal-legal-pad.css
   styles/plain-pages.css
+  styles/section-slide.css
   styles/new-shoot-guide-type.css
   styles/header-band.css
   styles/section-titles.css
@@ -192,6 +193,8 @@ built/app.js
   components/shoot-copies.js
   components/image-resize.js
   components/page-turn.js
+  components/slide-steps.js
+  components/section-slide.js
   components/last-place.js
   components/screen-size.js
   components/screen-pages.js

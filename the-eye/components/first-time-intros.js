@@ -7,7 +7,7 @@ window.EyeParts.addFirstTimeIntros = function addFirstTimeIntros(ed) {
   const TAB_INTROS = {
     overview: {
       title: 'Overview',
-      text: "this is your at-a-glance page. the Today card at the top shows only what needs you now, then comes your next shoot and everything after it, with small flags for what each shoot still needs. tap + at the top anytime to start a new shoot.",
+      text: "this is your at-a-glance page. the Today card at the top shows only what needs you now, then comes your next shoot and everything after it, with small flags for what each shoot still needs. tap NEW SHOOT on Shoots anytime to start a new one.",
     },
     shoots: {
       title: 'Shoots',

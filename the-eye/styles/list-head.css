@@ -1,5 +1,6 @@
-/* The top of a list (DESIGN.md 9): on Shoots, the sort button (ink) and how
-   many shoots (dim), in small capitals; on Reflections, a line saying what it
+/* The top of a list (DESIGN.md 9): on Shoots, the sort button (ink), how
+   many shoots (dim), in small capitals, and NEW SHOOT beside the count (13px
+   capitals, ink, a 16px +: 14 Nov, adding sits beside its list); on Reflections, a line saying what it
    is, then its contents and filter buttons in the same small capitals. The
    section titles in Shoots and the Archive (a status, a year) are the
    Overview's: 13px capitals with their count in dim. */
@@ -11,6 +12,13 @@
 }
 .list-sort-btn svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .list-count { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.list-head-end { display: inline-flex; align-items: center; gap: 4px; }
+.list-add-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 44px; min-height: 0; margin: 0 -8px 0 0; padding: 0 8px;
+  border: 0; border-radius: 0; background: none; color: var(--text);
+  font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+.list-add-btn svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .list-intro { margin: -2px 0 0; font: 400 15px/21px var(--ui); color: var(--dim); }
 
 #view-shoots .shoot-status-group, #view-archive .shoot-status-group { margin: 0; padding: 0; background: none; border: 0; }

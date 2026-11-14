@@ -1,5 +1,6 @@
 /* The Today card at the top of Overview: a white card (radius 12) with TODAY
-   and how many things (N THINGS), then the two most urgent, between
+   and how many things (N THINGS), or with two or fewer FULL REPORT and a
+   chevron, which opens the report (14 Nov: the band's bell went), then the two most urgent, between
    hairlines: a line in 17px light (the shoot's name in 500) with its two
    answers, or a line to tap with a chevron. A deadline gone by is crimson,
    and written out. Under them N MORE IN TODAY'S REPORT with a dot for each
@@ -8,6 +9,13 @@
 .today-card[hidden] { display: none; }
 .today-card-head { display: flex; align-items: baseline; justify-content: space-between; }
 .today-count { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.today-report {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 28px; height: auto; margin: 0; padding: 0;
+  border: 0; border-radius: 0; background: none; color: var(--dim); cursor: pointer;
+  font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+.today-report[hidden] { display: none; }
+.today-report svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #view-overview .today-card-head h2 {
   margin: 0; padding: 0; background: none; border: 0; color: var(--text);
   font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase;

@@ -4,7 +4,6 @@ window.EyeParts = window.EyeParts || {};
 window.EyeParts.addOverview = function addOverview(ed) {
   Object.assign(ed, { lockBodyScroll, unlockBodyScroll, scrollPageTo, anyPopupOpen, openStatBoxDetail, refreshOpenStatBoxDetail, closeStatBoxDetail });
   // ---------- Overview (home) ----------
-  document.getElementById('newShootBtn').addEventListener('click', () => ed.openShootModal(null));
 
   const STAT_BOX_FILTERS = {
     // Photo shoots in Editing, plus every video step after Captured and

@@ -222,15 +222,12 @@ window.EyeParts.addShootModePages = function addShootModePages(ed) {
   function stepShootModePage(by) {
     const to = ed.shootModeAt + by;
     if (to < 0 || to >= shootModePages().length) return;
-    const turning = ed.motionOk();
-    const oldCopy = turning ? shootModeSheetCopy() : null;
+    const oldCopy = shootModeSheetCopy();
     ed.shootModeWanted = null;
     ed.shootModeAt = to;
     drawShootModePage();
-    if (!turning) return;
-    const layer = ed.shootModeOverlay.querySelector('.nb-turn-layer');
-    if (by > 0) ed.playTurn(layer, '', oldCopy);
-    else ed.playTurn(layer, 'back', shootModeSheetCopy(), oldCopy);
+    // A plain slide, as between sections (14 Nov; with Reduce Motion, a crossfade).
+    ed.playSlide(ed.shootModeOverlay.querySelector('.nb-turn-layer'), by > 0 ? 1 : -1, oldCopy, shootModeSheetCopy());
   }
   document.getElementById('shootModePrev').addEventListener('click', () => stepShootModePage(-1));
   document.getElementById('shootModeNext').addEventListener('click', () => stepShootModePage(1));

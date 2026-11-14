@@ -7435,11 +7435,12 @@ window.EyeParts.addImageResize = function addImageResize(ed) {
 ;
 
 // ---- components/page-turn.js ----
-// Tabs and pages: going to a tab, turning a page, and each section as one page.
+// Tabs and pages: going to a tab, pictures of a page, and each section as one page.
+// (Going between sections is a plain slide since 14 Nov: components/section-slide.js.)
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addPageTurn = function addPageTurn(ed) {
-  Object.assign(ed, { pageCopy, clearTurn, playTurn, turnToView });
+  Object.assign(ed, { pageCopy, clearTurn, turnToView });
   // ---------- tab navigation ----------
   const views = {
     overview: document.getElementById('view-overview'),
@@ -7449,10 +7450,9 @@ window.EyeParts.addPageTurn = function addPageTurn(ed) {
     stats: document.getElementById('view-stats'),
   }; ed.views = views;
 
-  // ---------- Turning a page ----------
-  // A sheet swings over on its hinge, carrying a copy of a page. The copy
-  // only looks like the page: it can't be touched and goes on a timer, not on
-  // the animation's end, so it can never be left covering anything.
+  // ---------- Pictures of a page ----------
+  // A copy of a page, for the slide to carry (components/section-slide.js).
+  // It only looks like the page: it can't be touched.
   const turnTimers = new WeakMap();
   const motionOk = () => !matchMedia('(prefers-reduced-motion: reduce)').matches; ed.motionOk = motionOk;
 
@@ -7478,33 +7478,15 @@ window.EyeParts.addPageTurn = function addPageTurn(ed) {
     layer.querySelectorAll('.nb-turn, .nb-turn-under').forEach(el => el.remove());
   }
 
-  function playTurn(layer, kind, leafCopy, underCopy) {
-    clearTurn(layer);
-    const base = layer.getBoundingClientRect();
-    const add = (className, copy) => {
-      const sheet = document.createElement('div');
-      sheet.className = className;
-      layer.appendChild(sheet);
-      if (copy) {
-        // offsetLeft/Top ignore the sheet's own swing.
-        copy.holder.style.left = `${copy.left - base.left - sheet.offsetLeft}px`;
-        copy.holder.style.top = `${copy.top - base.top - sheet.offsetTop}px`;
-        sheet.appendChild(copy.holder);
-      }
-    };
-    if (underCopy) add('nb-turn-under', underCopy);
-    add(`nb-turn${kind ? ` ${kind}` : ''}`, leafCopy);
-    turnTimers.set(layer, setTimeout(() => clearTurn(layer), 640));
-  }
-
-  // Set just before a tab's click that should turn the page: the navigator,
-  // the side tabs and a swipe. The app's own jumps between screens don't.
+  // Set just before a tab's click that should slide the page over: the
+  // navigator, the side tabs and a swipe (with Reduce Motion, a crossfade).
+  // The app's own jumps between screens don't.
   ed.turnNextTab = false;
 
   function turnToView(view) {
     const tab = document.querySelector(`.tabbar .tab[data-view="${view}"]`);
     if (!tab || tab.classList.contains('active')) return;
-    ed.turnNextTab = motionOk();
+    ed.turnNextTab = true;
     tab.click();
   }
 
@@ -7520,6 +7502,176 @@ window.EyeParts.addPageTurn = function addPageTurn(ed) {
   const screenAt = { overview: 0, shoots: 0, archive: 0, journal: 0, stats: 0 }; ed.screenAt = screenAt;
   ed.statsFlows = [];
   const currentScreen = () => document.documentElement.dataset.view; ed.currentScreen = currentScreen;
+};
+;
+
+// ---- components/slide-steps.js ----
+// The sums for turning sections as a plain slide (Starky, 14 Nov; DESIGN.md
+// 9.4): which section is that way, where the pages sit under the finger, and
+// whether letting go goes on or comes back. No page, so it's unit tested
+// (tests/unit/the-eye/slide-steps.test.mjs); components/section-slide.js
+// does the sliding.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addSlideSteps = function addSlideSteps(ed) {
+  // The page settles in 240ms on the shelf's curve, no bounce; with Reduce
+  // Motion on, a 150ms crossfade instead.
+  ed.SLIDE = { ms: 240, ease: 'cubic-bezier(.4, 0, .2, 1)', fadeMs: 150 };
+  Object.assign(ed, { slideTarget, slideOffset, slideCommits });
+
+  // order: the sections, in order; at: the one showing; dir: on (above 0) or
+  // back (below 0). The section that way, or null past either end.
+  function slideTarget(order, at, dir) {
+    const i = order.indexOf(at);
+    if (i < 0 || !dir) return null;
+    return order[i + Math.sign(dir)] || null;
+  }
+
+  // Where the pages sit with the finger dx from where it started: only
+  // toward the section that's there (dir 1 is on, the finger going left),
+  // and never past a whole page (width).
+  function slideOffset(dx, dir, width) {
+    return dir > 0 ? Math.max(-width, Math.min(0, dx)) : Math.min(width, Math.max(0, dx));
+  }
+
+  // Letting go: on to the next section once the finger has taken the page
+  // far enough (60px, or 15% of a narrow page) or flicked it that way
+  // (speed in px/ms); a flick back the other way brings it back.
+  function slideCommits(dx, dir, width, speed = 0) {
+    if (dx * dir >= 0) return false;
+    if (speed * dir > 0) return false;
+    return Math.abs(dx) > Math.min(60, width * 0.15) || Math.abs(speed) > 0.35;
+  }
+};
+;
+
+// ---- components/section-slide.js ----
+// Going from one section to the next (Starky, 14 Nov; DESIGN.md 9.4): a
+// plain slide, no page turn. A picture of the page you were on and one of
+// the page you're going to lie side by side over the real page, which is
+// already the new one underneath, and slide across: under the finger while
+// it's on the glass, then settling in 240ms (components/slide-steps.js has
+// the sums). With Reduce Motion, the old page's picture fades out in 150ms.
+// The pictures can't be touched, and go on a timer, not on the animation's
+// end, so they can never be left covering anything.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addSectionSlide = function addSectionSlide(ed) {
+  Object.assign(ed, { playSlide, clearSlide, startSlideDrag, moveSlideDrag, endSlideDrag });
+  const timers = new WeakMap();
+  let drag = null;
+
+  function clearSlide(layer) {
+    clearTimeout(timers.get(layer));
+    layer.querySelectorAll('.nb-slide').forEach(el => el.remove());
+  }
+
+  // What's behind the pages there (Shoot mode's is dark), so the slide's
+  // layer hides the real page under it in the same colour.
+  function groundOf(el) {
+    for (let at = el; at; at = at.parentElement) {
+      const c = getComputedStyle(at).backgroundColor;
+      if (c && c !== 'transparent' && !/^rgba\(.*,\s*0\)$/.test(c)) return c;
+    }
+    return '#fff';
+  }
+
+  // A page's picture (ed.pageCopy) in a pane the size of the layer, x along.
+  function pane(layer, copy, x, ground) {
+    const base = layer.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'nb-slide-pane';
+    el.style.left = `${x}px`;
+    el.style.background = ground;
+    copy.holder.style.left = `${copy.left - base.left}px`;
+    copy.holder.style.top = `${copy.top - base.top}px`;
+    el.appendChild(copy.holder);
+    return el;
+  }
+
+  function layerFor(layer, cls) {
+    clearSlide(layer);
+    const el = document.createElement('div');
+    el.className = cls;
+    el.setAttribute('aria-hidden', 'true');
+    layer.appendChild(el);
+    return el;
+  }
+
+  // The old page, and the new one beside it: on its right going on (dir 1),
+  // on its left going back.
+  function build(layer, dir, oldCopy, newCopy) {
+    const ground = groundOf(layer);
+    const el = layerFor(layer, 'nb-slide');
+    const width = layer.clientWidth;
+    const strip = document.createElement('div');
+    strip.className = 'nb-slide-strip';
+    strip.append(pane(layer, oldCopy, 0, ground), pane(layer, newCopy, dir * width, ground));
+    el.appendChild(strip);
+    return { strip, width };
+  }
+
+  function settle(layer, s, from, to, then) {
+    s.strip.style.transform = `translate3d(${from}px, 0px, 0px)`;
+    s.strip.animate([{ transform: `translate3d(${from}px, 0px, 0px)` }, { transform: `translate3d(${to}px, 0px, 0px)` }],
+      { duration: ed.SLIDE.ms, easing: ed.SLIDE.ease, fill: 'forwards' });
+    timers.set(layer, setTimeout(() => { if (then) then(); clearSlide(layer); }, ed.SLIDE.ms + 40));
+  }
+
+  function crossfade(layer, oldCopy) {
+    const el = layerFor(layer, 'nb-slide nb-slide-fade');
+    el.appendChild(pane(layer, oldCopy, 0, groundOf(layer)));
+    el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: ed.SLIDE.fadeMs, easing: 'linear', fill: 'forwards' });
+    timers.set(layer, setTimeout(() => clearSlide(layer), ed.SLIDE.fadeMs + 40));
+  }
+
+  // Turned in one go (a tap on the section bar, its arrows, a page's last
+  // page): the new page is already showing under the pictures.
+  function playSlide(layer, dir, oldCopy, newCopy) {
+    if (!ed.motionOk()) { crossfade(layer, oldCopy); return; }
+    settle(layer, build(layer, dir, oldCopy, newCopy), 0, -dir * layer.clientWidth);
+  }
+
+  // ---------- Under the finger ----------
+  const order = () => [...document.querySelectorAll('.tabbar .tab')].map(tab => tab.dataset.view);
+  // The app's own jump: no slide of its own.
+  function showView(view) {
+    ed.turnNextTab = false;
+    document.querySelector(`.tabbar .tab[data-view="${view}"]`).click();
+  }
+
+  // A finger going sideways on the page (dir 1: on). The section that way
+  // goes under the pictures at once; false when there's none that way, the
+  // page has pages of its own to turn first, or with Reduce Motion (the
+  // swipe then turns when it's let go, as before).
+  function startSlideDrag(dir) {
+    if (drag || !ed.motionOk()) return false;
+    const from = ed.currentScreen();
+    const to = ed.slideTarget(order(), from, dir);
+    if (!to || ed.screenPageCount(from) > 1) return false;
+    const layer = document.querySelector('.nb-board');
+    const y = window.scrollY;
+    const oldCopy = ed.pageCopy(ed.views[from]);
+    showView(to);
+    drag = { layer, dir, from, y, x: 0, s: build(layer, dir, oldCopy, ed.pageCopy(ed.views[to])) };
+    return true;
+  }
+
+  function moveSlideDrag(dx) {
+    if (!drag) return;
+    drag.x = ed.slideOffset(dx, drag.dir, drag.s.width);
+    drag.s.strip.style.transform = `translate3d(${drag.x}px, 0px, 0px)`;
+  }
+
+  // Let go (speed in px/ms): on to the new section, or back to the one it
+  // came from, where it was on that page.
+  function endSlideDrag(dx, speed) {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    const on = ed.slideCommits(dx, d.dir, d.s.width, speed);
+    settle(d.layer, d.s, d.x, on ? -d.dir * d.s.width : 0, on ? null : () => { showView(d.from); ed.scrollPageTo(d.y); });
+  }
 };
 ;
 
@@ -7892,24 +8044,21 @@ window.EyeParts.addPagePan = function addPagePan(ed) {
     const from = ed.screenNow(view);
     if (to < 0 || to >= ed.screenPageCount(view) || to === from) return;
     clearPan();
-    const turning = ed.motionOk();
     // The left and right pages lie open side by side: no leaf between them.
-    if (turning && view === 'overview' && (from === 0 || to === 0)) { panSpread(view, to); return; }
-    const oldCopy = turning ? ed.pageCopy(ed.views[view]) : null;
+    if (ed.motionOk() && view === 'overview' && (from === 0 || to === 0)) { panSpread(view, to); return; }
+    const oldCopy = ed.pageCopy(ed.views[view]);
     ed.scrollPageTo(0); // only a page with something too tall on it could be scrolled
     ed.screenAt[view] = to;
     ed.drawScreenPage(view);
-    if (!turning) return;
-    const board = document.querySelector('.nb-board');
-    if (to > from) ed.playTurn(board, '', oldCopy);
-    else ed.playTurn(board, 'back', ed.pageCopy(ed.views[view]), oldCopy);
+    // A plain slide (with Reduce Motion, a crossfade), as between sections.
+    ed.playSlide(document.querySelector('.nb-board'), to > from ? 1 : -1, oldCopy, ed.pageCopy(ed.views[view]));
   }
   function stepScreenPage(by) {
     const view = ed.currentScreen();
     const to = ed.screenNow(view) + by;
     if (to >= 0 && to < ed.screenPageCount(view)) { turnScreenPage(view, to); return; }
     // Turning past a section's last page (or back past its first) carries on
-    // into the next section, as a leaf turn, landing on its first page either
+    // into the next section, as a slide, landing on its first page either
     // way. Nothing comes before Overview: the book only shuts from the navigator.
     const order = [...document.querySelectorAll('.tabbar .tab')].map(tab => tab.dataset.view);
     const next = order[order.indexOf(view) + Math.sign(by)];
@@ -7949,11 +8098,10 @@ window.EyeParts.addPagePan = function addPagePan(ed) {
       ed.renderAll();
       if (turning) {
         const order = [...document.querySelectorAll('.tabbar .tab')].map(tab => tab.dataset.view);
-        const board = document.querySelector('.nb-board');
-        // Going on, the old page swings away; going back, the page before
-        // swings in over it.
-        if (order.indexOf(view) > order.indexOf(previous)) ed.playTurn(board, '', oldCopy);
-        else ed.playTurn(board, 'back', ed.pageCopy(ed.views[view]), oldCopy);
+        // A plain slide: going on, the new page comes in from the right;
+        // going back, from the left (with Reduce Motion, a crossfade).
+        const dir = order.indexOf(view) > order.indexOf(previous) ? 1 : -1;
+        ed.playSlide(document.querySelector('.nb-board'), dir, oldCopy, ed.pageCopy(ed.views[view]));
       }
       // Journal's intro was rewritten when the Log and Reflections notebooks
       // merged into one page, under a new key so anyone who dismissed the old
@@ -7974,7 +8122,7 @@ window.EyeParts.addFirstTimeIntros = function addFirstTimeIntros(ed) {
   const TAB_INTROS = {
     overview: {
       title: 'Overview',
-      text: "this is your at-a-glance page. the Today card at the top shows only what needs you now, then comes your next shoot and everything after it, with small flags for what each shoot still needs. tap + at the top anytime to start a new shoot.",
+      text: "this is your at-a-glance page. the Today card at the top shows only what needs you now, then comes your next shoot and everything after it, with small flags for what each shoot still needs. tap NEW SHOOT on Shoots anytime to start a new one.",
     },
     shoots: {
       title: 'Shoots',
@@ -8112,7 +8260,6 @@ window.EyeParts = window.EyeParts || {};
 window.EyeParts.addOverview = function addOverview(ed) {
   Object.assign(ed, { lockBodyScroll, unlockBodyScroll, scrollPageTo, anyPopupOpen, openStatBoxDetail, refreshOpenStatBoxDetail, closeStatBoxDetail });
   // ---------- Overview (home) ----------
-  document.getElementById('newShootBtn').addEventListener('click', () => ed.openShootModal(null));
 
   const STAT_BOX_FILTERS = {
     // Photo shoots in Editing, plus every video step after Captured and
@@ -8582,8 +8729,9 @@ window.EyeParts.addOverviewDrawOverview = function addOverviewDrawOverview(ed) {
 // The Today card at the top of Overview: only what needs you now, in place of
 // the pop-ups that used to open on launch (the list: components/today-items.js).
 // The two most urgent, how many things there are in all, and under them
-// "N MORE IN TODAY'S REPORT", which opens the daily report (round 5). Hidden
-// when there's nothing.
+// "N MORE IN TODAY'S REPORT", which opens the daily report (round 5). With
+// two or fewer, FULL REPORT at the top in place of the count opens it (the
+// band's bell went on 14 Nov). Hidden when there's nothing.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addOverviewTodayCard = function addOverviewTodayCard(ed) {
@@ -8593,6 +8741,7 @@ window.EyeParts.addOverviewTodayCard = function addOverviewTodayCard(ed) {
   const items = document.getElementById('todayCardItems');
   const count = document.getElementById('todayCount');
   const more = document.getElementById('todayMoreBtn');
+  const report = document.getElementById('todayReportBtn');
   const moreWords = document.getElementById('todayMoreWords');
   const moreDots = document.getElementById('todayMoreDots');
 
@@ -8601,6 +8750,8 @@ window.EyeParts.addOverviewTodayCard = function addOverviewTodayCard(ed) {
     const left = list.length - SHOWN;
     items.innerHTML = list.slice(0, SHOWN).map(ed.todayItemHtml).join('');
     count.textContent = ed.todayCountWords(list.length);
+    count.hidden = left < 1;
+    report.hidden = left > 0;
     more.hidden = left < 1;
     moreWords.textContent = ed.todayMoreWords(Math.max(left, 0));
     // A dot for each of them (up to eight).
@@ -8613,6 +8764,7 @@ window.EyeParts.addOverviewTodayCard = function addOverviewTodayCard(ed) {
     if (el) ed.runTodayAct(el.dataset.act, el.dataset.id);
   });
   more.addEventListener('click', () => ed.openNotificationsBell());
+  report.addEventListener('click', () => ed.openNotificationsBell());
 };
 ;
 
@@ -8862,7 +9014,7 @@ window.EyeParts.addShootsShootLog = function addShootsShootLog(ed) {
     document.getElementById('shootEmpty').hidden = items.length !== 0;
     // Every shoot listed, a project's days each counted.
     const count = ed.state.shoots.filter(s => !s.archived).length;
-    document.getElementById('shootCount').textContent = count ? `${count} ${count === 1 ? 'shoot' : 'shoots'}` : '';
+    document.getElementById('shootCount').textContent = count ? String(count) : '';
 
     if (shootSort === 'shoot_date') renderShootsByDate(list, items);
     else if (shootSort === 'category') renderShootsByCategory(list, items);
@@ -19855,10 +20007,6 @@ window.EyeParts.addAppMenu = function addAppMenu(ed) {
     appMenuOverlay.querySelector('.opt-sheet-body').scrollTop = 0;
   });
 
-  document.getElementById('notificationBellBtn').addEventListener('click', () => {
-    ed.openNotificationsBell();
-  });
-
   document.getElementById('appMenuCancelBtn').addEventListener('click', closeAppMenu);
 
   appMenuOverlay.addEventListener('click', (e) => {
@@ -19951,7 +20099,7 @@ window.EyeParts.addTour = function addTour(ed) {
   eyeCards.addEventListener('click', (e) => { if (e.target === eyeCards && eyeCardsDim) eyeCardsDim(); });
 
   const eyeTourCards = () => [
-    ['Plan a shoot', 'Tap + at the top of Overview. Each shoot gets its own pages: basic info, logistics, team, direction, visuals and a shot list.'],
+    ['Plan a shoot', 'Tap NEW SHOOT on Shoots. Each shoot gets its own pages: basic info, logistics, team, direction, visuals and a shot list.'],
     ['On the day, and after', 'Tick off the shot list as you go. Afterwards, write a reflection: what went right, what could be better, and lessons for next time.'],
     ['Your week', 'Overview shows what needs you today and what’s coming up. Reflections keeps the week’s log, and Archive holds the shoots you’ve done.'],
     ...(window.DF_SUITE ? [['Mood boards from Ref', 'Send a board from Ref to a shoot and it shows on that shoot’s page, kept up to date until the shoot is captured.']] : []),
@@ -21845,15 +21993,12 @@ window.EyeParts.addShootModePages = function addShootModePages(ed) {
   function stepShootModePage(by) {
     const to = ed.shootModeAt + by;
     if (to < 0 || to >= shootModePages().length) return;
-    const turning = ed.motionOk();
-    const oldCopy = turning ? shootModeSheetCopy() : null;
+    const oldCopy = shootModeSheetCopy();
     ed.shootModeWanted = null;
     ed.shootModeAt = to;
     drawShootModePage();
-    if (!turning) return;
-    const layer = ed.shootModeOverlay.querySelector('.nb-turn-layer');
-    if (by > 0) ed.playTurn(layer, '', oldCopy);
-    else ed.playTurn(layer, 'back', shootModeSheetCopy(), oldCopy);
+    // A plain slide, as between sections (14 Nov; with Reduce Motion, a crossfade).
+    ed.playSlide(ed.shootModeOverlay.querySelector('.nb-turn-layer'), by > 0 ? 1 : -1, oldCopy, shootModeSheetCopy());
   }
   document.getElementById('shootModePrev').addEventListener('click', () => stepShootModePage(-1));
   document.getElementById('shootModeNext').addEventListener('click', () => stepShootModePage(1));
@@ -23273,7 +23418,7 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
       list.appendChild(row);
     }
 
-    // It only opens when asked for (the bell, the Today card's N MORE), so it always
+    // It only opens when asked for (the Today card's N MORE or FULL REPORT), so it always
     // says something.
     if (!today.length && !items.length && !nudge && !fact) {
       const row = document.createElement('div');
@@ -23285,7 +23430,7 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
     document.getElementById('dailyReportOverlay').hidden = false;
   }
 
-  // The bell and the Today card's N MORE: the daily report, shown when
+  // The Today card's N MORE and FULL REPORT: the daily report, shown when
   // asked for (it used to open once a day on its own; the Today card took
   // that over). It always shows something (a "nothing to report" line if
   // today's report is genuinely empty).
@@ -25178,10 +25323,15 @@ window.EyeParts = window.EyeParts || {};
 window.EyeParts.addSwipeTabs = function addSwipeTabs(ed) {
   // ---------- swipe between tabs ----------
   (function setupTabSwipe() {
-    // A swipe on the page turns a page of this screen; the navigator changes screens.
+    // A swipe on the page goes to the next section (or a page of this one,
+    // if it has more): the page follows the finger and slides over
+    // (components/section-slide.js, 14 Nov). Up and down, it scrolls.
     let startX = null;
     let startY = null;
     let tracking = false;
+    let sliding = false;
+    let axis = '';
+    let last = null; // the latest finger point, and the one before, for its speed
 
     // No tab swipes under any popup (the photo viewer and Stats' slide-over
     // included), so the screen behind one can't change.
@@ -25200,7 +25350,32 @@ window.EyeParts.addSwipeTabs = function addSwipeTabs(ed) {
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       tracking = true;
+      sliding = false;
+      axis = '';
+      last = { x: startX, t: e.timeStamp, before: null };
     }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!tracking || startX === null || !e.touches.length) return;
+      const x = e.touches[0].clientX;
+      const dx = x - startX;
+      const dy = e.touches[0].clientY - startY;
+      last = { x, t: e.timeStamp, before: last };
+      // The first 10px decide: sideways (and clearly so) slides, else it scrolls.
+      if (!axis) {
+        if (Math.hypot(dx, dy) < 10) return;
+        axis = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'x' : 'y';
+        if (axis === 'x') sliding = ed.startSlideDrag(dx < 0 ? 1 : -1);
+      }
+      if (sliding) ed.moveSlideDrag(dx);
+    }, { passive: true });
+
+    // How fast the finger was going when it let go, in px/ms.
+    const speedAt = (e) => {
+      const b = last && last.before;
+      if (!b || e.timeStamp - last.t > 80 || last.t <= b.t) return 0;
+      return (last.x - b.x) / (last.t - b.t);
+    };
 
     document.addEventListener('touchend', (e) => {
       if (!tracking || startX === null) return;
@@ -25209,9 +25384,17 @@ window.EyeParts.addSwipeTabs = function addSwipeTabs(ed) {
       const dy = e.changedTouches[0].clientY - startY;
       startX = null;
       startY = null;
-      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (sliding) { sliding = false; ed.endSlideDrag(dx, speedAt(e)); return; }
+      if (axis === 'y' || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
 
       ed.stepScreenPage(dx < 0 ? 1 : -1);
+    }, { passive: true });
+
+    // The system took the finger (a call, a gesture of its own): back where it was.
+    document.addEventListener('touchcancel', () => {
+      tracking = false;
+      startX = null;
+      if (sliding) { sliding = false; ed.endSlideDrag(0, 0); }
     }, { passive: true });
   })();
 
@@ -25585,6 +25768,8 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addShootCopies(ed);
   window.EyeParts.addImageResize(ed);
   window.EyeParts.addPageTurn(ed);
+  window.EyeParts.addSlideSteps(ed);
+  window.EyeParts.addSectionSlide(ed);
   window.EyeParts.addLastPlace(ed);
   window.EyeParts.addScreenSize(ed);
   window.EyeParts.addScreenPages(ed);

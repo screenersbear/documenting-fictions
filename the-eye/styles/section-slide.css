@@ -1,0 +1,7 @@
+/* The slide between sections, and between Shoot mode's pages (14 Nov,
+   components/section-slide.js): a layer over the whole page holding the two
+   pictures side by side, the old page and the new one, each in a pane the
+   size of the page in the colour behind it. Nothing in it can be touched. */
+.nb-slide { position: absolute; z-index: 6; inset: 0; overflow: hidden; pointer-events: none; }
+.nb-slide-strip { position: absolute; inset: 0; will-change: transform; }
+.nb-slide-pane { position: absolute; top: 0; bottom: 0; width: 100%; overflow: hidden; }

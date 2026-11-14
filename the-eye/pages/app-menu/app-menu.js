@@ -41,10 +41,6 @@ window.EyeParts.addAppMenu = function addAppMenu(ed) {
     appMenuOverlay.querySelector('.opt-sheet-body').scrollTop = 0;
   });
 
-  document.getElementById('notificationBellBtn').addEventListener('click', () => {
-    ed.openNotificationsBell();
-  });
-
   document.getElementById('appMenuCancelBtn').addEventListener('click', closeAppMenu);
 
   appMenuOverlay.addEventListener('click', (e) => {

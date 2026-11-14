@@ -1,8 +1,9 @@
 // The Today card at the top of Overview: only what needs you now, in place of
 // the pop-ups that used to open on launch (the list: components/today-items.js).
 // The two most urgent, how many things there are in all, and under them
-// "N MORE IN TODAY'S REPORT", which opens the daily report (round 5). Hidden
-// when there's nothing.
+// "N MORE IN TODAY'S REPORT", which opens the daily report (round 5). With
+// two or fewer, FULL REPORT at the top in place of the count opens it (the
+// band's bell went on 14 Nov). Hidden when there's nothing.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addOverviewTodayCard = function addOverviewTodayCard(ed) {
@@ -12,6 +13,7 @@ window.EyeParts.addOverviewTodayCard = function addOverviewTodayCard(ed) {
   const items = document.getElementById('todayCardItems');
   const count = document.getElementById('todayCount');
   const more = document.getElementById('todayMoreBtn');
+  const report = document.getElementById('todayReportBtn');
   const moreWords = document.getElementById('todayMoreWords');
   const moreDots = document.getElementById('todayMoreDots');
 
@@ -20,6 +22,8 @@ window.EyeParts.addOverviewTodayCard = function addOverviewTodayCard(ed) {
     const left = list.length - SHOWN;
     items.innerHTML = list.slice(0, SHOWN).map(ed.todayItemHtml).join('');
     count.textContent = ed.todayCountWords(list.length);
+    count.hidden = left < 1;
+    report.hidden = left > 0;
     more.hidden = left < 1;
     moreWords.textContent = ed.todayMoreWords(Math.max(left, 0));
     // A dot for each of them (up to eight).
@@ -32,4 +36,5 @@ window.EyeParts.addOverviewTodayCard = function addOverviewTodayCard(ed) {
     if (el) ed.runTodayAct(el.dataset.act, el.dataset.id);
   });
   more.addEventListener('click', () => ed.openNotificationsBell());
+  report.addEventListener('click', () => ed.openNotificationsBell());
 };

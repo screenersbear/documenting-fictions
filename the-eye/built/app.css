@@ -6761,6 +6761,15 @@ h2.status-group-heading, h2.status-group-heading.heading-yellow, h2.status-group
 .eye-cards-dots i.on { background: var(--text); }
 
 
+/* ---- styles/section-slide.css ---- */
+/* The slide between sections, and between Shoot mode's pages (14 Nov,
+   components/section-slide.js): a layer over the whole page holding the two
+   pictures side by side, the old page and the new one, each in a pane the
+   size of the page in the colour behind it. Nothing in it can be touched. */
+.nb-slide { position: absolute; z-index: 6; inset: 0; overflow: hidden; pointer-events: none; }
+.nb-slide-strip { position: absolute; inset: 0; will-change: transform; }
+.nb-slide-pane { position: absolute; top: 0; bottom: 0; width: 100%; overflow: hidden; }
+
 /* ---- styles/new-shoot-guide-type.css ---- */
 /* ---- The new-shoot guide's own type (user, 11-12: bigger fonts, and bold
    or bigger titles, since it "just looks like text") ----
@@ -6937,7 +6946,8 @@ html:not(.df-suite) .band-books { display: none; }
 
 /* ---- styles/today-card.css ---- */
 /* The Today card at the top of Overview: a white card (radius 12) with TODAY
-   and how many things (N THINGS), then the two most urgent, between
+   and how many things (N THINGS), or with two or fewer FULL REPORT and a
+   chevron, which opens the report (14 Nov: the band's bell went), then the two most urgent, between
    hairlines: a line in 17px light (the shoot's name in 500) with its two
    answers, or a line to tap with a chevron. A deadline gone by is crimson,
    and written out. Under them N MORE IN TODAY'S REPORT with a dot for each
@@ -6946,6 +6956,13 @@ html:not(.df-suite) .band-books { display: none; }
 .today-card[hidden] { display: none; }
 .today-card-head { display: flex; align-items: baseline; justify-content: space-between; }
 .today-count { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.today-report {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 28px; height: auto; margin: 0; padding: 0;
+  border: 0; border-radius: 0; background: none; color: var(--dim); cursor: pointer;
+  font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+.today-report[hidden] { display: none; }
+.today-report svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #view-overview .today-card-head h2 {
   margin: 0; padding: 0; background: none; border: 0; color: var(--text);
   font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase;
@@ -7011,8 +7028,9 @@ html:not(.df-suite) .band-books { display: none; }
 .next-shoot-status:empty { display: none; }
 
 /* ---- styles/list-head.css ---- */
-/* The top of a list (DESIGN.md 9): on Shoots, the sort button (ink) and how
-   many shoots (dim), in small capitals; on Reflections, a line saying what it
+/* The top of a list (DESIGN.md 9): on Shoots, the sort button (ink), how
+   many shoots (dim), in small capitals, and NEW SHOOT beside the count (13px
+   capitals, ink, a 16px +: 14 Nov, adding sits beside its list); on Reflections, a line saying what it
    is, then its contents and filter buttons in the same small capitals. The
    section titles in Shoots and the Archive (a status, a year) are the
    Overview's: 13px capitals with their count in dim. */
@@ -7024,6 +7042,13 @@ html:not(.df-suite) .band-books { display: none; }
 }
 .list-sort-btn svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .list-count { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.list-head-end { display: inline-flex; align-items: center; gap: 4px; }
+.list-add-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 44px; min-height: 0; margin: 0 -8px 0 0; padding: 0 8px;
+  border: 0; border-radius: 0; background: none; color: var(--text);
+  font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase;
+}
+.list-add-btn svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .list-intro { margin: -2px 0 0; font: 400 15px/21px var(--ui); color: var(--dim); }
 
 #view-shoots .shoot-status-group, #view-archive .shoot-status-group { margin: 0; padding: 0; background: none; border: 0; }

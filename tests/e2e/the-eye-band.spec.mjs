@@ -52,7 +52,7 @@ const bandNow = (page) => page.evaluate(() => {
 // Goes to a section the way a finger does (the page turns), and waits for the turn to end.
 async function turnTo(page, view) {
   await page.click(`.tabbar .tab[data-view="${view}"]`);
-  await page.waitForFunction(() => !document.querySelector('.nb-turn'), null, { timeout: 3000 });
+  await page.waitForFunction(() => !document.querySelector('.nb-turn, .nb-slide'), null, { timeout: 3000 });
   await page.waitForTimeout(100);
 }
 
@@ -69,23 +69,22 @@ test.describe('The Eye on an iPhone: the band and the lists', () => {
     await ctx.close();
   });
 
-  test('going back to Overview, the page that turns in sits exactly where Overview does', async ({ browser }, testInfo) => {
+  test('going back to Overview, the page that slides in sits exactly where Overview does', async ({ browser }, testInfo) => {
     const { ctx, page } = await openEye(browser, testInfo);
     await turnTo(page, 'shoots');
     await page.click('.tabbar .tab[data-view="overview"]');
-    // Where the turning copy's band, title and Next shoot card lie on the
-    // page (layout, so the swing itself doesn't count), against the real ones.
+    // Where the sliding picture's band, title and Next shoot card lie, top to
+    // bottom, against the real ones (the slide only moves it sideways; since
+    // 14 Nov sections slide rather than turn).
     const got = await page.evaluate(() => {
-      const holder = document.querySelector('.nb-turn .nb-turn-copy');
+      const holder = document.querySelector('.nb-slide-pane:last-child .nb-turn-copy');
       if (!holder) return null;
-      const sheet = holder.parentElement;
-      const base = sheet.parentElement.getBoundingClientRect().top + sheet.offsetTop + holder.offsetTop;
-      const inCopy = (sel) => { let el = holder.querySelector(sel); let y = 0; while (el && el !== holder) { y += el.offsetTop; el = el.offsetParent; } return base + y; };
+      const inCopy = (sel) => holder.querySelector(sel).getBoundingClientRect().top;
       const real = (sel) => document.querySelector(`#view-overview ${sel}`).getBoundingClientRect().top;
       return ['.band', '.band-title', '.next-shoot'].map((sel) => ({ sel, copy: Math.round(inCopy(sel)), real: Math.round(real(sel)) }));
     });
-    expect(got, 'the page turned').not.toBeNull();
-    for (const { sel, copy, real } of got) expect(copy, `${sel} in the turning page`).toBe(real);
+    expect(got, 'the page slid').not.toBeNull();
+    for (const { sel, copy, real } of got) expect(copy, `${sel} in the sliding page`).toBe(real);
     await ctx.close();
   });
 

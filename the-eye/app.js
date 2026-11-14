@@ -49,6 +49,8 @@
   window.EyeParts.addShootCopies(ed);
   window.EyeParts.addImageResize(ed);
   window.EyeParts.addPageTurn(ed);
+  window.EyeParts.addSlideSteps(ed);
+  window.EyeParts.addSectionSlide(ed);
   window.EyeParts.addLastPlace(ed);
   window.EyeParts.addScreenSize(ed);
   window.EyeParts.addScreenPages(ed);

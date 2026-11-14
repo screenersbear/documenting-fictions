@@ -85,24 +85,21 @@ window.EyeParts.addPagePan = function addPagePan(ed) {
     const from = ed.screenNow(view);
     if (to < 0 || to >= ed.screenPageCount(view) || to === from) return;
     clearPan();
-    const turning = ed.motionOk();
     // The left and right pages lie open side by side: no leaf between them.
-    if (turning && view === 'overview' && (from === 0 || to === 0)) { panSpread(view, to); return; }
-    const oldCopy = turning ? ed.pageCopy(ed.views[view]) : null;
+    if (ed.motionOk() && view === 'overview' && (from === 0 || to === 0)) { panSpread(view, to); return; }
+    const oldCopy = ed.pageCopy(ed.views[view]);
     ed.scrollPageTo(0); // only a page with something too tall on it could be scrolled
     ed.screenAt[view] = to;
     ed.drawScreenPage(view);
-    if (!turning) return;
-    const board = document.querySelector('.nb-board');
-    if (to > from) ed.playTurn(board, '', oldCopy);
-    else ed.playTurn(board, 'back', ed.pageCopy(ed.views[view]), oldCopy);
+    // A plain slide (with Reduce Motion, a crossfade), as between sections.
+    ed.playSlide(document.querySelector('.nb-board'), to > from ? 1 : -1, oldCopy, ed.pageCopy(ed.views[view]));
   }
   function stepScreenPage(by) {
     const view = ed.currentScreen();
     const to = ed.screenNow(view) + by;
     if (to >= 0 && to < ed.screenPageCount(view)) { turnScreenPage(view, to); return; }
     // Turning past a section's last page (or back past its first) carries on
-    // into the next section, as a leaf turn, landing on its first page either
+    // into the next section, as a slide, landing on its first page either
     // way. Nothing comes before Overview: the book only shuts from the navigator.
     const order = [...document.querySelectorAll('.tabbar .tab')].map(tab => tab.dataset.view);
     const next = order[order.indexOf(view) + Math.sign(by)];
@@ -142,11 +139,10 @@ window.EyeParts.addPagePan = function addPagePan(ed) {
       ed.renderAll();
       if (turning) {
         const order = [...document.querySelectorAll('.tabbar .tab')].map(tab => tab.dataset.view);
-        const board = document.querySelector('.nb-board');
-        // Going on, the old page swings away; going back, the page before
-        // swings in over it.
-        if (order.indexOf(view) > order.indexOf(previous)) ed.playTurn(board, '', oldCopy);
-        else ed.playTurn(board, 'back', ed.pageCopy(ed.views[view]), oldCopy);
+        // A plain slide: going on, the new page comes in from the right;
+        // going back, from the left (with Reduce Motion, a crossfade).
+        const dir = order.indexOf(view) > order.indexOf(previous) ? 1 : -1;
+        ed.playSlide(document.querySelector('.nb-board'), dir, oldCopy, ed.pageCopy(ed.views[view]));
       }
       // Journal's intro was rewritten when the Log and Reflections notebooks
       // merged into one page, under a new key so anyone who dismissed the old

@@ -1,8 +1,9 @@
-// Tabs and pages: going to a tab, turning a page, and each section as one page.
+// Tabs and pages: going to a tab, pictures of a page, and each section as one page.
+// (Going between sections is a plain slide since 14 Nov: components/section-slide.js.)
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addPageTurn = function addPageTurn(ed) {
-  Object.assign(ed, { pageCopy, clearTurn, playTurn, turnToView });
+  Object.assign(ed, { pageCopy, clearTurn, turnToView });
   // ---------- tab navigation ----------
   const views = {
     overview: document.getElementById('view-overview'),
@@ -12,10 +13,9 @@ window.EyeParts.addPageTurn = function addPageTurn(ed) {
     stats: document.getElementById('view-stats'),
   }; ed.views = views;
 
-  // ---------- Turning a page ----------
-  // A sheet swings over on its hinge, carrying a copy of a page. The copy
-  // only looks like the page: it can't be touched and goes on a timer, not on
-  // the animation's end, so it can never be left covering anything.
+  // ---------- Pictures of a page ----------
+  // A copy of a page, for the slide to carry (components/section-slide.js).
+  // It only looks like the page: it can't be touched.
   const turnTimers = new WeakMap();
   const motionOk = () => !matchMedia('(prefers-reduced-motion: reduce)').matches; ed.motionOk = motionOk;
 
@@ -41,33 +41,15 @@ window.EyeParts.addPageTurn = function addPageTurn(ed) {
     layer.querySelectorAll('.nb-turn, .nb-turn-under').forEach(el => el.remove());
   }
 
-  function playTurn(layer, kind, leafCopy, underCopy) {
-    clearTurn(layer);
-    const base = layer.getBoundingClientRect();
-    const add = (className, copy) => {
-      const sheet = document.createElement('div');
-      sheet.className = className;
-      layer.appendChild(sheet);
-      if (copy) {
-        // offsetLeft/Top ignore the sheet's own swing.
-        copy.holder.style.left = `${copy.left - base.left - sheet.offsetLeft}px`;
-        copy.holder.style.top = `${copy.top - base.top - sheet.offsetTop}px`;
-        sheet.appendChild(copy.holder);
-      }
-    };
-    if (underCopy) add('nb-turn-under', underCopy);
-    add(`nb-turn${kind ? ` ${kind}` : ''}`, leafCopy);
-    turnTimers.set(layer, setTimeout(() => clearTurn(layer), 640));
-  }
-
-  // Set just before a tab's click that should turn the page: the navigator,
-  // the side tabs and a swipe. The app's own jumps between screens don't.
+  // Set just before a tab's click that should slide the page over: the
+  // navigator, the side tabs and a swipe (with Reduce Motion, a crossfade).
+  // The app's own jumps between screens don't.
   ed.turnNextTab = false;
 
   function turnToView(view) {
     const tab = document.querySelector(`.tabbar .tab[data-view="${view}"]`);
     if (!tab || tab.classList.contains('active')) return;
-    ed.turnNextTab = motionOk();
+    ed.turnNextTab = true;
     tab.click();
   }
 

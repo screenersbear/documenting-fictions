@@ -32,7 +32,7 @@ async function openEye(browser, testInfo) {
 
 async function openShoot(page, title) {
   await page.click('.tabbar .tab[data-view="shoots"]');
-  await page.waitForFunction(() => !document.querySelector('.nb-turn'), null, { timeout: 3000 });
+  await page.waitForFunction(() => !document.querySelector('.nb-turn, .nb-slide'), null, { timeout: 3000 });
   await page.locator('#view-shoots .shoot-row', { hasText: title }).first().click();
   await expect(page.locator('#shootFront')).toBeVisible();
 }
@@ -78,7 +78,10 @@ test.describe('The Eye: the status card and Shoot progress', () => {
 
   test('the guide\'s Basics asks Shoot progress; Captured sets it with no pop-up', async ({ browser }, testInfo) => {
     const { ctx, page } = await openEye(browser, testInfo);
-    await page.click('#newShootBtn');
+    // NEW SHOOT, beside the Shoots count (the band's + went on 14 Nov).
+    await page.click('.tabbar .tab[data-view="shoots"]');
+    await page.waitForFunction(() => !document.querySelector('.nb-turn, .nb-slide'), null, { timeout: 3000 });
+    await page.click('#addShootBtn');
     const progress = page.locator('#shootWizardBody #guideProgress');
     await expect(progress).toBeVisible();
     await expect(progress.locator('[aria-checked="true"]')).toHaveText(['Prospect']);

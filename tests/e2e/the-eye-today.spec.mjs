@@ -2,7 +2,9 @@
 // the Today card had things on it while the full report said "Nothing to
 // report today" (they read different lists). The report now lists the Today
 // card's things first. And the card shows only the two most urgent, with
-// "N MORE IN TODAY'S REPORT" under them.
+// "N MORE IN TODAY'S REPORT" under them. With two things or fewer, FULL
+// REPORT sits where the count was: the band's bell went on 14 Nov, so the
+// card is the way into the report.
 import { test, expect } from '@playwright/test';
 import { freshPage } from './_helpers.mjs';
 
@@ -41,8 +43,8 @@ const cardItems = (page) => page.$$eval('#todayCardItems .today-item', (els) => 
 test.describe('The Eye: the Today card and the full report', () => {
   test('the full report lists everything on the Today card first', async ({ browser }, testInfo) => {
     const { ctx, page } = await openEye(browser, testInfo);
-    // From the band's Today's report button, as Starky opened it.
-    await page.click('#notificationBellBtn');
+    // From the card (the band's bell, which Starky used, went on 14 Nov).
+    await page.click('#todayMoreBtn');
     await expect(page.locator('#dailyReportOverlay')).toBeVisible();
     // The bug: the card had four things and the report none of them.
     await expect(page.locator('#dailyReportList')).not.toContainText('Nothing to report today');
@@ -88,13 +90,25 @@ test.describe('The Eye: the Today card and the full report', () => {
     await ctx.close();
   });
 
-  test('with two things or fewer there is no MORE row', async ({ browser }, testInfo) => {
+  test('with two things or fewer there is no MORE row: FULL REPORT, in place of the count, opens the report', async ({ browser }, testInfo) => {
     const { ctx, page } = await openEye(browser, testInfo);
+    await expect(page.locator('#todayReportBtn')).toBeHidden();
     await page.click('#todayCardItems [data-act="happened"][data-id="t2"]');
     await page.click('#todayCardItems [data-act="happened"][data-id="t1"]');
-    await expect(page.locator('#todayCount')).toHaveText('2 things');
     await expect(page.locator('#todayMoreBtn')).toBeHidden();
     await expect(page.locator('#todayCardItems .today-item')).toHaveCount(2);
+    await expect(page.locator('#todayCount')).toBeHidden();
+    const report = page.locator('#todayReportBtn');
+    await expect(report).toBeVisible();
+    await expect(report).toHaveText('Full report');
+    // On the TODAY line, at its right, a 28px target at least.
+    const head = await page.locator('.today-card-head').boundingBox();
+    const btn = await report.boundingBox();
+    expect(Math.round(btn.x + btn.width)).toBe(Math.round(head.x + head.width));
+    expect(btn.height).toBeGreaterThanOrEqual(28);
+    await report.click();
+    await expect(page.locator('#dailyReportOverlay')).toBeVisible();
+    expect(await reportToday(page)).toHaveLength(2);
     await ctx.close();
   });
 });
