@@ -97,8 +97,77 @@
     </section>`;
   }
 
+  // ---------- What passes ----------
+  // An Instagram handle as typed (@name, a profile address, or the name), cleaned.
+  function cleanHandle(v) {
+    const t = String(v ?? '').trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/[/?#].*$/, '').replace(/^@+/, '');
+    return /^[A-Za-z0-9._]{1,30}$/.test(t) ? t : '';
+  }
+  const named = (x) => !!x && typeof x.name === 'string' && x.name.trim() !== '';
+  // A shoot's credits from The Eye, for a caption: its talent and team, each
+  // with an Instagram handle when there is one.
+  function shootCredits(shoot) {
+    const insta = (list) => cleanHandle(((list || []).find((h) => h && h.platform === 'instagram') || {}).handle);
+    return {
+      talent: ((shoot && shoot.talents) || []).filter(named).map((t) => ({ name: t.name.trim(), handle: insta(t.socialHandles) })),
+      team: ((shoot && shoot.teamMembers) || []).filter(named).map((m) => ({
+        role: String(m.role || '').trim(), name: m.name.trim(),
+        handle: (m.socialPlatform || 'instagram') === 'instagram' ? cleanHandle(m.socialHandle) : '',
+      })),
+    };
+  }
+  const listWords = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+  // A post's caption: the shoot's title, then the credits ("Rooftop portraits
+  // with June Park @junepark.jpg. Hair and makeup @iryna.hmua.").
+  function captionFor(title, credits) {
+    const c = credits || {};
+    const who = (c.talent || []).map((t) => (t.handle ? `${t.name} @${t.handle}` : t.name));
+    const head = `${String(title || '').trim() || 'New work'}${who.length ? ` with ${listWords(who)}` : ''}.`;
+    const team = (c.team || []).map((m) => `${m.role || 'With'} ${m.handle ? `@${m.handle}` : m.name}.`);
+    return [head, ...team].join(' ');
+  }
+  // Everyone tagged in a caption, each once, as typed.
+  const handlesIn = (text) => [...new Set((String(text || '').match(/(^|[^\w.@])@([A-Za-z0-9._]{1,30})/g) || []).map((m) => m.replace(/^[^@]*@/, '').replace(/\.+$/, '')))].filter(Boolean);
+
+  const DAY = (iso) => { if (!iso) return ''; const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : `${d.getDate()} ${MONTHS[d.getMonth()]}`; };
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  // A shoot's record in The Eye (connect/02): what it passed on (its finals
+  // to Layouts, its people to Rounds) and what came in (a board from Ref).
+  // Each row opens the thing in the other notebook: { app, params }.
+  function passedOnRows(links, shootId) {
+    const passed = [];
+    const came = [];
+    for (const l of links) {
+      if (l.fromApp === 'the-eye' && l.fromId === shootId && l.type === 'finals') {
+        passed.push({ from: 'the-eye', to: 'contact-sheet', title: `${plural(l.count || 0, 'final', 'finals')} to Layouts`, line: l.madeAt ? 'Two posts made, waiting there.' : 'Waiting there.', app: 'contact-sheet', params: { posts: l.id } });
+      } else if (l.fromApp === 'the-eye' && l.fromId === shootId && l.type === 'people') {
+        const names = l.names || [];
+        passed.push({ from: 'the-eye', to: 'rounds', title: `${plural(names.length, 'person', 'people')} to Rounds`, line: `${names.join(', ').replace(/\.$/, '')}. ${names.length === 1 ? 'A thank-you' : 'Thank-yous'} ready.`, app: 'rounds', params: { at: 'people' } });
+      } else if (l.toApp === 'the-eye' && l.toId === shootId && l.type === 'moodboard') {
+        const when = DAY(l.frozenAt || l.drawnAt || l.importedAt || l.updatedAt);
+        came.push({ from: 'ref', to: 'the-eye', title: l.name || 'Mood board', line: `Mood board from Ref${when ? `, as of ${when}` : ''}.`, app: 'ref', params: l.importedAt ? null : { board: l.fromId } });
+      }
+    }
+    // The finals first, then the people (as in connect/02), whichever passed first.
+    const order = (r) => (r.to === 'contact-sheet' ? 0 : 1);
+    return { passed: passed.sort((a, b) => order(a) - order(b)), came };
+  }
+
+  // The rows of a record (passedOnRows), each a link to the other notebook
+  // when it has an address (row.href), a plain row when it hasn't.
+  const CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+  function recordHtml(rows) {
+    const row = (r) => {
+      const inner = `${pairHtml(r.from, r.to)}<span class="df-record-words"><span class="df-record-title">${esc(r.title)}</span><span class="df-record-line">${esc(r.line)}</span></span>`;
+      return r.href
+        ? `<a class="df-record-row" href="${esc(r.href)}">${inner}<span class="df-record-chev">${CHEV}</span></a>`
+        : `<div class="df-record-row">${inner}</div>`;
+    };
+    return `<div class="df-record">${rows.map(row).join('')}</div>`;
+  }
+
   window.DFConnect = {
     HANDOFFS, NOTEBOOKS, handoff, connectOn, setConnect, slipsFor, openSlip, tuckSlip, waitingByApp,
-    whenWords, slipHtml, markSvg, miniHtml, pairHtml,
+    whenWords, slipHtml, markSvg, miniHtml, pairHtml, cleanHandle, shootCredits, captionFor, handlesIn, passedOnRows, recordHtml,
   };
 })();

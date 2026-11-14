@@ -18,3 +18,21 @@ for (const [phone, userAgent, has] of [['an iPhone', IPHONE, false], ['Android',
     await ctx.close();
   });
 }
+
+// Turning the phone (or resizing the window) breaks the pages again. Since
+// Archive mode was merged (13 Nov) that called a step that's gone, and the
+// error stopped the shoot mode's pages from following.
+test("resizing The Eye breaks its pages again without an error", async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/the-eye/');
+  await page.waitForLoadState('networkidle').catch(() => {});
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForTimeout(600);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(600);
+  expect(errors).toEqual([]);
+  await ctx.close();
+});

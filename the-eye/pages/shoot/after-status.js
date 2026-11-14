@@ -70,6 +70,9 @@ window.EyeParts.addShootAfterStatus = function addShootAfterStatus(ed) {
     // Only on entering the edit bucket: a video stepping Rough cut ->
     // Client review -> Revisions shouldn't re-ask at every step.
     if (ed.isInTheEditStatus(newStatus) && !ed.isInTheEditStatus(oldStatus)) ed.maybeOpenDeadlinePrompt(shootId);
+    // Delivered: its finals pass to Layouts (pages/shoot/passed-on.js).
+    const handed = newStatus === 'delivered' && oldStatus !== 'delivered' ? ed.passFinalsOn(shootId) : Promise.resolve();
+    if (shootPageOpenOn(shootId)) handed.catch(() => {}).then(ed.renderPassedOn);
   }
 
   // The shoot the reflection prompt is about.

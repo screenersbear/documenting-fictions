@@ -15,8 +15,6 @@
 .connect-words { flex: 1; min-width: 0; }
 .connect-name { display: block; font-size: 17px; line-height: 22px; }
 .connect-line { display: block; margin-top: 2px; font-size: 14px; line-height: 19px; color: var(--dim); }
-.df-pair { flex: none; display: inline-flex; align-items: center; gap: 4px; color: var(--text); }
-.df-mini { flex: none; display: inline-flex; width: 20px; height: 20px; border-radius: 4px; }
 .df-switch { position: relative; flex: none; width: 52px; height: 32px; padding: 0; border: 0; border-radius: 16px; background: #E1E1DC; cursor: pointer; transition: background .15s; }
 .df-switch span { position: absolute; left: 3px; top: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(49, 61, 69, .25); transition: transform .15s; }
 .df-switch[aria-checked="true"] { background: var(--text); }

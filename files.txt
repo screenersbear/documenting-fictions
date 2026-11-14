@@ -15,6 +15,7 @@ built/app.css
   styles/sticker-new.css
   styles/toast.css
   styles/sheet-words.css
+  styles/shared/connect.css
   styles/shelf-connect.css
   styles/type.css
 

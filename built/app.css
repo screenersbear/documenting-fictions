@@ -277,6 +277,25 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .sheet-btn.plain { box-shadow: none; }
 .sheet-btn:disabled { opacity: .6; }
 
+/* ---- styles/shared/connect.css ---- */
+/* How the notebooks connect, the looks every notebook shares (round 2,
+   connect/NOTES.md): the two minis with an arrow, a slip at the top of a
+   list ("FROM THE EYE"), and the rows of what passed on and came in.
+   The markup comes from shared/data/connect.js. This is the master copy:
+   tools/sync.py shared copies it into each notebook's styles/shared/. */
+.df-pair { flex: none; display: inline-flex; align-items: center; gap: 4px; color: #313D45; }
+.df-mini { flex: none; display: inline-flex; width: 20px; height: 20px; border-radius: 4px; }
+
+/* PASSED ON and CAME IN: a record, each row opening the other notebook. */
+.df-record { margin-top: 8px; border-top: 1px solid #313D45; }
+.df-record-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 0; border: 0; border-bottom: 1px solid #E1E1DC; background: none; color: #313D45; font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
+.df-record-row[aria-disabled="true"] { cursor: default; }
+.df-record-words { flex: 1; min-width: 0; }
+.df-record-title { display: block; font-size: 17px; line-height: 22px; }
+.df-record-line { display: block; margin-top: 2px; font-size: 14px; line-height: 19px; color: #5C666D; }
+.df-record-chev { flex: none; display: inline-flex; color: #9AA3A8; }
+.df-record-chev svg { width: 18px; height: 18px; }
+
 /* ---- styles/shelf-connect.css ---- */
 /* How the notebooks connect (pages/shelf-connect.js): HOW THEY CONNECT,
    its row in Options, and the slips tucked into the covers. */
@@ -295,8 +314,6 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .connect-words { flex: 1; min-width: 0; }
 .connect-name { display: block; font-size: 17px; line-height: 22px; }
 .connect-line { display: block; margin-top: 2px; font-size: 14px; line-height: 19px; color: var(--dim); }
-.df-pair { flex: none; display: inline-flex; align-items: center; gap: 4px; color: var(--text); }
-.df-mini { flex: none; display: inline-flex; width: 20px; height: 20px; border-radius: 4px; }
 .df-switch { position: relative; flex: none; width: 52px; height: 32px; padding: 0; border: 0; border-radius: 16px; background: #E1E1DC; cursor: pointer; transition: background .15s; }
 .df-switch span { position: absolute; left: 3px; top: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(49, 61, 69, .25); transition: transform .15s; }
 .df-switch[aria-checked="true"] { background: var(--text); }

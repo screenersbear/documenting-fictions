@@ -61,6 +61,7 @@ window.EyeParts.addShootFinalImages = function addShootFinalImages(ed) {
         ed.shootHasImages = true;
         ed.scheduleShootAutosave();
         renderFinalImages();
+        return ed.passFinalsOn(ed.currentShootId).then(ed.renderPassedOn);
       })
       .catch(ed.noteStorageFull);
   });

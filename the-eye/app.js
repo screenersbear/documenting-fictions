@@ -114,6 +114,7 @@
   window.EyeParts.addProjectsPhotoCrop(ed);
   window.EyeParts.addImageViewerTouch(ed);
   window.EyeParts.addShootFinalImages(ed);
+  window.EyeParts.addShootPassedOn(ed);
   window.EyeParts.addShootSave(ed);
   window.EyeParts.addShootNotSure(ed);
   window.EyeParts.addShootMultiDay(ed);

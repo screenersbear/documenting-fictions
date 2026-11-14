@@ -62,7 +62,6 @@ window.EyeParts.addNotebook = function addNotebook(ed) {
     function breakAllPages() {
       ed.repaginate(ed.currentScreen());
       ed.breakShootPages();
-      ed.breakArchivePages();
       ed.breakShootModePages();
     }
     // A nudge is under way (nudgeShortScreen): what iOS says in the middle of

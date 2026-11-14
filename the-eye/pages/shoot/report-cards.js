@@ -1,6 +1,6 @@
 // A delivered or archived shoot's front page reads as its report (it was
 // Archive mode): the reflection in full, the final images (a video's
-// deliverables instead), what happened on set, the idea, and the shooting
+// deliverables instead), what passed on and came in (passed-on.js), what happened on set, the idea, and the shooting
 // notes. Each part opens on its own page to change it, like the rest.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
@@ -58,7 +58,7 @@ window.EyeParts.addShootReportCards = function addShootReportCards(ed) {
   // The reflection card (asking for it) comes first while it's missing.
   function drawReportCards(s, c, prompt) {
     const told = reflection(s);
-    const html = (told || prompt) + finalImages(s, c) + ed.onSetHtml(s) + idea(s) + shootingNotes(s);
+    const html = (told || prompt) + finalImages(s, c) + ed.passedOnSlot() + ed.onSetHtml(s) + idea(s) + shootingNotes(s);
     return { html, onFront: [told || prompt ? 'reflection' : '', c.video ? '' : 'finalImages', idea(s) ? 'direction' : ''].filter(Boolean) };
   }
 

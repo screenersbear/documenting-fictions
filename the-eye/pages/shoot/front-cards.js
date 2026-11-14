@@ -111,6 +111,7 @@ window.EyeParts.addShootFrontCards = function addShootFrontCards(ed) {
       onFront = ['shotList'];
     }
     box.innerHTML = html;
+    if (box.querySelector('#shootPassedOn')) ed.renderPassedOn();
     // An empty shot list isn't on the front page, so it stays a row.
     if (!box.querySelector('[data-page="shotListHeading"]')) onFront = onFront.filter(k => k !== 'shotList');
     return onFront;

@@ -3,9 +3,11 @@
 
     python3 tools/sync.py shared
         Copies the shared data files (shared/data/*.js) into each notebook's
-        data/shared/ folder, so a notebook copied out on its own still has
-        them; a file taken out of shared/data/ is taken out there too. Run it
-        after any change in shared/data/. Then it joins every app's files
+        data/shared/ folder, and the shared looks (styles/shared/*.css, kept
+        with the shelf's own styles) into its styles/shared/, so a notebook
+        copied out on its own still has them; a file taken out of either is
+        taken out there too. Run it after any change in shared/data/ or
+        styles/shared/. Then it joins every app's files
         again (node tools/join.mjs), since each app's built/ holds a joined
         copy of the shared data.
 
@@ -166,10 +168,8 @@ def join(apps, dry):
 
 
 def shared(dry):
-    """Copies shared/data/ into each notebook; gives the notebooks whose copies changed."""
+    """Copies shared/data/ and styles/shared/ into each notebook; gives the notebooks whose copies changed."""
     changed = set()
-    src_dir = os.path.join(ROOT, 'shared', 'data')
-    names = sorted(f for f in os.listdir(src_dir) if f.endswith('.js'))
     for nb in NOTEBOOKS:
         # Until 2026-11-12 the shared data was one file, df-data.js, beside index.html.
         old = os.path.join(ROOT, nb, 'df-data.js')
@@ -178,22 +178,26 @@ def shared(dry):
             changed.add(nb)
             if not dry:
                 os.remove(old)
-        dst_dir = os.path.join(ROOT, nb, 'data', 'shared')
-        for f in names:
-            src, dst = os.path.join(src_dir, f), os.path.join(dst_dir, f)
-            if os.path.exists(dst) and filecmp.cmp(src, dst, shallow=False):
-                continue
-            say(f'  shared -> {nb}/data/shared/{f}')
-            changed.add(nb)
-            if not dry:
-                os.makedirs(dst_dir, exist_ok=True)
-                shutil.copyfile(src, dst)
-        for f in sorted(os.listdir(dst_dir)) if os.path.isdir(dst_dir) else []:
-            if f.endswith('.js') and f not in names:
-                say(f'  removed {nb}/data/shared/{f} (no longer in shared/data/)')
+    for kind, ext, home in (('data', '.js', ('shared', 'data')), ('styles', '.css', ('styles', 'shared'))):
+        src_dir = os.path.join(ROOT, *home)
+        names = sorted(f for f in os.listdir(src_dir) if f.endswith(ext)) if os.path.isdir(src_dir) else []
+        for nb in NOTEBOOKS:
+            dst_dir = os.path.join(ROOT, nb, kind, 'shared')
+            for f in names:
+                src, dst = os.path.join(src_dir, f), os.path.join(dst_dir, f)
+                if os.path.exists(dst) and filecmp.cmp(src, dst, shallow=False):
+                    continue
+                say(f'  shared -> {nb}/{kind}/shared/{f}')
                 changed.add(nb)
                 if not dry:
-                    os.remove(os.path.join(dst_dir, f))
+                    os.makedirs(dst_dir, exist_ok=True)
+                    shutil.copyfile(src, dst)
+            for f in sorted(os.listdir(dst_dir)) if os.path.isdir(dst_dir) else []:
+                if f.endswith(ext) and f not in names:
+                    say(f'  removed {nb}/{kind}/shared/{f} (no longer in {"/".join(home)}/)')
+                    changed.add(nb)
+                    if not dry:
+                        os.remove(os.path.join(dst_dir, f))
     return changed
 
 

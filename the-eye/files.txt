@@ -24,6 +24,7 @@ built/shared-data.js
 # How it looks, in the order the rules apply.
 built/app.css
   styles/base.css
+  styles/shared/connect.css
   styles/band-colors.css
   styles/icon-buttons.css
   styles/journal-log.css
@@ -259,6 +260,7 @@ built/app.js
   pages/projects/photo-crop.js
   components/image-viewer-touch.js
   pages/shoot/final-images.js
+  pages/shoot/passed-on.js
   pages/shoot/shoot-save.js
   pages/shoot/not-sure.js
   pages/shoot/multi-day.js

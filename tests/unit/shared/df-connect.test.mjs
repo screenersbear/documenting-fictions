@@ -137,3 +137,103 @@ describe('the look', () => {
     expect(C.slipHtml({ link: { id: 1, fromApp: 'rounds', createdAt: null }, title: null, main: "It's & yes" })).toContain("It&#39;s &amp; yes");
   });
 });
+
+describe('what passes', () => {
+  it('a handle as typed, cleaned; anything else none', () => {
+    expect(C.cleanHandle('@june.park')).toBe('june.park');
+    expect(C.cleanHandle(' https://www.instagram.com/iryna.hmua/?hl=en ')).toBe('iryna.hmua');
+    expect(C.cleanHandle('@@sam_k')).toBe('sam_k');
+    expect(C.cleanHandle('two words')).toBe('');
+    expect(C.cleanHandle(null)).toBe('');
+    expect(C.cleanHandle('x'.repeat(31))).toBe('');
+  });
+  it("a shoot's credits: talent and team, Instagram handles only", () => {
+    const shoot = {
+      talents: [{ name: ' June Park ', socialHandles: [{ platform: 'tiktok', handle: 'jp' }, { platform: 'instagram', handle: '@junepark.jpg' }] }, { name: 'Bo' }, { name: '  ' }, null],
+      teamMembers: [{ role: 'Hair and makeup', name: 'Iryna V.', socialPlatform: 'instagram', socialHandle: 'iryna.hmua' }, { role: 'Styling', name: 'Sam K.', socialHandle: 'samk.styles' }, { name: 'Lee', socialPlatform: 'tiktok', socialHandle: 'lee' }, {}],
+    };
+    expect(C.shootCredits(shoot)).toEqual({
+      talent: [{ name: 'June Park', handle: 'junepark.jpg' }, { name: 'Bo', handle: '' }],
+      team: [{ role: 'Hair and makeup', name: 'Iryna V.', handle: 'iryna.hmua' }, { role: 'Styling', name: 'Sam K.', handle: 'samk.styles' }, { role: '', name: 'Lee', handle: '' }],
+    });
+    expect(C.shootCredits({})).toEqual({ talent: [], team: [] });
+    expect(C.shootCredits(null)).toEqual({ talent: [], team: [] });
+  });
+  it("a caption: the title, then who's in it and who made it", () => {
+    const credits = { talent: [{ name: 'June Park', handle: 'junepark.jpg' }], team: [{ role: 'Hair and makeup', name: 'Iryna V.', handle: 'iryna.hmua' }, { role: 'Styling', name: 'Sam K.', handle: 'samk.styles' }] };
+    expect(C.captionFor('Rooftop portraits', credits)).toBe('Rooftop portraits with June Park @junepark.jpg. Hair and makeup @iryna.hmua. Styling @samk.styles.');
+  });
+  it('two or three in it; a team member with no handle or role', () => {
+    const t = (n) => ({ name: n, handle: '' });
+    expect(C.captionFor('A', { talent: [t('X'), { name: 'Y', handle: 'y' }] })).toBe('A with X and Y @y.');
+    expect(C.captionFor('A', { talent: [t('X'), t('Y'), t('Z')], team: [{ role: '', name: 'Lee', handle: '' }] })).toBe('A with X, Y and Z. With Lee.');
+  });
+  it('no title and no credits', () => {
+    expect(C.captionFor('', null)).toBe('New work.');
+    expect(C.captionFor('  Garden test ', {})).toBe('Garden test.');
+  });
+  it("everyone tagged in a caption, once each", () => {
+    expect(C.handlesIn('Rooftop with June @junepark.jpg. Hair @iryna.hmua. Again @junepark.jpg, and @sam_k!')).toEqual(['junepark.jpg', 'iryna.hmua', 'sam_k']);
+    expect(C.handlesIn('mail me at me@site.com or @')).toEqual([]);
+    expect(C.handlesIn('@first')).toEqual(['first']);
+    expect(C.handlesIn(null)).toEqual([]);
+  });
+});
+
+describe("a shoot's record", () => {
+  const finals = { id: 'F', type: 'finals', fromApp: 'the-eye', fromId: 's1', toApp: 'contact-sheet', count: 12 };
+  const people = { id: 'P', type: 'people', fromApp: 'the-eye', fromId: 's1', toApp: 'rounds', names: ['June Park', 'Iryna V.', 'Sam K.'] };
+  const board = { id: 'B', type: 'moodboard', fromApp: 'ref', fromId: 'b1', toApp: 'the-eye', toId: 's1', name: 'Rooftop, golden hour', frozenAt: new Date(2026, 10, 7, 12).toISOString() };
+  it('passed on: the finals to Layouts and the people to Rounds; came in: the board', () => {
+    expect(C.passedOnRows([finals, people, board], 's1')).toEqual({
+      passed: [
+        { from: 'the-eye', to: 'contact-sheet', title: '12 finals to Layouts', line: 'Waiting there.', app: 'contact-sheet', params: { posts: 'F' } },
+        { from: 'the-eye', to: 'rounds', title: '3 people to Rounds', line: 'June Park, Iryna V., Sam K. Thank-yous ready.', app: 'rounds', params: { at: 'people' } },
+      ],
+      came: [{ from: 'ref', to: 'the-eye', title: 'Rooftop, golden hour', line: 'Mood board from Ref, as of 7 Nov.', app: 'ref', params: { board: 'b1' } }],
+    });
+  });
+  it('the finals come first, whichever passed first', () => {
+    expect(C.passedOnRows([people, board, finals], 's1').passed.map((r) => r.to)).toEqual(['contact-sheet', 'rounds']);
+  });
+  it('two posts made; one of each; a board from a file, or with no date', () => {
+    const r = C.passedOnRows([{ ...finals, count: 1, madeAt: 'x' }, { ...people, names: ['Bo'] }, { ...board, frozenAt: null, name: '', importedAt: 'bad' }, { ...board, frozenAt: null, updatedAt: null }], 's1');
+    expect(r.passed.map((x) => [x.title, x.line])).toEqual([['1 final to Layouts', 'Two posts made, waiting there.'], ['1 person to Rounds', 'Bo. A thank-you ready.']]);
+    expect(r.came.map((x) => [x.title, x.line, x.params])).toEqual([['Mood board', 'Mood board from Ref.', null], ['Rooftop, golden hour', 'Mood board from Ref.', { board: 'b1' }]]);
+  });
+  it("other shoots' links and other kinds stay out", () => {
+    expect(C.passedOnRows([{ ...finals, fromId: 's2' }, { ...people, fromId: 's2' }, { ...board, toId: 's2' }, { ...finals, type: 'odd' }, { ...board, type: 'finals', fromApp: 'ref', fromId: 's1' }, { ...board, type: 'odd' }], 's1'))
+      .toEqual({ passed: [], came: [] });
+    expect(C.passedOnRows([{ ...people, names: undefined }], 's1').passed[0].title).toBe('0 people to Rounds');
+    expect(C.passedOnRows([{ ...finals, count: undefined }], 's1').passed[0].title).toBe('0 finals to Layouts');
+  });
+});
+
+describe('a record on the page', () => {
+  it('rows with an address open the other notebook; without, they are plain', () => {
+    const html = C.recordHtml([
+      { from: 'the-eye', to: 'contact-sheet', title: '12 finals to Layouts', line: 'Waiting there.', href: '../contact-sheet/?posts=F' },
+      { from: 'ref', to: 'the-eye', title: 'A <b>board</b>', line: 'Mood board from Ref.', href: '' },
+    ]);
+    const box = document.createElement('div');
+    box.innerHTML = html;
+    const rows = box.querySelectorAll('.df-record > .df-record-row');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].tagName).toBe('A');
+    expect(rows[0].getAttribute('href')).toBe('../contact-sheet/?posts=F');
+    expect(rows[0].querySelector('.df-record-title').textContent).toBe('12 finals to Layouts');
+    expect(rows[0].querySelector('.df-record-chev svg')).not.toBeNull();
+    expect(rows[0].querySelectorAll('.df-mini')).toHaveLength(2);
+    expect(rows[1].tagName).toBe('DIV');
+    expect(rows[1].querySelector('.df-record-title').textContent).toBe('A <b>board</b>');
+    expect(rows[1].querySelector('.df-record-chev')).toBeNull();
+  });
+  it('no rows, an empty record', () => {
+    expect(C.recordHtml([])).toBe('<div class="df-record"></div>');
+  });
+  it('an address with quotes stays one attribute', () => {
+    const box = document.createElement('div');
+    box.innerHTML = C.recordHtml([{ from: 'ref', to: 'the-eye', title: 't', line: 'l', href: '../ref/?board="x"' }]);
+    expect(box.querySelector('a').getAttribute('href')).toBe('../ref/?board="x"');
+  });
+});
