@@ -33,15 +33,20 @@ export function shootPeople(shoot) {
 
 // Brings in the people on shoots not seen before: new people, or more
 // shoots for people Rounds has. Returns { changed (people new or changed),
-// seen (every shoot looked at, for next time) }.
+// seen (every shoot looked at, for next time), brought (each shoot that
+// brought someone: { shootId, title, names }, for its record in The Eye) }.
 export function bringIn(people, shoots, seen, today, makeId) {
   const all = [...people];
   const changed = new Map();
+  const brought = [];
   const done = new Set(seen);
   const fresh = (shoots || []).filter((s) => s && s.id && !done.has(s.id) && AFTER_SHOOT.includes(s.status) && isDay(s.date))
     .sort((a, b) => a.date.localeCompare(b.date));
   for (const s of fresh) {
-    for (const sp of shootPeople(s)) {
+    const on = shootPeople(s);
+    const names = on.map((sp) => sp.name).filter((n, i, all) => all.findIndex((x) => x.toLowerCase() === n.toLowerCase()) === i);
+    if (names.length) brought.push({ shootId: s.id, title: s.title || '', names });
+    for (const sp of on) {
       let p = findMatch(all, sp);
       if (!p) {
         p = newPerson({ ...sp, id: makeId(), where: `${sp.role} on ${s.title || 'a shoot'}`, source: 'eye', next: null }, today);
@@ -56,5 +61,5 @@ export function bringIn(people, shoots, seen, today, makeId) {
     }
     done.add(s.id);
   }
-  return { changed: [...changed.values()], seen: [...done] };
+  return { changed: [...changed.values()], seen: [...done], brought };
 }

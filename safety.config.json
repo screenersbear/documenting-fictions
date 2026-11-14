@@ -50,7 +50,9 @@
     "rounds/data/inbox.js",
     "rounds/data/sync.js",
     "rounds/data/auto-sync.js",
-    "rounds/data/clash.js"
+    "rounds/data/clash.js",
+    "rounds/data/pitch.js",
+    "rounds/data/photos-up.js"
   ],
   "ignore": [
     "**/vendor/**",

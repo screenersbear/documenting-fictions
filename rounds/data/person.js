@@ -48,13 +48,22 @@ export function fromImport(rows, today, perDay, makeId) {
 }
 
 // The move is done: what comes next, and the line for the log, which keeps
-// the move as it was (its due day and step) so it can be put back. A draft
-// Claude left for it is used up.
+// the move as it was (its due day and step, and for Your photos are up its
+// shoot and the move it stood in for) so it can be put back. A draft Claude
+// left for it is used up. A Pitch keeps its day (pitched, for HOW DID THE
+// PITCH GO?), and an answer to an earlier pitch is cleared; the log keeps
+// those as they were (was), for its undo.
 export function markDone(person, today) {
-  const { kind, due, step } = person.next;
-  const log = { personId: person.id, kind, day: today, due, step };
+  const { kind, due, step, shoot, then } = person.next;
+  const was = kind === 'pitch' ? { ...(person.pitched ? { pitched: person.pitched } : {}), ...(person.pitch ? { pitch: person.pitch } : {}) } : {};
+  const log = { personId: person.id, kind, day: today, due, step, ...(shoot ? { shoot } : {}), ...(then ? { then } : {}), ...(Object.keys(was).length ? { was } : {}) };
   const { draft, ...rest } = person;
-  return { person: { ...rest, lastMove: today, next: afterDone(person, today) }, log };
+  const after = { ...rest, lastMove: today, next: afterDone(person, today) };
+  if (kind === 'pitch') {
+    after.pitched = today;
+    delete after.pitch;
+  }
+  return { person: after, log };
 }
 
 // Claude drafted this move in Gmail (inbox.json): "Draft waiting in Gmail".
@@ -64,7 +73,8 @@ export const draftWaiting = (p) => !!(p.draft && p.next && p.draft.kind === p.ne
 // were before it, from its line in the log. Lines from before 14 Nov keep
 // only the kind and the day: the move was due that day, and a follow up was
 // the step before the one planned now (a prospect's last one, step 2, plans
-// nothing). Their last move goes back to the latest of their other lines.
+// nothing). Their last move goes back to the latest of their other lines,
+// and an undone Pitch takes back its day and any earlier answer (its was).
 function followupBefore(person) {
   const next = person.next;
   if (next && next.kind === 'followup') return Math.max(0, next.step - 1);
@@ -74,7 +84,13 @@ export function undoDone(person, line, lines = []) {
   const guess = line.kind === 'followup' ? followupBefore(person) : 0;
   const step = Number.isInteger(line.step) ? line.step : guess;
   const lastMove = lines.filter((l) => l.personId === person.id && l.id !== line.id).map((l) => l.day).sort().pop() || '';
-  return { ...person, lastMove, next: move(line.kind, line.due || line.day, step) };
+  const next = { ...move(line.kind, line.due || line.day, step), ...(line.shoot ? { shoot: line.shoot } : {}), ...(line.then ? { then: line.then } : {}) };
+  const back = { ...person, lastMove, next };
+  if (line.kind === 'pitch') {
+    const was = line.was || {};
+    for (const k of ['pitched', 'pitch']) if (was[k]) back[k] = was[k]; else delete back[k];
+  }
+  return back;
 }
 
 // LATER: the same move, tomorrow.

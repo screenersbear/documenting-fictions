@@ -1,13 +1,15 @@
 // A person (04-person): photo, name, handle (opens their profile), one line
 // (their group, and where you met or why they're a fit), then their next
-// move, which opens it. The ... menu: Edit, a photo, and Let go.
+// move, which opens it. After a pitch, HOW DID THE PITCH GO? comes between
+// (pages/person-pitch.js). The ... menu: Edit, a photo, Yes, and Let go.
 import { shortBandHtml } from '../components/band.js';
 import { photoHtml, fillPhotos } from '../components/photo.js';
 import { miniHtml } from '../components/marks.js';
 import { toast } from '../components/toast.js';
 import { esc } from '../components/util.js';
 import { CHEV_SMALL } from '../components/icons.js';
-import { getPerson } from '../data/db.js';
+import { getPerson, listMoves } from '../data/db.js';
+import { pitchedOn, asksAboutPitch, saidYes, yesLine } from '../data/pitch.js';
 import { GROUPS } from '../data/plan.js';
 import { phrase } from '../data/reasons.js';
 import { handleText, profileUrl } from '../data/contact.js';
@@ -16,6 +18,7 @@ import { doMove, undoMove, laterMove, getWeek } from '../data/moves.js';
 import { whenDue } from '../data/work-days.js';
 import { openMove } from './move.js';
 import { openPersonMenu } from './person-menu.js';
+import { pitchHtml, wirePitch } from './person-pitch.js';
 
 function restHtml(p) {
   if (p.letGo) return 'Let go. Everything about them is kept, and the menu can bring them back.';
@@ -28,7 +31,10 @@ export async function personScreen(view, id) {
   if (!p) { location.replace('#/people'); return; }
   const handle = handleText(p);
   const url = profileUrl(p);
-  const line = [GROUPS[p.group], p.note || p.where].filter(Boolean).join('. ');
+  // The day of their pitch, from the log for a pitch from before Rounds kept it.
+  const pitched = pitchedOn(p, !p.pitched && (p.group === 'prospect' || p.pitch) ? await listMoves() : []);
+  const asks = asksAboutPitch(p, pitched);
+  const line = saidYes(p) ? yesLine(pitched) : [GROUPS[p.group], p.note || p.where].filter(Boolean).join('. ');
   const next = p.next && !p.letGo;
   view.innerHTML = `<div class="screen"><div class="scroll">
     ${shortBandHtml({ place: 'People', back: '#/people', more: 'More' })}
@@ -39,12 +45,14 @@ export async function personScreen(view, id) {
       <!-- The handle opens their profile on Instagram (or TikTok, or their website): the button clicker leaves it alone. -->
       <p class="person-line">${esc(line.endsWith('.') ? line : `${line}.`)}</p>
     </div>
+    ${asks ? await pitchHtml(p, pitched) : ''}
     ${next ? `<button type="button" class="person-next" data-move>${miniHtml(p.next.kind)}<span class="person-next-what">${esc(phrase(p.next.kind, p.name))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>`
       : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
   </div></div>`;
   fillPhotos(view, [p]);
   const redraw = () => personScreen(view, id).then(() => view.querySelector('.screen')?.classList.add('still'));
-  view.querySelector('[data-band-more]').addEventListener('click', () => openPersonMenu(p, redraw));
+  view.querySelector('[data-band-more]').addEventListener('click', () => openPersonMenu(p, redraw, { asks, pitched }));
+  wirePitch(view, p, pitched, redraw);
   view.querySelector('[data-move]')?.addEventListener('click', () => openMove(p, {
     onDone: async () => {
       const undo = await doMove(p);

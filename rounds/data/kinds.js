@@ -1,6 +1,8 @@
-// The seven kinds of move (rounds/NOTES.md), in the order Today takes them
+// The nine kinds of move (rounds/NOTES.md), in the order Today takes them
 // when more are due than fit: a thank you while it's fresh first, a pitch
-// last. Each has its name, its colour pair (the move's colour, then its
+// last. Two are thank-yous of their own (round 2, connect): for a yes to a
+// shoot, and "Your photos are up" when a post from Layouts tags them.
+// Each has its name, its colour pair (the move's colour, then its
 // mark's) and its mark, drawn in a 24 x 24 box from the suite's shapes
 // (DESIGN.md 6), and the starter message Rounds ships with (05-messages).
 export const MARKS = {
@@ -14,6 +16,8 @@ export const MARKS = {
 const kind = (name, bg, fg, mark, starter) => ({ name, bg, fg, mark, starter });
 export const KINDS = {
   thanks: kind('Say thanks', '#FFD100', '#313D45', 'sun', 'Thank you for today, [name]! It was so good working with you.'),
+  yes: kind('Say thanks for the yes', '#FFD100', '#313D45', 'sun', "Thank you for the yes, [name]! I can't wait. I'll send a few ideas for the shoot soon."),
+  photos: kind('Your photos are up', '#FFD100', '#313D45', 'sun', 'The [shoot] set is up. Thank you again, feel free to share it.'),
   hello: kind('Say hello', '#13803F', '#FFD100', 'rise', "Great meeting you at [where]! I'd love to work together sometime."),
   checkin: kind('Check in', '#0A4FD6', '#FFAFAB', 'ring', "Hey [name], it's been a minute. Want to plan the next one?"),
   intros: kind('Ask for intros', '#CC2E8A', '#E2E600', 'dots', "Hi [name]! Hope you've been well since the session. I'm adding more people to my portfolio who do work like yours. Is there anyone you'd be happy to put me in touch with? No pressure at all."),
@@ -23,7 +27,7 @@ export const KINDS = {
 };
 export const KIND_KEYS = Object.keys(KINDS);
 // The order Messages lists them in (as 05-messages).
-export const MESSAGE_ORDER = ['thanks', 'hello', 'checkin', 'refresh', 'intros', 'pitch', 'followup'];
+export const MESSAGE_ORDER = ['thanks', 'yes', 'photos', 'hello', 'checkin', 'refresh', 'intros', 'pitch', 'followup'];
 
 export const isKind = (key) => KIND_KEYS.includes(key);
 

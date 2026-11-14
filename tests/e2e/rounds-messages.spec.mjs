@@ -10,8 +10,10 @@ const row = (page, kind) => page.locator(`#view .msg-row[data-kind="${kind}"]`);
 test.describe('Rounds: Messages and Options', () => {
   test('a message written in your words, with a fill-in, and back to the example', async ({ browser }, testInfo) => {
     const { ctx, page, problems } = await openRounds(browser, testInfo, '/rounds/#/messages');
-    await expect(page.locator('#view .msg-list').first().locator('.msg-kind')).toHaveText(['Say thanks', 'Say hello', 'Check in', 'Refresh offer', 'Ask for intros', 'Pitch', 'Follow up']);
+    await expect(page.locator('#view .msg-list').first().locator('.msg-kind')).toHaveText(['Say thanks', 'Say thanks for the yes', 'Your photos are up', 'Say hello', 'Check in', 'Refresh offer', 'Ask for intros', 'Pitch', 'Follow up']);
     await expect(row(page, 'thanks').locator('.msg-text')).toHaveText('Thank you for today, [name]! It was so good working with you.');
+    // Its own message for the people tagged in a post from Layouts (connect/NOTES.md).
+    await expect(row(page, 'photos').locator('.msg-text')).toHaveText('The [shoot] set is up. Thank you again, feel free to share it.');
     await row(page, 'thanks').click();
     const edit = await opened(page, 'Say thanks');
     await expect(edit.locator('[data-reset]')).toHaveCount(0);

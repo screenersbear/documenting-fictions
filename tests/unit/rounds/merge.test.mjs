@@ -93,6 +93,12 @@ describe('mergeFields', () => {
     expect(r.merged.next).toEqual({ kind: 'hello', due: '2026-11-15', step: 0 });
     expect(mergeFields(b, { ...b, draft: { kind: 'pitch' } }, { ...b, draft: { kind: 'followup' } }).clashes).toEqual(['draft']);
   });
+  it('an answer to a pitch is taken whole too', () => {
+    const pitch = { answer: 'waiting', on: '2026-11-14', before: { group: 'prospect', groupPicked: false, next: null } };
+    const at = { ...b, pitch };
+    const r = mergeFields(at, { ...at, pitch: { ...pitch, answer: 'yes' } }, { ...at, pitch: { ...pitch, on: '2026-11-15' } });
+    expect(r.clashes).toEqual(['pitch']);
+  });
   it('a new nested object on both sides with no base is merged within', () => {
     const r = mergeFields({ id: 'a' }, { id: 'a', lists: { email: true } }, { id: 'a', lists: { mail: true } });
     expect(r.merged.lists).toEqual({ email: true, mail: true });

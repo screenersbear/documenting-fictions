@@ -37,8 +37,9 @@ describe('shootPeople', () => {
 describe('bringIn', () => {
   it('brings in everyone from a captured shoot, with a ready thank you', () => {
     const s = shoot('s1', '2026-11-10', { talents: [maya], teamMembers: [{ role: 'Makeup', name: 'Jules' }] });
-    const { changed, seen } = bringIn([], [s], [], T, ids());
+    const { changed, seen, brought } = bringIn([], [s], [], T, ids());
     expect(seen).toEqual(['s1']);
+    expect(brought).toEqual([{ shootId: 's1', title: 'Rooftop portraits', names: ['Maya R.', 'Jules'] }]);
     expect(changed.map((p) => [p.id, p.name, p.group, p.source, p.where, p.shoots, p.lastShot, p.photoKey, p.next])).toEqual([
       ['p1', 'Maya R.', 'new', 'eye', 'Talent on Rooftop portraits', ['s1'], '2026-11-10', 's1__talent_t1', move('thanks', T)],
       ['p2', 'Jules', 'new', 'eye', 'Makeup on Rooftop portraits', ['s1'], '2026-11-10', '', move('thanks', T)],
@@ -46,10 +47,11 @@ describe('bringIn', () => {
   });
   it('leaves shoots not captured yet, seen before, with no day, or not shoots at all', () => {
     const shoots = [shoot('a', T, { status: 'planning', talents: [maya] }), shoot('b', T, { talents: [maya] }), shoot('c', '', { talents: [maya] }), null, { date: T, status: 'captured' }];
-    const { changed, seen } = bringIn([], shoots, ['b'], T, ids());
+    const { changed, seen, brought } = bringIn([], [...shoots, shoot('e', T)], ['b'], T, ids());
+    expect(brought).toEqual([]); // e: a shoot with no one on it
     expect(changed).toEqual([]);
-    expect(seen).toEqual(['b']);
-    expect(bringIn([], undefined, [], T, ids())).toEqual({ changed: [], seen: [] });
+    expect(seen).toEqual(['b', 'e']);
+    expect(bringIn([], undefined, [], T, ids())).toEqual({ changed: [], seen: [], brought: [] });
   });
   it('adds a shoot to someone Rounds has, and they become a Regular after three', () => {
     const had = { ...newPerson({ id: 'm', name: 'Maya', instagram: 'maya.rr', photoKey: 'old' }, T), shoots: ['x', 'y'], lastShot: '2026-11-12' };
@@ -71,8 +73,9 @@ describe('bringIn', () => {
   it('counts a shoot once for someone on it twice, and goes through shoots in date order', () => {
     const s1 = shoot('s1', '2026-11-12', { talents: [{ name: 'Ana' }], teamMembers: [{ role: 'Styling', name: 'ana' }] });
     const s0 = shoot('s0', '2026-08-01', { status: 'delivered', title: '', talents: [{ name: 'Ana' }] });
-    const { changed, seen } = bringIn([], [s1, s0], [], T, ids());
+    const { changed, seen, brought } = bringIn([], [s1, s0], [], T, ids());
     expect(seen).toEqual(['s0', 's1']);
+    expect(brought).toEqual([{ shootId: 's0', title: '', names: ['Ana'] }, { shootId: 's1', title: 'Rooftop portraits', names: ['Ana'] }]);
     expect(changed).toHaveLength(1);
     expect(changed[0]).toMatchObject({ where: 'Talent on a shoot', shoots: ['s0', 's1'], lastShot: '2026-11-12', next: move('thanks', T) });
   });

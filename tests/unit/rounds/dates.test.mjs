@@ -1,6 +1,6 @@
 // rounds/data/dates.js: days as 'YYYY-MM-DD' in the phone's own time, and how they read.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { dayOf, dateOf, isDay, addDays, daysBetween, later, whenWords, dueWords, sinceWords, agoWords } from '../../../rounds/data/dates.js';
+import { dayOf, dateOf, isDay, addDays, daysBetween, later, shortDay, whenWords, dueWords, sinceWords, agoWords } from '../../../rounds/data/dates.js';
 
 afterEach(() => vi.useRealTimers());
 const SAT = '2026-11-14'; // a Saturday
@@ -60,6 +60,18 @@ describe('later', () => {
     expect(later('', SAT)).toBe(SAT);
     expect(later(SAT, '')).toBe(SAT);
     expect(later(SAT, SAT)).toBe(SAT);
+  });
+});
+
+describe('shortDay', () => {
+  it('gives a day as its date, short', () => {
+    expect(shortDay('2026-11-03')).toBe('3 Nov');
+    expect(shortDay('2027-01-31')).toBe('31 Jan');
+  });
+  it('is empty for no day, or something else', () => {
+    expect(shortDay('')).toBe('');
+    expect(shortDay(undefined)).toBe('');
+    expect(shortDay('2026-02-30')).toBe('');
   });
 });
 

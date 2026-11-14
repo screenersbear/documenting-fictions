@@ -89,6 +89,16 @@ describe('afterDone', () => {
     expect(two).toEqual(move('followup', '2026-12-05', 2));
     expect(afterDone(who('prospect', two), '2026-12-05')).toBe(null);
   });
+  it('brings back the move Your photos are up stood in for', () => {
+    const checkin = move('checkin', '2026-12-01');
+    expect(afterDone(who('regular', { ...move('photos', T), then: checkin }), T)).toBe(checkin);
+    expect(afterDone(who('guest', { ...move('photos', T), then: move('hello', T) }), T)).toEqual(move('hello', T));
+  });
+  it('carries on as for any move when Your photos are up stood in for none', () => {
+    expect(afterDone(who('new', move('photos', T)), T)).toEqual(move('checkin', '2026-12-26'));
+    expect(afterDone(who('guest', move('photos', T)), T)).toBe(null);
+    expect(afterDone(who('client', move('yes', T)), T)).toEqual(move('intros', '2027-02-12'));
+  });
 });
 
 describe('regroup', () => {
@@ -97,6 +107,14 @@ describe('regroup', () => {
     expect(regroup(who('client', next), 'prospect', T)).toBe(next);
     const thanks = move('thanks', T);
     expect(regroup(who('new', thanks), 'client', T)).toBe(thanks);
+  });
+  it('keeps a thank-you for a yes, or Your photos are up, in any group', () => {
+    const yes = move('yes', T);
+    const photos = move('photos', T);
+    for (const g of GROUP_KEYS) {
+      expect(regroup(who('client', yes), g, T)).toBe(yes);
+      expect(regroup(who('new', photos), g, T)).toBe(photos);
+    }
   });
   it('gives the group\'s first move otherwise', () => {
     expect(regroup(who('new', move('thanks', T)), 'regular', T)).toEqual(move('checkin', T));

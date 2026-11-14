@@ -52,6 +52,9 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BESIDE = os.path.dirname(ROOT)
 NOTEBOOKS = ['ref', 'the-eye', 'contact-sheet', 'overthoughts']
+# The notebooks that get the shared copies: those above, and Rounds, which
+# lives only in the suite (it isn't exported).
+SHARED_IN = NOTEBOOKS + ['rounds']
 NAMES = {'ref': 'Ref', 'the-eye': 'The Eye', 'contact-sheet': 'Contact Sheet', 'overthoughts': 'Overthoughts'}
 TARGETS = {
     'ref': os.path.join(BESIDE, 'Ref Notebook'),
@@ -170,7 +173,7 @@ def join(apps, dry):
 def shared(dry):
     """Copies shared/data/ and styles/shared/ into each notebook; gives the notebooks whose copies changed."""
     changed = set()
-    for nb in NOTEBOOKS:
+    for nb in SHARED_IN:
         # Until 2026-11-12 the shared data was one file, df-data.js, beside index.html.
         old = os.path.join(ROOT, nb, 'df-data.js')
         if os.path.exists(old):
@@ -181,7 +184,7 @@ def shared(dry):
     for kind, ext, home in (('data', '.js', ('shared', 'data')), ('styles', '.css', ('styles', 'shared'))):
         src_dir = os.path.join(ROOT, *home)
         names = sorted(f for f in os.listdir(src_dir) if f.endswith(ext)) if os.path.isdir(src_dir) else []
-        for nb in NOTEBOOKS:
+        for nb in SHARED_IN:
             dst_dir = os.path.join(ROOT, nb, kind, 'shared')
             for f in names:
                 src, dst = os.path.join(src_dir, f), os.path.join(dst_dir, f)
@@ -376,7 +379,7 @@ def main(argv):
         return 1
     changed = shared(dry)
     if args[0] == 'shared':
-        join(['.'] + NOTEBOOKS, dry)  # the shelf joins shared/data/ itself
+        join(['.'] + SHARED_IN, dry)  # the shelf joins shared/data/ itself
     if args[0] == 'export':
         if len(args) < 2:
             print(__doc__)

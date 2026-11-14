@@ -1,0 +1,14 @@
+/* HOW DID THE PITCH GO? on a person's page (connect/05): the three answers
+   as chips (the picked one in ink with mango words), then, after a yes, the
+   card saying they've passed to Ref, with OPEN. */
+.pitch-label { margin: 26px 0 8px; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.pitch-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pitch-chip { height: 36px; padding: 0 14px; border-radius: 18px; background: #EFEFEA; font: 400 14px/18px var(--ui); color: var(--text); white-space: nowrap; }
+.pitch-chip[aria-checked="true"] { background: var(--ink); color: var(--partner); }
+.passed-ref { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding: 14px; border-radius: 8px; background: var(--card);
+  box-shadow: 0 1px 0 #E1E1DC, 0 10px 24px rgba(49, 61, 69, .10); }
+.passed-ref-words { flex: 1; min-width: 0; }
+.passed-ref-title { display: block; font: 400 17px/22px var(--ui); }
+.passed-ref-line { display: block; margin-top: 2px; font: 400 14px/19px var(--ui); color: var(--dim); }
+.passed-ref-open { display: inline-flex; align-items: center; height: 44px; margin-right: -8px; padding: 0 8px; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); text-decoration: none; }
+.pitch-chips + .person-next, .passed-ref + .person-next, .pitch-chips + .person-rest, .passed-ref + .person-rest { margin-top: 24px; }

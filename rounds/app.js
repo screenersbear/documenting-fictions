@@ -15,6 +15,7 @@ import { openOptions } from './pages/options.js';
 import { introSeen, openIntro } from './pages/intro.js';
 import { welcome } from './pages/welcome.js';
 import { bringInFromEye } from './data/eye.js';
+import { takeFromLayouts } from './data/from-layouts.js';
 import { startAutoSync } from './data/auto-sync.js';
 import { openConflicts } from './pages/conflicts.js';
 
@@ -82,12 +83,15 @@ function onSynced(r) {
 
 window.addEventListener('hashchange', route);
 if ((location.hash || '#/') === '#/') history.replaceState(null, '', suite && suite.at ? `#/${suite.at}` : '#/today');
-// People from The Eye's shoots come in first, then the notebook's drawn;
-// and again whenever Rounds comes back on screen.
-bringInFromEye().catch(console.error).finally(() => { route(); startAutoSync(onSynced); });
+// People from The Eye's shoots, and the people in posts shared from
+// Layouts, come in first, then the notebook's drawn; and again whenever
+// Rounds comes back on screen.
+// One after the other: both can change the same person.
+const bringIn = async () => (await bringInFromEye()) + (await takeFromLayouts());
+bringIn().catch(console.error).finally(() => { route(); startAutoSync(onSynced); });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || document.querySelector('.sheet-overlay')) return;
-  bringInFromEye().then((n) => { if (n && !document.querySelector('.sheet-overlay')) route(); }).catch(console.error);
+  bringIn().then((n) => { if (n && !document.querySelector('.sheet-overlay')) route(); }).catch(console.error);
 });
 // The first launch: inside the suite, how to get back to the shelf (and the
 // cards if they're wanted); on its own, the cards.

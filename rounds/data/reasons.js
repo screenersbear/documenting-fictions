@@ -13,6 +13,10 @@ export function reasonFor(person, today) {
   switch (n.kind) {
     case 'thanks':
       return person.lastShot ? `You shot together ${on(whenWords(person.lastShot, today))}. A quick thank you while it's fresh.` : "A quick thank you while it's fresh.";
+    case 'yes':
+      return "They said yes to a shoot. A quick thank you while it's fresh.";
+    case 'photos':
+      return n.shoot ? `The ${n.shoot} set is up, and they're tagged in it.` : "Their photos are up, and they're tagged in them.";
     case 'hello':
       if (person.group === 'guest') return 'One friendly note: send them their photos.';
       return person.note || "You just met. A quick hello while it's fresh.";

@@ -20,6 +20,8 @@ export const daysBetween = (a, b) => Math.round((dateOf(b) - dateOf(a)) / 864000
 // The later of two days ('' for none).
 export const later = (a, b) => (a > b ? a : b);
 const short = (d) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+// A day, short: 3 Nov ('' for none).
+export const shortDay = (day) => (isDay(day) ? short(dateOf(day)) : '');
 
 // A day gone by, in a sentence: today, yesterday, Tuesday (this past week), 3 Nov.
 export function whenWords(day, today) {

@@ -369,7 +369,11 @@ const STAMPS = new Set([
 	"createdAt",
 	"updatedAt"
 ]);
-const WHOLE = new Set(["next", "draft"]);
+const WHOLE = new Set([
+	"next",
+	"draft",
+	"pitch"
+]);
 const QUIET = new Set([
 	"lastMove",
 	"lastShot",
@@ -584,7 +588,7 @@ function nextBase(written, oldBase, held) {
 
 // data/db.js
 const DB_NAME$1 = "rounds";
-const KEYS = {
+const KEYS$1 = {
 	people: "id",
 	moves: "id",
 	photos: "id",
@@ -606,7 +610,7 @@ function openDb$1() {
 	dbPromise$1 = new Promise((resolve, reject) => {
 		const req = indexedDB.open(DB_NAME$1, 2);
 		req.onupgradeneeded = () => {
-			for (const [s, keyPath] of Object.entries(KEYS)) if (!req.result.objectStoreNames.contains(s)) req.result.createObjectStore(s, { keyPath });
+			for (const [s, keyPath] of Object.entries(KEYS$1)) if (!req.result.objectStoreNames.contains(s)) req.result.createObjectStore(s, { keyPath });
 		};
 		req.onsuccess = () => {
 			req.result.onversionchange = () => {
@@ -811,6 +815,7 @@ function addDays(day, n) {
 const daysBetween = (a, b) => Math.round((dateOf(b) - dateOf(a)) / 864e5);
 const later = (a, b) => a > b ? a : b;
 const short = (d) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+const shortDay = (day) => isDay(day) ? short(dateOf(day)) : "";
 function whenWords(day, today) {
 	const n = daysBetween(day, today);
 	if (n === 0) return "today";
@@ -854,25 +859,33 @@ const GAP = {
 	fresh: 14
 };
 const REGULAR_AFTER = 3;
+const ANY = ["yes", "photos"];
 const OWN = {
-	regular: ["checkin"],
+	regular: ["checkin", ...ANY],
 	new: [
 		"thanks",
 		"hello",
-		"checkin"
+		"checkin",
+		...ANY
 	],
 	client: [
 		"thanks",
 		"intros",
-		"refresh"
+		"refresh",
+		...ANY
 	],
 	prospect: [
 		"pitch",
 		"followup",
 		"hello",
-		"thanks"
+		"thanks",
+		...ANY
 	],
-	guest: ["hello", "thanks"]
+	guest: [
+		"hello",
+		"thanks",
+		...ANY
+	]
 };
 function groupFromName(text) {
 	const t = String(text ?? "").trim().toLowerCase().replace(/\s+/g, " ").replace(/s$/, "");
@@ -897,6 +910,7 @@ function afterShoot(person, shotOn, today) {
 }
 function afterDone(person, today) {
 	const done = person.next;
+	if (done && done.kind === "photos" && done.then) return done.then;
 	if (!done || person.group === "guest") return null;
 	if (person.group === "client") return move(done.kind === "intros" ? "refresh" : "intros", addDays(today, GAP.client));
 	if (person.group === "prospect") {
@@ -982,6 +996,8 @@ const kind = (name, bg, fg, mark, starter) => ({
 });
 const KINDS = {
 	thanks: kind("Say thanks", "#FFD100", "#313D45", "sun", "Thank you for today, [name]! It was so good working with you."),
+	yes: kind("Say thanks for the yes", "#FFD100", "#313D45", "sun", "Thank you for the yes, [name]! I can't wait. I'll send a few ideas for the shoot soon."),
+	photos: kind("Your photos are up", "#FFD100", "#313D45", "sun", "The [shoot] set is up. Thank you again, feel free to share it."),
 	hello: kind("Say hello", "#13803F", "#FFD100", "rise", "Great meeting you at [where]! I'd love to work together sometime."),
 	checkin: kind("Check in", "#0A4FD6", "#FFAFAB", "ring", "Hey [name], it's been a minute. Want to plan the next one?"),
 	intros: kind("Ask for intros", "#CC2E8A", "#E2E600", "dots", "Hi [name]! Hope you've been well since the session. I'm adding more people to my portfolio who do work like yours. Is there anyone you'd be happy to put me in touch with? No pressure at all."),
@@ -992,6 +1008,8 @@ const KINDS = {
 const KIND_KEYS = Object.keys(KINDS);
 const MESSAGE_ORDER = [
 	"thanks",
+	"yes",
+	"photos",
 	"hello",
 	"checkin",
 	"refresh",
@@ -1052,21 +1070,33 @@ function fromImport(rows, today, perDay, makeId) {
 	});
 }
 function markDone(person, today) {
-	const { kind, due, step } = person.next;
+	const { kind, due, step, shoot, then } = person.next;
+	const was = kind === "pitch" ? {
+		...person.pitched ? { pitched: person.pitched } : {},
+		...person.pitch ? { pitch: person.pitch } : {}
+	} : {};
 	const log = {
 		personId: person.id,
 		kind,
 		day: today,
 		due,
-		step
+		step,
+		...shoot ? { shoot } : {},
+		...then ? { then } : {},
+		...Object.keys(was).length ? { was } : {}
 	};
 	const { draft, ...rest } = person;
+	const after = {
+		...rest,
+		lastMove: today,
+		next: afterDone(person, today)
+	};
+	if (kind === "pitch") {
+		after.pitched = today;
+		delete after.pitch;
+	}
 	return {
-		person: {
-			...rest,
-			lastMove: today,
-			next: afterDone(person, today)
-		},
+		person: after,
 		log
 	};
 }
@@ -1080,11 +1110,22 @@ function undoDone$1(person, line, lines = []) {
 	const guess = line.kind === "followup" ? followupBefore(person) : 0;
 	const step = Number.isInteger(line.step) ? line.step : guess;
 	const lastMove = lines.filter((l) => l.personId === person.id && l.id !== line.id).map((l) => l.day).sort().pop() || "";
-	return {
+	const next = {
+		...move(line.kind, line.due || line.day, step),
+		...line.shoot ? { shoot: line.shoot } : {},
+		...line.then ? { then: line.then } : {}
+	};
+	const back = {
 		...person,
 		lastMove,
-		next: move(line.kind, line.due || line.day, step)
+		next
 	};
+	if (line.kind === "pitch") {
+		const was = line.was || {};
+		for (const k of ["pitched", "pitch"]) if (was[k]) back[k] = was[k];
+		else delete back[k];
+	}
+	return back;
 }
 __name(undoDone$1, "undoDone");
 const markLater = (person, today) => ({
@@ -1155,13 +1196,21 @@ function shootPeople(shoot) {
 	});
 	return [...talent, ...team];
 }
-function bringIn(people, shoots, seen, today, makeId) {
+function bringIn$1(people, shoots, seen, today, makeId) {
 	const all = [...people];
 	const changed = new Map();
+	const brought = [];
 	const done = new Set(seen);
 	const fresh = (shoots || []).filter((s) => s && s.id && !done.has(s.id) && AFTER_SHOOT.includes(s.status) && isDay(s.date)).sort((a, b) => a.date.localeCompare(b.date));
 	for (const s of fresh) {
-		for (const sp of shootPeople(s)) {
+		const on = shootPeople(s);
+		const names = on.map((sp) => sp.name).filter((n, i, all) => all.findIndex((x) => x.toLowerCase() === n.toLowerCase()) === i);
+		if (names.length) brought.push({
+			shootId: s.id,
+			title: s.title || "",
+			names
+		});
+		for (const sp of on) {
 			let p = findMatch(all, sp);
 			if (!p) {
 				p = newPerson({
@@ -1190,9 +1239,11 @@ function bringIn(people, shoots, seen, today, makeId) {
 	}
 	return {
 		changed: [...changed.values()],
-		seen: [...done]
+		seen: [...done],
+		brought
 	};
 }
+__name(bringIn$1, "bringIn");
 
 // data/eye.js
 const EYE_STATE = "dailies_state_v1";
@@ -1209,10 +1260,33 @@ async function bringInFromEye() {
 	const shoots = eyeShoots();
 	if (!shoots.length) return 0;
 	const [people, seen] = await Promise.all([listPeople(), getSetting("eyeSeen", [])]);
-	const { changed, seen: now } = bringIn(people, shoots, seen, dayOf(), uuid);
-	if (changed.length) await savePeople(changed);
+	const { changed, seen: now, brought } = bringIn$1(people, shoots, seen, dayOf(), uuid);
+	const on = !window.DFConnect || window.DFConnect.connectOn("people");
+	if (on && changed.length) await savePeople(changed);
 	if (now.length !== seen.length) await setSetting("eyeSeen", now);
-	return changed.length;
+	if (on) await notePeople(brought).catch(() => {});
+	return on ? changed.length : 0;
+}
+async function notePeople(brought) {
+	const D = window.DFData;
+	if (!D || !D.saveLink) return;
+	for (const b of brought) {
+		const [had] = await D.linksWhere({
+			fromApp: "the-eye",
+			fromId: b.shootId,
+			type: "people"
+		});
+		await D.saveLink({
+			...had || {},
+			fromApp: "the-eye",
+			fromId: b.shootId,
+			toApp: "rounds",
+			toId: "",
+			type: "people",
+			title: b.title,
+			names: b.names
+		});
+	}
 }
 function eyePhoto(key) {
 	return new Promise((done) => {
@@ -1514,7 +1588,8 @@ const FILLS = [
 	"offer",
 	"brand",
 	"when",
-	"city"
+	"city",
+	"shoot"
 ];
 const firstName = (name) => String(name ?? "").trim().split(/\s+/)[0];
 function fillValues(person, me, today) {
@@ -1525,7 +1600,8 @@ function fillValues(person, me, today) {
 		offer: me.offer || "",
 		brand: whole,
 		when: person.lastMove ? whenWords(person.lastMove, today) : "",
-		city: me.city || ""
+		city: me.city || "",
+		shoot: person.next && person.next.shoot || ""
 	};
 }
 function fill(text, values) {
@@ -1543,6 +1619,8 @@ function reasonFor(person, today) {
 	const since = sinceWords(later(person.lastShot || "", person.lastMove || "") || today, today);
 	switch (n.kind) {
 		case "thanks": return person.lastShot ? `You shot together ${on(whenWords(person.lastShot, today))}. A quick thank you while it's fresh.` : "A quick thank you while it's fresh.";
+		case "yes": return "They said yes to a shoot. A quick thank you while it's fresh.";
+		case "photos": return n.shoot ? `The ${n.shoot} set is up, and they're tagged in it.` : "Their photos are up, and they're tagged in them.";
 		case "hello":
 			if (person.group === "guest") return "One friendly note: send them their photos.";
 			return person.note || "You just met. A quick hello while it's fresh.";
@@ -2315,7 +2393,7 @@ async function leadsHandled(ids) {
 	await setMeta("leads", leads.filter((e) => !ids.includes(e.id)));
 	await setMeta("inboxHandled", [...new Set([...handled, ...ids])]);
 }
-async function answer(c, side) {
+async function answer$1(c, side) {
 	const base = await getMeta("syncBase") || {};
 	base[c.store] = base[c.store] || {};
 	const here = await exportData();
@@ -2363,6 +2441,7 @@ async function answer(c, side) {
 	await setMeta("syncConflicts", (await getConflicts()).filter((x) => keyOf(x.store, x.id) !== keyOf(c.store, c.id)));
 	return { stale };
 }
+__name(answer$1, "answer");
 
 // data/auto-sync.js
 const SOON = 4e3;
@@ -2389,7 +2468,7 @@ function request(delay = 0) {
 	}, delay);
 }
 function resolve(c, side) {
-	return inTurn(() => answer(c, side)).then((r) => {
+	return inTurn(() => answer$1(c, side)).then((r) => {
 		request(0);
 		return r;
 	});
@@ -2568,6 +2647,88 @@ async function openLeads(onChange) {
 	});
 }
 
+// data/photos-up.js
+function taggedIn(people, handles) {
+	const want = new Set((handles || []).map((h) => cleanHandle(h).toLowerCase()).filter(Boolean));
+	return people.filter((p) => !p.letGo && [p.instagram, p.tiktok].some((h) => !!h && want.has(h.toLowerCase())));
+}
+function photosUp(person, shoot, today) {
+	const had = person.next;
+	const then = !had || had.kind === "thanks" ? null : had.kind === "photos" ? had.then || null : had;
+	const title = String(shoot ?? "").trim();
+	return {
+		...person,
+		next: {
+			...move("photos", today),
+			...title ? { shoot: title } : {},
+			...then ? { then } : {}
+		}
+	};
+}
+function takePosts(people, links, today) {
+	const now = new Map(people.map((p) => [p.id, p]));
+	const changed = new Map();
+	const taken = [];
+	for (const link of links || []) {
+		if (!link || link.takenAt) continue;
+		const who = taggedIn([...now.values()], link.handles);
+		for (const p of who) {
+			const q = photosUp(p, link.title, today);
+			now.set(p.id, q);
+			changed.set(p.id, q);
+		}
+		taken.push({
+			link,
+			ids: who.map((p) => p.id)
+		});
+	}
+	return {
+		changed: [...changed.values()],
+		taken
+	};
+}
+const listWords = (xs) => `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
+function slipLine(names) {
+	if (!names.length) return "";
+	return names.length === 1 ? `${names[0]} is tagged in the post. A note is ready.` : `${listWords(names)} are tagged in the post. A note for each is ready.`;
+}
+const writeWho = (names) => names.length === 1 ? `Write to ${firstName(names[0])}` : "Write to them";
+
+// pages/post-slip.js
+const C$2 = /* @__PURE__ */ __name(() => window.DFConnect, "C");
+const personHtml = (p) => `<span class="rd-slip-person">${photoHtml(p, "small")}<span class="rd-slip-name">${esc(firstName(p.name))}</span></span>`;
+async function postSlipsHtml(people) {
+	if (!C$2() || !window.DFData) return "";
+	const byId = new Map(people.map((p) => [p.id, p]));
+	const out = [];
+	for (const link of await C$2().slipsFor("rounds")) {
+		if (link.type !== "post-people" || !link.takenAt) continue;
+		const who = (link.people || []).map((id) => byId.get(id)).filter((p) => p && !p.letGo);
+		if (!who.length) continue;
+		const names = who.map((p) => p.name);
+		out.push(C$2().slipHtml({
+			link,
+			title: link.title || "A new post",
+			line: slipLine(names),
+			body: `<div class="rd-slip-people" data-first="${esc(who[0].id)}">${who.map(personHtml).join("")}</div>`,
+			main: writeWho(names)
+		}));
+	}
+	return out.join("");
+}
+function wirePostSlips(root, open) {
+	root.querySelectorAll(".df-slip[data-slip]").forEach((slip) => slip.addEventListener("click", async (e) => {
+		const go = e.target.closest("[data-slip-open]");
+		if (!go && !e.target.closest("[data-slip-later]")) return;
+		const link = await window.DFData.getLink(slip.dataset.slip);
+		if (!link) return;
+		await (go ? C$2().openSlip(link) : C$2().tuckSlip(link));
+		const first = slip.querySelector("[data-first]")?.dataset.first;
+		slip.remove();
+		if (go && first) open(first);
+	}));
+}
+
 // pages/today.js
 const doneHtml = (n) => n ? `<button type="button" class="text-btn today-done" data-done-today>Done today <span>${n}</span></button>` : "";
 const head = (count, arc) => `<div class="today-head"><span class="today-count">${count}</span>${arc}</div>`;
@@ -2599,19 +2760,37 @@ function calmHtml(people, pick, today, week) {
 async function todayScreen(view, { beside = false } = {}) {
 	const today = dayOf();
 	const [{ people, pick, week }, { done: doneToday }] = await Promise.all([loadToday(), loadDone()]);
-	const leads = await leadsHtml(people);
+	const [leads, slips] = await Promise.all([leadsHtml(people), postSlipsHtml(people).catch(() => "")]);
 	const byId = new Map(people.map((p) => [p.id, p]));
 	const left = waiting$1(pick).map((id) => byId.get(id));
 	view.innerHTML = `<div class="screen"><div class="scroll">${bandHtml({
 		title: "Rounds",
 		place: "Today"
-	})}${leads}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today, week)}${doneHtml(doneToday.length)}</div></div>`;
+	})}${slips}${leads}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today, week)}${doneHtml(doneToday.length)}</div></div>`;
 	fillPhotos(view, people);
 	if (beside) return;
 	const redraw = () => todayScreen(view).then(() => view.querySelector(".screen")?.classList.add("still"));
 	view.querySelector("[data-add]")?.addEventListener("click", () => openAddPerson(() => todayScreen(view)));
 	view.querySelector("[data-done-today]")?.addEventListener("click", () => openDoneToday(redraw));
 	view.querySelector("[data-leads]")?.addEventListener("click", () => openLeads(redraw));
+	wirePostSlips(view, (id) => {
+		const p = byId.get(id);
+		if (!p || !p.next) {
+			redraw();
+			return;
+		}
+		openMove(p, {
+			onDone: async () => {
+				const undo = await doMove(p);
+				await redraw();
+				toast("Done.", { action: {
+					label: "Undo",
+					run: () => undoMove(undo).then(redraw)
+				} });
+			},
+			onLater: () => laterMove(p).then(redraw)
+		});
+	});
 	if (!left.length) return;
 	const top = left[0];
 	const card = view.querySelector(".card.top");
@@ -3232,6 +3411,70 @@ const dockEnd = (e) => {
 bar.addEventListener("pointerup", dockEnd);
 bar.addEventListener("pointercancel", dockEnd);
 
+// data/pitch.js
+const ANSWERS = [
+	{
+		key: "waiting",
+		label: "No reply yet"
+	},
+	{
+		key: "no",
+		label: "Not now"
+	},
+	{
+		key: "yes",
+		label: "Yes, let's shoot"
+	}
+];
+const KEYS = ANSWERS.map((a) => a.key);
+function pitchedOn(person, lines = []) {
+	if (person.pitched) return person.pitched;
+	return lines.filter((l) => l.personId === person.id && l.kind === "pitch").map((l) => l.day).sort().pop() || "";
+}
+const saidYes = (person) => !!person.pitch && person.pitch.answer === "yes" && !!person.next && person.next.kind === "yes";
+function asksAboutPitch(person, pitched) {
+	if (person.letGo) return false;
+	if (person.pitch && person.pitch.answer === "yes") return saidYes(person);
+	const next = person.next;
+	return person.group === "prospect" && !!pitched && (!next || next.kind === "followup");
+}
+function answerPitch(person, answer, today) {
+	if (!KEYS.includes(answer)) return person;
+	const before = person.pitch && person.pitch.before || {
+		group: person.group,
+		groupPicked: !!person.groupPicked,
+		next: person.next || null
+	};
+	const pitch = {
+		answer,
+		on: today,
+		before
+	};
+	if (answer === "yes") return {
+		...person,
+		group: "client",
+		groupPicked: true,
+		next: move("yes", today),
+		pitch
+	};
+	const was = {
+		group: before.group,
+		groupPicked: before.groupPicked
+	};
+	return {
+		...person,
+		...was,
+		next: answer === "no" ? null : before.next,
+		pitch
+	};
+}
+const yesLine = (pitched) => shortDay(pitched) ? `Client now. Pitched ${shortDay(pitched)}.` : "Client now.";
+const clientFor = (person, pitched) => ({
+	name: person.name,
+	handle: person.instagram || "",
+	pitched: pitched || ""
+});
+
 // pages/person-edit.js
 const field = (label, name, value, more = "") => `<label class="field"><span class="field-label">${label}</span><input type="text" name="${name}" value="${esc(value)}" autocomplete="off" ${more} /></label>`;
 const HANDLE = "autocapitalize=\"off\" spellcheck=\"false\" placeholder=\"@handle\"";
@@ -3305,8 +3548,86 @@ function openEdit(p, onSaved) {
 	return s;
 }
 
+// data/to-ref.js
+const D = () => window.DFData;
+const C$1 = /* @__PURE__ */ __name(() => window.DFConnect, "C");
+const ready = () => !!(D() && C$1() && D().saveLink);
+async function refLinkFor(person) {
+	if (!ready()) return null;
+	const [l] = await D().linksWhere({
+		fromApp: "rounds",
+		fromId: person.id,
+		type: "new-client"
+	});
+	return l || null;
+}
+async function photoOf(person) {
+	const own = await getPhoto(person.id);
+	if (own) return {
+		type: own.type || "image/jpeg",
+		bytes: await own.arrayBuffer()
+	};
+	const src = person.photoKey ? await eyePhoto(person.photoKey) : "";
+	if (!src) return null;
+	const b = await (await fetch(src)).blob();
+	return {
+		type: b.type || "image/jpeg",
+		bytes: await b.arrayBuffer()
+	};
+}
+async function passToRef(person, pitched) {
+	if (!ready() || !C$1().connectOn("clients")) return null;
+	const had = await refLinkFor(person);
+	const photo = await photoOf(person).catch(() => null);
+	const link = {
+		...had || {},
+		fromApp: "rounds",
+		fromId: person.id,
+		toApp: "ref",
+		toId: had && had.toId || "",
+		type: "new-client",
+		...clientFor(person, pitched)
+	};
+	return D().saveLink(link, photo ? { cover: photo } : undefined);
+}
+async function takeBackFromRef(person) {
+	const l = await refLinkFor(person);
+	if (l && !l.toId) await D().dropLinks([l.id]);
+}
+
+// pages/person-pitch.js
+const C = () => window.DFConnect;
+function passedHtml(person, link) {
+	if (!link || !C()) return "";
+	const href = window.DFData.notebookUrl("ref", { client: link.id });
+	return `<div class="passed-ref">${C().pairHtml("rounds", "ref")}
+    <span class="passed-ref-words"><span class="passed-ref-title">Passed to Ref</span><span class="passed-ref-line">${esc(`${firstName(person.name)}'s mood board is waiting there.`)}</span></span>
+    ${href ? `<a class="passed-ref-open" href="${esc(href)}">Open</a>` : ""}</div>`;
+}
+async function pitchHtml(person, pitched) {
+	const now = person.pitch ? person.pitch.answer : "";
+	const chips = ANSWERS.map((a) => `<button type="button" class="pitch-chip" role="radio" aria-checked="${a.key === now}" data-answer="${a.key}">${esc(a.label)}</button>`).join("");
+	const link = now === "yes" ? await refLinkFor(person).catch(() => null) : null;
+	return `<p class="pitch-label" id="pitchLabel">${pitched ? "How did the pitch go?" : "Shooting together?"}</p>
+    <div class="pitch-chips" role="radiogroup" aria-labelledby="pitchLabel">${chips}</div>${passedHtml(person, link)}`;
+}
+async function answer(person, key, pitched) {
+	if (person.pitch && person.pitch.answer === key) return person;
+	const after = answerPitch(person, key, dayOf());
+	await savePerson(after);
+	if (key === "yes") await passToRef(after, pitched).catch(() => null);
+	else if (person.pitch && person.pitch.answer === "yes") await takeBackFromRef(person).catch(() => {});
+	return after;
+}
+function wirePitch(view, person, pitched, redraw) {
+	view.querySelectorAll("[data-answer]").forEach((b) => b.addEventListener("click", async () => {
+		await answer(person, b.dataset.answer, pitched);
+		redraw();
+	}));
+}
+
 // pages/person-menu.js
-async function openPersonMenu(p, redraw) {
+async function openPersonMenu(p, redraw, { asks = false, pitched = "" } = {}) {
 	const own = await hasOwnPhoto(p);
 	const pick = await choiceSheet({
 		title: p.name,
@@ -3323,6 +3644,10 @@ async function openPersonMenu(p, redraw) {
 				key: "unphoto",
 				label: "Remove the photo"
 			}] : [],
+			...asks || p.letGo ? [] : [{
+				key: "yes",
+				label: "Yes, let's shoot"
+			}],
 			p.letGo ? {
 				key: "back",
 				label: "Bring back"
@@ -3345,6 +3670,9 @@ async function openPersonMenu(p, redraw) {
 		redraw();
 	} else if (pick === "unphoto") {
 		await removePhoto(p);
+		redraw();
+	} else if (pick === "yes") {
+		await answer(p, "yes", pitched);
 		redraw();
 	} else if (pick === "back") {
 		await savePerson(bringBack(p, dayOf()));
@@ -3376,7 +3704,9 @@ async function personScreen(view, id) {
 	}
 	const handle = handleText(p);
 	const url = profileUrl(p);
-	const line = [GROUPS[p.group], p.note || p.where].filter(Boolean).join(". ");
+	const pitched = pitchedOn(p, !p.pitched && (p.group === "prospect" || p.pitch) ? await listMoves() : []);
+	const asks = asksAboutPitch(p, pitched);
+	const line = saidYes(p) ? yesLine(pitched) : [GROUPS[p.group], p.note || p.where].filter(Boolean).join(". ");
 	const next = p.next && !p.letGo;
 	view.innerHTML = `<div class="screen"><div class="scroll">
     ${shortBandHtml({
@@ -3391,11 +3721,16 @@ async function personScreen(view, id) {
       <!-- The handle opens their profile on Instagram (or TikTok, or their website): the button clicker leaves it alone. -->
       <p class="person-line">${esc(line.endsWith(".") ? line : `${line}.`)}</p>
     </div>
+    ${asks ? await pitchHtml(p, pitched) : ""}
     ${next ? `<button type="button" class="person-next" data-move>${miniHtml(p.next.kind)}<span class="person-next-what">${esc(phrase(p.next.kind, p.name))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>` : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
   </div></div>`;
 	fillPhotos(view, [p]);
 	const redraw = () => personScreen(view, id).then(() => view.querySelector(".screen")?.classList.add("still"));
-	view.querySelector("[data-band-more]").addEventListener("click", () => openPersonMenu(p, redraw));
+	view.querySelector("[data-band-more]").addEventListener("click", () => openPersonMenu(p, redraw, {
+		asks,
+		pitched
+	}));
+	wirePitch(view, p, pitched, redraw);
 	view.querySelector("[data-move]")?.addEventListener("click", () => openMove(p, {
 		onDone: async () => {
 			const undo = await doMove(p);
@@ -3813,6 +4148,27 @@ function welcome(name, openTour) {
 	return true;
 }
 
+// data/from-layouts.js
+async function takeFromLayouts() {
+	const D = window.DFData;
+	if (!D || !D.linksWhere) return 0;
+	const waiting = (await D.linksWhere({
+		toApp: "rounds",
+		type: "post-people"
+	})).filter((l) => !l.takenAt);
+	if (!waiting.length) return 0;
+	const { changed, taken } = takePosts(await listPeople(), waiting, dayOf());
+	if (changed.length) await savePeople(changed);
+	const now = new Date().toISOString();
+	for (const { link, ids } of taken) await D.saveLink({
+		...link,
+		takenAt: now,
+		people: ids,
+		...ids.length ? {} : { tuckedAt: now }
+	});
+	return changed.length;
+}
+
 // app.js
 const view = document.getElementById("view");
 const suite = window.DF_SUITE;
@@ -3876,13 +4232,14 @@ function onSynced(r) {
 }
 window.addEventListener("hashchange", route);
 if ((location.hash || "#/") === "#/") history.replaceState(null, "", suite && suite.at ? `#/${suite.at}` : "#/today");
-bringInFromEye().catch(console.error).finally(() => {
+const bringIn = async () => await bringInFromEye() + await takeFromLayouts();
+bringIn().catch(console.error).finally(() => {
 	route();
 	startAutoSync(onSynced);
 });
 document.addEventListener("visibilitychange", () => {
 	if (document.hidden || document.querySelector(".sheet-overlay")) return;
-	bringInFromEye().then((n) => {
+	bringIn().then((n) => {
 		if (n && !document.querySelector(".sheet-overlay")) route();
 	}).catch(console.error);
 });

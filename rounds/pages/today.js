@@ -2,7 +2,8 @@
 // Swipe the card away when it's done, or LATER for tomorrow; WRITE TO (or a
 // tap on the card) opens the move. No overdue counts, no streaks: when the
 // day's done, a calm "That's today". DONE TODAY, under it all once a move's
-// done, lists them to undo any (a card swiped away by mistake).
+// done, lists them to undo any (a card swiped away by mistake). A post from
+// Layouts that tags people here shows as a slip at the top, once.
 import { bandHtml } from '../components/band.js';
 import { fillPhotos } from '../components/photo.js';
 import { toast } from '../components/toast.js';
@@ -18,6 +19,7 @@ import { openMove } from './move.js';
 import { openAddPerson } from './add-person.js';
 import { openDoneToday } from './done-today.js';
 import { leadsHtml, openLeads } from './leads.js';
+import { postSlipsHtml, wirePostSlips } from './post-slip.js';
 
 const doneHtml = (n) => (n ? `<button type="button" class="text-btn today-done" data-done-today>Done today <span>${n}</span></button>` : '');
 const head = (count, arc) => `<div class="today-head"><span class="today-count">${count}</span>${arc}</div>`;
@@ -53,16 +55,29 @@ function calmHtml(people, pick, today, week) {
 export async function todayScreen(view, { beside = false } = {}) {
   const today = dayOf();
   const [{ people, pick, week }, { done: doneToday }] = await Promise.all([loadToday(), loadDone()]);
-  const leads = await leadsHtml(people);
+  const [leads, slips] = await Promise.all([leadsHtml(people), postSlipsHtml(people).catch(() => '')]);
   const byId = new Map(people.map((p) => [p.id, p]));
   const left = waiting(pick).map((id) => byId.get(id));
-  view.innerHTML = `<div class="screen"><div class="scroll">${bandHtml({ title: 'Rounds', place: 'Today' })}${leads}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today, week)}${doneHtml(doneToday.length)}</div></div>`;
+  view.innerHTML = `<div class="screen"><div class="scroll">${bandHtml({ title: 'Rounds', place: 'Today' })}${slips}${leads}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today, week)}${doneHtml(doneToday.length)}</div></div>`;
   fillPhotos(view, people);
   if (beside) return;
   const redraw = () => todayScreen(view).then(() => view.querySelector('.screen')?.classList.add('still'));
   view.querySelector('[data-add]')?.addEventListener('click', () => openAddPerson(() => todayScreen(view)));
   view.querySelector('[data-done-today]')?.addEventListener('click', () => openDoneToday(redraw));
   view.querySelector('[data-leads]')?.addEventListener('click', () => openLeads(redraw));
+  // Someone's move, from a slip: as from their card.
+  wirePostSlips(view, (id) => {
+    const p = byId.get(id);
+    if (!p || !p.next) { redraw(); return; }
+    openMove(p, {
+      onDone: async () => {
+        const undo = await doMove(p);
+        await redraw();
+        toast('Done.', { action: { label: 'Undo', run: () => undoMove(undo).then(redraw) } });
+      },
+      onLater: () => laterMove(p).then(redraw),
+    });
+  });
   if (!left.length) return;
   const top = left[0];
   const card = view.querySelector('.card.top');

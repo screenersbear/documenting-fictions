@@ -1,15 +1,17 @@
-// rounds/data/kinds.js: the seven kinds of move, their colour pairs, marks and starter messages.
+// rounds/data/kinds.js: the nine kinds of move, their colour pairs, marks and starter messages.
 import { describe, it, expect } from 'vitest';
 import { KINDS, KIND_KEYS, MARKS, MESSAGE_ORDER, isKind, kindFromName, markSvg } from '../../../rounds/data/kinds.js';
 
 describe('the kinds', () => {
   it('come in the order Today takes them, thanks first and a pitch last', () => {
-    expect(KIND_KEYS).toEqual(['thanks', 'hello', 'checkin', 'intros', 'refresh', 'followup', 'pitch']);
+    expect(KIND_KEYS).toEqual(['thanks', 'yes', 'photos', 'hello', 'checkin', 'intros', 'refresh', 'followup', 'pitch']);
   });
   it('each have a name, a colour pair and a mark (rounds/NOTES.md)', () => {
     const rows = KIND_KEYS.map((k) => [k, KINDS[k].name, KINDS[k].bg, KINDS[k].fg, KINDS[k].mark]);
     expect(rows).toEqual([
       ['thanks', 'Say thanks', '#FFD100', '#313D45', 'sun'],
+      ['yes', 'Say thanks for the yes', '#FFD100', '#313D45', 'sun'],
+      ['photos', 'Your photos are up', '#FFD100', '#313D45', 'sun'],
       ['hello', 'Say hello', '#13803F', '#FFD100', 'rise'],
       ['checkin', 'Check in', '#0A4FD6', '#FFAFAB', 'ring'],
       ['intros', 'Ask for intros', '#CC2E8A', '#E2E600', 'dots'],
@@ -27,8 +29,13 @@ describe('the kinds', () => {
     expect(KINDS.followup.starter).toBe('Just following up on my note from [when]. Happy to send ideas.');
     expect(KINDS.pitch.starter).toBe("Hi [name], I'm a portrait photographer in [city]. I'd love to make some pictures with you. Could I send a few ideas?");
   });
+  it('have a thank-you for a yes, and Your photos are up with its starter from connect/NOTES.md', () => {
+    expect(KINDS.yes.starter).toBe("Thank you for the yes, [name]! I can't wait. I'll send a few ideas for the shoot soon.");
+    expect(KINDS.photos.starter).toBe('The [shoot] set is up. Thank you again, feel free to share it.');
+  });
   it('are all listed on Messages, in the mockup order', () => {
-    expect(MESSAGE_ORDER).toEqual(['thanks', 'hello', 'checkin', 'refresh', 'intros', 'pitch', 'followup']);
+    expect(MESSAGE_ORDER).toEqual(['thanks', 'yes', 'photos', 'hello', 'checkin', 'refresh', 'intros', 'pitch', 'followup']);
+    expect([...MESSAGE_ORDER].sort()).toEqual([...KIND_KEYS].sort());
   });
   it('draw their marks from the suite shapes', () => {
     expect(MARKS).toEqual({
@@ -42,7 +49,8 @@ describe('the kinds', () => {
 });
 
 describe('isKind', () => {
-  it('knows the seven and nothing else', () => {
+  it('knows the nine and nothing else', () => {
+    expect(KIND_KEYS).toHaveLength(9);
     expect(KIND_KEYS.every(isKind)).toBe(true);
     expect(isKind('toString')).toBe(false);
     expect(isKind('')).toBe(false);
@@ -61,6 +69,8 @@ describe('kindFromName', () => {
     expect(kindFromName('Say thanks')).toBe('thanks');
     expect(kindFromName('thanks')).toBe('thanks');
     expect(kindFromName('PITCH')).toBe('pitch');
+    expect(kindFromName('Your photos are up')).toBe('photos');
+    expect(kindFromName('say thanks for the YES')).toBe('yes');
   });
   it('gives null for anything else', () => {
     expect(kindFromName('')).toBe(null);

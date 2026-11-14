@@ -18,12 +18,14 @@ export const GAP = { checkin: 42, client: 90, followup: [7, 14], fresh: 14 };
 // New people become Regulars on their own after this many shoots together in The Eye.
 export const REGULAR_AFTER = 3;
 // The moves each group has: changing someone's group keeps a next move that's one of these.
+// A thanks for a yes, and Your photos are up, belong to every group.
+const ANY = ['yes', 'photos'];
 const OWN = {
-  regular: ['checkin'],
-  new: ['thanks', 'hello', 'checkin'],
-  client: ['thanks', 'intros', 'refresh'],
-  prospect: ['pitch', 'followup', 'hello', 'thanks'],
-  guest: ['hello', 'thanks'],
+  regular: ['checkin', ...ANY],
+  new: ['thanks', 'hello', 'checkin', ...ANY],
+  client: ['thanks', 'intros', 'refresh', ...ANY],
+  prospect: ['pitch', 'followup', 'hello', 'thanks', ...ANY],
+  guest: ['hello', 'thanks', ...ANY],
 };
 
 // A group from how a person (or a file) writes it: "Client", "clients", "event guest".
@@ -52,9 +54,11 @@ export function afterShoot(person, shotOn, today) {
   return person.next || checkin;
 }
 
-// What comes after the next move is done (null: nothing more to do).
+// What comes after the next move is done (null: nothing more to do). Your
+// photos are up stood in for the move they had next: that one comes back.
 export function afterDone(person, today) {
   const done = person.next;
+  if (done && done.kind === 'photos' && done.then) return done.then;
   if (!done || person.group === 'guest') return null;
   if (person.group === 'client') return move(done.kind === 'intros' ? 'refresh' : 'intros', addDays(today, GAP.client));
   if (person.group === 'prospect') {

@@ -35,6 +35,13 @@ describe('reasonFor', () => {
     expect(reasonFor(p('pitch', { note: 'A bright storefront.' }), T)).toBe('A bright storefront.');
     expect(reasonFor(p('pitch'), T)).toBe('Someone new to pitch.');
   });
+  it('thanks someone for a yes', () => {
+    expect(reasonFor(p('yes'), T)).toBe("They said yes to a shoot. A quick thank you while it's fresh.");
+  });
+  it('says which set is up, for Your photos are up', () => {
+    expect(reasonFor({ ...p('photos'), next: { kind: 'photos', due: T, step: 0, shoot: 'Rooftop portraits' } }, T)).toBe("The Rooftop portraits set is up, and they're tagged in it.");
+    expect(reasonFor(p('photos'), T)).toBe("Their photos are up, and they're tagged in them.");
+  });
   it('follows up once, then one last time', () => {
     expect(reasonFor(p('followup', {}, 1), T)).toBe('No answer yet. One friendly follow up.');
     expect(reasonFor(p('followup', {}, 2), T)).toBe('One last follow up, then Rounds lets it rest.');
@@ -47,5 +54,7 @@ describe('phrase', () => {
     expect(phrase('refresh', 'Dana')).toBe('Offer a refresh');
     expect(phrase('thanks', 'Dana')).toBe('Say thanks');
     expect(phrase('followup', 'Dana')).toBe('Follow up');
+    expect(phrase('yes', 'Dana')).toBe('Say thanks for the yes');
+    expect(phrase('photos', 'Dana')).toBe('Your photos are up');
   });
 });

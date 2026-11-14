@@ -1,7 +1,10 @@
 // Reading The Eye, never changing it: its shoots (kept in localStorage) and
-// its talent photos (in its own database). Rounds doesn't load the suite's
-// shared data (60 KB of backup code it has no use for), so these few lines
-// are its own. The two notebooks share a website, inside the suite and out.
+// its talent photos (in its own database). These few lines are Rounds' own:
+// of the suite's shared data it loads only the hand-offs (df-links), not
+// The Eye's backup code. The two notebooks share a website, inside the suite
+// and out. What came in is noted in df-links (a 'people' link per shoot),
+// for the shoot's record in The Eye (PASSED ON); with The shoot's people
+// switched off (HOW THEY CONNECT), new shoots are passed by.
 import { bringIn } from './eye-people.js';
 import { listPeople, savePeople, getSetting, setSetting } from './db.js';
 import { uuid } from '../components/util.js';
@@ -22,10 +25,22 @@ export async function bringInFromEye() {
   const shoots = eyeShoots();
   if (!shoots.length) return 0;
   const [people, seen] = await Promise.all([listPeople(), getSetting('eyeSeen', [])]);
-  const { changed, seen: now } = bringIn(people, shoots, seen, dayOf(), uuid);
-  if (changed.length) await savePeople(changed);
+  const { changed, seen: now, brought } = bringIn(people, shoots, seen, dayOf(), uuid);
+  const on = !window.DFConnect || window.DFConnect.connectOn('people');
+  if (on && changed.length) await savePeople(changed);
   if (now.length !== seen.length) await setSetting('eyeSeen', now);
-  return changed.length;
+  if (on) await notePeople(brought).catch(() => {});
+  return on ? changed.length : 0;
+}
+
+// Each shoot's people, noted for its record in The Eye.
+async function notePeople(brought) {
+  const D = window.DFData;
+  if (!D || !D.saveLink) return;
+  for (const b of brought) {
+    const [had] = await D.linksWhere({ fromApp: 'the-eye', fromId: b.shootId, type: 'people' });
+    await D.saveLink({ ...(had || {}), fromApp: 'the-eye', fromId: b.shootId, toApp: 'rounds', toId: '', type: 'people', title: b.title, names: b.names });
+  }
 }
 
 // A talent photo, as The Eye keeps it ('' when there's none). Opened the

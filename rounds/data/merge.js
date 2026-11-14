@@ -18,8 +18,9 @@
 export const STORES = ['people', 'moves', 'messages', 'settings', 'passed', 'tombstones'];
 const RECORDS = STORES.filter((s) => s !== 'tombstones');
 const STAMPS = new Set(['id', 'createdAt', 'updatedAt']);
-// Taken whole, never field by field: a next move is its kind and day together.
-const WHOLE = new Set(['next', 'draft']);
+// Taken whole, never field by field: a next move is its kind and day
+// together, and an answer to a pitch is the answer with how they were before.
+const WHOLE = new Set(['next', 'draft', 'pitch']);
 // Bookkeeping nobody needs to be asked about (the newer copy's is taken):
 // times, the day of the last move, and what The Eye brought in on this phone.
 const QUIET = new Set(['lastMove', 'lastShot', 'shoots', 'photoKey', 'groupPicked']);

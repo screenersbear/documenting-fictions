@@ -50,6 +50,22 @@ describe('markDone and markLater', () => {
     const late = { ...newPerson({ id: 'q', name: 'Q', group: 'prospect' }, T), next: move('followup', '2026-11-10', 1) };
     expect(markDone(late, T).log).toEqual({ personId: 'q', kind: 'followup', day: T, due: '2026-11-10', step: 1 });
   });
+  it('keeps the day of a pitch, clearing an answer to an earlier one, and logs them as they were', () => {
+    const q = { ...newPerson({ id: 'q', name: 'Q', group: 'prospect' }, T), pitched: '2026-09-01', pitch: { answer: 'no', on: '2026-09-10', before: {} } };
+    const { person, log } = markDone(q, T);
+    expect(person.pitched).toBe(T);
+    expect(person).not.toHaveProperty('pitch');
+    expect(log.was).toEqual({ pitched: '2026-09-01', pitch: q.pitch });
+    expect(markDone(newPerson({ id: 'n', name: 'N', group: 'prospect' }, T), T).log).not.toHaveProperty('was');
+  });
+  it('logs Your photos are up with its shoot and the move it stood in for', () => {
+    const then = move('checkin', '2026-12-01');
+    const p = { ...dana, next: { ...move('photos', T), shoot: 'Rooftop portraits', then } };
+    const { person, log } = markDone(p, T);
+    expect(log).toMatchObject({ kind: 'photos', shoot: 'Rooftop portraits', then });
+    expect(person.next).toBe(then);
+    expect(markDone(dana, T).log).not.toHaveProperty('shoot');
+  });
   it('moves LATER to tomorrow', () => {
     const p = markLater(dana, T);
     expect(p.next).toEqual(move('intros', '2026-11-15'));
@@ -95,6 +111,16 @@ describe('undoDone', () => {
     const line = { id: 'l2', ...log };
     const lines = [{ id: 'l1', personId: 'a', kind: 'pitch', day: '2026-11-03' }, line];
     expect(undoDone(person, line, lines)).toEqual(was);
+  });
+  it('puts back Your photos are up with its shoot and the move it stood in for', () => {
+    const was = { ...prospect, next: { ...move('photos', '2026-11-12'), shoot: 'Rooftop portraits', then: move('followup', '2026-11-20', 1) } };
+    const { person, log } = markDone(was, T);
+    expect(undoDone(person, { id: 'l', ...log }, [{ id: 'l', ...log }])).toEqual(was);
+  });
+  it('puts back the day of an earlier pitch, and the answer to it, when a pitch is undone', () => {
+    const was = { ...prospect, pitched: '2026-09-01', pitch: { answer: 'no', on: '2026-09-10', before: { group: 'prospect', groupPicked: false, next: null } } };
+    const { person, log } = markDone(was, T);
+    expect(undoDone(person, { id: 'l', ...log }, [{ id: 'l', ...log }])).toEqual(was);
   });
   it('a swiped pitch comes back as the pitch, due that day', () => {
     const { person, log } = markDone(prospect, T);

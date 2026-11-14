@@ -3,8 +3,18 @@
 # built file: one trip to the server instead of one per file.
 # After changing, adding or removing a file listed here, run: node tools/join.mjs
 
+# What the notebooks share, the hand-offs only (window.DFData's links and
+# window.DFConnect): copies of the suite's shared/data/, made by
+# tools/sync.py shared. Rounds has no use for the backup code, so it's left out.
+built/shared-data.js
+  data/shared/basics.js
+  data/shared/links.js
+  data/shared/connect.js
+  data/shared/df-data.js
+
 # How it looks, in the order the rules apply.
 built/app.css
+  styles/shared/connect.css
   styles/base.css
   styles/screen.css
   styles/band.css
@@ -20,6 +30,8 @@ built/app.css
   styles/messages.css
   styles/options.css
   styles/sync.css
+  styles/pitch.css
+  styles/post-slip.css
 
 # The scripts: app.js and every ES module it imports (and those import), joined
 # by following the imports, so they aren't listed one by one.
