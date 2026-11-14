@@ -15,6 +15,7 @@ built/app.css
   styles/sticker-new.css
   styles/toast.css
   styles/sheet-words.css
+  styles/shelf-connect.css
   styles/type.css
 
 # What it does, in the order the scripts run.
@@ -33,6 +34,7 @@ built/app.js
   pages/shelf-caption.js
   pages/shelf-marks.js
   pages/shelf-options.js
+  pages/shelf-connect.js
   components/toast.js
   pages/shelf-open.js
   components/screen-fit.js
@@ -47,6 +49,7 @@ built/app.js
   shared/data/zip-backup.js
   shared/data/zip-restore.js
   shared/data/links.js
+  shared/data/connect.js
   shared/data/df-data.js
   data/suite-backup.js
   components/backup-sheet.js

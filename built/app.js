@@ -957,7 +957,7 @@ window.ShelfParts.addShapeMarks = function addShapeMarks(ed) {
 
 // ---- pages/shelf-options.js ----
 // The notebook in front up close, with its options under it: its colour,
-// stickers for its cover, and Back up all four. (Loaded before app.js.)
+// stickers for its cover, How they connect and Back up all four. (Loaded before app.js.)
 window.ShelfParts = window.ShelfParts || {};
 window.ShelfParts.addOptions = function addOptions(ed) {
   'use strict';
@@ -971,6 +971,7 @@ window.ShelfParts.addOptions = function addOptions(ed) {
   const CLOSE = glyph('<path d="M6 6l12 12M18 6L6 18"/>');
   const TRASH = glyph('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>');
   const PLUS = glyph('<path d="M12 5v14M5 12h14"/>');
+  const CHEV = glyph('<path d="M9 5l7 7-7 7"/>');
   const nearSlot = () => ed.slots[ed.near];
   // As big as fits above `bottom` (px down the screen), in the middle of the
   // room there, no wider than the notebooks were on their own.
@@ -1035,6 +1036,7 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         ${St ? `<div class="opt-label-row"><span class="opt-label">Stickers</span>${mine.length ? `<button type="button" class="label-btn" data-remove>${TRASH}Remove one</button>` : ''}</div>
         <button type="button" class="add-sticker" data-add>${PLUS}Add a sticker</button>
         <p class="opt-note">Pick a photo, then its shape and edge as you place it.</p>` : ''}
+        <button type="button" class="opt-row" data-connect><span>How they connect</span>${CHEV}</button>
         <div class="opt-foot"><button type="button" class="sheet-btn" data-backup>Back up all four</button><button type="button" class="sheet-btn primary" data-close>Done</button></div>`;
     };
     const drawRemove = () => {
@@ -1057,6 +1059,12 @@ window.ShelfParts.addOptions = function addOptions(ed) {
     const close = () => { hide(); leaveNear(); };
     dim.addEventListener('click', async (e) => {
       if (e.target === dim || e.target.closest('[data-close]')) { close(); return; }
+      if (e.target.closest('[data-connect]')) {
+        await hide();
+        leaveNear();
+        ed.openConnect();
+        return;
+      }
       if (e.target.closest('[data-backup]')) {
         await hide();
         leaveNear();
@@ -1127,6 +1135,101 @@ window.ShelfParts.addOptions = function addOptions(ed) {
     }
     ed.paint(i);
   }
+};
+;
+
+// ---- pages/shelf-connect.js ----
+// How the notebooks connect, on the shelf (round 2, connect/01 and 07):
+// HOW THEY CONNECT, from Options (the loop, then a switch per hand-off), and
+// a slip tucked into the top of each notebook that has a hand-off waiting.
+// The hand-offs themselves: shared/data/connect.js. (Loaded before app.js.)
+window.ShelfParts = window.ShelfParts || {};
+window.ShelfParts.addConnect = function addConnect(ed) {
+  'use strict';
+  Object.assign(ed, { openConnect, paintSlips });
+  // The shared files load after the shelf's own (files.txt), so window.DFConnect is looked up when used.
+  const C = () => window.DFConnect;
+  const BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+
+  // ---------- The loop ----------
+  // The four notebooks round one circle, clockwise from Ref at the top, what
+  // passes written by each arc, and the dashed line from The Eye to Rounds.
+  const label = (x, y, words, anchor = 'middle', halo = false) => `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="10" font-weight="700" letter-spacing="1.3" fill="#313D45"${halo ? ' stroke="#FAFAF7" stroke-width="5" paint-order="stroke"' : ''}>${words}</text>`;
+  const tick = (x, y, turn) => `<path d="M-6 -6 L0 0 L-6 6" transform="translate(${x} ${y}) rotate(${turn})" fill="none" stroke="#313D45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const book = (app, x, y, name, below) => `<rect x="${x}" y="${y}" width="56" height="56" rx="6" fill="${C().NOTEBOOKS[app].bg}"/>${C().markSvg(app, 44).replace('<svg ', `<svg x="${x + 6}" y="${y + 6}" `)}${label(x + 28, below ? y + 72 : y - 8, name, 'middle', true)}`;
+  function loopSvg() {
+    return `<svg class="connect-loop" role="img" aria-label="Ref sends mood boards to The Eye, The Eye sends final images to Layouts and the shoot's people to Rounds, Layouts nudges the people in a new post through Rounds, Rounds sends new clients to Ref." viewBox="0 0 358 330">
+      <circle cx="179" cy="160" r="100" fill="none" stroke="#313D45" stroke-width="1.5"/>
+      ${tick(249.7, 89.3, 45)}${label(259.6, 81.4, 'MOOD BOARD', 'start')}
+      ${tick(249.7, 230.7, 135)}${label(259.6, 250.6, 'FINAL IMAGES', 'start')}
+      ${tick(108.3, 230.7, 225)}${label(98.4, 250.6, 'NEW POSTS', 'end')}
+      ${tick(108.3, 89.3, 315)}${label(98.4, 81.4, 'NEW CLIENTS', 'end')}
+      <line x1="245" y1="160" x2="117" y2="160" stroke="#313D45" stroke-width="1.5" stroke-dasharray="4 4"/>
+      <path d="M6 -6 L0 0 L6 6" transform="translate(115 160)" fill="none" stroke="#313D45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${label(179, 151, 'THE SHOOT&#39;S PEOPLE')}
+      ${book('ref', 151, 32, 'REF', false)}${book('the-eye', 251, 132, 'THE EYE', true)}${book('contact-sheet', 151, 232, 'LAYOUTS', true)}${book('rounds', 51, 132, 'ROUNDS', true)}
+    </svg>`;
+  }
+
+  // ---------- HOW THEY CONNECT ----------
+  function rowHtml(h) {
+    const on = C().connectOn(h.key);
+    return `<div class="connect-row">${C().pairHtml(h.from, h.to)}<span class="connect-words"><span class="connect-name">${h.name}</span><span class="connect-line">${h.line}</span></span>
+      <button type="button" class="df-switch" role="switch" aria-checked="${on}" aria-label="${h.name}" data-switch="${h.key}"><span></span></button></div>`;
+  }
+  function openConnect() {
+    const page = document.createElement('div');
+    page.className = 'connect-page';
+    page.setAttribute('role', 'dialog');
+    page.setAttribute('aria-modal', 'true');
+    page.setAttribute('aria-label', 'How they connect');
+    page.innerHTML = `<div class="connect-head"><button type="button" class="ring-btn" data-back aria-label="Back"><span>${BACK}</span></button><h2>How they connect</h2></div>
+      <div class="connect-scroll">${loopSvg()}
+        <p class="connect-intro">Each notebook hands one thing to the next. It arrives once, at the top of the list, marked with where it came from.</p>
+        <div class="connect-rows">${C().HANDOFFS.map(rowHtml).join('')}</div>
+      </div>`;
+    document.body.appendChild(page);
+    requestAnimationFrame(() => page.classList.add('in'));
+    page.addEventListener('click', (e) => {
+      const sw = e.target.closest('[data-switch]');
+      if (sw) {
+        const on = sw.getAttribute('aria-checked') !== 'true';
+        C().setConnect(sw.dataset.switch, on);
+        sw.setAttribute('aria-checked', String(on));
+      } else if (e.target.closest('[data-back]')) {
+        page.classList.remove('in');
+        setTimeout(() => page.remove(), 220);
+      }
+    });
+    return page;
+  }
+
+  // ---------- Slips on the covers ----------
+  // A notebook with a hand-off waiting has a small slip in the sender's
+  // colour, with its mark, tucked behind its top edge; it goes once the slip
+  // in the notebook is opened or tucked away. The cover's label says what's
+  // waiting ("Layouts: finals from The Eye").
+  async function paintSlips() {
+    let waiting = {};
+    try { waiting = await C().waitingByApp(); } catch (e) { return; }
+    ed.BOOKS.forEach((b, i) => {
+      const bookEl = ed.slots[i].querySelector('.book');
+      const front = ed.slots[i].querySelector('.front');
+      const here = waiting[b.id] || [];
+      bookEl.querySelector('.cover-slip')?.remove();
+      front.setAttribute('aria-label', here.length ? `${b.name}: ${here.map((w) => w.what).join(', ')}` : b.name);
+      if (!here.length) return;
+      const from = C().NOTEBOOKS[here[0].from] || { bg: '#E1E1DC' };
+      const slip = document.createElement('div');
+      slip.className = 'cover-slip';
+      slip.style.background = from.bg;
+      slip.innerHTML = C().markSvg(here[0].from, 24);
+      bookEl.append(slip);
+    });
+  }
+  window.addEventListener('load', paintSlips);
+  window.addEventListener('pageshow', (e) => { if (e.persisted) paintSlips(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) paintSlips(); });
 };
 ;
 
@@ -1483,6 +1586,7 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
   window.ShelfParts.addCaption(ed);
   window.ShelfParts.addShapeMarks(ed);
   window.ShelfParts.addOptions(ed);
+  window.ShelfParts.addConnect(ed);
   window.ShelfParts.addToast(ed);
   window.ShelfParts.addOpening(ed);
 
@@ -2715,6 +2819,113 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
     linksWhere, getLink, saveLink, linkPictures, dropLinks, pictureUrl, boardFile,
     readBoardFile
   });
+})();
+;
+
+// ---- shared/data/connect.js ----
+// How the notebooks connect (round 2, connect/NOTES.md): each notebook hands
+// one thing to the next and the work goes round: Ref to The Eye (a mood
+// board), The Eye to Layouts (the finals) and to Rounds (the shoot's people),
+// Layouts to Rounds (the people in a post), Rounds to Ref (a new client).
+// Every hand-off is a link in df-links (links.js), so no notebook writes
+// into another's database. One that arrives shows once, as a slip at the top
+// of the receiving list, until it's opened or tucked away (NOT NOW); while
+// it waits, the notebook has a slip on its cover on the shelf. Each hand-off
+// has a switch (the shelf's Options, HOW THEY CONNECT), all on unless turned
+// off; off, it simply doesn't happen. window.DFConnect.
+(function () {
+  'use strict';
+  const parts = window.DFDataParts;
+  const { linksWhere, saveLink, nowIso } = parts;
+
+  // The hand-offs in the loop's order. type: the link's type in df-links;
+  // waiting: what a slip on the shelf says is there.
+  const HANDOFFS = [
+    { key: 'moodboards', from: 'ref', to: 'the-eye', type: 'moodboard', name: 'Mood boards', line: "A board sent to a shoot stays live until it's shot." },
+    { key: 'finals', from: 'the-eye', to: 'contact-sheet', type: 'finals', name: 'Final images', line: 'Delivered finals arrive, with two posts made.', waiting: 'finals from The Eye' },
+    { key: 'people', from: 'the-eye', to: 'rounds', type: 'people', name: "The shoot's people", line: 'Talent and team come in with a thank-you ready.' },
+    { key: 'posts', from: 'contact-sheet', to: 'rounds', type: 'post-people', name: 'New posts', line: 'When a post goes up, a nudge for the people in it.', waiting: 'a new post from Layouts' },
+    { key: 'clients', from: 'rounds', to: 'ref', type: 'new-client', name: 'New clients', line: 'A yes, or someone asking to shoot, starts a board.', waiting: 'a new client from Rounds' },
+  ];
+  const handoff = (type) => HANDOFFS.find((h) => h.type === type) || null;
+
+  // Each notebook's own pair of colours and its small mark (24 x 24), as the
+  // slips and the HOW THEY CONNECT rows show them.
+  const NOTEBOOKS = {
+    ref: { name: 'Ref', bg: '#0A4FD6', fg: '#FFAFAB' },
+    'the-eye': { name: 'The Eye', bg: '#FFD100', fg: '#313D45' },
+    'contact-sheet': { name: 'Layouts', bg: '#CC2E8A', fg: '#E2E600' },
+    rounds: { name: 'Rounds', bg: '#313D45', fg: '#FFD100' },
+  };
+  const MARKS = {
+    ref: '<g transform="translate(12 12) rotate(45) translate(-6 -6)"><rect width="6" height="6" fill="#FFAFAB"/><rect x="6" width="6" height="6" fill="#FFFFFF"/><rect y="6" width="6" height="6" fill="#FFFFFF"/><rect x="6" y="6" width="6" height="6" fill="#FFAFAB"/></g>',
+    'the-eye': '<circle cx="12" cy="12" r="6.5" fill="none" stroke="#313D45" stroke-width="3"/>',
+    'contact-sheet': '<rect x="5" y="6" width="3.6" height="12" fill="#E2E600"/><rect x="10.2" y="8.4" width="3.6" height="9.6" fill="#FFFFFF"/><rect x="15.4" y="10.3" width="3.6" height="7.7" fill="#E2E600"/>',
+    rounds: '<path d="M5 17 A7 7 0 0 1 19 17" fill="none" stroke="#FFD100" stroke-width="2.2"/><circle cx="6" cy="13.2" r="2" fill="#14BFA0"/><circle cx="12" cy="10" r="1.6" fill="#FFFFFF"/><circle cx="18" cy="13.2" r="1.3" fill="#14BFA0"/>',
+  };
+  const markSvg = (app, size = 20) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${MARKS[app] || ''}</svg>`;
+  // A notebook's mark on its colour, 20 px square.
+  const miniHtml = (app) => `<span class="df-mini" style="background:${(NOTEBOOKS[app] || {}).bg || '#E1E1DC'}" aria-hidden="true">${markSvg(app)}</span>`;
+  // From one notebook to another: the two minis with an arrow between.
+  const ARROW = '<svg class="df-arrow" viewBox="0 0 16 10" width="16" height="10" aria-hidden="true"><path d="M1 5h12M9 1.5 13 5 9 8.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const pairHtml = (from, to) => `<span class="df-pair">${miniHtml(from)}${ARROW}${miniHtml(to)}</span>`;
+
+  // ---------- The switches ----------
+  // Kept on this phone for every notebook in the suite (they share its storage).
+  const SWITCHES = 'df-connect';
+  function switches() {
+    try {
+      const v = JSON.parse(localStorage.getItem(SWITCHES));
+      return v && typeof v === 'object' ? v : {};
+    } catch (e) { return {}; }
+  }
+  const connectOn = (key) => switches()[key] !== false;
+  function setConnect(key, on) {
+    try { localStorage.setItem(SWITCHES, JSON.stringify({ ...switches(), [key]: !!on })); } catch (e) { /* storage blocked: stays as it was */ }
+  }
+
+  // ---------- Slips ----------
+  const isWaiting = (l) => !!handoff(l.type) && !!handoff(l.type).waiting && !l.openedAt && !l.tuckedAt;
+  // The hand-offs waiting in a notebook, newest first.
+  const slipsFor = async (app) => (await linksWhere({ toApp: app })).filter(isWaiting).reverse();
+  // Its main button pressed (openedAt) or NOT NOW (tuckedAt): it doesn't show again.
+  const openSlip = (l) => saveLink({ ...l, openedAt: nowIso() });
+  const tuckSlip = (l) => saveLink({ ...l, tuckedAt: nowIso() });
+  // For the shelf: what's waiting in each notebook, newest first,
+  // { app: [{ from, what }, ...] }.
+  async function waitingByApp() {
+    const out = {};
+    for (const l of (await linksWhere()).filter(isWaiting).reverse()) (out[l.toApp] = out[l.toApp] || []).push({ from: l.fromApp, what: handoff(l.type).waiting });
+    return out;
+  }
+
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // TODAY, or the day it came ('14 Nov'), as the slip's corner says it.
+  function whenWords(iso, now = new Date()) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const same = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    return same ? 'Today' : `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  }
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // A slip, the same in every notebook: FROM <NOTEBOOK> in the sender's
+  // colours, the day, a title, one dim line, what it brought (body, markup),
+  // then one main button in the receiving notebook's colour and NOT NOW.
+  function slipHtml({ link, title, line, body = '', main, mainClass = '' }) {
+    const from = NOTEBOOKS[link.fromApp] || { name: link.fromApp, bg: '#E1E1DC', fg: '#313D45' };
+    return `<section class="df-slip" data-slip="${esc(link.id)}" aria-label="From ${esc(from.name)}">
+      <div class="df-slip-head"><span class="df-slip-tag" style="background:${from.bg};color:${from.fg}">${markSvg(link.fromApp, 18)}From ${esc(from.name)}</span><span class="df-slip-when">${esc(whenWords(link.createdAt))}</span></div>
+      <p class="df-slip-title">${esc(title)}</p>
+      ${line ? `<p class="df-slip-line">${esc(line)}</p>` : ''}${body}
+      <div class="df-slip-actions"><button type="button" class="df-slip-main ${mainClass}" data-slip-open>${esc(main)}</button><button type="button" class="df-slip-later" data-slip-later>Not now</button></div>
+    </section>`;
+  }
+
+  window.DFConnect = {
+    HANDOFFS, NOTEBOOKS, handoff, connectOn, setConnect, slipsFor, openSlip, tuckSlip, waitingByApp,
+    whenWords, slipHtml, markSvg, miniHtml, pairHtml,
+  };
 })();
 ;
 

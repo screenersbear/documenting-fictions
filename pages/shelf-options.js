@@ -1,5 +1,5 @@
 // The notebook in front up close, with its options under it: its colour,
-// stickers for its cover, and Back up all four. (Loaded before app.js.)
+// stickers for its cover, How they connect and Back up all four. (Loaded before app.js.)
 window.ShelfParts = window.ShelfParts || {};
 window.ShelfParts.addOptions = function addOptions(ed) {
   'use strict';
@@ -13,6 +13,7 @@ window.ShelfParts.addOptions = function addOptions(ed) {
   const CLOSE = glyph('<path d="M6 6l12 12M18 6L6 18"/>');
   const TRASH = glyph('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>');
   const PLUS = glyph('<path d="M12 5v14M5 12h14"/>');
+  const CHEV = glyph('<path d="M9 5l7 7-7 7"/>');
   const nearSlot = () => ed.slots[ed.near];
   // As big as fits above `bottom` (px down the screen), in the middle of the
   // room there, no wider than the notebooks were on their own.
@@ -77,6 +78,7 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         ${St ? `<div class="opt-label-row"><span class="opt-label">Stickers</span>${mine.length ? `<button type="button" class="label-btn" data-remove>${TRASH}Remove one</button>` : ''}</div>
         <button type="button" class="add-sticker" data-add>${PLUS}Add a sticker</button>
         <p class="opt-note">Pick a photo, then its shape and edge as you place it.</p>` : ''}
+        <button type="button" class="opt-row" data-connect><span>How they connect</span>${CHEV}</button>
         <div class="opt-foot"><button type="button" class="sheet-btn" data-backup>Back up all four</button><button type="button" class="sheet-btn primary" data-close>Done</button></div>`;
     };
     const drawRemove = () => {
@@ -99,6 +101,12 @@ window.ShelfParts.addOptions = function addOptions(ed) {
     const close = () => { hide(); leaveNear(); };
     dim.addEventListener('click', async (e) => {
       if (e.target === dim || e.target.closest('[data-close]')) { close(); return; }
+      if (e.target.closest('[data-connect]')) {
+        await hide();
+        leaveNear();
+        ed.openConnect();
+        return;
+      }
       if (e.target.closest('[data-backup]')) {
         await hide();
         leaveNear();

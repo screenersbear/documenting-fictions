@@ -16,6 +16,7 @@ built/shared-data.js
   data/shared/zip-backup.js
   data/shared/zip-restore.js
   data/shared/links.js
+  data/shared/connect.js
   data/shared/df-data.js
 
 # How it looks, in the order the rules apply.
