@@ -237,3 +237,51 @@ describe('a record on the page', () => {
     expect(box.querySelector('a').getAttribute('href')).toBe('../ref/?board="x"');
   });
 });
+
+describe('finals into posts', () => {
+  it('six or more: a carousel of five spread through the set, the single the first left over', () => {
+    expect(C.pickPosts(12)).toEqual({ carousel: [0, 2, 5, 7, 10], single: 1 });
+    expect(C.pickPosts(6)).toEqual({ carousel: [0, 1, 2, 4, 5], single: 3 });
+    expect(C.pickPosts(100)).toEqual({ carousel: [0, 20, 40, 60, 80], single: 1 });
+  });
+  it('two to five: only the carousel; one: only the single', () => {
+    expect(C.pickPosts(5)).toEqual({ carousel: [0, 1, 2, 3, 4], single: null });
+    expect(C.pickPosts(2)).toEqual({ carousel: [0, 1], single: null });
+    expect(C.pickPosts(1)).toEqual({ carousel: [], single: 0 });
+  });
+  it('none, or not a number', () => {
+    expect(C.pickPosts(0)).toEqual({ carousel: [], single: null });
+    expect(C.pickPosts(-3)).toEqual({ carousel: [], single: null });
+    expect(C.pickPosts('x')).toEqual({ carousel: [], single: null });
+    expect(C.pickPosts(2.9)).toEqual({ carousel: [0, 1], single: null });
+  });
+  it("the slip's line and the page's title", () => {
+    expect(C.postsLine(12, 2)).toBe('12 finals. Two posts made from them, ready to look over.');
+    expect(C.postsLine(1, 1)).toBe('1 final. A post made from it, ready to look over.');
+    expect(C.postsLine(4, 3)).toBe('4 finals. 3 posts made from them, ready to look over.');
+    expect(C.postsTitle(2, ' Rooftop portraits ')).toBe('Two posts from Rooftop portraits');
+    expect(C.postsTitle(1, '')).toBe('A post from the shoot');
+  });
+  it("the shoot's record says how many posts were made", () => {
+    const l = { id: 'F', type: 'finals', fromApp: 'the-eye', fromId: 's1', count: 1, madeAt: 'x' };
+    expect(C.passedOnRows([{ ...l, postIds: ['p1'] }], 's1').passed[0].line).toBe('A post made, waiting there.');
+    expect(C.passedOnRows([{ ...l, postIds: ['p1', 'p2'] }], 's1').passed[0].line).toBe('Two posts made, waiting there.');
+    expect(C.passedOnRows([{ ...l, postIds: [] }], 's1').passed[0].line).toBe('Two posts made, waiting there.');
+  });
+});
+
+describe('the FROM tag', () => {
+  it("in the sender's colours, with its mark", () => {
+    const box = document.createElement('div');
+    box.innerHTML = C.tagHtml('the-eye');
+    const tag = box.querySelector('.df-slip-tag');
+    expect(tag.textContent).toBe('From The Eye');
+    expect(tag.getAttribute('style')).toBe(`background:${C.NOTEBOOKS['the-eye'].bg};color:${C.NOTEBOOKS['the-eye'].fg}`);
+    expect(tag.querySelector('svg')).not.toBeNull();
+  });
+  it('another notebook, and one it does not know', () => {
+    expect(C.tagHtml('rounds')).toContain('From Rounds');
+    expect(C.tagHtml('odd')).toContain('background:#E1E1DC;color:#313D45');
+    expect(C.tagHtml('<b>')).toContain('From &lt;b&gt;');
+  });
+});

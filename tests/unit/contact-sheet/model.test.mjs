@@ -181,6 +181,24 @@ describe('defaultCrop / newFrame', () => {
   });
 });
 
+describe('stripLayout', () => {
+  it('one photo to a slide, edge to edge, 3:4 by default', () => {
+    const p = M.stripLayout(['a', 'b', 'c']);
+    expect(p).toMatchObject({ ratio: '3:4', slides: 3, background: '#ffffff', padding: 0, seamsOpen: false, borderWidth: 0 });
+    expect(p.frames.map((f) => [f.x, f.y, f.w, f.h, f.photoId])).toEqual([[0, 0, 1080, 1440, 'a'], [1080, 0, 1080, 1440, 'b'], [2160, 0, 1080, 1440, 'c']]);
+    expect(p.frames[0]).toMatchObject({ id: expect.stringMatching(UUID), crop: M.defaultCrop() });
+    expect(new Set(p.frames.map((f) => f.id)).size).toBe(3);
+  });
+  it('one photo makes one slide; another ratio sizes the frames', () => {
+    expect(M.stripLayout(['a'], '4:5')).toMatchObject({ ratio: '4:5', slides: 1, frames: [{ x: 0, w: 1080, h: 1350, photoId: 'a' }] });
+  });
+  it('no photos: one empty slide', () => {
+    expect(M.stripLayout([])).toMatchObject({ slides: 1, frames: [{ photoId: null }] });
+    expect(M.stripLayout(null)).toMatchObject({ slides: 1, frames: [{ photoId: null }] });
+    expect(M.stripLayout(undefined).frames).toHaveLength(1);
+  });
+});
+
 describe('blankLayout', () => {
   it('makes a one-slide 3:4 project with one full-slide frame by default', () => {
     const p = M.blankLayout();

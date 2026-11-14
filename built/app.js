@@ -2912,10 +2912,12 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
   // A slip, the same in every notebook: FROM <NOTEBOOK> in the sender's
   // colours, the day, a title, one dim line, what it brought (body, markup),
   // then one main button in the receiving notebook's colour and NOT NOW.
+  const sender = (app) => NOTEBOOKS[app] || { name: app, bg: '#E1E1DC', fg: '#313D45' };
+  // The notched tag, FROM <NOTEBOOK> in the sender's colours with its mark.
+  const tagHtml = (app) => `<span class="df-slip-tag" style="background:${sender(app).bg};color:${sender(app).fg}">${markSvg(app, 18)}From ${esc(sender(app).name)}</span>`;
   function slipHtml({ link, title, line, body = '', main, mainClass = '' }) {
-    const from = NOTEBOOKS[link.fromApp] || { name: link.fromApp, bg: '#E1E1DC', fg: '#313D45' };
-    return `<section class="df-slip" data-slip="${esc(link.id)}" aria-label="From ${esc(from.name)}">
-      <div class="df-slip-head"><span class="df-slip-tag" style="background:${from.bg};color:${from.fg}">${markSvg(link.fromApp, 18)}From ${esc(from.name)}</span><span class="df-slip-when">${esc(whenWords(link.createdAt))}</span></div>
+    return `<section class="df-slip" data-slip="${esc(link.id)}" aria-label="From ${esc(sender(link.fromApp).name)}">
+      <div class="df-slip-head">${tagHtml(link.fromApp)}<span class="df-slip-when">${esc(whenWords(link.createdAt))}</span></div>
       <p class="df-slip-title">${esc(title)}</p>
       ${line ? `<p class="df-slip-line">${esc(line)}</p>` : ''}${body}
       <div class="df-slip-actions"><button type="button" class="df-slip-main ${mainClass}" data-slip-open>${esc(main)}</button><button type="button" class="df-slip-later" data-slip-later>Not now</button></div>
@@ -2964,7 +2966,7 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
     const came = [];
     for (const l of links) {
       if (l.fromApp === 'the-eye' && l.fromId === shootId && l.type === 'finals') {
-        passed.push({ from: 'the-eye', to: 'contact-sheet', title: `${plural(l.count || 0, 'final', 'finals')} to Layouts`, line: l.madeAt ? 'Two posts made, waiting there.' : 'Waiting there.', app: 'contact-sheet', params: { posts: l.id } });
+        passed.push({ from: 'the-eye', to: 'contact-sheet', title: `${plural(l.count || 0, 'final', 'finals')} to Layouts`, line: l.madeAt ? `${postsWord((l.postIds || []).length || 2)} made, waiting there.` : 'Waiting there.', app: 'contact-sheet', params: { posts: l.id } });
       } else if (l.fromApp === 'the-eye' && l.fromId === shootId && l.type === 'people') {
         const names = l.names || [];
         passed.push({ from: 'the-eye', to: 'rounds', title: `${plural(names.length, 'person', 'people')} to Rounds`, line: `${names.join(', ').replace(/\.$/, '')}. ${names.length === 1 ? 'A thank-you' : 'Thank-yous'} ready.`, app: 'rounds', params: { at: 'people' } });
@@ -2977,6 +2979,26 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
     const order = (r) => (r.to === 'contact-sheet' ? 0 : 1);
     return { passed: passed.sort((a, b) => order(a) - order(b)), came };
   }
+
+  // ---------- Finals into posts (Layouts, connect/03) ----------
+  // Which finals go in the two posts, by their place in The Eye's list (the
+  // order they were added): a carousel of up to 5 starting with the first
+  // (the cover), the rest spread through the set so it isn't five of one
+  // look; the single is the first one left over. One final makes only the
+  // single; up to five make only the carousel.
+  function pickPosts(n) {
+    const count = Math.max(0, Math.floor(Number(n) || 0));
+    if (count === 0) return { carousel: [], single: null };
+    if (count === 1) return { carousel: [], single: 0 };
+    if (count <= 5) return { carousel: [...Array(count).keys()], single: null };
+    const carousel = [0, 1, 2, 3, 4].map((i) => Math.round((i * count) / 5));
+    return { carousel, single: [...Array(count).keys()].find((i) => !carousel.includes(i)) };
+  }
+  const postsWord = (n) => (n === 1 ? 'A post' : n === 2 ? 'Two posts' : `${n} posts`);
+  // The slip's line: "12 finals. Two posts made from them, ready to look over."
+  const postsLine = (finals, posts) => `${plural(finals, 'final', 'finals')}. ${postsWord(posts)} made from ${finals === 1 ? 'it' : 'them'}, ready to look over.`;
+  // The page's title: "Two posts from Rooftop portraits".
+  const postsTitle = (posts, title) => `${postsWord(posts)} from ${String(title || '').trim() || 'the shoot'}`;
 
   // The rows of a record (passedOnRows), each a link to the other notebook
   // when it has an address (row.href), a plain row when it hasn't.
@@ -2993,7 +3015,7 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
 
   window.DFConnect = {
     HANDOFFS, NOTEBOOKS, handoff, connectOn, setConnect, slipsFor, openSlip, tuckSlip, waitingByApp,
-    whenWords, slipHtml, markSvg, miniHtml, pairHtml, cleanHandle, shootCredits, captionFor, handlesIn, passedOnRows, recordHtml,
+    whenWords, slipHtml, tagHtml, markSvg, miniHtml, pairHtml, cleanHandle, shootCredits, captionFor, handlesIn, passedOnRows, recordHtml, pickPosts, postsLine, postsTitle,
   };
 })();
 ;
