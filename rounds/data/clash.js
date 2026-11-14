@@ -11,7 +11,7 @@ const FIELDS = {
   where: 'Where you met', note: 'Note', address: 'Address', next: 'Next move', draft: 'Draft in Gmail',
   letGo: 'Let go', 'lists.email': 'Email newsletter', 'lists.mail': 'Mail newsletter', text: 'Message',
 };
-const SETTINGS = { perDay: 'Moves a day', workDays: 'Work days', offer: 'Your offer', city: 'Your city' };
+const SETTINGS = { perDay: 'Moves a day', workDays: 'Work days', daysOff: 'Days off', offer: 'Your offer', city: 'Your city' };
 
 // A field's value in words ('Nothing' for none).
 export function valueWords(path, v, id = '') {
@@ -19,7 +19,7 @@ export function valueWords(path, v, id = '') {
   if (typeof v === 'boolean') return v ? 'Yes' : 'No';
   if (path === 'group') return GROUPS[v] || String(v);
   if (path === 'next' || path === 'draft') return KINDS[v.kind] ? [KINDS[v.kind].name, v.due && `due ${v.due}`].filter(Boolean).join(', ') : 'Nothing';
-  if (id === 'workDays' && Array.isArray(v)) return WEEK.filter(([d]) => v.includes(d)).map(([, n]) => n).join(', ') || 'Nothing';
+  if ((id === 'workDays' || id === 'daysOff') && Array.isArray(v)) return WEEK.filter(([d]) => v.includes(d)).map(([, n]) => n).join(', ') || 'Nothing';
   return typeof v === 'object' ? JSON.stringify(v) : String(v);
 }
 

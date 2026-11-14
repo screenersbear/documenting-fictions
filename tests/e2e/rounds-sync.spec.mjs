@@ -21,12 +21,17 @@ async function addAna(page) {
   await expect(page.locator('#toast')).toContainText('1 person added.');
 }
 
-// Every day a work day, so a pitch is due today whatever day the test runs.
+const workChips = (s) => s.locator('[data-chips="work"] .day-chip');
+const offChips = (s) => s.locator('[data-chips="off"] .day-chip');
+
+// Every day a work day and none off, so a pitch is due today whatever day the test runs.
 async function everyDay(page) {
   const s = await options(page);
-  const off = s.locator('.day-chip[aria-pressed="false"]');
-  for (let i = 0; i < 7 && (await off.count()); i++) await off.first().click();
-  await expect(off).toHaveCount(0);
+  const notWork = s.locator('[data-chips="work"] .day-chip[aria-pressed="false"]');
+  for (let i = 0; i < 7 && (await notWork.count()); i++) await notWork.first().click();
+  await expect(notWork).toHaveCount(0);
+  await s.locator('[data-chips="off"] [data-off="0"]').click();
+  await expect(s.locator('[data-chips="off"] .day-chip[aria-pressed="true"]')).toHaveCount(0);
   await s.locator('[data-close]').click();
 }
 
@@ -49,19 +54,25 @@ async function turnOnSync(page) {
 }
 
 test.describe('Rounds: Work days and Sync', () => {
-  test("Work days: a pitch waits for one, and today's chip brings it up or puts it off", async ({ browser }, testInfo) => {
+  test("Work days and days off: a pitch waits for a work day, and nothing comes up on a day off", async ({ browser }, testInfo) => {
     const { ctx, page, problems } = await openRounds(browser, testInfo);
     await addAna(page);
-    // Monday to Friday, to start.
     const day = await page.evaluate(() => new Date().getDay());
     const work = day >= 1 && day <= 5;
-    await expect(top(page)).toHaveCount(work ? 1 : 0);
+    // Monday to Friday to work, Sunday off, to start.
     let s = await options(page);
-    await expect(s.locator('.day-chip')).toHaveText(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
-    await expect(s.locator('.day-chip[aria-pressed="true"]')).toHaveText(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
-    await expect(s.locator('.work-days-note')).toHaveText('Pitches and follow ups wait for these days.');
-    await s.locator(`.day-chip[data-day="${day}"]`).click();
-    await expect(s.locator(`.day-chip[data-day="${day}"]`)).toHaveAttribute('aria-pressed', String(!work));
+    await expect(workChips(s)).toHaveText(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+    await expect(s.locator('[data-chips="work"] .day-chip[aria-pressed="true"]')).toHaveText(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+    await expect(offChips(s)).toHaveText(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+    await expect(s.locator('[data-chips="off"] .day-chip[aria-pressed="true"]')).toHaveText(['Sun']);
+    await expect(s.locator('.work-days-note')).toHaveText(['Pitches and follow ups wait for these days.', 'Nothing comes up on these days.']);
+    await s.locator('[data-close]').click();
+    await expect(top(page)).toHaveCount(work ? 1 : 0);
+    // Today's work day chip brings the pitch up, or puts it off.
+    s = await options(page);
+    if (day === 0) await s.locator('[data-chips="off"] [data-off="0"]').click();
+    await s.locator(`[data-chips="work"] [data-day="${day}"]`).click();
+    await expect(s.locator(`[data-chips="work"] [data-day="${day}"]`)).toHaveAttribute('aria-pressed', String(!work));
     await s.locator('[data-close]').click();
     await expect(top(page)).toHaveCount(work ? 0 : 1);
     if (!work) await expect(top(page)).toContainText('Ana Lima');
@@ -69,13 +80,23 @@ test.describe('Rounds: Work days and Sync', () => {
     await page.reload();
     await expect(top(page)).toHaveCount(work ? 0 : 1);
     s = await options(page);
-    await expect(s.locator(`.day-chip[data-day="${day}"]`)).toHaveAttribute('aria-pressed', String(!work));
-    // The last day on stays on.
-    const on = s.locator('.day-chip[aria-pressed="true"]');
-    for (let i = 0; i < 7 && (await on.count()) > 1; i++) await on.first().click();
-    await expect(on).toHaveCount(1);
-    await on.click();
-    await expect(on).toHaveCount(1);
+    await expect(s.locator(`[data-chips="work"] [data-day="${day}"]`)).toHaveAttribute('aria-pressed', String(!work));
+    // Today a work day again, then a day off: nothing comes up.
+    if (work) await s.locator(`[data-chips="work"] [data-day="${day}"]`).click();
+    await s.locator('[data-close]').click();
+    await expect(top(page)).toHaveCount(1);
+    s = await options(page);
+    await s.locator(`[data-chips="off"] [data-off="${day}"]`).click();
+    await expect(s.locator(`[data-chips="off"] [data-off="${day}"]`)).toHaveAttribute('aria-pressed', 'true');
+    await s.locator('[data-close]').click();
+    await expect(top(page)).toHaveCount(0);
+    // The last work day left that isn't off (today is) stays on.
+    s = await options(page);
+    const others = s.locator(`[data-chips="work"] .day-chip[aria-pressed="true"]:not([data-day="${day}"])`);
+    for (let i = 0; i < 7 && (await others.count()) > 1; i++) await others.first().click();
+    await expect(others).toHaveCount(1);
+    await others.click();
+    await expect(others).toHaveCount(1);
     expect(problems).toEqual([]);
     await ctx.close();
   });

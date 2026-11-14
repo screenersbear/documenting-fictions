@@ -33,6 +33,9 @@ export function fillPhotos(root, people) {
     const img = new Image();
     img.alt = '';
     img.decoding = 'async';
+    // Loaded, the photo takes the initials' place; one that can't load leaves them.
+    img.addEventListener('load', () => el.classList.add('has-photo'), { once: true });
+    img.addEventListener('error', () => img.remove(), { once: true });
     img.src = src;
     el.append(img);
   });

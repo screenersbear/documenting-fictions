@@ -2,31 +2,32 @@
 // card at a time. The day's pick holds for the day: what's done stays done,
 // LATER moves a card to tomorrow, and anything that comes due in the day
 // (a shoot just captured in The Eye) joins only while there's room. A Pitch
-// or Follow up waits for a work day (data/work-days.js): days, the work days.
+// or Follow up waits for a work day, and nothing comes up on a day off
+// (data/work-days.js): week, the work days and days off.
 import { KIND_KEYS } from './kinds.js';
-import { comesUp, EVERY_DAY } from './work-days.js';
+import { comesUp, ANY_DAY } from './work-days.js';
 
 export const PER_DAY = 3;
 export const MOST = 5;
 const rank = (k) => KIND_KEYS.indexOf(k);
 export const perDayOf = (n) => Math.min(MOST, Math.max(1, Math.floor(Number(n)) || PER_DAY));
 
-const isDue = (p, today, days) => !p.letGo && comesUp(p.next, today, days);
+const isDue = (p, today, week) => !p.letGo && comesUp(p.next, today, week);
 
 // Everyone with a move due, the most timely kind first, then the longest waiting.
-export function dueOn(people, today, days = EVERY_DAY) {
-  return people.filter((p) => isDue(p, today, days)).sort((a, b) => rank(a.next.kind) - rank(b.next.kind)
+export function dueOn(people, today, week = ANY_DAY) {
+  return people.filter((p) => isDue(p, today, week)).sort((a, b) => rank(a.next.kind) - rank(b.next.kind)
     || a.next.due.localeCompare(b.next.due) || a.added.localeCompare(b.added) || a.name.localeCompare(b.name));
 }
 
 // The day's pick: { date, ids (in order), marks: { id: 'done' | 'later' } }.
-export function pickFor(people, saved, today, perDay = PER_DAY, days = EVERY_DAY) {
+export function pickFor(people, saved, today, perDay = PER_DAY, week = ANY_DAY) {
   const same = !!saved && saved.date === today;
   const marks = same ? { ...saved.marks } : {};
   const byId = new Map(people.map((p) => [p.id, p]));
-  const keep = same ? saved.ids.filter((id) => byId.has(id) && (marks[id] || isDue(byId.get(id), today, days))) : [];
+  const keep = same ? saved.ids.filter((id) => byId.has(id) && (marks[id] || isDue(byId.get(id), today, week))) : [];
   const room = Math.max(0, perDayOf(perDay) - keep.length);
-  const more = dueOn(people, today, days).map((p) => p.id).filter((id) => !keep.includes(id)).slice(0, room);
+  const more = dueOn(people, today, week).map((p) => p.id).filter((id) => !keep.includes(id)).slice(0, room);
   return { date: today, ids: [...keep, ...more], marks };
 }
 

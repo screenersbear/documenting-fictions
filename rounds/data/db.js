@@ -19,7 +19,7 @@ import { nowISO } from '../components/util.js';
 const DB_NAME = 'rounds';
 const KEYS = { people: 'id', moves: 'id', photos: 'id', messages: 'kind', settings: 'key', passed: 'id', tombstones: 'id' };
 // The settings that go to the other devices (not the day's pick, nor what this phone has seen).
-export const SYNCED_SETTINGS = ['perDay', 'workDays', 'offer', 'city'];
+export const SYNCED_SETTINGS = ['perDay', 'workDays', 'daysOff', 'offer', 'city'];
 
 let dbPromise = null;
 function openDb() {

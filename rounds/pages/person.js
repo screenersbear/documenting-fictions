@@ -12,7 +12,7 @@ import { GROUPS } from '../data/plan.js';
 import { phrase } from '../data/reasons.js';
 import { handleText, profileUrl } from '../data/contact.js';
 import { dayOf, dueWords } from '../data/dates.js';
-import { doMove, undoMove, laterMove, getWorkDays } from '../data/moves.js';
+import { doMove, undoMove, laterMove, getWeek } from '../data/moves.js';
 import { whenDue } from '../data/work-days.js';
 import { openMove } from './move.js';
 import { openPersonMenu } from './person-menu.js';
@@ -24,7 +24,7 @@ function restHtml(p) {
 }
 
 export async function personScreen(view, id) {
-  const [p, days] = await Promise.all([getPerson(id), getWorkDays()]);
+  const [p, week] = await Promise.all([getPerson(id), getWeek()]);
   if (!p) { location.replace('#/people'); return; }
   const handle = handleText(p);
   const url = profileUrl(p);
@@ -39,7 +39,7 @@ export async function personScreen(view, id) {
       <!-- The handle opens their profile on Instagram (or TikTok, or their website): the button clicker leaves it alone. -->
       <p class="person-line">${esc(line.endsWith('.') ? line : `${line}.`)}</p>
     </div>
-    ${next ? `<button type="button" class="person-next" data-move>${miniHtml(p.next.kind)}<span class="person-next-what">${esc(phrase(p.next.kind, p.name))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, days, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>`
+    ${next ? `<button type="button" class="person-next" data-move>${miniHtml(p.next.kind)}<span class="person-next-what">${esc(phrase(p.next.kind, p.name))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>`
       : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
   </div></div>`;
   fillPhotos(view, [p]);

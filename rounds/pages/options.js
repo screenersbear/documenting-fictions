@@ -1,5 +1,5 @@
 // Options, from the band's menu: how many moves a day (three, at most five),
-// the work days, Sync (with Claude, through GitHub), Import people, the two
+// the work days and days off, Sync (with Claude, through GitHub), Import people, the two
 // newsletter lists to export, and How it works.
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
@@ -7,7 +7,7 @@ import { CHEV } from '../components/icons.js';
 import { saveFile } from '../components/files.js';
 import { getSetting, setSetting, listPeople } from '../data/db.js';
 import { PER_DAY, MOST, perDayOf } from '../data/today.js';
-import { WEEK, workDaysOf, toggleDay } from '../data/work-days.js';
+import { WEEK, workDaysOf, daysOffOf, toggleDay, toggleOff } from '../data/work-days.js';
 import { listRows } from '../data/lists.js';
 import { toCsv } from '../data/csv.js';
 import { dayOf } from '../data/dates.js';
@@ -21,10 +21,11 @@ const LISTS = { email: ['Email newsletter list', 'rounds-email-list'], mail: ['M
 // onChange: something Today or People shows has changed.
 // autoHandler: what to do after each sync, once sync is turned on here.
 export async function openOptions(onChange, autoHandler) {
-  const [perDay, people, workDays, syncRow] = await Promise.all([getSetting('perDay', PER_DAY), listPeople(), getSetting('workDays', null), syncRowHtml()]);
+  const [perDay, people, workDays, daysOff, syncRow] = await Promise.all([getSetting('perDay', PER_DAY), listPeople(), getSetting('workDays', null), getSetting('daysOff', null), syncRowHtml()]);
   let n = perDayOf(perDay);
   let days = workDaysOf(workDays);
-  const chips = () => WEEK.map(([d, name]) => `<button type="button" class="day-chip${days.includes(d) ? ' on' : ''}" data-day="${d}" aria-pressed="${days.includes(d)}">${name}</button>`).join('');
+  let off = daysOffOf(daysOff);
+  const chips = (on, attr) => WEEK.map(([d, name]) => `<button type="button" class="day-chip${on.includes(d) ? ' on' : ''}" ${attr}="${d}" aria-pressed="${on.includes(d)}">${name}</button>`).join('');
   const count = (which) => listRows(people, which).length - 1;
   const people1 = (k) => (k === 1 ? '1 person' : `${k} people`);
   const s = openSheet({
@@ -32,7 +33,8 @@ export async function openOptions(onChange, autoHandler) {
     body: `
       <div class="switch-row"><span>Moves a day</span>
         <span class="stepper"><button type="button" data-step="-1" aria-label="Fewer"><span>−</span></button><output data-n>${n}</output><button type="button" data-step="1" aria-label="More"><span>+</span></button></span></div>
-      <div class="work-days"><span class="field-label">Work days</span><div class="day-chips">${chips()}</div><p class="work-days-note">Pitches and follow ups wait for these days.</p></div>
+      <div class="work-days"><span class="field-label">Work days</span><div class="day-chips" data-chips="work">${chips(days, 'data-day')}</div><p class="work-days-note">Pitches and follow ups wait for these days.</p></div>
+      <div class="work-days"><span class="field-label">Days off</span><div class="day-chips" data-chips="off">${chips(off, 'data-off')}</div><p class="work-days-note">Nothing comes up on these days.</p></div>
       <div class="choice-list">
         ${syncRow}
         ${row('data-import', 'Import people', 'From a CSV file')}
@@ -46,9 +48,14 @@ export async function openOptions(onChange, autoHandler) {
     const b = e.target.closest('button');
     if (!b) return;
     if (b.dataset.day) {
-      days = toggleDay(days, Number(b.dataset.day));
-      s.body.querySelector('.day-chips').innerHTML = chips();
+      days = toggleDay(days, Number(b.dataset.day), off);
+      s.body.querySelector('[data-chips="work"]').innerHTML = chips(days, 'data-day');
       await setSetting('workDays', days);
+      onChange();
+    } else if (b.dataset.off) {
+      off = toggleOff(off, Number(b.dataset.off), days);
+      s.body.querySelector('[data-chips="off"]').innerHTML = chips(off, 'data-off');
+      await setSetting('daysOff', off);
       onChange();
     } else if (b.dataset.step) {
       const to = Math.min(MOST, Math.max(1, n + Number(b.dataset.step)));

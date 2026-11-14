@@ -36,7 +36,7 @@ function stackHtml(pick, left, today) {
 }
 
 // No card to show: the day's done, nothing's due, or no one's here yet.
-function calmHtml(people, pick, today, days) {
+function calmHtml(people, pick, today, week) {
   const n = pick.ids.length;
   if (n) return `${head(`${n} of ${n} today`, arcHtml(pick, '', `All ${n} done`))}<div class="today-calm"><h2>That's today.</h2><p>Rounds picks the next ones tomorrow.</p></div>`;
   const here = people.filter((p) => !p.letGo);
@@ -45,18 +45,18 @@ function calmHtml(people, pick, today, days) {
     return `<div class="today-calm"><h2>No one here yet.</h2><p>Add the people you work with, and Rounds picks a few to write to each day.${eye}</p>
       <button type="button" class="btn primary" data-add>${PLUS}Add someone</button></div>`;
   }
-  const next = here.filter((p) => p.next).map((p) => whenDue(p.next, days, today)).sort()[0];
+  const next = here.filter((p) => p.next).map((p) => whenDue(p.next, week, today)).sort()[0];
   const when = next ? `The next move is due ${dueWords(next, today).replace('Tomorrow', 'tomorrow')}.` : 'Nothing is planned.';
   return `<div class="today-calm"><h2>Nothing today.</h2><p>${when}</p></div>`;
 }
 
 export async function todayScreen(view, { beside = false } = {}) {
   const today = dayOf();
-  const [{ people, pick, days }, { done: doneToday }] = await Promise.all([loadToday(), loadDone()]);
+  const [{ people, pick, week }, { done: doneToday }] = await Promise.all([loadToday(), loadDone()]);
   const leads = await leadsHtml(people);
   const byId = new Map(people.map((p) => [p.id, p]));
   const left = waiting(pick).map((id) => byId.get(id));
-  view.innerHTML = `<div class="screen"><div class="scroll">${bandHtml({ title: 'Rounds', place: 'Today' })}${leads}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today, days)}${doneHtml(doneToday.length)}</div></div>`;
+  view.innerHTML = `<div class="screen"><div class="scroll">${bandHtml({ title: 'Rounds', place: 'Today' })}${leads}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today, week)}${doneHtml(doneToday.length)}</div></div>`;
   fillPhotos(view, people);
   if (beside) return;
   const redraw = () => todayScreen(view).then(() => view.querySelector('.screen')?.classList.add('still'));

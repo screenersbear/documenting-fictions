@@ -118,20 +118,28 @@ describe('doneOn', () => {
 
 describe('work days (a Pitch or Follow up waits for one)', () => {
   const SAT = T; // 14 Nov 2026 is a Saturday
+  const MON_FRI = { work: [1, 2, 3, 4, 5], off: [] };
   const people = [p('pitch', 'pitch', SAT), p('fu', 'followup', '2026-11-13'), p('thanks', 'thanks', SAT)];
   it('on a day off, only the moves that come up any day are due', () => {
-    expect(dueOn(people, SAT, [1, 2, 3, 4, 5]).map((x) => x.id)).toEqual(['thanks']);
+    expect(dueOn(people, SAT, MON_FRI).map((x) => x.id)).toEqual(['thanks']);
     expect(dueOn(people, SAT).map((x) => x.id)).toEqual(['thanks', 'fu', 'pitch']);
-    expect(dueOn(people, SAT, [6]).map((x) => x.id)).toEqual(['thanks', 'fu', 'pitch']);
+    expect(dueOn(people, SAT, { work: [6], off: [] }).map((x) => x.id)).toEqual(['thanks', 'fu', 'pitch']);
   });
   it('on the next work day they come up', () => {
-    expect(dueOn(people, '2026-11-16', [1, 2, 3, 4, 5]).map((x) => x.id)).toEqual(['thanks', 'fu', 'pitch']);
-    expect(dueOn(people, '2026-11-15', [1, 2, 3, 4, 5]).map((x) => x.id)).toEqual(['thanks']);
+    expect(dueOn(people, '2026-11-16', MON_FRI).map((x) => x.id)).toEqual(['thanks', 'fu', 'pitch']);
+    expect(dueOn(people, '2026-11-15', MON_FRI).map((x) => x.id)).toEqual(['thanks']);
   });
   it("the day's pick leaves them for a work day, and keeps what's already done", () => {
-    expect(pickFor(people, null, SAT, 3, [1, 2, 3, 4, 5])).toEqual({ date: SAT, ids: ['thanks'], marks: {} });
+    expect(pickFor(people, null, SAT, 3, MON_FRI)).toEqual({ date: SAT, ids: ['thanks'], marks: {} });
     const saved = { date: SAT, ids: ['pitch', 'fu', 'thanks'], marks: { pitch: 'done' } };
-    expect(pickFor(people, saved, SAT, 3, [1, 2, 3, 4, 5])).toEqual({ date: SAT, ids: ['pitch', 'thanks'], marks: { pitch: 'done' } });
+    expect(pickFor(people, saved, SAT, 3, MON_FRI)).toEqual({ date: SAT, ids: ['pitch', 'thanks'], marks: { pitch: 'done' } });
     expect(pickFor(people, saved, SAT, 3).ids).toEqual(['pitch', 'fu', 'thanks']);
+  });
+  it('Sunday off: nothing at all; Monday, all of it', () => {
+    const week = { work: [1, 2, 3, 4, 5], off: [0] };
+    const sun = [...people, p('hi', 'hello', '2026-11-15')];
+    expect(dueOn(sun, '2026-11-15', week)).toEqual([]);
+    expect(pickFor(sun, null, '2026-11-15', 3, week)).toEqual({ date: '2026-11-15', ids: [], marks: {} });
+    expect(dueOn(sun, '2026-11-16', week).map((x) => x.id)).toEqual(['thanks', 'hi', 'fu', 'pitch']);
   });
 });

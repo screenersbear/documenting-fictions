@@ -18,6 +18,8 @@ describe('valueWords', () => {
   it('work days by name, Monday first', () => {
     expect(valueWords('value', [0, 1, 5], 'workDays')).toBe('Mon, Fri, Sun');
     expect(valueWords('value', [9], 'workDays')).toBe('Nothing');
+    expect(valueWords('value', [6, 0], 'daysOff')).toBe('Sat, Sun');
+    expect(valueWords('value', [], 'daysOff')).toBe('Nothing');
     expect(valueWords('value', 4, 'perDay')).toBe('4');
   });
   it('anything else as it is', () => {
@@ -35,6 +37,7 @@ describe('subjectOf', () => {
     expect(subjectOf({ store: 'messages', id: 'thanks' })).toBe('The Say thanks message');
     expect(subjectOf({ store: 'messages', id: 'odd' })).toBe('The odd message');
     expect(subjectOf({ store: 'settings', id: 'workDays' })).toBe('Work days');
+    expect(subjectOf({ store: 'settings', id: 'daysOff' })).toBe('Days off');
     expect(subjectOf({ store: 'settings', id: 'other' })).toBe('A setting');
   });
   it('a move, or a lead passed on', () => {

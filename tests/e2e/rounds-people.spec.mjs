@@ -110,6 +110,33 @@ test.describe('Rounds: People', () => {
     await ctx.close();
   });
 
+  test('a photo chosen shows in place of the initials, on their page, in People and on Today', async ({ browser }, testInfo) => {
+    const { ctx, page, problems } = await openRounds(browser, testInfo);
+    await addDana(page);
+    await goTo(page, 'people');
+    const card = page.locator('#view .person-card', { hasText: 'Dana Ortiz' });
+    await expect(card.locator('.ph-initials')).toBeVisible();
+    await expect(card.locator('.ph-initials')).toHaveText('DO');
+    await card.click();
+    await page.click('#view [data-band-more]');
+    const m = await opened(page, 'Dana Ortiz');
+    // A small red square, as if picked from Photos.
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), m.locator('.choice', { hasText: 'Choose a photo' }).click()]);
+    await chooser.setFiles({ name: 'dana.png', mimeType: 'image/png', buffer: png });
+    const photo = page.locator('#view .ph').first();
+    await expect(photo.locator('img')).toBeVisible();
+    await expect(photo.locator('.ph-initials')).toBeHidden();
+    await page.click('#view .band-short a[aria-label="Back"]');
+    await expect(card.locator('img')).toBeVisible();
+    await expect(card.locator('.ph-initials')).toBeHidden();
+    await goTo(page, 'today');
+    await expect(page.locator('#view .card.top .ph img')).toBeVisible();
+    await expect(page.locator('#view .card.top .ph-initials')).toBeHidden();
+    expect(problems).toEqual([]);
+    await ctx.close();
+  });
+
   test('people from a shoot in The Eye say where you met', async ({ browser }, testInfo) => {
     const { ctx, page } = await openRounds(browser, testInfo, '/rounds/#/people', eyeShoot);
     await page.locator('#view .person-card', { hasText: 'Jules M.' }).click();

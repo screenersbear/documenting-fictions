@@ -596,6 +596,7 @@ const KEYS = {
 const SYNCED_SETTINGS = [
 	"perDay",
 	"workDays",
+	"daysOff",
 	"offer",
 	"city"
 ];
@@ -1269,6 +1270,8 @@ function fillPhotos(root, people) {
 		const img = new Image();
 		img.alt = "";
 		img.decoding = "async";
+		img.addEventListener("load", () => el.classList.add("has-photo"), { once: true });
+		img.addEventListener("error", () => img.remove(), { once: true });
 		img.src = src;
 		el.append(img);
 	});
@@ -1310,6 +1313,7 @@ const WORK_DAYS = [
 	4,
 	5
 ];
+const DAYS_OFF = [0];
 const EVERY_DAY = [
 	0,
 	1,
@@ -1319,6 +1323,10 @@ const EVERY_DAY = [
 	5,
 	6
 ];
+const ANY_DAY = {
+	work: EVERY_DAY,
+	off: []
+};
 const WORK_ONLY = ["pitch", "followup"];
 const WEEK = [
 	[1, "Mon"],
@@ -1330,41 +1338,60 @@ const WEEK = [
 	[0, "Sun"]
 ];
 const byNumber = (a, b) => a - b;
+const clean = (v) => [...new Set(v.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort(byNumber);
 function workDaysOf(v) {
-	const days = Array.isArray(v) ? [...new Set(v.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort(byNumber) : [];
+	const days = Array.isArray(v) ? clean(v) : [];
 	return days.length ? days : [...WORK_DAYS];
 }
-function toggleDay(v, day) {
+const daysOffOf = (v) => Array.isArray(v) ? clean(v) : [...DAYS_OFF];
+const weekOf = (work, off) => ({
+	work: workDaysOf(work),
+	off: daysOffOf(off)
+});
+const usable = (work, off) => work.some((d) => !off.includes(d));
+function toggleDay(v, day, off = []) {
 	const on = workDaysOf(v);
 	if (!on.includes(day)) return [...on, day].sort(byNumber);
-	return on.length > 1 ? on.filter((d) => d !== day) : on;
+	const left = on.filter((d) => d !== day);
+	return left.length && usable(left, daysOffOf(off)) ? left : on;
 }
-function whenDue(next, v, today = "") {
+function toggleOff(v, day, work) {
+	const off = daysOffOf(v);
+	if (off.includes(day)) return off.filter((d) => d !== day);
+	const more = [...off, day].sort(byNumber);
+	return usable(workDaysOf(work), more) ? more : off;
+}
+function whenDue(next, week, today = "") {
 	if (!next) return "";
-	if (!WORK_ONLY.includes(next.kind)) return next.due;
-	const on = workDaysOf(v);
-	let day = next.due > today ? next.due : today;
-	while (!on.includes(dateOf(day).getDay())) day = addDays(day, 1);
-	return day;
+	const work = WORK_ONLY.includes(next.kind);
+	const fits = (iso) => {
+		const d = dateOf(iso).getDay();
+		return !week.off.includes(d) && (!work || week.work.includes(d));
+	};
+	if (!work && next.due < today && fits(today)) return next.due;
+	const from = next.due > today ? next.due : today;
+	let day = from;
+	for (let i = 0; i < 7; i++, day = addDays(day, 1)) if (fits(day)) return day;
+	return from;
 }
-const comesUp = (next, today, v) => !!next && whenDue(next, v, today) <= today;
+const comesUp = (next, today, week) => !!next && whenDue(next, week, today) <= today;
 
 // data/today.js
 const PER_DAY = 3;
 const MOST = 5;
 const rank = (k) => KIND_KEYS.indexOf(k);
 const perDayOf = (n) => Math.min(5, Math.max(1, Math.floor(Number(n)) || 3));
-const isDue = (p, today, days) => !p.letGo && comesUp(p.next, today, days);
-function dueOn(people, today, days = EVERY_DAY) {
-	return people.filter((p) => isDue(p, today, days)).sort((a, b) => rank(a.next.kind) - rank(b.next.kind) || a.next.due.localeCompare(b.next.due) || a.added.localeCompare(b.added) || a.name.localeCompare(b.name));
+const isDue = (p, today, week) => !p.letGo && comesUp(p.next, today, week);
+function dueOn(people, today, week = ANY_DAY) {
+	return people.filter((p) => isDue(p, today, week)).sort((a, b) => rank(a.next.kind) - rank(b.next.kind) || a.next.due.localeCompare(b.next.due) || a.added.localeCompare(b.added) || a.name.localeCompare(b.name));
 }
-function pickFor(people, saved, today, perDay = 3, days = EVERY_DAY) {
+function pickFor(people, saved, today, perDay = 3, week = ANY_DAY) {
 	const same = !!saved && saved.date === today;
 	const marks = same ? { ...saved.marks } : {};
 	const byId = new Map(people.map((p) => [p.id, p]));
-	const keep = same ? saved.ids.filter((id) => byId.has(id) && (marks[id] || isDue(byId.get(id), today, days))) : [];
+	const keep = same ? saved.ids.filter((id) => byId.has(id) && (marks[id] || isDue(byId.get(id), today, week))) : [];
 	const room = Math.max(0, perDayOf(perDay) - keep.length);
-	const more = dueOn(people, today, days).map((p) => p.id).filter((id) => !keep.includes(id)).slice(0, room);
+	const more = dueOn(people, today, week).map((p) => p.id).filter((id) => !keep.includes(id)).slice(0, room);
 	return {
 		date: today,
 		ids: [...keep, ...more],
@@ -1412,20 +1439,20 @@ function stops$1(n) {
 __name(stops$1, "stops");
 
 // data/moves.js
-const getWorkDays = async () => workDaysOf(await getSetting("workDays", null));
+const getWeek = async () => weekOf(...await Promise.all([getSetting("workDays", null), getSetting("daysOff", null)]));
 async function loadToday() {
-	const [people, saved, perDay, days] = await Promise.all([
+	const [people, saved, perDay, week] = await Promise.all([
 		listPeople(),
 		getSetting("pick", null),
 		getSetting("perDay", 3),
-		getWorkDays()
+		getWeek()
 	]);
-	const pick = pickFor(people, saved, dayOf(), perDay, days);
+	const pick = pickFor(people, saved, dayOf(), perDay, week);
 	if (JSON.stringify(pick) !== JSON.stringify(saved)) await setSetting("pick", pick);
 	return {
 		people,
 		pick,
-		days
+		week
 	};
 }
 async function markInPick(id, how) {
@@ -2556,7 +2583,7 @@ function stackHtml(pick, left, today) {
       <button type="button" class="btn primary" data-write><span>${esc(writeLabel(top))}</span></button>
     </div>`;
 }
-function calmHtml(people, pick, today, days) {
+function calmHtml(people, pick, today, week) {
 	const n = pick.ids.length;
 	if (n) return `${head(`${n} of ${n} today`, arcHtml(pick, "", `All ${n} done`))}<div class="today-calm"><h2>That's today.</h2><p>Rounds picks the next ones tomorrow.</p></div>`;
 	const here = people.filter((p) => !p.letGo);
@@ -2565,20 +2592,20 @@ function calmHtml(people, pick, today, days) {
 		return `<div class="today-calm"><h2>No one here yet.</h2><p>Add the people you work with, and Rounds picks a few to write to each day.${eye}</p>
       <button type="button" class="btn primary" data-add>${PLUS}Add someone</button></div>`;
 	}
-	const next = here.filter((p) => p.next).map((p) => whenDue(p.next, days, today)).sort()[0];
+	const next = here.filter((p) => p.next).map((p) => whenDue(p.next, week, today)).sort()[0];
 	const when = next ? `The next move is due ${dueWords(next, today).replace("Tomorrow", "tomorrow")}.` : "Nothing is planned.";
 	return `<div class="today-calm"><h2>Nothing today.</h2><p>${when}</p></div>`;
 }
 async function todayScreen(view, { beside = false } = {}) {
 	const today = dayOf();
-	const [{ people, pick, days }, { done: doneToday }] = await Promise.all([loadToday(), loadDone()]);
+	const [{ people, pick, week }, { done: doneToday }] = await Promise.all([loadToday(), loadDone()]);
 	const leads = await leadsHtml(people);
 	const byId = new Map(people.map((p) => [p.id, p]));
 	const left = waiting$1(pick).map((id) => byId.get(id));
 	view.innerHTML = `<div class="screen"><div class="scroll">${bandHtml({
 		title: "Rounds",
 		place: "Today"
-	})}${leads}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today, days)}${doneHtml(doneToday.length)}</div></div>`;
+	})}${leads}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today, week)}${doneHtml(doneToday.length)}</div></div>`;
 	fillPhotos(view, people);
 	if (beside) return;
 	const redraw = () => todayScreen(view).then(() => view.querySelector(".screen")?.classList.add("still"));
@@ -2613,13 +2640,13 @@ async function todayScreen(view, { beside = false } = {}) {
 }
 
 // pages/people.js
-const order = (days, today) => (a, b) => (whenDue(a.next, days, today) || "~").localeCompare(whenDue(b.next, days, today) || "~") || a.name.localeCompare(b.name);
+const order = (week, today) => (a, b) => (whenDue(a.next, week, today) || "~").localeCompare(whenDue(b.next, week, today) || "~") || a.name.localeCompare(b.name);
 const cardHtml = (p) => `
   <a class="person-card" href="#/person/${encodeURIComponent(p.id)}">${photoHtml(p)}
     <span class="person-card-name">${p.letGo ? "" : miniHtml(p.next?.kind)}<span>${esc(p.name)}</span></span></a>`;
 async function peopleScreen(view, { beside = false } = {}) {
-	const [people, days] = await Promise.all([listPeople(), getWorkDays()]);
-	const here = people.filter((p) => !p.letGo).sort(order(days, dayOf()));
+	const [people, week] = await Promise.all([listPeople(), getWeek()]);
+	const here = people.filter((p) => !p.letGo).sort(order(week, dayOf()));
 	const gone = people.filter((p) => p.letGo).sort((a, b) => a.name.localeCompare(b.name));
 	const eye = window.DF_SUITE ? " People from your shoots in The Eye come in on their own." : "";
 	view.innerHTML = `<div class="screen"><div class="scroll">
@@ -3342,7 +3369,7 @@ function restHtml(p) {
 	return "Nothing planned. Rounds let this one rest.";
 }
 async function personScreen(view, id) {
-	const [p, days] = await Promise.all([getPerson(id), getWorkDays()]);
+	const [p, week] = await Promise.all([getPerson(id), getWeek()]);
 	if (!p) {
 		location.replace("#/people");
 		return;
@@ -3364,7 +3391,7 @@ async function personScreen(view, id) {
       <!-- The handle opens their profile on Instagram (or TikTok, or their website): the button clicker leaves it alone. -->
       <p class="person-line">${esc(line.endsWith(".") ? line : `${line}.`)}</p>
     </div>
-    ${next ? `<button type="button" class="person-next" data-move>${miniHtml(p.next.kind)}<span class="person-next-what">${esc(phrase(p.next.kind, p.name))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, days, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>` : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
+    ${next ? `<button type="button" class="person-next" data-move>${miniHtml(p.next.kind)}<span class="person-next-what">${esc(phrase(p.next.kind, p.name))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>` : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
   </div></div>`;
 	fillPhotos(view, [p]);
 	const redraw = () => personScreen(view, id).then(() => view.querySelector(".screen")?.classList.add("still"));
@@ -3461,6 +3488,7 @@ const FIELDS = {
 const SETTINGS = {
 	perDay: "Moves a day",
 	workDays: "Work days",
+	daysOff: "Days off",
 	offer: "Your offer",
 	city: "Your city"
 };
@@ -3469,7 +3497,7 @@ function valueWords(path, v, id = "") {
 	if (typeof v === "boolean") return v ? "Yes" : "No";
 	if (path === "group") return GROUPS[v] || String(v);
 	if (path === "next" || path === "draft") return KINDS[v.kind] ? [KINDS[v.kind].name, v.due && `due ${v.due}`].filter(Boolean).join(", ") : "Nothing";
-	if (id === "workDays" && Array.isArray(v)) return WEEK.filter(([d]) => v.includes(d)).map(([, n]) => n).join(", ") || "Nothing";
+	if ((id === "workDays" || id === "daysOff") && Array.isArray(v)) return WEEK.filter(([d]) => v.includes(d)).map(([, n]) => n).join(", ") || "Nothing";
 	return typeof v === "object" ? JSON.stringify(v) : String(v);
 }
 function subjectOf(c) {
@@ -3663,15 +3691,17 @@ const LISTS = {
 	mail: ["Mail newsletter list", "rounds-mail-list"]
 };
 async function openOptions(onChange, autoHandler) {
-	const [perDay, people, workDays, syncRow] = await Promise.all([
+	const [perDay, people, workDays, daysOff, syncRow] = await Promise.all([
 		getSetting("perDay", 3),
 		listPeople(),
 		getSetting("workDays", null),
+		getSetting("daysOff", null),
 		syncRowHtml()
 	]);
 	let n = perDayOf(perDay);
 	let days = workDaysOf(workDays);
-	const chips = () => WEEK.map(([d, name]) => `<button type="button" class="day-chip${days.includes(d) ? " on" : ""}" data-day="${d}" aria-pressed="${days.includes(d)}">${name}</button>`).join("");
+	let off = daysOffOf(daysOff);
+	const chips = (on, attr) => WEEK.map(([d, name]) => `<button type="button" class="day-chip${on.includes(d) ? " on" : ""}" ${attr}="${d}" aria-pressed="${on.includes(d)}">${name}</button>`).join("");
 	const count = (which) => listRows(people, which).length - 1;
 	const people1 = (k) => k === 1 ? "1 person" : `${k} people`;
 	const s = openSheet({
@@ -3679,7 +3709,8 @@ async function openOptions(onChange, autoHandler) {
 		body: `
       <div class="switch-row"><span>Moves a day</span>
         <span class="stepper"><button type="button" data-step="-1" aria-label="Fewer"><span>−</span></button><output data-n>${n}</output><button type="button" data-step="1" aria-label="More"><span>+</span></button></span></div>
-      <div class="work-days"><span class="field-label">Work days</span><div class="day-chips">${chips()}</div><p class="work-days-note">Pitches and follow ups wait for these days.</p></div>
+      <div class="work-days"><span class="field-label">Work days</span><div class="day-chips" data-chips="work">${chips(days, "data-day")}</div><p class="work-days-note">Pitches and follow ups wait for these days.</p></div>
+      <div class="work-days"><span class="field-label">Days off</span><div class="day-chips" data-chips="off">${chips(off, "data-off")}</div><p class="work-days-note">Nothing comes up on these days.</p></div>
       <div class="choice-list">
         ${syncRow}
         ${row("data-import", "Import people", "From a CSV file")}
@@ -3693,9 +3724,14 @@ async function openOptions(onChange, autoHandler) {
 		const b = e.target.closest("button");
 		if (!b) return;
 		if (b.dataset.day) {
-			days = toggleDay(days, Number(b.dataset.day));
-			s.body.querySelector(".day-chips").innerHTML = chips();
+			days = toggleDay(days, Number(b.dataset.day), off);
+			s.body.querySelector("[data-chips=\"work\"]").innerHTML = chips(days, "data-day");
 			await setSetting("workDays", days);
+			onChange();
+		} else if (b.dataset.off) {
+			off = toggleOff(off, Number(b.dataset.off), days);
+			s.body.querySelector("[data-chips=\"off\"]").innerHTML = chips(off, "data-off");
+			await setSetting("daysOff", off);
 			onChange();
 		} else if (b.dataset.step) {
 			const to = Math.min(5, Math.max(1, n + Number(b.dataset.step)));

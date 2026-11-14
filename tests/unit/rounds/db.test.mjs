@@ -179,9 +179,9 @@ describe('messages and settings', () => {
     await db.setSetting('pick', { date: 'x' });
     await db.setSetting('eyeSeen', ['s1']);
     expect(heard).not.toHaveBeenCalled();
-    for (const k of ['perDay', 'workDays', 'offer', 'city']) await db.setSetting(k, 1);
-    expect(heard).toHaveBeenCalledTimes(4);
-    expect(db.SYNCED_SETTINGS).toEqual(['perDay', 'workDays', 'offer', 'city']);
+    for (const k of ['perDay', 'workDays', 'daysOff', 'offer', 'city']) await db.setSetting(k, 1);
+    expect(heard).toHaveBeenCalledTimes(5);
+    expect(db.SYNCED_SETTINGS).toEqual(['perDay', 'workDays', 'daysOff', 'offer', 'city']);
   });
 });
 
