@@ -53,6 +53,7 @@ window.StickerParts.addStickerArt = function addStickerArt(ed) {
     const el = document.createElement('div');
     el.className = `sticker ${s.shape}${s.printed ? ' printed' : ''}${s.edge === 'outline' ? ' outline' : ''}`;
     el.style.setProperty('--r', String(ed.ratioOf(s)));
+    el.style.setProperty('--turn', `${Number(s.turn) || 0}deg`);
     const v = vinylArt(seedOf(s), 1 / ed.ratioOf(s));
     const layer = (cls) => `<img class="vinyl ${cls}" src="${v[cls]}" alt="" draggable="false" />`;
     el.innerHTML = `<img class="photo" alt="" draggable="false" />${layer('grain')}${layer('wrinkle')}${layer('sheen')}${layer('fold')}<i class="gloss"></i>${onFlap ? '' : '<i class="bend r" hidden></i><i class="bend l" hidden></i><i class="bend t" hidden></i><i class="bend b" hidden></i>'}`;

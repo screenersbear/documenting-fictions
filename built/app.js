@@ -68,7 +68,7 @@ window.ShelfColors = {
 window.StickerParts = window.StickerParts || {};
 window.StickerParts.addStickerStore = function addStickerStore(ed) {
   'use strict';
-  Object.assign(ed, { write, setEdge });
+  Object.assign(ed, { write });
   // ---------- Keeping them ----------
   let dbp = null;
   const open = () => dbp || (dbp = new Promise((ok, no) => {
@@ -97,16 +97,6 @@ window.StickerParts.addStickerStore = function addStickerStore(ed) {
       q.onsuccess = () => ok(q.result || []);
       q.onerror = () => no(q.error);
     });
-  }
-
-  // A sticker's edge (round 3): 'outline' (a thin ink line) or 'white' (the
-  // white die-cut edge, also what a sticker saved before had). Only that
-  // field changes; the rest of the sticker is kept as it was.
-  async function setEdge(s, edge) {
-    const next = Object.assign({}, s, { edge: edge === 'outline' ? 'outline' : 'white' });
-    await write((os) => os.put(next));
-    ed.all = ed.all.map((x) => (x.id === s.id ? next : x));
-    return next;
   }
 
   ed.all = [];
@@ -251,6 +241,7 @@ window.StickerParts.addStickerArt = function addStickerArt(ed) {
     const el = document.createElement('div');
     el.className = `sticker ${s.shape}${s.printed ? ' printed' : ''}${s.edge === 'outline' ? ' outline' : ''}`;
     el.style.setProperty('--r', String(ed.ratioOf(s)));
+    el.style.setProperty('--turn', `${Number(s.turn) || 0}deg`);
     const v = vinylArt(seedOf(s), 1 / ed.ratioOf(s));
     const layer = (cls) => `<img class="vinyl ${cls}" src="${v[cls]}" alt="" draggable="false" />`;
     el.innerHTML = `<img class="photo" alt="" draggable="false" />${layer('grain')}${layer('wrinkle')}${layer('sheen')}${layer('fold')}<i class="gloss"></i>${onFlap ? '' : '<i class="bend r" hidden></i><i class="bend l" hidden></i><i class="bend t" hidden></i><i class="bend b" hidden></i>'}`;
@@ -291,12 +282,12 @@ window.StickerParts.addStickerArt = function addStickerArt(ed) {
 ;
 
 // ---- components/sticker-new.js ----
-// A new sticker: a photo picked, cropped to its shape, and stuck on a cover;
+// A new sticker: a photo picked and read (placing it: components/sticker-place.js);
 // taking one off, and putting it back. (Loaded before components/stickers.js.)
 window.StickerParts = window.StickerParts || {};
 window.StickerParts.addNewSticker = function addNewSticker(ed) {
   'use strict';
-  Object.assign(ed, { pick, crop, stick, remove, putBack });
+  Object.assign(ed, { pick, photo, remove, putBack });
   // ---------- A new one ----------
   // A photo from the library, straight from the tap (or iOS won't open it).
   function pick() {
@@ -313,118 +304,119 @@ window.StickerParts.addNewSticker = function addNewSticker(ed) {
       input.click();
     });
   }
-  const twoFingers = (list) => (list.length > 1 ? Math.hypot(list[0][0] - list[1][0], list[0][1] - list[1][1]) : 0);
-  const middle = (list) => [list.reduce((a, p) => a + p[0], 0) / list.length, list.reduce((a, p) => a + p[1], 0) / list.length];
-  const foot = (no, yes) => `<div class="place-foot"><button type="button" class="sheet-btn" data-no>${no}</button><button type="button" class="sheet-btn primary" data-yes>${yes}</button></div>`;
   const loadImage = (url) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error('Could not read that photo')); im.src = url; });
   const toBlob = (c, type, q) => new Promise((ok, no) => c.toBlob((b) => (b ? ok(b) : no(new Error('Could not read that photo'))), type, q));
 
-  // Fit the photo in the shape: drag and pinch it behind the window. Resolves
-  // with the picture's bytes, or null if cancelled.
-  async function crop(file, shape) {
-    const ratio = ed.RATIO[shape], aspect = 1 / ratio;
+  // The whole photo, no bigger than it's ever shown (round 5: its shape is
+  // picked while placing it, and the photo fills that shape from the middle).
+  async function photo(file) {
     const url = URL.createObjectURL(file);
     let img;
     try { img = await loadImage(url); } finally { URL.revokeObjectURL(url); }
-    const fit = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
-    const pic = document.createElement('canvas');
-    pic.width = Math.round(img.naturalWidth * fit);
-    pic.height = Math.round(img.naturalHeight * fit);
-    const pg = pic.getContext('2d');
-    pg.imageSmoothingQuality = 'high';
-    pg.drawImage(img, 0, 0, pic.width, pic.height);
-    return new Promise((resolve) => {
-      const layer = document.createElement('div');
-      layer.className = 'crop-layer';
-      layer.innerHTML = `<div class="crop-win ${shape}"></div>${foot('Cancel', 'Okay')}`;
-      layer.prepend(pic);
-      document.body.append(layer);
-      const box = layer.getBoundingClientRect();
-      const footTop = layer.querySelector('.place-foot').getBoundingClientRect().top - box.top;
-      const ww = Math.min(box.width - 48, (footTop - 48) / aspect, 420), wh = ww * aspect;
-      const wx = (box.width - ww) / 2, wy = (footTop - wh) / 2;
-      Object.assign(layer.querySelector('.crop-win').style, { left: `${wx}px`, top: `${wy}px`, width: `${ww}px`, height: `${wh}px` });
-      const least = Math.max(ww / pic.width, wh / pic.height);
-      let k = least, tx = wx + (ww - pic.width * k) / 2, ty = wy + (wh - pic.height * k) / 2;
-      const draw = () => {
-        k = Math.min(least * 6, Math.max(least, k));
-        tx = Math.min(wx, Math.max(wx + ww - pic.width * k, tx));
-        ty = Math.min(wy, Math.max(wy + wh - pic.height * k, ty));
-        pic.style.transform = `translate(${tx}px, ${ty}px) scale(${k})`;
-      };
-      draw();
-      const pts = new Map();
-      let grab = null;
-      const start = () => {
-        const list = [...pts.values()], [mx, my] = middle(list);
-        grab = { k, px: (mx - tx) / k, py: (my - ty) / k, d: twoFingers(list) };
-      };
-      layer.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.place-foot')) return;
-        try { layer.setPointerCapture(e.pointerId); } catch (err) { /* fine */ }
-        pts.set(e.pointerId, [e.clientX, e.clientY]);
-        start();
-      });
-      layer.addEventListener('pointermove', (e) => {
-        if (!pts.has(e.pointerId)) return;
-        pts.set(e.pointerId, [e.clientX, e.clientY]);
-        const list = [...pts.values()], [mx, my] = middle(list);
-        if (list.length > 1 && grab.d) k = grab.k * (twoFingers(list) / grab.d);
-        tx = mx - grab.px * k; ty = my - grab.py * k;
-        draw();
-      });
-      const up = (e) => { if (pts.delete(e.pointerId) && pts.size) start(); };
-      layer.addEventListener('pointerup', up);
-      layer.addEventListener('pointercancel', up);
-      layer.addEventListener('wheel', (e) => { e.preventDefault(); k *= e.deltaY < 0 ? 1.05 : 0.95; draw(); }, { passive: false });
-      const finish = (bytes) => { layer.remove(); pic.width = pic.height = 0; resolve(bytes); };
-      layer.querySelector('[data-no]').addEventListener('click', () => finish(null));
-      layer.querySelector('[data-yes]').addEventListener('click', async () => {
-        const sw = ww / k, sh = wh / k, out = Math.min(1000, Math.round(sw));
-        const c = document.createElement('canvas');
-        c.width = out; c.height = Math.round(out * aspect);
-        const g = c.getContext('2d');
-        g.imageSmoothingQuality = 'high';
-        g.drawImage(pic, (wx - tx) / k, (wy - ty) / k, sw, sh, 0, 0, c.width, c.height);
-        try { finish(await (await toBlob(c, 'image/jpeg', 0.88)).arrayBuffer()); } catch (err) { finish(null); }
-        c.width = c.height = 0;
-      });
-    });
+    const fit = Math.min(1, 1200 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * fit));
+    c.height = Math.max(1, Math.round(img.naturalHeight * fit));
+    const g = c.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(img, 0, 0, c.width, c.height);
+    try { return await (await toBlob(c, 'image/jpeg', 0.88)).arrayBuffer(); } finally { c.width = c.height = 0; }
   }
 
-  // The new sticker on the cover, to drag and pinch until Okay or Cancel.
-  // front/flap: that book's; laidOut(footTop): called once the buttons are
-  // up, so the book can make room for them. Resolves true once it's saved.
-  function stick(app, shape, bytes, front, flap, laidOut) {
-    // A new sticker takes the edge of the last one on this cover.
+  async function remove(s) {
+    await ed.write((os) => os.delete(s.id));
+    ed.all = ed.all.filter((x) => x.id !== s.id);
+  }
+  async function putBack(s) {
+    await ed.write((os) => os.put(s));
+    if (!ed.all.some((x) => x.id === s.id)) ed.all.push(s);
+  }
+};
+;
+
+// ---- components/sticker-place.js ----
+// Placing a new sticker (round 5, 05-sticker-placing): the book up close
+// with the sticker on its cover (drag to move, pinch to size, twist to turn)
+// and a sheet under it with its SHAPE and EDGE, the sticker changing as you
+// pick. BACK leaves it; STICK IT ON saves it. Shape and edge are chosen
+// here, never after. (Loaded before components/stickers.js.)
+window.StickerParts = window.StickerParts || {};
+window.StickerParts.addPlacing = function addPlacing(ed) {
+  'use strict';
+  Object.assign(ed, { stick });
+  const SHAPES = [['circle', 'Circle'], ['square', 'Square'], ['rect', 'Card']];
+  const EDGES = [['white', 'White border'], ['outline', 'Black outline']];
+  const twoFingers = (list) => (list.length > 1 ? Math.hypot(list[0][0] - list[1][0], list[0][1] - list[1][1]) : 0);
+  const angleOf = (list) => (list.length > 1 ? (Math.atan2(list[1][1] - list[0][1], list[1][0] - list[0][0]) * 180) / Math.PI : 0);
+  const middle = (list) => [list.reduce((a, p) => a + p[0], 0) / list.length, list.reduce((a, p) => a + p[1], 0) / list.length];
+  // Between -180 and 180, so a saved turn reads plainly.
+  const wrap = (deg) => ((((deg + 180) % 360) + 360) % 360) - 180;
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const seg = (name, label, list, on) => `
+    <p class="place-title" id="place${name}">${label}</p>
+    <div class="place-seg" role="radiogroup" aria-labelledby="place${name}">${list.map(([key, words]) => `<button type="button" role="radio" data-${name.toLowerCase()}="${key}" aria-checked="${key === on}"><span class="seg-mark ${key}" aria-hidden="true"></span>${words}</button>`).join('')}</div>`;
+
+  // The new sticker on the cover. app: its notebook; bytes: the photo; book:
+  // that notebook's name; front/flap: its book's cover and fore-edge;
+  // laidOut(top): called once the sheet is up, so the book can make room
+  // above it. Resolves true once it's saved.
+  function stick(app, bytes, book, front, flap, laidOut) {
+    // A new sticker takes the shape and edge of the last one on this cover.
     const last = ed.listOf(app).slice(-1)[0];
-    const draft = { id: ed.uid(), app, shape, ratio: ed.RATIO[shape], x: 0.5, y: 0.42, size: 0.44, seed: Math.floor(Math.random() * 2 ** 31), bytes, type: 'image/jpeg', edge: last && last.edge === 'outline' ? 'outline' : 'white' };
+    const shape = last && ed.RATIO[last.shape] && !last.printed ? last.shape : 'circle';
+    const draft = { id: ed.uid(), app, shape, ratio: ed.RATIO[shape], x: 0.5, y: 0.42, size: 0.44, turn: 0, seed: Math.floor(Math.random() * 2 ** 31), bytes, type: 'image/jpeg', edge: last && last.edge === 'outline' ? 'outline' : 'white' };
     const url = URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
     const layerOn = front.querySelector('.stickers');
-    const el = ed.make(draft, url);
-    const onFlap = ed.make(draft, url, true);
-    layerOn.append(el);
-    if (flap) flap.append(onFlap);
+    let el = null, onFlap = null;
+    // (Again after a shape or edge is picked: its look is made from both.)
+    const draw = () => {
+      const was = el;
+      el = ed.make(draft, url);
+      el.classList.add('placing');
+      if (was) was.replaceWith(el); else layerOn.append(el);
+      if (flap) { const old = onFlap; onFlap = ed.make(draft, url, true); if (old) old.replaceWith(onFlap); else flap.append(onFlap); }
+    };
+    draw();
     const layer = document.createElement('div');
     layer.className = 'place-layer';
-    layer.innerHTML = foot('Cancel', 'Okay');
+    layer.innerHTML = `
+      <p class="place-label">New sticker · ${esc(book)}</p>
+      <section class="place-sheet" aria-label="Place the sticker">
+        <span class="place-grip" aria-hidden="true"></span>
+        <p class="place-hint">Drag to move, pinch to size, twist to turn.</p>
+        ${seg('Shape', 'Shape', SHAPES, draft.shape)}
+        ${seg('Edge', 'Edge', EDGES, draft.edge)}
+        <div class="place-foot"><button type="button" class="sheet-btn" data-no>Back</button><button type="button" class="sheet-btn primary" data-yes>Stick it on</button></div>
+      </section>`;
     document.body.append(layer);
-    if (laidOut) laidOut(layer.querySelector('.place-foot').getBoundingClientRect().top);
+    const sheet = layer.querySelector('.place-sheet');
+    if (laidOut) laidOut(sheet.getBoundingClientRect().top);
     const clampAll = () => {
       draft.size = Math.min(1.5, Math.max(0.12, draft.size));
       draft.x = Math.min(1.1, Math.max(-0.1, draft.x)); // past an edge it folds, but it's never lost
       draft.y = Math.min(1.1, Math.max(-0.1, draft.y));
+      draft.turn = wrap(draft.turn);
+      el.style.setProperty('--turn', `${draft.turn}deg`);
       ed.seat(el, draft);
-      ed.placeOnFlap(onFlap, draft);
+      if (onFlap) { onFlap.style.setProperty('--turn', `${draft.turn}deg`); ed.placeOnFlap(onFlap, draft); }
     };
+    sheet.addEventListener('click', (e) => {
+      const s = e.target.closest('[data-shape]'), g = e.target.closest('[data-edge]');
+      if (!s && !g) return;
+      if (s) Object.assign(draft, { shape: s.dataset.shape, ratio: ed.RATIO[s.dataset.shape] });
+      if (g) draft.edge = g.dataset.edge;
+      (s || g).parentElement.querySelectorAll('[role="radio"]').forEach((b) => b.setAttribute('aria-checked', String(b === (s || g))));
+      draw();
+      clampAll();
+    });
     const pts = new Map();
     let grab = null;
     const start = () => {
       const list = [...pts.values()], [mx, my] = middle(list), r = front.getBoundingClientRect();
-      grab = { w: r.width, h: r.height, mx, my, x: draft.x, y: draft.y, size: draft.size, d: twoFingers(list) };
+      grab = { w: r.width, h: r.height, mx, my, x: draft.x, y: draft.y, size: draft.size, turn: draft.turn, d: twoFingers(list), a: angleOf(list) };
     };
     layer.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('.place-foot')) return;
+      if (e.target.closest('.place-sheet')) return;
       try { layer.setPointerCapture(e.pointerId); } catch (err) { /* fine */ }
       pts.set(e.pointerId, [e.clientX, e.clientY]);
       start();
@@ -435,15 +427,26 @@ window.StickerParts.addNewSticker = function addNewSticker(ed) {
       const list = [...pts.values()], [mx, my] = middle(list);
       draft.x = grab.x + (mx - grab.mx) / grab.w;
       draft.y = grab.y + (my - grab.my) / grab.h;
-      if (list.length > 1 && grab.d) draft.size = grab.size * (twoFingers(list) / grab.d);
+      if (list.length > 1 && grab.d) {
+        draft.size = grab.size * (twoFingers(list) / grab.d);
+        draft.turn = grab.turn + wrap(angleOf(list) - grab.a);
+      }
       clampAll();
     });
     const up = (e) => { if (pts.delete(e.pointerId) && pts.size) start(); };
     layer.addEventListener('pointerup', up);
     layer.addEventListener('pointercancel', up);
-    layer.addEventListener('wheel', (e) => { e.preventDefault(); draft.size *= e.deltaY < 0 ? 1.05 : 0.95; clampAll(); }, { passive: false });
+    // On a computer: the wheel sizes it, and with Shift turns it.
+    layer.addEventListener('wheel', (e) => {
+      if (e.target.closest('.place-sheet')) return;
+      e.preventDefault();
+      if (e.shiftKey) draft.turn += (e.deltaY || e.deltaX) < 0 ? -3 : 3;
+      else draft.size *= e.deltaY < 0 ? 1.05 : 0.95;
+      clampAll();
+    }, { passive: false });
+    clampAll();
     return new Promise((resolve) => {
-      const done = (saved) => { layer.remove(); el.remove(); onFlap.remove(); URL.revokeObjectURL(url); resolve(saved); };
+      const done = (saved) => { layer.remove(); el.remove(); if (onFlap) onFlap.remove(); URL.revokeObjectURL(url); resolve(saved); };
       layer.querySelector('[data-no]').addEventListener('click', () => done(false));
       const yes = layer.querySelector('[data-yes]');
       yes.addEventListener('click', async () => {
@@ -462,23 +465,14 @@ window.StickerParts.addNewSticker = function addNewSticker(ed) {
       });
     });
   }
-
-  async function remove(s) {
-    await ed.write((os) => os.delete(s.id));
-    ed.all = ed.all.filter((x) => x.id !== s.id);
-  }
-  async function putBack(s) {
-    await ed.write((os) => os.put(s));
-    if (!ed.all.some((x) => x.id === s.id)) ed.all.push(s);
-  }
 };
 ;
 
 // ---- components/stickers.js ----
 // Documenting Fictions: stickers on the notebooks' covers, on the shelf
 // (user, 11-12). One kind of sticker for all four notebooks, kept here in one
-// place, df-stickers, each one marked with the notebook it's on: a photo cut
-// to a circle, square or rectangle, a little creased (the look Ref's had),
+// place, df-stickers, each one marked with the notebook it's on: a photo in
+// a circle, square or card (rect), in vinyl (the look Ref's had, round 4),
 // stuck on the cover so it swings open with it. Past an edge it folds over:
 // shaded where it bends, and on the right it runs on across the edge of the
 // pages. Newest on top.
@@ -488,10 +482,12 @@ window.StickerParts.addNewSticker = function addNewSticker(ed) {
 // here once, the first time the shelf opens with this, and left where they
 // were.
 //
-//   df-stickers / stickers  { id, app, shape, ratio, x, y, size, seed, bytes, type, printed, edge, createdAt }
+//   df-stickers / stickers  { id, app, shape, ratio, x, y, size, turn, seed, bytes, type, printed, edge, createdAt }
 //     x, y: its middle, as a share of the cover's width and height; size: its
-//     width, as a share of the cover's width; ratio: width over height;
-//     bytes: the photo (an ArrayBuffer: Safari's stored Blobs break when a
+//     width, as a share of the cover's width; turn: degrees, clockwise (round 5;
+//     missing on older ones, which stand straight); ratio: width over height;
+//     bytes: the photo, filling the shape from its middle (round 5 keeps it
+//     whole; older ones were cut to their shape) (an ArrayBuffer: Safari's stored Blobs break when a
 //     record is saved again); printed: the photo already has its paper edge
 //     (Contact Sheet's prints), so none is drawn round it; edge: 'white' (or
 //     missing) for the white die-cut edge, 'outline' for a thin ink line;
@@ -508,8 +504,9 @@ window.StickerParts.addNewSticker = function addNewSticker(ed) {
   window.StickerParts.addStickerStore(ed);
   window.StickerParts.addStickerArt(ed);
   window.StickerParts.addNewSticker(ed);
+  window.StickerParts.addPlacing(ed);
 
-  window.DFStickers = { ready: ed.ready, list: ed.listOf, paint: ed.paint, pick: ed.pick, crop: ed.crop, place: ed.stick, remove: ed.remove, putBack: ed.putBack, setEdge: ed.setEdge, thumb: ed.urlOf, ratioOf };
+  window.DFStickers = { ready: ed.ready, list: ed.listOf, paint: ed.paint, pick: ed.pick, photo: ed.photo, place: ed.stick, remove: ed.remove, putBack: ed.putBack, thumb: ed.urlOf, ratioOf };
 })();
 ;
 
@@ -752,15 +749,20 @@ window.ShelfParts.addCaption = function addCaption(ed) {
   const line = document.getElementById('frontLine');
   const dots = document.getElementById('frontDots');
   dots.innerHTML = ed.BOOKS.map(() => '<span></span>').join('');
-  ed.optionsBtn.innerHTML = '<span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></span>';
-  let shown = -1;
+  // Options (round 5): a disc in the front notebook's colour, three dots in
+  // its partner colour shrinking left to right.
+  ed.optionsBtn.className = 'opts-disc';
+  ed.optionsBtn.innerHTML = '<i></i><i></i><i></i>';
+  let shown = '';
   // Called on every frame of a turn (pages/shelf-turntable.js render), so it
-  // only writes when the book in front changes.
+  // only writes when the book in front (or its colour) changes.
   ed.caption = function caption() {
     const at = ed.mod(Math.round(ed.pos));
-    if (at === shown) return;
-    shown = at;
-    const b = ed.BOOKS[at];
+    const b = ed.BOOKS[at], c = ed.COLORS[ed.colorOf(b)];
+    if (`${at} ${c.band}` === shown) return;
+    shown = `${at} ${c.band}`;
+    ed.optionsBtn.style.setProperty('--disc', c.band);
+    ed.optionsBtn.style.setProperty('--dots', c.partner);
     name.textContent = b.short;
     line.textContent = b.line;
     [...dots.children].forEach((d, i) => d.classList.toggle('on', i === at));
@@ -816,6 +818,7 @@ window.ShelfParts.addOptions = function addOptions(ed) {
   const glyph = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const CLOSE = glyph('<path d="M6 6l12 12M18 6L6 18"/>');
   const TRASH = glyph('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>');
+  const PLUS = glyph('<path d="M12 5v14M5 12h14"/>');
   const nearSlot = () => ed.slots[ed.near];
   // As big as fits above `bottom` (px down the screen), in the middle of the
   // room there, no wider than the notebooks were on their own.
@@ -861,15 +864,6 @@ window.ShelfParts.addOptions = function addOptions(ed) {
     if (window.DFStickers) window.DFStickers.paint(ed.slots[i].querySelector('.front'), ed.slots[i].querySelector('.sticker-flap'), ed.BOOKS[i].id);
   }
 
-  // Sticker edge (round 3), for the newest sticker on this cover: White
-  // border or Black outline, each shown on a little of its photo.
-  function edgeHtml(s) {
-    const St = window.DFStickers, on = s.edge === 'outline' ? 'outline' : 'white';
-    const pick = (key, label) => `<button type="button" class="edge-opt" role="radio" data-edge="${key}" aria-checked="${key === on}"><span class="edge-dot ${key}" style="background-image:url('${St.thumb(s)}')"></span>${label}</button>`;
-    return `<span class="opt-label" id="optEdgeLabel">Sticker edge</span>
-        <div class="edge-opts" role="radiogroup" aria-labelledby="optEdgeLabel">${pick('white', 'White border')}${pick('outline', 'Black outline')}</div>`;
-  }
-
   function showOptions(view) {
     const i = ed.near, b = ed.BOOKS[i];
     const St = window.DFStickers;
@@ -886,13 +880,9 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         <div class="sheet-head"><h2>${b.short}</h2><button type="button" class="ring-btn" data-close aria-label="Close"><span>${CLOSE}</span></button></div>
         <span class="opt-label" id="optColorLabel">Notebook color</span>
         <div class="opt-colors" role="radiogroup" aria-labelledby="optColorLabel">${b.colors.map((k) => `<button type="button" class="opt-color" role="radio" data-color="${k}" aria-checked="${k === now}" style="--sw:${ed.COLORS[k].band};--sp:${ed.COLORS[k].partner}"><span class="opt-swatch"></span><span>${ed.COLORS[k].name}</span></button>`).join('')}</div>
-        ${St ? `<div class="opt-label-row"><span class="opt-label">Add a sticker</span>${mine.length ? `<button type="button" class="label-btn" data-remove>${TRASH}Remove one</button>` : ''}</div>
-        <div class="sticker-kinds">
-          <button type="button" class="sticker-kind" data-shape="circle"><span class="shape circle"></span><span>Circle</span></button>
-          <button type="button" class="sticker-kind" data-shape="square"><span class="shape square"></span><span>Square</span></button>
-          <button type="button" class="sticker-kind" data-shape="rect"><span class="shape rect"></span><span>Rectangle</span></button>
-        </div>
-        ${mine.length ? edgeHtml(mine[mine.length - 1]) : ''}` : ''}
+        ${St ? `<div class="opt-label-row"><span class="opt-label">Stickers</span>${mine.length ? `<button type="button" class="label-btn" data-remove>${TRASH}Remove one</button>` : ''}</div>
+        <button type="button" class="add-sticker" data-add>${PLUS}Add a sticker</button>
+        <p class="opt-note">Pick a photo, then its shape and edge as you place it.</p>` : ''}
         <div class="opt-foot"><button type="button" class="sheet-btn" data-backup>Back up all four</button><button type="button" class="sheet-btn primary" data-close>Done</button></div>`;
     };
     const drawRemove = () => {
@@ -927,15 +917,6 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         sheet.querySelectorAll('[data-color]').forEach((x) => x.setAttribute('aria-checked', String(x === c)));
         return;
       }
-      const edge = e.target.closest('[data-edge]');
-      if (edge) {
-        const mine = St.list(b.id), s = mine[mine.length - 1];
-        if (!s) return;
-        sheet.querySelectorAll('[data-edge]').forEach((x) => x.setAttribute('aria-checked', String(x === edge)));
-        try { await St.setEdge(s, edge.dataset.edge); } catch (err) { console.error(err); ed.toast("The sticker edge wasn't saved"); }
-        paintStickers(i);
-        return;
-      }
       if (e.target.closest('[data-remove]')) { drawRemove(); nearFit(sheet.offsetTop); nearMove(); return; }
       if (e.target.closest('[data-back]')) { drawMain(); nearFit(sheet.offsetTop); nearMove(); return; }
       const gone = e.target.closest('.sticker-pick');
@@ -954,17 +935,18 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         });
         return;
       }
-      const k = e.target.closest('[data-shape]');
-      if (k && St) {
+      // Add a sticker (round 5): a photo, then the placing screen, where its
+      // shape and edge are picked (components/sticker-place.js).
+      if (e.target.closest('[data-add]') && St) {
         const file = await St.pick(); // straight from the tap, or iOS won't open the picker
         if (!file) return;
         await hide();
         let bytes = null;
-        try { bytes = await St.crop(file, k.dataset.shape); } catch (err) { console.error(err); ed.toast('Could not read that photo'); }
+        try { bytes = await St.photo(file); } catch (err) { console.error(err); ed.toast('Could not read that photo'); }
         if (bytes) {
           const s = nearSlot();
           s.classList.add('still');
-          const saved = await St.place(b.id, k.dataset.shape, bytes, s.querySelector('.front'), s.querySelector('.sticker-flap'), (footTop) => { nearFit(footTop); nearMove(); });
+          const saved = await St.place(b.id, bytes, b.short, s.querySelector('.front'), s.querySelector('.sticker-flap'), (top) => { nearFit(top); nearMove(); });
           s.classList.remove('still');
           if (saved) paintStickers(i);
         }

@@ -1,13 +1,14 @@
 /* Stickers on a cover (components/stickers.js), and round its fore-edge. */
 .front .stickers { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
-/* Its edge (round 3): White border (a thick white die-cut edge) or Black
-   outline (a thin ink line, no white); either way a thin lift shadow under
-   it, so it sits on the cover (round 4). */
-.sticker { position: absolute; aspect-ratio: var(--r, 1); transform: translate(-50%, -50%); padding: calc(var(--W) * .012); background: #FFFFFF; box-shadow: 0 calc(var(--W) * .006) calc(var(--W) * .01) calc(var(--W) * .004) rgba(49, 61, 69, .35); overflow: hidden; pointer-events: none; isolation: isolate; }
+/* Its edge (round 3): White border (a thick white die-cut edge, 1.2% of the
+   cover) or Black outline (an ink line, 1% of it, round 5: 2.5px against 3px
+   of white); either way a thin lift shadow under it, so it sits on the cover
+   (round 4). Turned as it was placed (--turn, round 5). */
+.sticker { position: absolute; aspect-ratio: var(--r, 1); transform: translate(-50%, -50%) rotate(var(--turn, 0deg)); padding: calc(var(--W) * .012); background: #FFFFFF; box-shadow: 0 calc(var(--W) * .006) calc(var(--W) * .01) calc(var(--W) * .004) rgba(49, 61, 69, .35); overflow: hidden; pointer-events: none; isolation: isolate; }
 .sticker.square, .sticker.rect { border-radius: calc(var(--W) * .012); }
 .sticker.circle { border-radius: 50%; }
 .sticker.printed { padding: 0; background: none; }
-.sticker.outline { padding: 0; background: none; box-shadow: 0 0 0 max(1px, calc(var(--W) * .0075)) #313D45, 0 calc(var(--W) * .006) calc(var(--W) * .01) calc(var(--W) * .004) rgba(49, 61, 69, .35); }
+.sticker.outline { padding: 0; background: none; box-shadow: 0 0 0 max(1px, calc(var(--W) * .01)) #313D45, 0 calc(var(--W) * .006) calc(var(--W) * .01) calc(var(--W) * .004) rgba(49, 61, 69, .35); }
 .sticker .photo { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; -webkit-touch-callout: none; }
 /* The vinyl (components/sticker-art.js): grain and wrinkles in soft light,
    the wrinkles stronger toward the edges, the sheen screened on, one faint

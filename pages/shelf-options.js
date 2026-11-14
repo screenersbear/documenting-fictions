@@ -12,6 +12,7 @@ window.ShelfParts.addOptions = function addOptions(ed) {
   const glyph = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const CLOSE = glyph('<path d="M6 6l12 12M18 6L6 18"/>');
   const TRASH = glyph('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>');
+  const PLUS = glyph('<path d="M12 5v14M5 12h14"/>');
   const nearSlot = () => ed.slots[ed.near];
   // As big as fits above `bottom` (px down the screen), in the middle of the
   // room there, no wider than the notebooks were on their own.
@@ -57,15 +58,6 @@ window.ShelfParts.addOptions = function addOptions(ed) {
     if (window.DFStickers) window.DFStickers.paint(ed.slots[i].querySelector('.front'), ed.slots[i].querySelector('.sticker-flap'), ed.BOOKS[i].id);
   }
 
-  // Sticker edge (round 3), for the newest sticker on this cover: White
-  // border or Black outline, each shown on a little of its photo.
-  function edgeHtml(s) {
-    const St = window.DFStickers, on = s.edge === 'outline' ? 'outline' : 'white';
-    const pick = (key, label) => `<button type="button" class="edge-opt" role="radio" data-edge="${key}" aria-checked="${key === on}"><span class="edge-dot ${key}" style="background-image:url('${St.thumb(s)}')"></span>${label}</button>`;
-    return `<span class="opt-label" id="optEdgeLabel">Sticker edge</span>
-        <div class="edge-opts" role="radiogroup" aria-labelledby="optEdgeLabel">${pick('white', 'White border')}${pick('outline', 'Black outline')}</div>`;
-  }
-
   function showOptions(view) {
     const i = ed.near, b = ed.BOOKS[i];
     const St = window.DFStickers;
@@ -82,13 +74,9 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         <div class="sheet-head"><h2>${b.short}</h2><button type="button" class="ring-btn" data-close aria-label="Close"><span>${CLOSE}</span></button></div>
         <span class="opt-label" id="optColorLabel">Notebook color</span>
         <div class="opt-colors" role="radiogroup" aria-labelledby="optColorLabel">${b.colors.map((k) => `<button type="button" class="opt-color" role="radio" data-color="${k}" aria-checked="${k === now}" style="--sw:${ed.COLORS[k].band};--sp:${ed.COLORS[k].partner}"><span class="opt-swatch"></span><span>${ed.COLORS[k].name}</span></button>`).join('')}</div>
-        ${St ? `<div class="opt-label-row"><span class="opt-label">Add a sticker</span>${mine.length ? `<button type="button" class="label-btn" data-remove>${TRASH}Remove one</button>` : ''}</div>
-        <div class="sticker-kinds">
-          <button type="button" class="sticker-kind" data-shape="circle"><span class="shape circle"></span><span>Circle</span></button>
-          <button type="button" class="sticker-kind" data-shape="square"><span class="shape square"></span><span>Square</span></button>
-          <button type="button" class="sticker-kind" data-shape="rect"><span class="shape rect"></span><span>Rectangle</span></button>
-        </div>
-        ${mine.length ? edgeHtml(mine[mine.length - 1]) : ''}` : ''}
+        ${St ? `<div class="opt-label-row"><span class="opt-label">Stickers</span>${mine.length ? `<button type="button" class="label-btn" data-remove>${TRASH}Remove one</button>` : ''}</div>
+        <button type="button" class="add-sticker" data-add>${PLUS}Add a sticker</button>
+        <p class="opt-note">Pick a photo, then its shape and edge as you place it.</p>` : ''}
         <div class="opt-foot"><button type="button" class="sheet-btn" data-backup>Back up all four</button><button type="button" class="sheet-btn primary" data-close>Done</button></div>`;
     };
     const drawRemove = () => {
@@ -123,15 +111,6 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         sheet.querySelectorAll('[data-color]').forEach((x) => x.setAttribute('aria-checked', String(x === c)));
         return;
       }
-      const edge = e.target.closest('[data-edge]');
-      if (edge) {
-        const mine = St.list(b.id), s = mine[mine.length - 1];
-        if (!s) return;
-        sheet.querySelectorAll('[data-edge]').forEach((x) => x.setAttribute('aria-checked', String(x === edge)));
-        try { await St.setEdge(s, edge.dataset.edge); } catch (err) { console.error(err); ed.toast("The sticker edge wasn't saved"); }
-        paintStickers(i);
-        return;
-      }
       if (e.target.closest('[data-remove]')) { drawRemove(); nearFit(sheet.offsetTop); nearMove(); return; }
       if (e.target.closest('[data-back]')) { drawMain(); nearFit(sheet.offsetTop); nearMove(); return; }
       const gone = e.target.closest('.sticker-pick');
@@ -150,17 +129,18 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         });
         return;
       }
-      const k = e.target.closest('[data-shape]');
-      if (k && St) {
+      // Add a sticker (round 5): a photo, then the placing screen, where its
+      // shape and edge are picked (components/sticker-place.js).
+      if (e.target.closest('[data-add]') && St) {
         const file = await St.pick(); // straight from the tap, or iOS won't open the picker
         if (!file) return;
         await hide();
         let bytes = null;
-        try { bytes = await St.crop(file, k.dataset.shape); } catch (err) { console.error(err); ed.toast('Could not read that photo'); }
+        try { bytes = await St.photo(file); } catch (err) { console.error(err); ed.toast('Could not read that photo'); }
         if (bytes) {
           const s = nearSlot();
           s.classList.add('still');
-          const saved = await St.place(b.id, k.dataset.shape, bytes, s.querySelector('.front'), s.querySelector('.sticker-flap'), (footTop) => { nearFit(footTop); nearMove(); });
+          const saved = await St.place(b.id, bytes, b.short, s.querySelector('.front'), s.querySelector('.sticker-flap'), (top) => { nearFit(top); nearMove(); });
           s.classList.remove('still');
           if (saved) paintStickers(i);
         }

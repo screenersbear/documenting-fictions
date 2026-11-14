@@ -1,9 +1,23 @@
-/* A new sticker: fitting the photo in its shape, then placing it on the cover. */
-.crop-layer { position: fixed; inset: 0; z-index: 1100; background: #fff; overflow: hidden; touch-action: none; }
-.crop-layer canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
-.crop-win { position: absolute; box-shadow: 0 0 0 200vmax rgba(255, 255, 255, .8); outline: 2px solid #334045; pointer-events: none; }
-.crop-win.circle { border-radius: 50%; }
-.crop-win.square, .crop-win.rect { border-radius: 4px; }
+/* Placing a new sticker (round 5, components/sticker-place.js): NEW STICKER
+   and the notebook's name at the top; the book up close with the sticker on
+   it, a dashed line round it while it's placed; under it a white sheet with
+   the hint, SHAPE and EDGE as segmented controls, and BACK and STICK IT ON. */
 .place-layer { position: fixed; inset: 0; z-index: 1100; touch-action: none; }
-.place-foot { position: absolute; z-index: 1; left: 16px; right: 16px; bottom: calc(10px + var(--safe-b)); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.place-foot .sheet-btn { margin-top: 0; }
+.place-label { position: absolute; left: 16px; top: max(16px, calc(var(--safe-t) + 15px)); margin: 0; font-size: 11px; font-weight: 500; letter-spacing: .12em; line-height: 14px; text-transform: uppercase; color: var(--dim); pointer-events: none; }
+.place-sheet { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px max(16px, calc((100% - 560px) / 2)) max(16px, var(--safe-b)); border-radius: 20px 20px 0 0; background: #FFFFFF; box-shadow: 0 -2px 16px rgba(49, 61, 69, .08); touch-action: auto; }
+.place-grip { display: block; width: 36px; height: 5px; margin: 6px auto 0; border-radius: 3px; background: #D6DADD; }
+.place-hint { margin: 10px 0 0; font-size: 15px; line-height: 21px; color: var(--dim); }
+.place-title { margin: 14px 0 6px; font-size: 11px; font-weight: 500; letter-spacing: .12em; line-height: 14px; text-transform: uppercase; color: var(--dim); }
+.place-seg { display: flex; height: 44px; padding: 3px; box-sizing: border-box; border-radius: 10px; background: #EFEFEA; }
+.place-seg button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; min-width: 0; padding: 0 4px; border: 0; border-radius: 8px; background: none; color: var(--text); font-size: 14px; font-weight: 400; white-space: nowrap; cursor: pointer; }
+.place-seg button[aria-checked="true"] { background: #FFFFFF; box-shadow: 0 1px 2px rgba(49, 61, 69, .15); font-weight: 600; }
+.seg-mark { flex: none; display: block; box-shadow: inset 0 0 0 1.5px var(--text); }
+.seg-mark.circle { width: 14px; height: 14px; border-radius: 50%; }
+.seg-mark.square { width: 13px; height: 13px; border-radius: 2px; }
+.seg-mark.rect { width: 17px; height: 11px; border-radius: 2px; }
+.seg-mark.white { width: 16px; height: 16px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 0 0 1px #E1E1DC; }
+.seg-mark.outline { width: 16px; height: 16px; border-radius: 50%; }
+.place-foot { display: flex; gap: 8px; margin-top: 20px; }
+.place-foot .sheet-btn { flex: 1 1 auto; width: auto; margin-top: 0; padding: 0 20px; }
+.place-foot .sheet-btn.primary { flex: 1.4 1 auto; padding: 0; }
+.sticker.placing { outline: 1.5px dashed rgba(49, 61, 69, .5); outline-offset: calc(var(--W) * .02); }

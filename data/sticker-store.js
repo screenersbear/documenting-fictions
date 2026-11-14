@@ -3,7 +3,7 @@
 window.StickerParts = window.StickerParts || {};
 window.StickerParts.addStickerStore = function addStickerStore(ed) {
   'use strict';
-  Object.assign(ed, { write, setEdge });
+  Object.assign(ed, { write });
   // ---------- Keeping them ----------
   let dbp = null;
   const open = () => dbp || (dbp = new Promise((ok, no) => {
@@ -32,16 +32,6 @@ window.StickerParts.addStickerStore = function addStickerStore(ed) {
       q.onsuccess = () => ok(q.result || []);
       q.onerror = () => no(q.error);
     });
-  }
-
-  // A sticker's edge (round 3): 'outline' (a thin ink line) or 'white' (the
-  // white die-cut edge, also what a sticker saved before had). Only that
-  // field changes; the rest of the sticker is kept as it was.
-  async function setEdge(s, edge) {
-    const next = Object.assign({}, s, { edge: edge === 'outline' ? 'outline' : 'white' });
-    await write((os) => os.put(next));
-    ed.all = ed.all.map((x) => (x.id === s.id ? next : x));
-    return next;
   }
 
   ed.all = [];

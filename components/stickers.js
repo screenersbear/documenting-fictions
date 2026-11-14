@@ -1,7 +1,7 @@
 // Documenting Fictions: stickers on the notebooks' covers, on the shelf
 // (user, 11-12). One kind of sticker for all four notebooks, kept here in one
-// place, df-stickers, each one marked with the notebook it's on: a photo cut
-// to a circle, square or rectangle, a little creased (the look Ref's had),
+// place, df-stickers, each one marked with the notebook it's on: a photo in
+// a circle, square or card (rect), in vinyl (the look Ref's had, round 4),
 // stuck on the cover so it swings open with it. Past an edge it folds over:
 // shaded where it bends, and on the right it runs on across the edge of the
 // pages. Newest on top.
@@ -11,10 +11,12 @@
 // here once, the first time the shelf opens with this, and left where they
 // were.
 //
-//   df-stickers / stickers  { id, app, shape, ratio, x, y, size, seed, bytes, type, printed, edge, createdAt }
+//   df-stickers / stickers  { id, app, shape, ratio, x, y, size, turn, seed, bytes, type, printed, edge, createdAt }
 //     x, y: its middle, as a share of the cover's width and height; size: its
-//     width, as a share of the cover's width; ratio: width over height;
-//     bytes: the photo (an ArrayBuffer: Safari's stored Blobs break when a
+//     width, as a share of the cover's width; turn: degrees, clockwise (round 5;
+//     missing on older ones, which stand straight); ratio: width over height;
+//     bytes: the photo, filling the shape from its middle (round 5 keeps it
+//     whole; older ones were cut to their shape) (an ArrayBuffer: Safari's stored Blobs break when a
 //     record is saved again); printed: the photo already has its paper edge
 //     (Contact Sheet's prints), so none is drawn round it; edge: 'white' (or
 //     missing) for the white die-cut edge, 'outline' for a thin ink line;
@@ -31,6 +33,7 @@
   window.StickerParts.addStickerStore(ed);
   window.StickerParts.addStickerArt(ed);
   window.StickerParts.addNewSticker(ed);
+  window.StickerParts.addPlacing(ed);
 
-  window.DFStickers = { ready: ed.ready, list: ed.listOf, paint: ed.paint, pick: ed.pick, crop: ed.crop, place: ed.stick, remove: ed.remove, putBack: ed.putBack, setEdge: ed.setEdge, thumb: ed.urlOf, ratioOf };
+  window.DFStickers = { ready: ed.ready, list: ed.listOf, paint: ed.paint, pick: ed.pick, photo: ed.photo, place: ed.stick, remove: ed.remove, putBack: ed.putBack, thumb: ed.urlOf, ratioOf };
 })();

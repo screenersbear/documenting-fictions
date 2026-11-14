@@ -8,15 +8,20 @@ window.ShelfParts.addCaption = function addCaption(ed) {
   const line = document.getElementById('frontLine');
   const dots = document.getElementById('frontDots');
   dots.innerHTML = ed.BOOKS.map(() => '<span></span>').join('');
-  ed.optionsBtn.innerHTML = '<span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></span>';
-  let shown = -1;
+  // Options (round 5): a disc in the front notebook's colour, three dots in
+  // its partner colour shrinking left to right.
+  ed.optionsBtn.className = 'opts-disc';
+  ed.optionsBtn.innerHTML = '<i></i><i></i><i></i>';
+  let shown = '';
   // Called on every frame of a turn (pages/shelf-turntable.js render), so it
-  // only writes when the book in front changes.
+  // only writes when the book in front (or its colour) changes.
   ed.caption = function caption() {
     const at = ed.mod(Math.round(ed.pos));
-    if (at === shown) return;
-    shown = at;
-    const b = ed.BOOKS[at];
+    const b = ed.BOOKS[at], c = ed.COLORS[ed.colorOf(b)];
+    if (`${at} ${c.band}` === shown) return;
+    shown = `${at} ${c.band}`;
+    ed.optionsBtn.style.setProperty('--disc', c.band);
+    ed.optionsBtn.style.setProperty('--dots', c.partner);
     name.textContent = b.short;
     line.textContent = b.line;
     [...dots.children].forEach((d, i) => d.classList.toggle('on', i === at));

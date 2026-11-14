@@ -12,7 +12,13 @@
 .front-dots { display: flex; gap: 8px; margin-top: 28px; }
 .front-dots span { width: 6px; height: 6px; border-radius: 3px; background: #D6DADD; transition: width .2s, background-color .2s; }
 .front-dots span.on { width: 18px; background: var(--text); }
-.shelf-bar .ring-btn { margin-top: 48px; pointer-events: auto; }
+/* Options (round 5): a 52px disc in the front notebook's colour, three dots
+   in its partner colour (7, 5.5, 4px, 4px apart), no ring. Where the 44px
+   ring button was, so nothing above it moves. */
+.opts-disc { display: flex; align-items: center; justify-content: center; gap: 4px; width: 52px; height: 52px; margin-top: 40px; padding: 0; border: 0; border-radius: 50%; background: var(--disc, #FFD100); cursor: pointer; pointer-events: auto; transition: background-color .25s; }
+.opts-disc i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--dots, #313D45); transition: background-color .25s; }
+.opts-disc i + i { width: 5.5px; height: 5.5px; }
+.opts-disc i + i + i { width: 4px; height: 4px; }
 .shelf.away .shelf-bar { opacity: 0; pointer-events: none; }
 /* The iPhone home-screen app (components/screen-fit.js): for a moment the page is
    taller than the screen, so iOS measures itself again. If it stays short,

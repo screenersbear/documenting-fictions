@@ -87,14 +87,15 @@ button { font: inherit; color: inherit; }
 /* ---- styles/cover-stickers.css ---- */
 /* Stickers on a cover (components/stickers.js), and round its fore-edge. */
 .front .stickers { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
-/* Its edge (round 3): White border (a thick white die-cut edge) or Black
-   outline (a thin ink line, no white); either way a thin lift shadow under
-   it, so it sits on the cover (round 4). */
-.sticker { position: absolute; aspect-ratio: var(--r, 1); transform: translate(-50%, -50%); padding: calc(var(--W) * .012); background: #FFFFFF; box-shadow: 0 calc(var(--W) * .006) calc(var(--W) * .01) calc(var(--W) * .004) rgba(49, 61, 69, .35); overflow: hidden; pointer-events: none; isolation: isolate; }
+/* Its edge (round 3): White border (a thick white die-cut edge, 1.2% of the
+   cover) or Black outline (an ink line, 1% of it, round 5: 2.5px against 3px
+   of white); either way a thin lift shadow under it, so it sits on the cover
+   (round 4). Turned as it was placed (--turn, round 5). */
+.sticker { position: absolute; aspect-ratio: var(--r, 1); transform: translate(-50%, -50%) rotate(var(--turn, 0deg)); padding: calc(var(--W) * .012); background: #FFFFFF; box-shadow: 0 calc(var(--W) * .006) calc(var(--W) * .01) calc(var(--W) * .004) rgba(49, 61, 69, .35); overflow: hidden; pointer-events: none; isolation: isolate; }
 .sticker.square, .sticker.rect { border-radius: calc(var(--W) * .012); }
 .sticker.circle { border-radius: 50%; }
 .sticker.printed { padding: 0; background: none; }
-.sticker.outline { padding: 0; background: none; box-shadow: 0 0 0 max(1px, calc(var(--W) * .0075)) #313D45, 0 calc(var(--W) * .006) calc(var(--W) * .01) calc(var(--W) * .004) rgba(49, 61, 69, .35); }
+.sticker.outline { padding: 0; background: none; box-shadow: 0 0 0 max(1px, calc(var(--W) * .01)) #313D45, 0 calc(var(--W) * .006) calc(var(--W) * .01) calc(var(--W) * .004) rgba(49, 61, 69, .35); }
 .sticker .photo { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; -webkit-touch-callout: none; }
 /* The vinyl (components/sticker-art.js): grain and wrinkles in soft light,
    the wrinkles stronger toward the edges, the sheen screened on, one faint
@@ -154,7 +155,13 @@ button { font: inherit; color: inherit; }
 .front-dots { display: flex; gap: 8px; margin-top: 28px; }
 .front-dots span { width: 6px; height: 6px; border-radius: 3px; background: #D6DADD; transition: width .2s, background-color .2s; }
 .front-dots span.on { width: 18px; background: var(--text); }
-.shelf-bar .ring-btn { margin-top: 48px; pointer-events: auto; }
+/* Options (round 5): a 52px disc in the front notebook's colour, three dots
+   in its partner colour (7, 5.5, 4px, 4px apart), no ring. Where the 44px
+   ring button was, so nothing above it moves. */
+.opts-disc { display: flex; align-items: center; justify-content: center; gap: 4px; width: 52px; height: 52px; margin-top: 40px; padding: 0; border: 0; border-radius: 50%; background: var(--disc, #FFD100); cursor: pointer; pointer-events: auto; transition: background-color .25s; }
+.opts-disc i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--dots, #313D45); transition: background-color .25s; }
+.opts-disc i + i { width: 5.5px; height: 5.5px; }
+.opts-disc i + i + i { width: 4px; height: 4px; }
 .shelf.away .shelf-bar { opacity: 0; pointer-events: none; }
 /* The iPhone home-screen app (components/screen-fit.js): for a moment the page is
    taller than the screen, so iOS measures itself again. If it stays short,
@@ -195,24 +202,15 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .opt-swatch::before { content: ''; position: absolute; left: 10px; top: 12px; width: 32px; height: 4px; border-radius: 2px; background: var(--sp); } /* its partner */
 .opt-color[aria-checked="true"] { font-weight: 700; }
 .opt-color[aria-checked="true"] .opt-swatch { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--text); }
-.sticker-kinds { display: flex; gap: 8px; }
-.sticker-kind { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 68px; padding: 0; border: 0; border-radius: 12px; background: var(--paper); box-shadow: inset 0 0 0 1px #E1E1DC; color: var(--text); font-size: 14px; cursor: pointer; }
-.sticker-kind .shape { display: block; width: 28px; height: 28px; box-shadow: inset 0 0 0 2px var(--text); }
-.sticker-kind .shape.circle { width: 30px; height: 30px; border-radius: 50%; }
-.sticker-kind .shape.square { border-radius: 3px; }
-.sticker-kind .shape.rect { width: 40px; height: 26px; border-radius: 3px; }
-/* ADD A STICKER with REMOVE ONE beside it (round 3). */
+/* STICKERS with REMOVE ONE beside it, then one ADD A STICKER button and a
+   line on what comes next (round 5: shape and edge are picked while placing). */
 .opt-label-row { display: flex; align-items: center; justify-content: space-between; margin: 12px 0 4px; }
 .opt-label-row .opt-label { margin: 0; }
 .label-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 0 0 8px; border: 0; background: none; color: var(--dim); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
 .label-btn svg { width: 14px; height: 14px; }
-/* STICKER EDGE: White border or Black outline, on a grey track, the picked one white. */
-.edge-opts { display: flex; height: 50px; padding: 3px; border-radius: 10px; background: #EFEFEA; }
-.edge-opt { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 0; height: 44px; padding: 0 6px; border: 0; border-radius: 8px; background: none; color: var(--text); font-size: 15px; font-weight: 400; white-space: nowrap; cursor: pointer; }
-.edge-opt[aria-checked="true"] { background: #FFFFFF; box-shadow: 0 1px 2px rgba(49, 61, 69, .15); font-weight: 500; }
-.edge-dot { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #D6DADD center / cover no-repeat; }
-.edge-dot.white { box-shadow: 0 0 0 2.5px #FFFFFF, 0 0 0 3.5px #E1E1DC; }
-.edge-dot.outline { box-shadow: 0 0 0 1.5px #313D45; }
+.add-sticker { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 52px; padding: 0; border: 0; border-radius: 12px; background: var(--paper); box-shadow: inset 0 0 0 1px #E1E1DC; color: var(--text); font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+.add-sticker svg { width: 16px; height: 16px; }
+.sheet .opt-note { margin: 8px 0 0; font-size: 13px; line-height: 18px; color: var(--dim); }
 .opt-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; }
 .opt-foot.one { grid-template-columns: 1fr; }
 .opt-foot .sheet-btn { margin-top: 0; }
@@ -220,18 +218,31 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .sticker-pick { aspect-ratio: var(--r, 1); overflow: hidden; padding: 0; border: 0; background: #f1eee6; border-radius: 6px; cursor: pointer; }
 .sticker-pick.circle { border-radius: 50%; }
 .sticker-pick img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.sticker-kinds + .opt-label { margin-top: 14px; }
 
 /* ---- styles/sticker-new.css ---- */
-/* A new sticker: fitting the photo in its shape, then placing it on the cover. */
-.crop-layer { position: fixed; inset: 0; z-index: 1100; background: #fff; overflow: hidden; touch-action: none; }
-.crop-layer canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
-.crop-win { position: absolute; box-shadow: 0 0 0 200vmax rgba(255, 255, 255, .8); outline: 2px solid #334045; pointer-events: none; }
-.crop-win.circle { border-radius: 50%; }
-.crop-win.square, .crop-win.rect { border-radius: 4px; }
+/* Placing a new sticker (round 5, components/sticker-place.js): NEW STICKER
+   and the notebook's name at the top; the book up close with the sticker on
+   it, a dashed line round it while it's placed; under it a white sheet with
+   the hint, SHAPE and EDGE as segmented controls, and BACK and STICK IT ON. */
 .place-layer { position: fixed; inset: 0; z-index: 1100; touch-action: none; }
-.place-foot { position: absolute; z-index: 1; left: 16px; right: 16px; bottom: calc(10px + var(--safe-b)); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.place-foot .sheet-btn { margin-top: 0; }
+.place-label { position: absolute; left: 16px; top: max(16px, calc(var(--safe-t) + 15px)); margin: 0; font-size: 11px; font-weight: 500; letter-spacing: .12em; line-height: 14px; text-transform: uppercase; color: var(--dim); pointer-events: none; }
+.place-sheet { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px max(16px, calc((100% - 560px) / 2)) max(16px, var(--safe-b)); border-radius: 20px 20px 0 0; background: #FFFFFF; box-shadow: 0 -2px 16px rgba(49, 61, 69, .08); touch-action: auto; }
+.place-grip { display: block; width: 36px; height: 5px; margin: 6px auto 0; border-radius: 3px; background: #D6DADD; }
+.place-hint { margin: 10px 0 0; font-size: 15px; line-height: 21px; color: var(--dim); }
+.place-title { margin: 14px 0 6px; font-size: 11px; font-weight: 500; letter-spacing: .12em; line-height: 14px; text-transform: uppercase; color: var(--dim); }
+.place-seg { display: flex; height: 44px; padding: 3px; box-sizing: border-box; border-radius: 10px; background: #EFEFEA; }
+.place-seg button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; min-width: 0; padding: 0 4px; border: 0; border-radius: 8px; background: none; color: var(--text); font-size: 14px; font-weight: 400; white-space: nowrap; cursor: pointer; }
+.place-seg button[aria-checked="true"] { background: #FFFFFF; box-shadow: 0 1px 2px rgba(49, 61, 69, .15); font-weight: 600; }
+.seg-mark { flex: none; display: block; box-shadow: inset 0 0 0 1.5px var(--text); }
+.seg-mark.circle { width: 14px; height: 14px; border-radius: 50%; }
+.seg-mark.square { width: 13px; height: 13px; border-radius: 2px; }
+.seg-mark.rect { width: 17px; height: 11px; border-radius: 2px; }
+.seg-mark.white { width: 16px; height: 16px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 0 0 1px #E1E1DC; }
+.seg-mark.outline { width: 16px; height: 16px; border-radius: 50%; }
+.place-foot { display: flex; gap: 8px; margin-top: 20px; }
+.place-foot .sheet-btn { flex: 1 1 auto; width: auto; margin-top: 0; padding: 0 20px; }
+.place-foot .sheet-btn.primary { flex: 1.4 1 auto; padding: 0; }
+.sticker.placing { outline: 1.5px dashed rgba(49, 61, 69, .5); outline-offset: calc(var(--W) * .02); }
 
 /* ---- styles/toast.css ---- */
 /* The toast: a word at the foot of the screen. */
