@@ -2,7 +2,9 @@
 <html lang="en" class="booting">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, interactive-widget=resizes-content" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<!-- interactive-widget (the page shrinks for the keyboard) only on Android, whose browsers know it: Safari logs an error for it. -->
+<script>if (/Android/i.test(navigator.userAgent)) document.querySelector('meta[name="viewport"]').content += ', interactive-widget=resizes-content';</script>
 <title>The Eye</title>
 
 <!-- Inside Documenting Fictions this says so (the suite's own file); copied out on its own the notebook has no ../suite.js and is an app of its own. -->
