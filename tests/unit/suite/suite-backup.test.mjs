@@ -592,6 +592,14 @@ describe('restoreJson unpacks what the backup packed', () => {
       expect([...new Uint8Array(b)]).toEqual([1, 2, 3]);
     }
   });
+  it('puts a cut-out sticker back with both its picture and its shape (round 5)', async () => {
+    const [s] = await restoreRow({ id: 's', shape: 'cut', edge: 'outline', ratio: 0.9, type: 'image/jpeg', bytes: { __buf: BYTES }, mask: { __buf: BYTES } });
+    expect(s).toMatchObject({ id: 's', shape: 'cut', edge: 'outline', ratio: 0.9, type: 'image/jpeg' });
+    for (const b of [s.bytes, s.mask]) {
+      expect(b).toBeInstanceOf(ArrayBuffer);
+      expect([...new Uint8Array(b)]).toEqual([1, 2, 3]);
+    }
+  });
   it('turns packed dates back into Dates, in keys too', async () => {
     const [v, k] = await restoreRow({ when: { __date: '2026-11-12T10:00:00.000Z' } }, { __date: '2026-01-01T00:00:00.000Z' });
     expect(v.when).toBeInstanceOf(Date);

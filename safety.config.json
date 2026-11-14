@@ -3,6 +3,7 @@
   "logic": [
     "shared/data/*.js",
     "data/suite-backup.js",
+    "components/cut-out.js",
     "tools/join-files.mjs", "tools/join-modules.mjs", "the-eye/components/load-lib.js", "the-eye/components/row-words.js", "the-eye/components/shoot-stage.js", "the-eye/components/today-items.js", "the-eye/components/status-steps.js",
     "the-eye/components/stats-words.js",
     "ref/data/db.js",

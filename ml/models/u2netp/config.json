@@ -1,0 +1,4 @@
+{
+  "model_type": "u2netp",
+  "_readme": "U-2-Net, small (u2netp): finds the subject of a photo, for the stickers Cut out shape. Apache-2.0 (LICENSE-u2net.txt). onnx/model.onnx is rembg release v0.0.0 u2netp.onnx, sha256 309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8."
+}

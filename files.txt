@@ -24,6 +24,7 @@ built/app.js
   data/sticker-store.js
   components/sticker-art.js
   components/sticker-new.js
+  components/sticker-cut.js
   components/sticker-place.js
   components/stickers.js
   pages/shelf-turntable.js

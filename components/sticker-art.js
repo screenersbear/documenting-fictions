@@ -49,14 +49,28 @@ window.StickerParts.addStickerArt = function addStickerArt(ed) {
     if (!urls.has(s.id)) urls.set(s.id, URL.createObjectURL(new Blob([s.bytes], { type: s.type || 'image/jpeg' })));
     return urls.get(s.id);
   }; ed.urlOf = urlOf;
-  function make(s, src, onFlap) {
+  // A cut-out's shape (round 5): see-through round its outline.
+  const masks = new Map();
+  const maskOf = (s) => {
+    if (!s.mask) return '';
+    if (!masks.has(s.id)) masks.set(s.id, URL.createObjectURL(new Blob([s.mask], { type: 'image/png' })));
+    return masks.get(s.id);
+  };
+  // s: the sticker; src: its picture; onFlap: the bit round the fore-edge;
+  // mask: a cut-out's shape (while it's placed; a saved one has its own).
+  function make(s, src, onFlap, mask = maskOf(s)) {
     const el = document.createElement('div');
     el.className = `sticker ${s.shape}${s.printed ? ' printed' : ''}${s.edge === 'outline' ? ' outline' : ''}`;
     el.style.setProperty('--r', String(ed.ratioOf(s)));
     el.style.setProperty('--turn', `${Number(s.turn) || 0}deg`);
     const v = vinylArt(seedOf(s), 1 / ed.ratioOf(s));
     const layer = (cls) => `<img class="vinyl ${cls}" src="${v[cls]}" alt="" draggable="false" />`;
-    el.innerHTML = `<img class="photo" alt="" draggable="false" />${layer('grain')}${layer('wrinkle')}${layer('sheen')}${layer('fold')}<i class="gloss"></i>${onFlap ? '' : '<i class="bend r" hidden></i><i class="bend l" hidden></i><i class="bend t" hidden></i><i class="bend b" hidden></i>'}`;
+    const inside = `<img class="photo" alt="" draggable="false" />${layer('grain')}${layer('wrinkle')}${layer('sheen')}${layer('fold')}<i class="gloss"></i>${onFlap ? '' : '<i class="bend r" hidden></i><i class="bend l" hidden></i><i class="bend t" hidden></i><i class="bend b" hidden></i>'}`;
+    // A cut-out: all of it (picture, vinyl, gloss, bends) clipped to its shape.
+    if (s.shape === 'cut') {
+      el.innerHTML = `<div class="cut-in">${inside}</div>`;
+      el.style.setProperty('--cut', `url("${mask}")`);
+    } else el.innerHTML = inside;
     el.querySelector('.photo').src = src;
     (onFlap ? placeOnFlap : seat)(el, s);
     return el;

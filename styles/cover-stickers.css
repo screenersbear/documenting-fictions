@@ -29,3 +29,9 @@
 .leaf > .sticker-flap { left: 100%; top: 0; width: var(--T); height: 100%; overflow: hidden; transform-origin: 0 50%; transform: translateZ(1px) rotateY(90deg); pointer-events: none; }
 .sticker-flap .sticker { filter: brightness(.84); box-shadow: none; }
 .slot.open .sticker-flap { visibility: hidden; }
+/* Cut out (round 5): the picture's own outline, with its white border or black
+   outline already painted in. Everything in it (picture, vinyl, gloss, bends)
+   is clipped to its shape (--cut), and the lift shadow follows the shape. */
+.sticker.cut, .sticker.cut.outline { padding: 0; background: none; border-radius: 0; box-shadow: none; overflow: visible; filter: drop-shadow(0 calc(var(--W) * .006) calc(var(--W) * .006) rgba(49, 61, 69, .35)); }
+.sticker .cut-in { position: absolute; inset: 0; -webkit-mask: var(--cut) center / 100% 100% no-repeat; mask: var(--cut) center / 100% 100% no-repeat; }
+.sticker-flap .sticker.cut { filter: brightness(.84); }
