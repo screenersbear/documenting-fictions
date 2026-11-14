@@ -132,6 +132,15 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
     const { items, nudge, fact } = content;
     const list = document.getElementById('dailyReportList');
     list.innerHTML = '';
+    // First, everything on the Today card (components/today-items.js), with
+    // the same answers (round 5: the report used to leave them out).
+    const today = ed.todayItems();
+    if (today.length) {
+      const block = document.createElement('div');
+      block.className = 'report-today';
+      block.innerHTML = today.map(ed.todayItemHtml).join('');
+      list.appendChild(block);
+    }
     items.forEach(item => {
       const row = document.createElement('div');
       // daily-report-fact is the app's existing "this row isn't a link" marker
@@ -180,9 +189,9 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
       list.appendChild(row);
     }
 
-    // It only opens when asked for (the bell, Full report), so it always
+    // It only opens when asked for (the bell, the Today card's N MORE), so it always
     // says something.
-    if (!items.length && !nudge && !fact) {
+    if (!today.length && !items.length && !nudge && !fact) {
       const row = document.createElement('div');
       row.className = 'daily-report-item daily-report-fact';
       row.textContent = 'Nothing to report today.';
@@ -192,7 +201,7 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
     document.getElementById('dailyReportOverlay').hidden = false;
   }
 
-  // The bell and the Today card's Full report: the daily report, shown when
+  // The bell and the Today card's N MORE: the daily report, shown when
   // asked for (it used to open once a day on its own; the Today card took
   // that over). It always shows something (a "nothing to report" line if
   // today's report is genuinely empty).
@@ -202,5 +211,17 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
 
   document.getElementById('dailyReportCloseBtn').addEventListener('click', () => {
     document.getElementById('dailyReportOverlay').hidden = true;
+  });
+
+  // A Today line, answered or tapped in the report: an answer keeps the
+  // report open, without that line; a line to tap closes it and opens what
+  // it's about.
+  document.getElementById('dailyReportList').addEventListener('click', (e) => {
+    const el = e.target.closest('.report-today [data-act]');
+    if (!el) return;
+    const answer = el.dataset.act === 'happened';
+    if (!answer) document.getElementById('dailyReportOverlay').hidden = true;
+    ed.runTodayAct(el.dataset.act, el.dataset.id);
+    if (answer) openNotificationsBell();
   });
 };

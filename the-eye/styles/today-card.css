@@ -1,20 +1,18 @@
 /* The Today card at the top of Overview: a white card (radius 12) with TODAY
-   and FULL REPORT, then each thing that needs you, between hairlines: a line
-   in 17px light (the shoot's name in 500) with its two answers, or a line to
-   tap with a chevron. A deadline gone by is crimson, and written out. */
+   and how many things (N THINGS), then the two most urgent, between
+   hairlines: a line in 17px light (the shoot's name in 500) with its two
+   answers, or a line to tap with a chevron. A deadline gone by is crimson,
+   and written out. Under them N MORE IN TODAY'S REPORT with a dot for each
+   (round 5). The same lines head the daily report (.report-today). */
 .today-card { background: #FFFFFF; border-radius: 12px; padding: 16px; color: var(--text); }
 .today-card[hidden] { display: none; }
-.today-card-head { display: flex; align-items: center; justify-content: space-between; }
+.today-card-head { display: flex; align-items: baseline; justify-content: space-between; }
+.today-count { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
 #view-overview .today-card-head h2 {
   margin: 0; padding: 0; background: none; border: 0; color: var(--text);
   font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase;
 }
-.today-report-btn {
-  display: inline-flex; align-items: center; gap: 4px; min-height: 28px; height: auto; margin: 0 -4px 0 0; padding: 0 4px;
-  border: 0; border-radius: 0; background: none; color: var(--dim);
-  font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase;
-}
-.today-report-btn svg, .today-link svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.today-link svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .today-item { display: block; padding: 12px 0; border-top: 1px solid var(--line); }
 .today-item:first-child { padding-top: 10px; border-top: 0; }
 .today-link:first-child { border-top: 0; }
@@ -35,3 +33,14 @@
 }
 .today-link > span { flex: 1; }
 .today-link svg { color: var(--off); }
+.today-more {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; height: auto;
+  margin: 12px 0 -6px; padding: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; color: var(--text);
+  font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; text-align: left; cursor: pointer;
+}
+.today-more[hidden] { display: none; }
+.today-more-dots { display: inline-flex; gap: 4px; flex: none; }
+.today-more-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--text); }
+/* At the top of the daily report: the same lines on a white card of their own. */
+.report-today { background: var(--surface); border-radius: var(--radius-xl); padding: 0 14px 14px; color: var(--text); }
+.daily-report-modal .report-today p { color: var(--text); }

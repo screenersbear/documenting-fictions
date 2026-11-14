@@ -1,0 +1,18 @@
+/* Shoot progress in the new-shoot guide's Basics (pages/new-shoot/guide-progress.js,
+   round 5): SHOOT PROGRESS in capitals like the guide's other labels, four chips (40px, round, pale;
+   the picked one ink with a tick), and a line under them. Only in the guide:
+   on the page, the status card does this. */
+.guide-progress { display: none; }
+#shootForm #shootWizardBody .guide-progress { display: block; width: 100%; margin: 0; text-align: left; }
+#shootForm #shootWizardBody .guide-progress[hidden] { display: none; }
+#shootForm #shootWizardBody .guide-progress-title { margin: 6px 0 8px; padding: 0; font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.guide-progress-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+#shootForm #shootWizardBody .guide-progress-chips button {
+  display: inline-flex; align-items: center; gap: 6px; width: auto; height: 40px; min-height: 0; margin: 0; padding: 0 14px;
+  border: 0; border-radius: 20px; background: #EFEFEA; box-shadow: none; color: var(--text);
+  font: 400 15px/20px var(--ui); letter-spacing: 0; text-transform: none; cursor: pointer;
+}
+#shootForm #shootWizardBody .guide-progress-chips button[aria-checked="true"] { background: var(--text); color: var(--paper); }
+.guide-progress-chips svg { display: none; flex: none; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.guide-progress-chips [aria-checked="true"] svg { display: block; }
+#shootForm #shootWizardBody .guide-progress-hint { margin: 10px 0 0; padding: 0; font: 400 14px/20px var(--ui); letter-spacing: 0; text-transform: none; color: var(--dim); }

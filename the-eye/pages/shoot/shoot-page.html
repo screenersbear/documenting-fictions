@@ -29,16 +29,22 @@
       </div>
     </div>
     <button type="button" class="enter-shoot-mode-btn shine-sweep" id="enterShootModeBtn" hidden>shoot mode</button>
-    <!-- The shoot's page in the round 2 look (styles/shoot-band.css, shoot-front.css). The compact band: Back, where it was opened from (or, on a part of the page, the shoot's name) and More. Then the front page (pages/shoot/shoot-front.js): the status as a tag that opens Change status, the name, when and where, the cards for what this stage needs, and The details: a row for each part of the form below, which opens that part on a page of its own. -->
+    <!-- The shoot's page in the round 2 look (styles/shoot-band.css, shoot-front.css). The compact band: Back, where it was opened from (or, on a part of the page, the shoot's name) and More. Then the front page (pages/shoot/shoot-front.js): the name, when and where, the status as a card that opens Change status (pages/shoot/status-card.js), the cards for what this stage needs, and The details: a row for each part of the form below, which opens that part on a page of its own. -->
     <header class="band shoot-band">
       <button type="button" class="ring-btn" id="shootBandBack" aria-label="Back"><span><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></span></button>
       <p class="band-line shoot-band-line"><b id="shootBandPlace">Shoots</b><span class="band-rule"></span></p>
       <button type="button" class="ring-btn" id="shootBandMore" aria-label="More"><span><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></span></button>
     </header>
     <div class="shoot-front" id="shootFront">
-      <button type="button" class="status-tag-btn" id="shootStatusTag" aria-haspopup="dialog"><span class="status-tag"><span id="shootStatusTagText">Prospect</span> <span aria-hidden="true">&#9662;</span></span></button>
       <h1 class="shoot-front-title" id="shootFrontTitle"></h1>
       <div class="shoot-front-when" id="shootFrontWhen"></div>
+      <button type="button" class="status-card" id="shootStatusTag" aria-haspopup="dialog">
+        <span class="status-card-top"><span class="status-card-label">Status</span><span class="status-card-change">Change <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></span></span>
+        <span class="status-card-name"><span id="shootStatusTagText">Prospect</span><span class="status-card-count" id="shootStatusCount"></span></span>
+        <span class="status-card-bars" id="shootStatusBars" aria-hidden="true"></span>
+        <span class="status-card-ends" id="shootStatusEnds" aria-hidden="true"></span>
+        <span class="status-card-off" id="shootStatusOff" hidden></span>
+      </button>
       <div class="shoot-front-cards" id="shootFrontCards"></div>
       <h2 class="front-title">The details</h2>
       <div class="detail-rows" id="shootDetailRows"></div>
@@ -62,6 +68,12 @@
             <option value="rescheduled">Postponed</option>
             <option value="canceled">Canceled</option>
           </select>
+        </div>
+        <!-- In the new-shoot guide's Basics only (pages/new-shoot/guide-progress.js, styles/guide-progress.css, round 5): how far along the shoot is, so one already done can start as Captured. On the page, the status card does this. -->
+        <div class="guide-progress" id="guideProgress">
+          <p class="guide-progress-title" id="guideProgressTitle">Shoot progress</p>
+          <div class="guide-progress-chips" role="radiogroup" aria-labelledby="guideProgressTitle"><button type="button" role="radio" data-progress="prospect" aria-checked="false"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="5 12.5 10 17 19 7"/></svg>Prospect</button><button type="button" role="radio" data-progress="planning" aria-checked="false"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="5 12.5 10 17 19 7"/></svg>Active planning</button><button type="button" role="radio" data-progress="waiting_to_shoot" aria-checked="false"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="5 12.5 10 17 19 7"/></svg>Shoot ready</button><button type="button" role="radio" data-progress="captured" aria-checked="false"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="5 12.5 10 17 19 7"/></svg>Captured</button></div>
+          <p class="guide-progress-hint">Pick Captured for a shoot you've already done. The later stages are on the shoot page.</p>
         </div>
         <label>Title
           <input type="text" id="shootTitle" maxlength="120" placeholder="Name for the shoot if applicable" />

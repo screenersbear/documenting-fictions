@@ -88,8 +88,10 @@ built/app.css
   styles/reflections.css
   styles/shoot-band.css
   styles/shoot-front.css
+  styles/status-card.css
   styles/shoot-report.css
   styles/guide-page.css
+  styles/guide-progress.css
   styles/not-sure.css
   styles/shoot-mode-dark.css
   styles/shoot-mode-dark-popups.css
@@ -168,6 +170,8 @@ built/app.js
   components/dates.js
   components/row-words.js
   components/shoot-stage.js
+  components/today-items.js
+  components/status-steps.js
   components/helpers.js
   components/held-upright.js
   components/shoot-kinds.js
@@ -237,6 +241,7 @@ built/app.js
   pages/shoot/chapter-pages.js
   pages/shoot/chapter.js
   pages/new-shoot/wizard-steps.js
+  pages/new-shoot/guide-progress.js
   pages/new-shoot/guide-chapters.js
   pages/new-shoot/wizard.js
   pages/new-shoot/wizard-end.js
@@ -267,6 +272,7 @@ built/app.js
   pages/shoot/report-cards.js
   pages/shoot/next-step.js
   pages/shoot/status-sheet.js
+  pages/shoot/status-card.js
   components/toast.js
   components/confirm.js
   components/load-lib.js

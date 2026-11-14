@@ -53,7 +53,9 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
   }
 
   const SHOOT_WIZARD_STEPS = [
-    // The status is the tag on the shoot's page, so the guide doesn't ask it.
+    // Basics asks how far along it is, up to Captured (Shoot progress,
+    // pages/new-shoot/guide-progress.js); the later stages are on the
+    // shoot page's status card.
     {
       key: 'basics',
       title: 'The basics',
@@ -64,7 +66,9 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
         shootWizardBlock('dateNotSetBtn'),
         shootWizardBlock('multiDayRow'),
         shootWizardBlock('multiDayLastDayLabel'),
+        shootWizardBlock('guideProgress'),
       ],
+      enter: () => ed.drawGuideProgress(),
     },
     {
       key: 'talent',

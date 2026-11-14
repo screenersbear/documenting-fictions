@@ -6227,8 +6227,9 @@ h2.status-group-heading .collapse-arrow, .section-block h2 .collapse-arrow { mar
 /* One weight of handwriting: only headings are bold. Not in the parts already
    in the round 2 look, which use Figtree's own weights (the band, the section
    bar, Overview, Shoots, the Archive, Reflections, the shoot rows, a
-   shoot's front page); this goes once every screen is. */
-body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, .tabbar *, #view-overview *, .shoot-row *, #view-shoots *, #view-archive *, #view-journal *, #view-stats *, .sm-dark *, .opt-sheet *, .log-card *, .shoot-band *, #shootFront *, #shootNext *, .guide-chrome *, #shootForm > .shoot-section-heading, #postShootContent > .shoot-section-heading) { font-weight: 400 !important; }
+   shoot's front page, the Today lines in the daily report, the guide's Shoot
+   progress); this goes once every screen is. */
+body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, .tabbar *, #view-overview *, .shoot-row *, #view-shoots *, #view-archive *, #view-journal *, #view-stats *, .sm-dark *, .opt-sheet *, .log-card *, .shoot-band *, #shootFront *, #shootNext *, .guide-chrome *, .report-today *, .guide-progress *, #shootForm > .shoot-section-heading, #postShootContent > .shoot-section-heading) { font-weight: 400 !important; }
 :is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, #view-overview *, #view-shoots *, #view-archive *, #view-journal *, #view-stats *, .sm-dark *, .opt-sheet *, .log-card *, .shoot-band *, #shootFront *, #shootNext *, .guide-chrome *, #shootForm > .shoot-section-heading, #postShootContent > .shoot-section-heading) { text-shadow: 0 0 0.6px; }
 
 /* The button in a page's top right corner that swaps a shoot and its summary. */
@@ -6936,22 +6937,20 @@ html:not(.df-suite) .band-books { display: none; }
 
 /* ---- styles/today-card.css ---- */
 /* The Today card at the top of Overview: a white card (radius 12) with TODAY
-   and FULL REPORT, then each thing that needs you, between hairlines: a line
-   in 17px light (the shoot's name in 500) with its two answers, or a line to
-   tap with a chevron. A deadline gone by is crimson, and written out. */
+   and how many things (N THINGS), then the two most urgent, between
+   hairlines: a line in 17px light (the shoot's name in 500) with its two
+   answers, or a line to tap with a chevron. A deadline gone by is crimson,
+   and written out. Under them N MORE IN TODAY'S REPORT with a dot for each
+   (round 5). The same lines head the daily report (.report-today). */
 .today-card { background: #FFFFFF; border-radius: 12px; padding: 16px; color: var(--text); }
 .today-card[hidden] { display: none; }
-.today-card-head { display: flex; align-items: center; justify-content: space-between; }
+.today-card-head { display: flex; align-items: baseline; justify-content: space-between; }
+.today-count { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
 #view-overview .today-card-head h2 {
   margin: 0; padding: 0; background: none; border: 0; color: var(--text);
   font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase;
 }
-.today-report-btn {
-  display: inline-flex; align-items: center; gap: 4px; min-height: 28px; height: auto; margin: 0 -4px 0 0; padding: 0 4px;
-  border: 0; border-radius: 0; background: none; color: var(--dim);
-  font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase;
-}
-.today-report-btn svg, .today-link svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.today-link svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .today-item { display: block; padding: 12px 0; border-top: 1px solid var(--line); }
 .today-item:first-child { padding-top: 10px; border-top: 0; }
 .today-link:first-child { border-top: 0; }
@@ -6972,6 +6971,17 @@ html:not(.df-suite) .band-books { display: none; }
 }
 .today-link > span { flex: 1; }
 .today-link svg { color: var(--off); }
+.today-more {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; height: auto;
+  margin: 12px 0 -6px; padding: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; color: var(--text);
+  font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; text-align: left; cursor: pointer;
+}
+.today-more[hidden] { display: none; }
+.today-more-dots { display: inline-flex; gap: 4px; flex: none; }
+.today-more-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--text); }
+/* At the top of the daily report: the same lines on a white card of their own. */
+.report-today { background: var(--surface); border-radius: var(--radius-xl); padding: 0 14px 14px; color: var(--text); }
+.daily-report-modal .report-today p { color: var(--text); }
 
 /* ---- styles/next-shoot.css ---- */
 /* The Next shoot card on Overview: a white card (radius 12) with the shoot's
@@ -7161,9 +7171,9 @@ html:not(.df-suite) .band-books { display: none; }
 }
 
 /* ---- styles/shoot-front.css ---- */
-/* A shoot's front page (DESIGN.md 9): the status as a notched tag that
-   opens Change status, the name in 30px light, when and where (or, once
-   it's shot, one line in small dim capitals), the cards for this stage on
+/* A shoot's front page (DESIGN.md 9): the name in 30px light, when and
+   where (or, once it's shot, one line in small dim capitals), the status
+   card (styles/status-card.css), the cards for this stage on
    white (radius 12), section titles in 13px capitals, and The details: rows
    under an ink rule, each a dot (filled when it has something), its label
    in small capitals, a line of what's in it, and a chevron. A part of the
@@ -7171,15 +7181,8 @@ html:not(.df-suite) .band-books { display: none; }
 #shootForm > .shoot-off, #shootFront[hidden] { display: none !important; }
 #shootModalOverlay #basicInfoBody > .status-swatch-wrap { display: none; }
 
-.status-tag-btn { display: inline-flex; height: auto; min-height: 0; margin: 0; padding: 0; border: 0; background: none; cursor: pointer; }
-.status-tag {
-  display: inline-flex; align-items: center; height: 26px; padding: 0 21px 0 9px; border-radius: 3px 0 0 3px;
-  background: var(--band); color: var(--band-small); clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%);
-  font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
-}
-.status-tag > span[aria-hidden] { margin-left: .5em; }
-#shootModalOverlay #shootFront .shoot-front-title { margin: 12px 0 0; padding: 0; border: 0; background: none; font: 300 30px/36px var(--ui) !important; letter-spacing: 0 !important; text-transform: none !important; color: var(--text); text-align: left; overflow-wrap: anywhere; }
-.shoot-front-when { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font: 400 16px/22px var(--ui); color: var(--text); }
+#shootModalOverlay #shootFront .shoot-front-title { margin: 0; padding: 0; border: 0; background: none; font: 300 30px/36px var(--ui) !important; letter-spacing: 0 !important; text-transform: none !important; color: var(--text); text-align: left; overflow-wrap: anywhere; }
+.shoot-front-when { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font: 400 16px/22px var(--ui); color: var(--text); }
 .shoot-front-when > span { display: flex; align-items: center; gap: 10px; }
 .shoot-front-when svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .shoot-front-dim { color: var(--dim); }
@@ -7288,6 +7291,32 @@ button.front-card { cursor: pointer; }
   font: 300 30px/36px var(--ui) !important; letter-spacing: 0 !important; text-transform: none !important;
 }
 
+/* ---- styles/status-card.css ---- */
+/* The status card on a shoot's front page (pages/shoot/status-card.js, round
+   5): a white card with a hairline, under when and where. STATUS and CHANGE ›,
+   the status at 22px with 3 OF 7, then a bar for each stage, 10 to 28px tall
+   and 4px apart: done in ink, the one it's at in the notebook's colour with
+   an ink ring, the rest pale; the first and last stage named under the ends.
+   Postponed or Canceled: a crimson line in place of the bars. */
+#shootFront .status-card {
+  display: block; width: 100%; height: auto; min-height: 0; margin: 12px 0 0; padding: 12px 14px;
+  border: 0; border-radius: 12px; background: #FFFFFF; box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--text); font: 400 16px/22px var(--ui); letter-spacing: 0; text-transform: none; text-align: left; cursor: pointer;
+}
+.status-card-top { display: flex; align-items: center; justify-content: space-between; }
+.status-card-label { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.status-card-change { display: inline-flex; align-items: center; gap: 4px; font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.status-card-change svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.status-card-name { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 4px; font: 400 22px/28px var(--ui); }
+.status-card-count { flex: none; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.status-card-bars { display: flex; align-items: flex-end; gap: 4px; height: 30px; margin-top: 10px; }
+.status-card-bars i { flex: 1; min-width: 0; border-radius: 2px; background: #D6DADD; }
+.status-card-bars i.done { background: var(--text); }
+.status-card-bars i.now { background: var(--band); box-shadow: inset 0 0 0 1.5px var(--text); }
+.status-card-ends { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; font: 400 11px/14px var(--ui); color: var(--dim); }
+.status-card-bars[hidden], .status-card-ends[hidden], .status-card-off[hidden] { display: none; }
+.status-card-off { display: block; margin-top: 10px; font: 500 15px/20px var(--ui); color: var(--crimson); }
+
 /* ---- styles/shoot-report.css ---- */
 /* A delivered or archived shoot's front page as its report
    (pages/shoot/report-cards.js): label-over-words cards and the final
@@ -7376,6 +7405,26 @@ button.front-card { cursor: pointer; }
 #shootForm #shootWizardBody :is(.status-swatch-label, .talents-section > .team-question, .aspect-ratio-field-label) {
   font: 700 12px/16px var(--ui) !important; letter-spacing: .12em; text-transform: uppercase; color: var(--text); text-shadow: none;
 }
+
+/* ---- styles/guide-progress.css ---- */
+/* Shoot progress in the new-shoot guide's Basics (pages/new-shoot/guide-progress.js,
+   round 5): SHOOT PROGRESS in capitals like the guide's other labels, four chips (40px, round, pale;
+   the picked one ink with a tick), and a line under them. Only in the guide:
+   on the page, the status card does this. */
+.guide-progress { display: none; }
+#shootForm #shootWizardBody .guide-progress { display: block; width: 100%; margin: 0; text-align: left; }
+#shootForm #shootWizardBody .guide-progress[hidden] { display: none; }
+#shootForm #shootWizardBody .guide-progress-title { margin: 6px 0 8px; padding: 0; font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.guide-progress-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+#shootForm #shootWizardBody .guide-progress-chips button {
+  display: inline-flex; align-items: center; gap: 6px; width: auto; height: 40px; min-height: 0; margin: 0; padding: 0 14px;
+  border: 0; border-radius: 20px; background: #EFEFEA; box-shadow: none; color: var(--text);
+  font: 400 15px/20px var(--ui); letter-spacing: 0; text-transform: none; cursor: pointer;
+}
+#shootForm #shootWizardBody .guide-progress-chips button[aria-checked="true"] { background: var(--text); color: var(--paper); }
+.guide-progress-chips svg { display: none; flex: none; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.guide-progress-chips [aria-checked="true"] svg { display: block; }
+#shootForm #shootWizardBody .guide-progress-hint { margin: 10px 0 0; padding: 0; font: 400 14px/20px var(--ui); letter-spacing: 0; text-transform: none; color: var(--dim); }
 
 /* ---- styles/not-sure.css ---- */
 /* The honest answers (pages/shoot/not-sure.js): "Date not set" and

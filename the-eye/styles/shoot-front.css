@@ -1,6 +1,6 @@
-/* A shoot's front page (DESIGN.md 9): the status as a notched tag that
-   opens Change status, the name in 30px light, when and where (or, once
-   it's shot, one line in small dim capitals), the cards for this stage on
+/* A shoot's front page (DESIGN.md 9): the name in 30px light, when and
+   where (or, once it's shot, one line in small dim capitals), the status
+   card (styles/status-card.css), the cards for this stage on
    white (radius 12), section titles in 13px capitals, and The details: rows
    under an ink rule, each a dot (filled when it has something), its label
    in small capitals, a line of what's in it, and a chevron. A part of the
@@ -8,15 +8,8 @@
 #shootForm > .shoot-off, #shootFront[hidden] { display: none !important; }
 #shootModalOverlay #basicInfoBody > .status-swatch-wrap { display: none; }
 
-.status-tag-btn { display: inline-flex; height: auto; min-height: 0; margin: 0; padding: 0; border: 0; background: none; cursor: pointer; }
-.status-tag {
-  display: inline-flex; align-items: center; height: 26px; padding: 0 21px 0 9px; border-radius: 3px 0 0 3px;
-  background: var(--band); color: var(--band-small); clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%);
-  font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
-}
-.status-tag > span[aria-hidden] { margin-left: .5em; }
-#shootModalOverlay #shootFront .shoot-front-title { margin: 12px 0 0; padding: 0; border: 0; background: none; font: 300 30px/36px var(--ui) !important; letter-spacing: 0 !important; text-transform: none !important; color: var(--text); text-align: left; overflow-wrap: anywhere; }
-.shoot-front-when { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font: 400 16px/22px var(--ui); color: var(--text); }
+#shootModalOverlay #shootFront .shoot-front-title { margin: 0; padding: 0; border: 0; background: none; font: 300 30px/36px var(--ui) !important; letter-spacing: 0 !important; text-transform: none !important; color: var(--text); text-align: left; overflow-wrap: anywhere; }
+.shoot-front-when { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font: 400 16px/22px var(--ui); color: var(--text); }
 .shoot-front-when > span { display: flex; align-items: center; gap: 10px; }
 .shoot-front-when svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .shoot-front-dim { color: var(--dim); }

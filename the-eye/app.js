@@ -7,6 +7,8 @@
   window.EyeParts.addDates(ed);
   window.EyeParts.addRowWords(ed);
   window.EyeParts.addShootStage(ed);
+  window.EyeParts.addTodayItems(ed);
+  window.EyeParts.addStatusSteps(ed);
   window.EyeParts.addHelpers(ed);
   // iOS Safari only computes :active styles on elements it thinks have a
   // touch listener — this no-op unlocks tap-flash feedback app-wide.
@@ -96,6 +98,7 @@
   window.EyeParts.addShootChapterPages(ed);
   window.EyeParts.addShootChapter(ed);
   window.EyeParts.addNewShootWizardSteps(ed);
+  window.EyeParts.addGuideProgress(ed);
   window.EyeParts.addNewShootGuideChapters(ed);
   window.EyeParts.addNewShootWizard(ed);
   window.EyeParts.addNewShootWizardEnd(ed);
@@ -127,6 +130,7 @@
   window.EyeParts.addShootReportCards(ed);
   window.EyeParts.addShootNextStep(ed);
   window.EyeParts.addShootStatusSheet(ed);
+  window.EyeParts.addShootStatusCard(ed);
   window.EyeParts.addToast(ed);
   window.EyeParts.addConfirm(ed);
   window.EyeParts.addLoadLib(ed);

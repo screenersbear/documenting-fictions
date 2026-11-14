@@ -86,7 +86,7 @@ window.EyeParts.addShootFront = function addShootFront(ed) {
   const placeWords = loc => (loc ? [loc.name, loc.city].filter(has).map(v => v.trim()).join(', ') || ed.formatLocationDisplayNoCountry(loc) : '');
 
   function drawHead(s) {
-    document.getElementById('shootStatusTagText').textContent = ed.STATUS_LABELS[s.status] || 'Prospect';
+    ed.drawStatusCard(s);
     document.getElementById('shootFrontTitle').textContent = ed.shootDisplayName(s);
     const today = ed.todayStr();
     const when = document.getElementById('shootFrontWhen');

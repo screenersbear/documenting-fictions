@@ -4578,6 +4578,147 @@ window.EyeParts.addShootStage = function addShootStage(ed) {
 };
 ;
 
+// ---- components/today-items.js ----
+// What needs you today: one list for the Today card on Overview and the top
+// of the daily report, so the two never disagree (round 5: the report said
+// "Nothing to report today" while the card had things on it). A shoot ready
+// to shoot today, a shoot whose day went by without an answer, deadlines
+// gone by, and Monday's look back, most urgent first. The shoots in, plain
+// items and their markup out (no page, no saved data), so it's unit tested
+// (tests/unit/the-eye/today-items.test.mjs).
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addTodayItems = function addTodayItems(ed) {
+  Object.assign(ed, { todayItems, todayItemHtml, todayCountWords, todayMoreWords, runTodayAct });
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
+  const byDate = (a, b) => ed.dateTimeSortKey(a).localeCompare(ed.dateTimeSortKey(b));
+
+  function todayItems() {
+    // The day starts at 5am, as the daily report's does (effectiveReportDateStr):
+    // a shoot that ran late last night isn't "yesterday's" yet at 1am.
+    const day = ed.effectiveReportDateStr();
+    const today = ed.todayStr();
+    const shoots = ed.state.shoots;
+    const list = [];
+
+    // Shoot day: only once it's Shoot ready, since that's when Shoot mode
+    // works, and not while Shoot mode is up.
+    if (!ed.shootModeOverlay || ed.shootModeOverlay.hidden) {
+      shoots.filter(s => !s.archived && s.status === 'waiting_to_shoot' && s.date === day).sort(byDate)
+        .forEach(s => list.push({ kind: 'shoot-day', id: s.id, name: ed.shootDisplayName(s) }));
+    }
+
+    // Any shoot whose day has gone by and isn't marked shot yet, oldest
+    // first, however many days ago (so a few days away from the app don't
+    // lose one). A postponed or canceled shoot's kept date already has its
+    // answer; a new date it's been given since is asked about like any
+    // other (isOriginalPlanDate).
+    shoots.filter(s => !s.archived && !ed.POST_CAPTURE_STATUSES.includes(s.status) && !ed.isOriginalPlanDate(s) && s.date && s.date < day)
+      .sort(byDate).forEach((s) => {
+        const info = ed.projectDayInfo(s);
+        list.push({ kind: 'happened', id: s.id, name: ed.shootDisplayName(s), day: info ? info.day : 0, setFor: ed.setForWords(s.date, day) });
+      });
+
+    // Deadlines gone by: once per project, whose days share one.
+    ed.collapseProjects(shoots.filter(s => ed.isUpcomingDeadline(s) && s.deadline < today)).forEach((item) => {
+      if (item.kind === 'project') {
+        const deadline = item.members.map(s => s.deadline).sort()[0];
+        list.push({ kind: 'late', act: 'project', id: item.project.id, name: item.project.name || ed.UNTITLED_PROJECT_NAME, late: ed.pastDeadlineWords(deadline, today) });
+      } else {
+        list.push({ kind: 'late', act: 'shoot', id: item.shoot.id, name: ed.shootDisplayName(item.shoot), late: ed.pastDeadlineWords(item.shoot.deadline, today) });
+      }
+    });
+
+    // On a Monday: last week, looked back on, until it's been read.
+    if (ed.mondayBriefDue()) list.push({ kind: 'brief', id: '' });
+    return list;
+  }
+
+  const b = text => `<b>${ed.escapeHtml(text)}</b>`;
+  // A question with its answers.
+  const ask = (html, answers) => `<div class="today-item"><p>${html}</p><div class="today-btns">${answers}</div></div>`;
+  const answer = (act, id, label, primary) => `<button type="button" class="${primary ? 'primary' : 'secondary'}" data-act="${act}" data-id="${ed.escapeHtml(id)}">${label}</button>`;
+  // A line you tap to go somewhere.
+  const link = (act, id, html) => `<button type="button" class="today-item today-link" data-act="${act}" data-id="${ed.escapeHtml(id)}"><span>${html}</span>${CHEVRON}</button>`;
+
+  function todayItemHtml(item) {
+    switch (item.kind) {
+      case 'shoot-day':
+        return ask(`You're shooting ${b(item.name)} today.`, answer('shoot-mode', item.id, 'Shoot mode', true));
+      case 'happened':
+        return ask(`Did ${b(item.name)}${item.day ? ` (day ${item.day})` : ''} happen? It was set for ${ed.escapeHtml(item.setFor)}.`,
+          answer('happened', item.id, 'Yes, it happened', true) + answer('move', item.id, 'Move the date', false));
+      case 'late':
+        return link(item.act, item.id, `${b(item.name)} is <span class="today-late">${ed.escapeHtml(item.late)}</span> its deadline.`);
+      default:
+        return link('brief', '', `${b('Last week')}: your shoots and what you took from them.`);
+    }
+  }
+
+  // "1 thing", "4 things" (shown in capitals).
+  function todayCountWords(n) {
+    return `${n} ${n === 1 ? 'thing' : 'things'}`;
+  }
+  // "2 more in today's report".
+  function todayMoreWords(n) {
+    return `${n} more in today's report`;
+  }
+
+  // An answer or a line, tapped (on the card or in the report).
+  function runTodayAct(act, id) {
+    switch (act) {
+      case 'shoot-mode': ed.openShootMode(id); break;
+      // As the old day-after check-in did: the status changes on the spot
+      // (applyStatusChange saves and redraws, which takes the line away),
+      // without the follow-up questions a status change usually brings.
+      case 'happened': ed.applyStatusChange(id, 'captured', { followUps: false }); break;
+      // Postponed (its date kept as the original plan), then its page, to
+      // give it the new one.
+      case 'move':
+        if (ed.applyStatusChange(id, 'rescheduled', { followUps: false }) !== null) ed.openShootModal(id);
+        break;
+      case 'shoot': ed.openShootModal(id); break;
+      case 'project': ed.openProjectPopup(id); break;
+      case 'brief': ed.maybeShowMondayBrief(); break;
+      // Anything else: nothing.
+    }
+  }
+};
+;
+
+// ---- components/status-steps.js ----
+// The status card on a shoot's page (round 5, 12-shoot-status-card): the
+// stages a shoot goes through in order (Prospect to Delivered, with the
+// photo or video steps between), each a bar a little taller than the one
+// before: done, now, or still to come. Postponed and Canceled are off that
+// line, so the card says so instead. Statuses in, plain parts out (no page,
+// no saved data), so it's unit tested (tests/unit/the-eye/status-steps.test.mjs).
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addStatusSteps = function addStatusSteps(ed) {
+  Object.assign(ed, { statusSteps });
+  const OFF = ['rescheduled', 'canceled'];
+  const LOW = 10;
+  const HIGH = 28;
+
+  // keys: the statuses the shoot's status field offers, in order
+  // (statusOptionKeys); current: the shoot's. Gives each stage's bar (its
+  // state and height in px), where the shoot is ("3 of 7"; empty off the
+  // line), and whether it's off the line.
+  function statusSteps(keys, current) {
+    const stages = keys.filter(k => !OFF.includes(k));
+    const at = stages.indexOf(current);
+    const rise = (HIGH - LOW) / Math.max(stages.length - 1, 1);
+    const state = i => (i < at ? 'done' : (i === at ? 'now' : 'later'));
+    return {
+      off: OFF.includes(current),
+      count: at < 0 ? '' : `${at + 1} of ${stages.length}`,
+      bars: stages.map((key, i) => ({ key, state: state(i), height: Math.round((LOW + rise * i) * 10) / 10 })),
+    };
+  }
+};
+;
+
 // ---- components/helpers.js ----
 // Small helpers: ids, shuffling, sort keys, escaping, and what a shoot is called and still needs.
 // (Loaded before app.js, which runs it in its turn.)
@@ -8439,93 +8580,39 @@ window.EyeParts.addOverviewDrawOverview = function addOverviewDrawOverview(ed) {
 
 // ---- pages/overview/today-card.js ----
 // The Today card at the top of Overview: only what needs you now, in place of
-// the pop-ups that used to open on launch. A shoot ready to shoot today (with
-// Shoot mode), a shoot whose day has gone by without an answer ("Did it
-// happen?"), deadlines gone by, and Monday's look back at last week. Hidden
-// when there's nothing. Full report (and the bell) open the daily report.
+// the pop-ups that used to open on launch (the list: components/today-items.js).
+// The two most urgent, how many things there are in all, and under them
+// "N MORE IN TODAY'S REPORT", which opens the daily report (round 5). Hidden
+// when there's nothing.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addOverviewTodayCard = function addOverviewTodayCard(ed) {
   Object.assign(ed, { renderTodayCard });
+  const SHOWN = 2;
   const card = document.getElementById('todayCard');
   const items = document.getElementById('todayCardItems');
-  const CHEVRON = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
-  const byDate = (a, b) => ed.dateTimeSortKey(a).localeCompare(ed.dateTimeSortKey(b));
-  const b = text => `<b>${ed.escapeHtml(text)}</b>`;
-
-  // A line you tap to go somewhere.
-  const linkItem = (act, id, html) => `<button type="button" class="today-item today-link" data-act="${act}" data-id="${ed.escapeHtml(id)}"><span>${html}</span>${CHEVRON}</button>`;
-  // A question with its two answers.
-  const askItem = (id, html, yes, no) => `<div class="today-item"><p>${html}</p><div class="today-btns">${yes}${no}</div></div>`;
-  const btn = (act, id, label, primary) => `<button type="button" class="${primary ? 'primary' : 'secondary'}" data-act="${act}" data-id="${ed.escapeHtml(id)}">${label}</button>`;
+  const count = document.getElementById('todayCount');
+  const more = document.getElementById('todayMoreBtn');
+  const moreWords = document.getElementById('todayMoreWords');
+  const moreDots = document.getElementById('todayMoreDots');
 
   function renderTodayCard() {
-    // The day starts at 5am, as the daily report's does (effectiveReportDateStr):
-    // a shoot that ran late last night isn't "yesterday's" yet at 1am.
-    const day = ed.effectiveReportDateStr();
-    const today = ed.todayStr();
-    const html = [];
-
-    // Shoot day: only once it's Shoot ready, since that's when Shoot mode works.
-    if (!ed.shootModeOverlay || ed.shootModeOverlay.hidden) {
-      ed.state.shoots.filter(s => !s.archived && s.status === 'waiting_to_shoot' && s.date === day).sort(byDate).forEach((s) => {
-        html.push(askItem(s.id, `You're shooting ${b(ed.shootDisplayName(s))} today.`, btn('shoot-mode', s.id, 'Shoot mode', true), ''));
-      });
-    }
-
-    // Any shoot whose day has gone by and isn't marked shot yet, oldest
-    // first, however many days ago (so a few days away from the app don't
-    // lose one). A postponed or canceled shoot's kept date already has its
-    // answer; a new date it's been given since is asked about like any
-    // other (isOriginalPlanDate).
-    ed.state.shoots.filter(s => !s.archived && !ed.POST_CAPTURE_STATUSES.includes(s.status) && !ed.isOriginalPlanDate(s) && s.date && s.date < day)
-      .sort(byDate).forEach((s) => {
-        const info = ed.projectDayInfo(s);
-        const name = `${b(ed.shootDisplayName(s))}${info ? ` (day ${info.day})` : ''}`;
-        html.push(askItem(s.id, `Did ${name} happen? It was set for ${ed.escapeHtml(ed.setForWords(s.date, day))}.`,
-          btn('happened', s.id, 'Yes, it happened', true), btn('move', s.id, 'Move the date', false)));
-      });
-
-    // Deadlines gone by: once per project, whose days share one.
-    const overdue = ed.state.shoots.filter(s => ed.isUpcomingDeadline(s) && s.deadline < today);
-    ed.collapseProjects(overdue).forEach((item) => {
-      const isProject = item.kind === 'project';
-      const deadline = isProject ? item.members.map(s => s.deadline).sort()[0] : item.shoot.deadline;
-      const name = isProject ? (item.project.name || ed.UNTITLED_PROJECT_NAME) : ed.shootDisplayName(item.shoot);
-      html.push(linkItem(isProject ? 'project' : 'shoot', isProject ? item.project.id : item.shoot.id,
-        `${b(name)} is <span class="today-late">${ed.pastDeadlineWords(deadline, today)}</span> its deadline.`));
-    });
-
-    // On a Monday: last week, looked back on, until it's been read.
-    if (ed.mondayBriefDue()) html.push(linkItem('brief', '', `${b('Last week')}: your shoots and what you took from them.`));
-
-    items.innerHTML = html.join('');
-    card.hidden = !html.length;
+    const list = ed.todayItems();
+    const left = list.length - SHOWN;
+    items.innerHTML = list.slice(0, SHOWN).map(ed.todayItemHtml).join('');
+    count.textContent = ed.todayCountWords(list.length);
+    more.hidden = left < 1;
+    moreWords.textContent = ed.todayMoreWords(Math.max(left, 0));
+    // A dot for each of them (up to eight).
+    moreDots.innerHTML = '<i></i>'.repeat(Math.min(Math.max(left, 0), 8));
+    card.hidden = !list.length;
   }
 
   items.addEventListener('click', (e) => {
     const el = e.target.closest('[data-act]');
-    if (!el) return;
-    const id = el.dataset.id;
-    switch (el.dataset.act) {
-      case 'shoot-mode': ed.openShootMode(id); break;
-      // As the old day-after check-in did: the status changes on the spot
-      // (applyStatusChange saves and redraws, which takes the line away),
-      // without the follow-up questions a status change usually brings.
-      case 'happened': ed.applyStatusChange(id, 'captured', { followUps: false }); break;
-      // Postponed (its date kept as the original plan), then its page, to
-      // give it the new one.
-      case 'move':
-        if (ed.applyStatusChange(id, 'rescheduled', { followUps: false }) !== null) ed.openShootModal(id);
-        break;
-      case 'shoot': ed.openShootModal(id); break;
-      case 'project': ed.openProjectPopup(id); break;
-      case 'brief': ed.maybeShowMondayBrief(); break;
-      default: break;
-    }
+    if (el) ed.runTodayAct(el.dataset.act, el.dataset.id);
   });
-
-  document.getElementById('todayReportBtn').addEventListener('click', () => ed.openNotificationsBell());
+  more.addEventListener('click', () => ed.openNotificationsBell());
 };
 ;
 
@@ -13275,7 +13362,9 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
   }
 
   const SHOOT_WIZARD_STEPS = [
-    // The status is the tag on the shoot's page, so the guide doesn't ask it.
+    // Basics asks how far along it is, up to Captured (Shoot progress,
+    // pages/new-shoot/guide-progress.js); the later stages are on the
+    // shoot page's status card.
     {
       key: 'basics',
       title: 'The basics',
@@ -13286,7 +13375,9 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
         shootWizardBlock('dateNotSetBtn'),
         shootWizardBlock('multiDayRow'),
         shootWizardBlock('multiDayLastDayLabel'),
+        shootWizardBlock('guideProgress'),
       ],
+      enter: () => ed.drawGuideProgress(),
     },
     {
       key: 'talent',
@@ -13427,6 +13518,46 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
       blocks: () => [shootWizardBlock('shootDeadline', 'label')],
     },
   ]; ed.SHOOT_WIZARD_STEPS = SHOOT_WIZARD_STEPS;
+};
+;
+
+// ---- pages/new-shoot/guide-progress.js ----
+// Shoot progress in the new-shoot guide's Basics (round 5,
+// 11-guide-basics-progress): Prospect, Active planning, Shoot ready or
+// Captured, so a shoot already done can start as Captured. Picking one sets
+// the status field, as picking it there would, but the guide carries on:
+// no follow-up questions (the reflection comes when the guide's done, from
+// the page). Shown only while the shoot is at one of the four; the later
+// stages are on the shoot page's status card.
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addGuideProgress = function addGuideProgress(ed) {
+  Object.assign(ed, { drawGuideProgress });
+  const box = document.getElementById('guideProgress');
+  const select = document.getElementById('shootStatus');
+  const chips = [...box.querySelectorAll('[data-progress]')];
+
+  // On entering Basics, and after a pick.
+  function drawGuideProgress() {
+    chips.forEach(b => b.setAttribute('aria-checked', String(b.dataset.progress === select.value)));
+    box.hidden = !chips.some(b => b.dataset.progress === select.value);
+  }
+
+  box.addEventListener('click', (e) => {
+    const pick = e.target.closest('[data-progress]');
+    if (!pick || pick.dataset.progress === select.value) return;
+    // The status field's change listener asks what comes next only when the
+    // status it remembers differs; remembered first, it asks nothing. It
+    // still does the rest (and the form saves).
+    ed.previousStatusValue = pick.dataset.progress;
+    select.value = pick.dataset.progress;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    // Its reflection shows on the page, as when a captured shoot opens.
+    document.getElementById('postShootContent').hidden = !ed.isPostCaptureStatus(select.value);
+    ed.updateShootModalJumpMenuVisibility();
+    ed.updateStatusSwatchDisplay();
+    drawGuideProgress();
+  });
 };
 ;
 
@@ -16889,7 +17020,7 @@ window.EyeParts.addShootFront = function addShootFront(ed) {
   const placeWords = loc => (loc ? [loc.name, loc.city].filter(has).map(v => v.trim()).join(', ') || ed.formatLocationDisplayNoCountry(loc) : '');
 
   function drawHead(s) {
-    document.getElementById('shootStatusTagText').textContent = ed.STATUS_LABELS[s.status] || 'Prospect';
+    ed.drawStatusCard(s);
     document.getElementById('shootFrontTitle').textContent = ed.shootDisplayName(s);
     const today = ed.todayStr();
     const when = document.getElementById('shootFrontWhen');
@@ -17454,6 +17585,41 @@ window.EyeParts.addShootStatusSheet = function addShootStatusSheet(ed) {
   });
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   document.getElementById('shootStatusSheetCancelBtn').addEventListener('click', close);
+};
+;
+
+// ---- pages/shoot/status-card.js ----
+// The status card on a shoot's front page (round 5, 12-shoot-status-card),
+// under when and where: STATUS and CHANGE, the status in large with "3 OF 7",
+// then a bar for each stage (components/status-steps.js) with the first and
+// last named under the ends. Postponed and Canceled say so in a crimson line
+// in place of the bars. The whole card opens Change status (status-sheet.js).
+// (Loaded before app.js, which runs it in its turn.)
+window.EyeParts = window.EyeParts || {};
+window.EyeParts.addShootStatusCard = function addShootStatusCard(ed) {
+  Object.assign(ed, { drawStatusCard });
+  const card = document.getElementById('shootStatusTag');
+  const name = document.getElementById('shootStatusTagText');
+  const count = document.getElementById('shootStatusCount');
+  const bars = document.getElementById('shootStatusBars');
+  const ends = document.getElementById('shootStatusEnds');
+  const offLine = document.getElementById('shootStatusOff');
+  const label = key => ed.STATUS_LABELS[key] || 'Prospect';
+
+  function drawStatusCard(s) {
+    const steps = ed.statusSteps(ed.statusOptionKeys(s.category, s.status), s.status);
+    const now = label(s.status);
+    name.textContent = now;
+    count.textContent = steps.count;
+    bars.innerHTML = steps.bars.map(b => `<i class="${b.state}" style="height:${b.height}px"></i>`).join('');
+    const first = steps.bars[0], last = steps.bars[steps.bars.length - 1];
+    ends.innerHTML = first ? `<span>${ed.escapeHtml(label(first.key))}</span><span>${ed.escapeHtml(label(last.key))}</span>` : '';
+    bars.hidden = steps.off;
+    ends.hidden = steps.off;
+    offLine.hidden = !steps.off;
+    offLine.textContent = steps.off ? `This shoot is ${now.toLowerCase()}.` : '';
+    card.setAttribute('aria-label', `Status: ${now}${steps.count ? `, ${steps.count}` : ''}. Change it`);
+  }
 };
 ;
 
@@ -23050,6 +23216,15 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
     const { items, nudge, fact } = content;
     const list = document.getElementById('dailyReportList');
     list.innerHTML = '';
+    // First, everything on the Today card (components/today-items.js), with
+    // the same answers (round 5: the report used to leave them out).
+    const today = ed.todayItems();
+    if (today.length) {
+      const block = document.createElement('div');
+      block.className = 'report-today';
+      block.innerHTML = today.map(ed.todayItemHtml).join('');
+      list.appendChild(block);
+    }
     items.forEach(item => {
       const row = document.createElement('div');
       // daily-report-fact is the app's existing "this row isn't a link" marker
@@ -23098,9 +23273,9 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
       list.appendChild(row);
     }
 
-    // It only opens when asked for (the bell, Full report), so it always
+    // It only opens when asked for (the bell, the Today card's N MORE), so it always
     // says something.
-    if (!items.length && !nudge && !fact) {
+    if (!today.length && !items.length && !nudge && !fact) {
       const row = document.createElement('div');
       row.className = 'daily-report-item daily-report-fact';
       row.textContent = 'Nothing to report today.';
@@ -23110,7 +23285,7 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
     document.getElementById('dailyReportOverlay').hidden = false;
   }
 
-  // The bell and the Today card's Full report: the daily report, shown when
+  // The bell and the Today card's N MORE: the daily report, shown when
   // asked for (it used to open once a day on its own; the Today card took
   // that over). It always shows something (a "nothing to report" line if
   // today's report is genuinely empty).
@@ -23120,6 +23295,18 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
 
   document.getElementById('dailyReportCloseBtn').addEventListener('click', () => {
     document.getElementById('dailyReportOverlay').hidden = true;
+  });
+
+  // A Today line, answered or tapped in the report: an answer keeps the
+  // report open, without that line; a line to tap closes it and opens what
+  // it's about.
+  document.getElementById('dailyReportList').addEventListener('click', (e) => {
+    const el = e.target.closest('.report-today [data-act]');
+    if (!el) return;
+    const answer = el.dataset.act === 'happened';
+    if (!answer) document.getElementById('dailyReportOverlay').hidden = true;
+    ed.runTodayAct(el.dataset.act, el.dataset.id);
+    if (answer) openNotificationsBell();
   });
 };
 ;
@@ -25356,6 +25543,8 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addDates(ed);
   window.EyeParts.addRowWords(ed);
   window.EyeParts.addShootStage(ed);
+  window.EyeParts.addTodayItems(ed);
+  window.EyeParts.addStatusSteps(ed);
   window.EyeParts.addHelpers(ed);
   // iOS Safari only computes :active styles on elements it thinks have a
   // touch listener — this no-op unlocks tap-flash feedback app-wide.
@@ -25445,6 +25634,7 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addShootChapterPages(ed);
   window.EyeParts.addShootChapter(ed);
   window.EyeParts.addNewShootWizardSteps(ed);
+  window.EyeParts.addGuideProgress(ed);
   window.EyeParts.addNewShootGuideChapters(ed);
   window.EyeParts.addNewShootWizard(ed);
   window.EyeParts.addNewShootWizardEnd(ed);
@@ -25476,6 +25666,7 @@ window.EyeParts.addBand = function addBand(ed) {
   window.EyeParts.addShootReportCards(ed);
   window.EyeParts.addShootNextStep(ed);
   window.EyeParts.addShootStatusSheet(ed);
+  window.EyeParts.addShootStatusCard(ed);
   window.EyeParts.addToast(ed);
   window.EyeParts.addConfirm(ed);
   window.EyeParts.addLoadLib(ed);

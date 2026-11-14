@@ -1,0 +1,24 @@
+/* The status card on a shoot's front page (pages/shoot/status-card.js, round
+   5): a white card with a hairline, under when and where. STATUS and CHANGE ›,
+   the status at 22px with 3 OF 7, then a bar for each stage, 10 to 28px tall
+   and 4px apart: done in ink, the one it's at in the notebook's colour with
+   an ink ring, the rest pale; the first and last stage named under the ends.
+   Postponed or Canceled: a crimson line in place of the bars. */
+#shootFront .status-card {
+  display: block; width: 100%; height: auto; min-height: 0; margin: 12px 0 0; padding: 12px 14px;
+  border: 0; border-radius: 12px; background: #FFFFFF; box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--text); font: 400 16px/22px var(--ui); letter-spacing: 0; text-transform: none; text-align: left; cursor: pointer;
+}
+.status-card-top { display: flex; align-items: center; justify-content: space-between; }
+.status-card-label { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.status-card-change { display: inline-flex; align-items: center; gap: 4px; font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.status-card-change svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.status-card-name { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 4px; font: 400 22px/28px var(--ui); }
+.status-card-count { flex: none; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.status-card-bars { display: flex; align-items: flex-end; gap: 4px; height: 30px; margin-top: 10px; }
+.status-card-bars i { flex: 1; min-width: 0; border-radius: 2px; background: #D6DADD; }
+.status-card-bars i.done { background: var(--text); }
+.status-card-bars i.now { background: var(--band); box-shadow: inset 0 0 0 1.5px var(--text); }
+.status-card-ends { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; font: 400 11px/14px var(--ui); color: var(--dim); }
+.status-card-bars[hidden], .status-card-ends[hidden], .status-card-off[hidden] { display: none; }
+.status-card-off { display: block; margin-top: 10px; font: 500 15px/20px var(--ui); color: var(--crimson); }

@@ -203,8 +203,9 @@
 /* One weight of handwriting: only headings are bold. Not in the parts already
    in the round 2 look, which use Figtree's own weights (the band, the section
    bar, Overview, Shoots, the Archive, Reflections, the shoot rows, a
-   shoot's front page); this goes once every screen is. */
-body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, .tabbar *, #view-overview *, .shoot-row *, #view-shoots *, #view-archive *, #view-journal *, #view-stats *, .sm-dark *, .opt-sheet *, .log-card *, .shoot-band *, #shootFront *, #shootNext *, .guide-chrome *, #shootForm > .shoot-section-heading, #postShootContent > .shoot-section-heading) { font-weight: 400 !important; }
+   shoot's front page, the Today lines in the daily report, the guide's Shoot
+   progress); this goes once every screen is. */
+body *:not(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, .tabbar *, #view-overview *, .shoot-row *, #view-shoots *, #view-archive *, #view-journal *, #view-stats *, .sm-dark *, .opt-sheet *, .log-card *, .shoot-band *, #shootFront *, #shootNext *, .guide-chrome *, .report-today *, .guide-progress *, #shootForm > .shoot-section-heading, #postShootContent > .shoot-section-heading) { font-weight: 400 !important; }
 :is(h1, h2, h3, h4, h5, h6, .log-week-heading, .log-section-label, .subsection-heading, .upcoming-subheading, .stats-page-title, .team-question, .moodboard-label, .app-menu-header, .shoot-mode-review-setup-name, .journal-entry-title, .stats-region-heading):not(.band *, #view-overview *, #view-shoots *, #view-archive *, #view-journal *, #view-stats *, .sm-dark *, .opt-sheet *, .log-card *, .shoot-band *, #shootFront *, #shootNext *, .guide-chrome *, #shootForm > .shoot-section-heading, #postShootContent > .shoot-section-heading) { text-shadow: 0 0 0.6px; }
 
 /* The button in a page's top right corner that swaps a shoot and its summary. */
