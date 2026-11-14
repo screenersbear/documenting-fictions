@@ -273,7 +273,9 @@ button. Used for a shoot's page, a guide, a board.
 | Field row | an 11px label over a 17px value, a chevron, at least 52px tall |
 | Detail row | on a long page: a label (12px 700 capitals), a one-line summary (15px), an 8px dot (filled = has something, open = empty), a chevron. It opens that part's own page |
 | Flag | a 20px pill with a 1px berry blade black outline, 10px 700 capitals (TEAM, MOOD BOARD, PROOFS, REFLECTION, FINAL IMAGES) |
-| Status tag | the notched tag (section 6) in the notebook colour, 24px tall, 11px 700 capitals; on a page it's a button (▾) that opens Change status |
+| Status tag | the notched tag (section 6) in the notebook colour, 24px tall, 11px 700 capitals (in lists and on cards) |
+| Status card | on a shoot's page, full width under its date and place: a white card (radius 12, a 1px `line` ring), STATUS (label type) and CHANGE › (button type) on top, the status at 22px with "3 OF 7" (label type) at its right, then one bar per stage in order (Prospect, Active planning, Shoot ready, Captured, the photo or video stages, Delivered), 4px apart, growing from 10 to 28px tall: done ones berry blade black, this one the notebook colour with a 1.5px berry blade black ring, the rest `#D6DADD`; the first and last stage named under the ends (11px dim). Postponed and Canceled show one crimson line saying so instead. The whole card is one button that opens Change status |
+| Today card | The Eye's Overview: TODAY with "N THINGS" (label type) on top, then the two most urgent (a question first, then anything overdue), then a row "N MORE IN TODAY'S REPORT" with a dot for each, which opens the full report. The full report lists everything on the Today card first |
 | Primary button | 40px tall (48 in a bottom bar), radius 8, the notebook colour with its small-text colour, button type |
 | Outline button | the same shape with a 1.5px berry blade black ring on paper or white |
 | Text button | button type, no box |
@@ -288,6 +290,9 @@ button. Used for a shoot's page, a guide, a board.
   up to this step. A small label under it ("CHAPTER 3 OF 7").
 - Each step: a title (30px 300), one question (17px dim), answers as option cards (white, a 2px berry blade black ring when
   picked) or chips from saved lists. Honest answers ("Not sure yet") count as answered.
+- **The Eye's Basics asks SHOOT PROGRESS:** Prospect, Active planning, Shoot ready and Captured as chips (40px, radius 20,
+  `#EFEFEA`; picked = berry blade black with paper text and a tick). Prospect unless picked. A line under them: "Pick Captured
+  for a shoot you've already done. The later stages are on the shoot page."
 - **A bottom bar, always:** an outline secondary (The Eye: DONE FOR NOW, which saves) and a filled next button naming the next
   step ("NEXT: TEAM"). Back in the band goes to the step before.
 
@@ -305,9 +310,19 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
   text. Ref: Mood boards, Tags. The Eye: Overview, Shoots, Reflections, Archive, Stats. Layouts: All layouts, New layout.
   Overthoughts: Entries, Reviews (until its redesign).
 - **Top left:** DOCUMENTING FICTIONS, 13px 700 capitals.
-- **Under the front book:** its name and one line about it, page dots, and one ring button: Options for the notebook in front.
-- **Options sheet:** the front book comes up close; colour (the seven pairs), Add a sticker (Circle, Square, Rectangle), Remove
-  a sticker, BACK UP ALL FOUR (outline) and DONE (berry blade black).
+- **Arrangements:** Ring, Dominoes, Row and Spread (the books big, overlapping, lying back), changed by swiping up or down.
+  Marks at the right edge, one for each, the one in use long; its name shows in a small ink pill for a moment after a swipe.
+- **Under the front book:** its name and one line about it, page dots, and the Options button: a 52px disc in the front
+  notebook's colour with three dots in its partner colour shrinking left to right (7, 5.5 and 4px, 4px apart), no ring. It
+  changes colour as the books turn; the same button in every arrangement.
+- **Options sheet:** the front book comes up close; colour (the seven pairs), STICKERS with REMOVE ONE and one ADD A STICKER
+  button, BACK UP ALL FOUR (outline) and DONE (berry blade black).
+- **Placing a sticker:** pick a photo, then the placing screen: the book big with the sticker on it (drag to move, pinch to
+  size, twist to turn) and a sheet under it with SHAPE (Circle, Square, Card, Cut out) and EDGE (White border, Black outline)
+  as segmented controls, the sticker changing as you pick; BACK and STICK IT ON. Shape and edge are chosen there, never after.
+- **Stickers:** vinyl (fine grain, small wrinkles toward the edges, a satin sheen, one faint fold) with a lift shadow. White
+  border: 1.2% of the cover's width (3px at 250px). Black outline: 1% (2.5px), berry blade black. Cut out traces the
+  picture: a white margin of 3.5% of the sticker's width, or an ink line 60% of that; texture and shadow follow the cut.
 
 ### 9.9 Other layout rules
 
