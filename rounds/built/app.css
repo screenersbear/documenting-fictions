@@ -236,6 +236,13 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .today-calm h2 { margin: 0; font: 300 30px/34px var(--ui); }
 .today-calm p { margin: 10px 0 0; max-width: 32em; font: 400 17px/24px var(--ui); color: var(--dim); }
 .today-calm .btn { margin-top: 24px; }
+/* DONE TODAY (a text button, under it all once a move's done) and its
+   sheet: each one done today, its mark, the name over the move, UNDO. */
+.today-done { display: block; margin: 14px 0 0 -10px; }
+.today-done span { font-weight: 500; }
+.done-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.done-row:last-child { border-bottom: 0; }
+.done-row .text-btn { margin-right: -10px; }
 
 /* ---- styles/move.css ---- */
 /* A move opened (02-move): the move's tag and the close ring, the person,

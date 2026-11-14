@@ -1,6 +1,6 @@
 // rounds/data/today.js: the day's moves, three a day (at most five), the pick fixed for the day.
 import { describe, it, expect } from 'vitest';
-import { PER_DAY, MOST, perDayOf, dueOn, pickFor, waiting, markPick, unmarkPick, stops } from '../../../rounds/data/today.js';
+import { PER_DAY, MOST, perDayOf, dueOn, pickFor, waiting, markPick, unmarkPick, doneOn, stops } from '../../../rounds/data/today.js';
 
 const T = '2026-11-14';
 const p = (id, kind, due, more = {}) => ({ id, name: id, added: '2026-11-01', letGo: false, next: kind ? { kind, due, step: 0 } : null, ...more });
@@ -84,5 +84,34 @@ describe('stops', () => {
   });
   it('has none for none', () => {
     expect(stops(0)).toEqual([]);
+  });
+});
+
+describe('doneOn', () => {
+  const people = [p('a', 'followup', '2026-11-21'), p('b', 'checkin', '2026-12-26'), p('c', null, null), p('gone', 'pitch', T, { letGo: true })];
+  const line = (id, personId, day, at, kind = 'pitch') => ({ id, personId, kind, day, ...(at === undefined ? {} : { at }) });
+  it("lists the day's done moves, the newest first, with who they were for", () => {
+    const lines = [line('1', 'a', T, 100), line('2', 'b', T, 300, 'thanks'), line('3', 'c', T, 200, 'hello')];
+    const done = doneOn(lines, people, T);
+    expect(done.map((d) => d.line.id)).toEqual(['2', '3', '1']);
+    expect(done[0].person).toBe(people[1]);
+  });
+  it("only that day's, and only each person's latest", () => {
+    const lines = [line('old', 'a', '2026-11-13', 900), line('1', 'a', T, 100), line('2', 'a', T, 200, 'followup'), line('3', 'b', T, 50)];
+    expect(doneOn(lines, people, T).map((d) => d.line.id)).toEqual(['2', '3']);
+    expect(doneOn([line('2', 'a', T, 200), line('1', 'a', T, 100)], people, T).map((d) => d.line.id)).toEqual(['2']);
+  });
+  it('lines from before 14 Nov (no time) come after, by name', () => {
+    const lines = [line('c1', 'c', T), line('b1', 'b', T), line('a1', 'a', T, 5)];
+    expect(doneOn(lines, people, T).map((d) => d.line.id)).toEqual(['a1', 'b1', 'c1']);
+    expect(doneOn([line('x', 'a', T), line('y', 'a', T)], people, T).map((d) => d.line.id)).toEqual(['x']);
+  });
+  it('leaves out anyone let go or no longer here, and lines with no known move', () => {
+    const lines = [line('1', 'gone', T, 1), line('2', 'nobody', T, 2), line('3', 'a', T, 3, 'wave'), line('4', 'b', T, 4, null)];
+    expect(doneOn(lines, people, T)).toEqual([]);
+  });
+  it('is empty with no lines or no people', () => {
+    expect(doneOn([], people, T)).toEqual([]);
+    expect(doneOn([line('1', 'a', T, 1)], [], T)).toEqual([]);
   });
 });

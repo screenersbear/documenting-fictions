@@ -717,10 +717,13 @@ function fromImport(rows, today, perDay, makeId) {
 	});
 }
 function markDone(person, today) {
+	const { kind, due, step } = person.next;
 	const log = {
 		personId: person.id,
-		kind: person.next.kind,
-		day: today
+		kind,
+		day: today,
+		due,
+		step
 	};
 	return {
 		person: {
@@ -731,6 +734,22 @@ function markDone(person, today) {
 		log
 	};
 }
+function followupBefore(person) {
+	const next = person.next;
+	if (next && next.kind === "followup") return Math.max(0, next.step - 1);
+	return person.group === "prospect" && !next ? 2 : 0;
+}
+function undoDone$1(person, line, lines = []) {
+	const guess = line.kind === "followup" ? followupBefore(person) : 0;
+	const step = Number.isInteger(line.step) ? line.step : guess;
+	const lastMove = lines.filter((l) => l.personId === person.id && l.id !== line.id).map((l) => l.day).sort().pop() || "";
+	return {
+		...person,
+		lastMove,
+		next: move(line.kind, line.due || line.day, step)
+	};
+}
+__name(undoDone$1, "undoDone");
 const markLater = (person, today) => ({
 	...person,
 	next: {
@@ -970,6 +989,19 @@ function pickFor(people, saved, today, perDay = 3) {
 	};
 }
 const waiting$1 = /* @__PURE__ */ __name((pick) => pick.ids.filter((id) => !pick.marks[id]), "waiting");
+function doneOn(lines, people, day) {
+	const byId = new Map(people.filter((p) => !p.letGo).map((p) => [p.id, p]));
+	const latest = new Map();
+	for (const l of lines) {
+		if (l.day !== day || !byId.has(l.personId) || !KIND_KEYS.includes(l.kind)) continue;
+		const had = latest.get(l.personId);
+		if (!had || (l.at || 0) > (had.at || 0)) latest.set(l.personId, l);
+	}
+	return [...latest.values()].map((line) => ({
+		line,
+		person: byId.get(line.personId)
+	})).sort((a, b) => (b.line.at || 0) - (a.line.at || 0) || a.person.name.localeCompare(b.person.name));
+}
 const markPick = (pick, id, how) => ({
 	...pick,
 	marks: {
@@ -1018,6 +1050,7 @@ async function doMove(person) {
 	const { person: after, log } = markDone(person, dayOf());
 	const line = {
 		id: uuid(),
+		at: Date.now(),
 		...log
 	};
 	await savePerson(after);
@@ -1033,6 +1066,18 @@ async function undoMove({ before, line }) {
 	await savePerson(before);
 	await dropMove(line.id);
 	await markInPick(before.id, null);
+}
+async function loadDone() {
+	const [lines, people] = await Promise.all([listMoves(), listPeople()]);
+	return {
+		lines,
+		done: doneOn(lines, people, dayOf())
+	};
+}
+async function undoDone({ line, person }, lines) {
+	await savePerson(undoDone$1(person, line, lines));
+	await dropMove(line.id);
+	await markInPick(person.id, null);
 }
 async function laterMove(person) {
 	const after = markLater(person, dayOf());
@@ -1342,7 +1387,39 @@ function openAddPerson(onAdded) {
 	return s;
 }
 
+// pages/done-today.js
+const rowHtml = ({ line, person }, i) => `
+  <div class="done-row">${miniHtml(line.kind)}
+    <span class="choice-text"><span class="choice-label">${esc(person.name)}</span><span class="choice-detail">${esc(KINDS[line.kind].name)}</span></span>
+    <button type="button" class="text-btn" data-undo="${i}">Undo</button>
+  </div>`;
+async function openDoneToday(onChange) {
+	let { lines, done } = await loadDone();
+	const s = openSheet({
+		title: "Done today",
+		className: "sheet-small",
+		body: "<div class=\"done-list\"></div>"
+	});
+	const list = s.body.querySelector(".done-list");
+	const draw = () => {
+		list.innerHTML = done.map(rowHtml).join("");
+	};
+	draw();
+	list.addEventListener("click", async (e) => {
+		const b = e.target.closest("[data-undo]");
+		if (!b || b.disabled) return;
+		b.disabled = true;
+		await undoDone(done[Number(b.dataset.undo)], lines);
+		({lines, done} = await loadDone());
+		await onChange();
+		toast("Undone.");
+		if (done.length) draw();
+		else s.close();
+	});
+}
+
 // pages/today.js
+const doneHtml = (n) => n ? `<button type="button" class="text-btn today-done" data-done-today>Done today <span>${n}</span></button>` : "";
 const head = (count, arc) => `<div class="today-head"><span class="today-count">${count}</span>${arc}</div>`;
 function stackHtml(pick, left, today) {
 	const n = pick.ids.length;
@@ -1371,20 +1448,21 @@ function calmHtml(people, pick, today) {
 }
 async function todayScreen(view, { beside = false } = {}) {
 	const today = dayOf();
-	const { people, pick } = await loadToday();
+	const [{ people, pick }, { done: doneToday }] = await Promise.all([loadToday(), loadDone()]);
 	const byId = new Map(people.map((p) => [p.id, p]));
 	const left = waiting$1(pick).map((id) => byId.get(id));
 	view.innerHTML = `<div class="screen"><div class="scroll">${bandHtml({
 		title: "Rounds",
 		place: "Today"
-	})}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today)}</div></div>`;
+	})}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today)}${doneHtml(doneToday.length)}</div></div>`;
 	fillPhotos(view, people);
 	if (beside) return;
+	const redraw = () => todayScreen(view).then(() => view.querySelector(".screen")?.classList.add("still"));
 	view.querySelector("[data-add]")?.addEventListener("click", () => openAddPerson(() => todayScreen(view)));
+	view.querySelector("[data-done-today]")?.addEventListener("click", () => openDoneToday(redraw));
 	if (!left.length) return;
 	const top = left[0];
 	const card = view.querySelector(".card.top");
-	const redraw = () => todayScreen(view).then(() => view.querySelector(".screen")?.classList.add("still"));
 	const done = async (dir = 1, dx = 0) => {
 		const [undo] = await Promise.all([doMove(top), cardAway(card, dir, dx)]);
 		await redraw();

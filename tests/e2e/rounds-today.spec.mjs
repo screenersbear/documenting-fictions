@@ -2,7 +2,8 @@
 // come in with a thank you due today. One card at a time: LATER moves it to
 // tomorrow, WRITE TO opens the move, whose button copies the message and
 // opens their Instagram, and coming back asks "Done?". A swipe is done too,
-// with UNDO. Going between sections is a plain slide, as in Ref.
+// with UNDO, and DONE TODAY lists the day's done moves to undo any later.
+// Going between sections is a plain slide, as in Ref.
 import { test, expect } from '@playwright/test';
 import { openRounds, eyeShoot, sheet, opened } from './_rounds.mjs';
 
@@ -14,6 +15,16 @@ const standIns = (page) => page.evaluate(() => {
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t) => { window.__copied = t; } } });
 });
 const top = (page) => page.locator('#view .card.top');
+// The top card swiped away to the right.
+async function swipe(page) {
+  const box = await top(page).boundingBox();
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + 120, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 140, y + 2, { steps: 2 });
+  await page.mouse.move(box.x + 330, y + 4, { steps: 6 });
+  await page.mouse.up();
+}
 
 test.describe('Rounds: Today', () => {
   test('people from The Eye come in, one card at a time; LATER, then WRITE TO and Done', async ({ browser }, testInfo) => {
@@ -70,17 +81,47 @@ test.describe('Rounds: Today', () => {
 
   test('a card swiped away is done, and UNDO puts it back', async ({ browser }, testInfo) => {
     const { ctx, page } = await openRounds(browser, testInfo, '/rounds/', eyeShoot);
-    const box = await top(page).boundingBox();
-    const y = box.y + box.height / 2;
-    await page.mouse.move(box.x + 120, y);
-    await page.mouse.down();
-    await page.mouse.move(box.x + 140, y + 2, { steps: 2 });
-    await page.mouse.move(box.x + 330, y + 4, { steps: 6 });
-    await page.mouse.up();
+    await swipe(page);
     await expect(page.locator('#toast')).toContainText('Done.');
     await expect(top(page)).toContainText('Maya R.');
     await page.click('#toast .toast-action');
     await expect(top(page)).toContainText('Jules M.');
+    await ctx.close();
+  });
+
+  test('DONE TODAY lists the cards swiped away, newest first, and Undo brings each back', async ({ browser }, testInfo) => {
+    const { ctx, page, problems } = await openRounds(browser, testInfo, '/rounds/', eyeShoot);
+    const doneToday = page.locator('#view [data-done-today]');
+    await expect(doneToday).toHaveCount(0);
+    await swipe(page);
+    await expect(doneToday).toHaveText('Done today 1');
+    await expect(top(page)).toContainText('Maya R.');
+    await swipe(page);
+    await expect(page.locator('#view .today-calm h2')).toHaveText("That's today.");
+    await expect(doneToday).toHaveText('Done today 2');
+    // Long after the toast's Undo has gone.
+    await page.reload();
+    await page.click('#view [data-done-today]');
+    const s = await opened(page, 'Done today');
+    await expect(s.locator('.choice-label')).toHaveText(['Maya R.', 'Jules M.']);
+    await expect(s.locator('.choice-detail')).toHaveText(['Say thanks', 'Say thanks']);
+    await s.locator('.done-row', { hasText: 'Jules M.' }).locator('[data-undo]').click();
+    await expect(page.locator('#toast')).toHaveText('Undone.');
+    await expect(s.locator('.choice-label')).toHaveText(['Maya R.']);
+    // Behind the sheet, Jules is back on Today.
+    await expect(count(page)).toHaveText('2 of 2 today');
+    await expect(top(page)).toContainText('Jules M.');
+    await expect(doneToday).toHaveText('Done today 1');
+    // The last one: the sheet closes, and the day is as it was.
+    await s.locator('[data-undo]').click();
+    await expect(s).toHaveCount(0);
+    await expect(count(page)).toHaveText('1 of 2 today');
+    await expect(doneToday).toHaveCount(0);
+    await page.reload();
+    await expect(count(page)).toHaveText('1 of 2 today');
+    await expect(top(page)).toContainText('Jules M.');
+    await expect(top(page)).toContainText('Say thanks');
+    expect(problems).toEqual([]);
     await ctx.close();
   });
 

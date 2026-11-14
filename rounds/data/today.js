@@ -29,6 +29,22 @@ export function pickFor(people, saved, today, perDay = PER_DAY) {
 }
 
 export const waiting = (pick) => pick.ids.filter((id) => !pick.marks[id]);
+
+// Done today (to undo a card swiped away by mistake): from the log, each
+// person's latest move that day (an earlier one shows once that's undone),
+// the newest first. Anyone let go or no longer here is left out.
+export function doneOn(lines, people, day) {
+  const byId = new Map(people.filter((p) => !p.letGo).map((p) => [p.id, p]));
+  const latest = new Map();
+  for (const l of lines) {
+    if (l.day !== day || !byId.has(l.personId) || !KIND_KEYS.includes(l.kind)) continue;
+    const had = latest.get(l.personId);
+    if (!had || (l.at || 0) > (had.at || 0)) latest.set(l.personId, l);
+  }
+  return [...latest.values()]
+    .map((line) => ({ line, person: byId.get(line.personId) }))
+    .sort((a, b) => (b.line.at || 0) - (a.line.at || 0) || a.person.name.localeCompare(b.person.name));
+}
 export const markPick = (pick, id, how) => ({ ...pick, marks: { ...pick.marks, [id]: how } });
 export function unmarkPick(pick, id) {
   const marks = { ...pick.marks };

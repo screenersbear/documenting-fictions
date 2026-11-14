@@ -47,10 +47,29 @@ export function fromImport(rows, today, perDay, makeId) {
   });
 }
 
-// The move is done: what comes next, and the line for the log.
+// The move is done: what comes next, and the line for the log, which keeps
+// the move as it was (its due day and step) so it can be put back.
 export function markDone(person, today) {
-  const log = { personId: person.id, kind: person.next.kind, day: today };
+  const { kind, due, step } = person.next;
+  const log = { personId: person.id, kind, day: today, due, step };
   return { person: { ...person, lastMove: today, next: afterDone(person, today) }, log };
+}
+
+// A move marked done by mistake (Today's Done today): the person as they
+// were before it, from its line in the log. Lines from before 14 Nov keep
+// only the kind and the day: the move was due that day, and a follow up was
+// the step before the one planned now (a prospect's last one, step 2, plans
+// nothing). Their last move goes back to the latest of their other lines.
+function followupBefore(person) {
+  const next = person.next;
+  if (next && next.kind === 'followup') return Math.max(0, next.step - 1);
+  return person.group === 'prospect' && !next ? 2 : 0;
+}
+export function undoDone(person, line, lines = []) {
+  const guess = line.kind === 'followup' ? followupBefore(person) : 0;
+  const step = Number.isInteger(line.step) ? line.step : guess;
+  const lastMove = lines.filter((l) => l.personId === person.id && l.id !== line.id).map((l) => l.day).sort().pop() || '';
+  return { ...person, lastMove, next: move(line.kind, line.due || line.day, step) };
 }
 
 // LATER: the same move, tomorrow.

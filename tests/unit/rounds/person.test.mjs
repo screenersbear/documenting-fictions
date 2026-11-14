@@ -1,6 +1,6 @@
 // rounds/data/person.js: a person as Rounds keeps them, and what happens to them.
 import { describe, it, expect } from 'vitest';
-import { newPerson, fromImport, markDone, markLater, applyEdit, letGo, bringBack } from '../../../rounds/data/person.js';
+import { newPerson, fromImport, markDone, undoDone, markLater, applyEdit, letGo, bringBack } from '../../../rounds/data/person.js';
 import { move } from '../../../rounds/data/plan.js';
 
 const T = '2026-11-14';
@@ -41,10 +41,14 @@ describe('markDone and markLater', () => {
   const dana = newPerson({ id: 'd', name: 'Dana', group: 'client' }, T);
   it('logs the move and plans the next', () => {
     const { person, log } = markDone(dana, T);
-    expect(log).toEqual({ personId: 'd', kind: 'intros', day: T });
+    expect(log).toEqual({ personId: 'd', kind: 'intros', day: T, due: T, step: 0 });
     expect(person.lastMove).toBe(T);
     expect(person.next).toEqual(move('refresh', '2027-02-12'));
     expect(dana.lastMove).toBe(''); // the old one stays as it was
+  });
+  it('logs a move that was waiting with the day it was due and its step', () => {
+    const late = { ...newPerson({ id: 'q', name: 'Q', group: 'prospect' }, T), next: move('followup', '2026-11-10', 1) };
+    expect(markDone(late, T).log).toEqual({ personId: 'q', kind: 'followup', day: T, due: '2026-11-10', step: 1 });
   });
   it('moves LATER to tomorrow', () => {
     const p = markLater(dana, T);
@@ -80,5 +84,66 @@ describe('letGo and bringBack', () => {
   it('brings them back with their move, or their group\'s first', () => {
     expect(bringBack(letGo(maya), T)).toEqual(maya);
     expect(bringBack({ ...letGo(maya), next: null, group: 'prospect' }, T).next).toEqual(move('pitch', T));
+  });
+});
+
+describe('undoDone', () => {
+  const prospect = newPerson({ id: 'a', name: 'Abrams', group: 'prospect' }, T);
+  it('puts back the move exactly as it was, from a line with its due day and step', () => {
+    const was = { ...prospect, next: move('followup', '2026-11-10', 1), lastMove: '2026-11-03' };
+    const { person, log } = markDone(was, T);
+    const line = { id: 'l2', ...log };
+    const lines = [{ id: 'l1', personId: 'a', kind: 'pitch', day: '2026-11-03' }, line];
+    expect(undoDone(person, line, lines)).toEqual(was);
+  });
+  it('a swiped pitch comes back as the pitch, due that day', () => {
+    const { person, log } = markDone(prospect, T);
+    expect(person.next).toEqual(move('followup', '2026-11-21', 1));
+    expect(undoDone(person, { id: 'l', ...log }, [{ id: 'l', ...log }])).toEqual(prospect);
+  });
+  it('a line from before 14 Nov (only its kind and day) gives the move due that day', () => {
+    const after = { ...prospect, lastMove: T, next: move('followup', '2026-11-21', 1) };
+    const back = undoDone(after, { id: 'old', personId: 'a', kind: 'pitch', day: '2026-11-13' });
+    expect(back.next).toEqual(move('pitch', '2026-11-13', 0));
+    expect(back.lastMove).toBe('');
+  });
+  it('an older follow up line takes the step before the one planned now', () => {
+    const line = { id: 'old', personId: 'a', kind: 'followup', day: T };
+    expect(undoDone({ ...prospect, next: move('followup', '2026-12-05', 2) }, line).next).toEqual(move('followup', T, 1));
+    expect(undoDone({ ...prospect, next: move('followup', '2026-12-05', 0) }, line).next.step).toBe(0);
+  });
+  it("an older line for a prospect's last follow up (nothing planned after) was step 2", () => {
+    const line = { id: 'old', personId: 'a', kind: 'followup', day: T };
+    expect(undoDone({ ...prospect, next: null }, line).next).toEqual(move('followup', T, 2));
+  });
+  it('an older follow up for anyone else, or with another move planned, was step 0', () => {
+    const line = { id: 'old', personId: 'n', kind: 'followup', day: T };
+    const fresh = newPerson({ id: 'n', name: 'N' }, T);
+    expect(undoDone({ ...fresh, next: move('checkin', '2026-12-26') }, line).next).toEqual(move('followup', T, 0));
+    expect(undoDone({ ...fresh, next: null }, line).next.step).toBe(0);
+    expect(undoDone({ ...prospect, next: move('hello', T) }, line).next.step).toBe(0);
+  });
+  it('a step kept on the line wins, even 0', () => {
+    const line = { id: 'l', personId: 'a', kind: 'followup', day: T, due: '2026-11-12', step: 0 };
+    expect(undoDone({ ...prospect, next: move('followup', '2026-12-05', 2) }, line).next).toEqual(move('followup', '2026-11-12', 0));
+    expect(undoDone({ ...prospect, next: move('followup', '2026-12-05', 2) }, { ...line, step: 'x' }).next.step).toBe(1);
+  });
+  it("the last move goes back to the latest of their other lines, not anyone else's", () => {
+    const lines = [
+      { id: 'l1', personId: 'a', kind: 'pitch', day: '2026-10-20' },
+      { id: 'l2', personId: 'a', kind: 'followup', day: '2026-10-27' },
+      { id: 'zz', personId: 'b', kind: 'pitch', day: '2026-11-13' },
+      { id: 'l3', personId: 'a', kind: 'followup', day: T },
+    ];
+    expect(undoDone({ ...prospect, lastMove: T, next: null }, lines[3], lines).lastMove).toBe('2026-10-27');
+    expect(undoDone({ ...prospect, lastMove: T }, lines[3], [lines[3]]).lastMove).toBe('');
+  });
+  it('keeps everything else about them, and leaves the person given as it was', () => {
+    const after = { ...prospect, note: 'Big agency', lastMove: T, next: move('followup', '2026-11-21', 1) };
+    const back = undoDone(after, { id: 'l', personId: 'a', kind: 'pitch', day: T, due: T, step: 0 });
+    expect(back.note).toBe('Big agency');
+    expect(back.name).toBe('Abrams');
+    expect(after.next).toEqual(move('followup', '2026-11-21', 1));
+    expect(after.lastMove).toBe(T);
   });
 });
