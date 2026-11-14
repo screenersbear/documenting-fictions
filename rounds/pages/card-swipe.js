@@ -7,7 +7,7 @@ const still = () => window.matchMedia('(prefers-reduced-motion: reduce)').matche
 const held = (dx) => `translate3d(${dx}px, 0px, 0px) rotate(${(dx / 24).toFixed(2)}deg)`;
 
 export function wireCard(card, { onOpen, onSwipe }) {
-  let d = null, swiped = 0;
+  let d = null, swiped = -Infinity; // never, to start: a tap just after Today opens counts
   card.addEventListener('pointerdown', (e) => {
     if (e.button) return;
     e.stopPropagation();

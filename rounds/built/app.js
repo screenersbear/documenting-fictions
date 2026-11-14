@@ -1684,7 +1684,7 @@ const still$1 = /* @__PURE__ */ __name(() => window.matchMedia("(prefers-reduced
 const held = (dx) => `translate3d(${dx}px, 0px, 0px) rotate(${(dx / 24).toFixed(2)}deg)`;
 function wireCard(card, { onOpen, onSwipe }) {
 	let d = null;
-	let swiped = 0;
+	let swiped = -Infinity;
 	card.addEventListener("pointerdown", (e) => {
 		if (e.button) return;
 		e.stopPropagation();

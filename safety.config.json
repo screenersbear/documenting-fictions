@@ -9,6 +9,7 @@
     "ref/data/db.js",
     "ref/data/library.js",
     "ref/data/templates.js",
+    "ref/data/client-board.js",
     "ref/components/textsize.js",
     "ref/components/util.js",
     "ref/components/undo.js",

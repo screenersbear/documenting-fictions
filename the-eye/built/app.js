@@ -15355,6 +15355,8 @@ window.EyeParts.addShootMoodboard = function addShootMoodboard(ed) {
   }
 
   // Ref's + New shoot from this board: a new shoot, named for the board, with it on.
+  // A client's board (started in Ref from a yes in Rounds) brings the
+  // client along: the new shoot has them as its talent, with their handle.
   function openShootFromBoard(linkId) {
     if (!ed.refApi) return;
     ed.refApi.getLink(linkId).then(l => {
@@ -15363,6 +15365,11 @@ window.EyeParts.addShootMoodboard = function addShootMoodboard(ed) {
       const title = document.getElementById('shootTitle');
       title.value = l.name || '';
       ed.syncFieldFilledState(title);
+      const c = l.client;
+      if (c && ed.hasText(c.name) && !ed.currentTalents.length) {
+        ed.currentTalents = [{ id: ed.uid(), name: c.name.trim(), socialHandles: ed.hasText(c.handle) ? [{ platform: 'instagram', handle: c.handle.trim() }] : [], photo: '' }];
+        ed.renderTalents();
+      }
       ed.updateShootRunningHead();
       ed.autosaveShoot(true);
       return ed.refApi.saveLink({ ...l, toId: ed.currentShootId, pending: false })
