@@ -20,6 +20,8 @@
 .opts-disc i + i { width: 5.5px; height: 5.5px; }
 .opts-disc i + i + i { width: 4px; height: 4px; }
 .shelf.away .shelf-bar { opacity: 0; pointer-events: none; }
+/* Coming back from a notebook: hidden from the first paint (index.html, app.js). */
+html.arriving .shelf-bar { opacity: 0; transition: none; }
 /* The iPhone home-screen app (components/screen-fit.js): for a moment the page is
    taller than the screen, so iOS measures itself again. If it stays short,
    the bar comes down by that much less. */

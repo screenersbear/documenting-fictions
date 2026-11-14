@@ -151,6 +151,10 @@
     if (quiet || ed.still()) { ed.settle(); store.set(FRONT_KEY, String(ed.fromAt)); }
     else { ed.busy = true; shelf.classList.add('away'); }
   }
+  // index.html hid the bar from the first paint while a book comes back;
+  // .away hides it from here (until the book has shut), so it never shows
+  // for a moment and then fades.
+  requestAnimationFrame(() => document.documentElement.classList.remove('arriving'));
   stage.classList.add('waiting');
   whenArtIn(1500).then(() => {
     stage.classList.remove('waiting');

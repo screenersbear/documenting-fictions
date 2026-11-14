@@ -27,6 +27,10 @@
       document.documentElement.style.visibility = 'hidden';
       location.replace(inside + '/');
     }
+    // Coming back from a notebook, the book shuts into the shelf: the bar
+    // under it stays hidden from the first paint until it has (app.js).
+    var still = /[?&]still/.test(location.search) || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    if (/[?&]from=/.test(location.search) && !still) document.documentElement.classList.add('arriving');
   } catch (e) {}
 })();
 </script>
