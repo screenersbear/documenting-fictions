@@ -185,6 +185,35 @@ window.StickerParts.addStickerStore = function addStickerStore(ed) {
 };
 ;
 
+// ---- components/sticker-bends.js ----
+// Where a sticker bends over its cover's edges: which edges it passes, and
+// where the shading goes on it (components/sticker-art.js draws it).
+// (Loaded before components/stickers.js.)
+window.StickerParts = window.StickerParts || {};
+window.StickerParts.addStickerBends = function addStickerBends(ed) {
+  'use strict';
+  Object.assign(ed, { bendsOf });
+  const BEND = 0.075; // how far in the bend's shading reaches, of the cover's width
+
+  // s: { x, y, size } (its middle as shares of the cover's width and height,
+  // its width as a share of the cover's width) and its shape. For each edge,
+  // r, l, t, b: null, or where the shading sits, in % of the sticker.
+  function bendsOf(s) {
+    // Its width and height as shares of the cover's: the cover's width is
+    // COVER of its height, so a sticker size wide is size x COVER / ratio tall.
+    const w = s.size, h = (s.size / ed.ratioOf(s)) * ed.COVER;
+    const left = s.x - w / 2, top = s.y - h / 2;
+    const across = (BEND / w) * 100, down = ((BEND * ed.COVER) / h) * 100;
+    return {
+      r: left + w > 1 ? { left: ((1 - left) / w) * 100 - across, width: across } : null,
+      l: left < 0 ? { left: (-left / w) * 100, width: across } : null,
+      t: top < 0 ? { top: (-top / h) * 100, height: down } : null,
+      b: top + h > 1 ? { top: ((1 - top) / h) * 100 - down, height: down } : null,
+    };
+  }
+};
+;
+
 // ---- components/sticker-art.js ----
 // Drawing a sticker: its picture, its vinyl, its edge, and where it sits on a
 // cover (folding over an edge). (Loaded before components/stickers.js.)
@@ -263,20 +292,18 @@ window.StickerParts.addStickerArt = function addStickerArt(ed) {
     (onFlap ? placeOnFlap : seat)(el, s);
     return el;
   }
-  // Where it sits, and the shading wherever it bends over an edge.
-  const BEND = 0.075; // how far in the bend's shading reaches, of the cover's width
+  // Where it sits, and the shading wherever it bends over an edge
+  // (components/sticker-bends.js works out where).
   function seat(el, s) {
     el.style.left = `${s.x * 100}%`;
     el.style.top = `${s.y * 100}%`;
     el.style.width = `${s.size * 100}%`;
-    const w = s.size, h = (s.size / ed.ratioOf(s)) / ed.COVER;
-    const left = s.x - w / 2, top = s.y - h / 2;
-    const across = (BEND / w) * 100, down = ((BEND / ed.COVER) / h) * 100;
-    const set = (cls, on, css) => { const f = el.querySelector(`.bend.${cls}`); f.hidden = !on; if (on) Object.assign(f.style, css); };
-    set('r', left + w > 1, { left: `${((1 - left) / w) * 100 - across}%`, width: `${across}%` });
-    set('l', left < 0, { left: `${(-left / w) * 100}%`, width: `${across}%` });
-    set('b', top + h > 1, { top: `${((1 - top) / h) * 100 - down}%`, height: `${down}%` });
-    set('t', top < 0, { top: `${(-top / h) * 100}%`, height: `${down}%` });
+    const bends = ed.bendsOf(s);
+    for (const [edge, at] of Object.entries(bends)) {
+      const f = el.querySelector(`.bend.${edge}`);
+      f.hidden = !at;
+      if (at) for (const [k, v] of Object.entries(at)) f.style[k] = `${v}%`;
+    }
   }
   function placeOnFlap(el, s) {
     el.style.left = `calc(${s.x - 1} * var(--W))`;
@@ -618,6 +645,7 @@ window.StickerParts.addPlacing = function addPlacing(ed) {
   const ratioOf = (s) => ((s.shape === 'rect' || s.shape === 'cut') && s.ratio > 0 ? s.ratio : RATIO[s.shape] || 1); ed.ratioOf = ratioOf;
   const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`; ed.uid = uid;
   window.StickerParts.addStickerStore(ed);
+  window.StickerParts.addStickerBends(ed);
   window.StickerParts.addStickerArt(ed);
   window.StickerParts.addNewSticker(ed);
   window.StickerParts.addCutting(ed);

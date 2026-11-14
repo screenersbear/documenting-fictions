@@ -75,20 +75,18 @@ window.StickerParts.addStickerArt = function addStickerArt(ed) {
     (onFlap ? placeOnFlap : seat)(el, s);
     return el;
   }
-  // Where it sits, and the shading wherever it bends over an edge.
-  const BEND = 0.075; // how far in the bend's shading reaches, of the cover's width
+  // Where it sits, and the shading wherever it bends over an edge
+  // (components/sticker-bends.js works out where).
   function seat(el, s) {
     el.style.left = `${s.x * 100}%`;
     el.style.top = `${s.y * 100}%`;
     el.style.width = `${s.size * 100}%`;
-    const w = s.size, h = (s.size / ed.ratioOf(s)) / ed.COVER;
-    const left = s.x - w / 2, top = s.y - h / 2;
-    const across = (BEND / w) * 100, down = ((BEND / ed.COVER) / h) * 100;
-    const set = (cls, on, css) => { const f = el.querySelector(`.bend.${cls}`); f.hidden = !on; if (on) Object.assign(f.style, css); };
-    set('r', left + w > 1, { left: `${((1 - left) / w) * 100 - across}%`, width: `${across}%` });
-    set('l', left < 0, { left: `${(-left / w) * 100}%`, width: `${across}%` });
-    set('b', top + h > 1, { top: `${((1 - top) / h) * 100 - down}%`, height: `${down}%` });
-    set('t', top < 0, { top: `${(-top / h) * 100}%`, height: `${down}%` });
+    const bends = ed.bendsOf(s);
+    for (const [edge, at] of Object.entries(bends)) {
+      const f = el.querySelector(`.bend.${edge}`);
+      f.hidden = !at;
+      if (at) for (const [k, v] of Object.entries(at)) f.style[k] = `${v}%`;
+    }
   }
   function placeOnFlap(el, s) {
     el.style.left = `calc(${s.x - 1} * var(--W))`;

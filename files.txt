@@ -22,6 +22,7 @@ built/app.js
   components/colors.js
   components/books.js
   data/sticker-store.js
+  components/sticker-bends.js
   components/sticker-art.js
   components/sticker-new.js
   components/sticker-cut.js

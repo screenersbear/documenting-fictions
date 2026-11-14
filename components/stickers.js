@@ -34,6 +34,7 @@
   const ratioOf = (s) => ((s.shape === 'rect' || s.shape === 'cut') && s.ratio > 0 ? s.ratio : RATIO[s.shape] || 1); ed.ratioOf = ratioOf;
   const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`; ed.uid = uid;
   window.StickerParts.addStickerStore(ed);
+  window.StickerParts.addStickerBends(ed);
   window.StickerParts.addStickerArt(ed);
   window.StickerParts.addNewSticker(ed);
   window.StickerParts.addCutting(ed);
