@@ -10,11 +10,18 @@ import { NOTE, readList, kindOf, styleProblem, joinStyles, joinScripts, joinMark
 // The tests run from the suite's top folder.
 const ROOT = process.cwd();
 
+// Inside Stryker's mutation sandbox (on GitHub) the logic files are rewritten
+// on purpose, each carrying its mutants, so no built/ can match them there and
+// the whole mutation run stopped before it began. The real files are checked
+// everywhere else: these unit tests on this Mac, the push check and GitHub's
+// unit job.
+const MUTATING = !!process.env.STRYKER_MUTATOR_WORKER;
+
 describe('every app in the suite', () => {
-  it('finds the shelf and the four notebooks', () => {
+  it('finds the shelf and the notebooks', () => {
     expect(findApps(ROOT)).toEqual(expect.arrayContaining(['.', 'ref', 'contact-sheet', 'overthoughts', 'rounds']));
   });
-  it.each(findApps(ROOT))('%s: built/ matches files.txt (run node tools/join.mjs if not)', async (app) => {
+  it.each(MUTATING ? [] : findApps(ROOT))('%s: built/ matches files.txt (run node tools/join.mjs if not)', async (app) => {
     expect(await staleFiles(join(ROOT, app))).toEqual([]);
   });
 });
