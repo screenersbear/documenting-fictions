@@ -17,6 +17,24 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
   ed.near = null; // the book brought up close for its options (the film roll)
   ed.nearAt = { y: 0, k: 1 }; // where it is then: how far up, how much bigger
   ed.layout = ed.LAYOUTS.includes(ed.store.get(ed.LAYOUT_KEY)) ? ed.store.get(ed.LAYOUT_KEY) : 'ring';
+  // The notebooks in front last, newest first: Spread lays them in that order.
+  const ids = ed.BOOKS.map((b) => b.id);
+  let recent = [];
+  try { recent = JSON.parse(ed.store.get(ed.RECENT_KEY) || '[]').map((id) => ids.indexOf(id)).filter((i) => i >= 0); } catch (e) { recent = []; }
+  function remember(i) {
+    if (recent[0] === i) return;
+    recent = [i, ...recent.filter((x) => x !== i)];
+    ed.store.set(ed.RECENT_KEY, JSON.stringify(recent.map((x) => ids[x])));
+  }
+  if (fromAt >= 0) remember(fromAt);
+  // Where book i lies in Spread: 0 on top (the one in front), then the ones
+  // in front before it, then the rest round the ring.
+  function spreadRank(i) {
+    const front = mod(Math.round(ed.pos));
+    const order = [front, ...recent.filter((x) => x !== front)];
+    for (let k = 1; k < ed.N; k++) if (!order.includes(mod(front + k))) order.push(mod(front + k));
+    return order.indexOf(i);
+  }
 
   // Where book i stands, wherever the turning has got to: [x, y, z, yaw, depth
   // order, fog]. pos is the book in front (fractions while turning).
@@ -61,6 +79,15 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
       fogTo(i, '0');
       return Infinity;
     }
+    if (ed.layout === 'spread') { // big, overlapping, lying back; a book opening sits up to face you
+      const r = spreadRank(i), [fx, fy, fw, turn] = ed.SPREAD[r];
+      const vw = window.innerWidth, vh = ed.VH || window.innerHeight, u = Math.min(vw, vh * 390 / 844);
+      const x = (fx - 0.5) * u, y = vh / 2 + (fy - 0.5) * u * (844 / 390) - (ed.Y || vh * 0.6), k = (fw * u) / ed.W;
+      const up = ed.facing === i;
+      s.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0px) rotateX(${up ? 0 : ed.SPREAD_TILT}deg) rotateZ(${up ? 0 : turn}deg) scale3d(${k.toFixed(3)}, ${k.toFixed(3)}, ${k.toFixed(3)})`;
+      fogTo(i, '0');
+      return 100 - r * 10;
+    }
     const [x, y, z, yaw, order, fog] = spot(i);
     const tilt = ed.layout === 'row' ? 0 : ed.TILT; // the row looks at you straight on
     const upright = ed.facing === i ? tilt : 0;
@@ -73,6 +100,7 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
     const at = Math.round(ed.pos);
     if (ed.layout === 'dominoes') return mod(i - at); // the ones behind come forward
     if (ed.layout === 'row') return mod(i - at + ed.N / 2) - ed.N / 2;
+    if (ed.layout === 'spread') return mod(i - at);
     return wrap((i - at) * ed.STEP) / ed.STEP;
   }
   // A swipe up: the next way of standing them; down: the one before.
@@ -83,11 +111,14 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
     ed.pos = mod(Math.round(ed.pos));
     ed.slots.forEach((sl) => sl.classList.add('reshaping'));
     render();
+    if (ed.shapeMarks) ed.shapeMarks(true); // the marks at the right edge, and the name for a moment (pages/shelf-marks.js)
     clearTimeout(reshape.t);
     reshape.t = setTimeout(() => ed.slots.forEach((sl) => sl.classList.remove('reshaping')), ed.RESHAPE_MS + 40);
     ed.store.set(ed.FRONT_KEY, String(ed.pos));
   }
+  let spread = null;
   function render() {
+    if (spread !== (ed.layout === 'spread')) { spread = ed.layout === 'spread'; ed.stage.classList.toggle('is-spread', spread); ed.shelf.classList.toggle('is-spread', spread); }
     const order = ed.slots.map((s, i) => place(i));
     // Which book is in front of which, 1 to 4: that only changes as two of
     // them pass, so the shelf is restacked then and not on every frame of a turn.
@@ -116,6 +147,7 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
   }
   function settle() {
     ed.pos = mod(Math.round(ed.pos));
+    remember(ed.pos);
     render();
     ed.store.set(ed.FRONT_KEY, String(ed.pos));
   }

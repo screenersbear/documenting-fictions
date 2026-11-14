@@ -1,0 +1,21 @@
+/* Spread (round 2, 03-shelf-spread): the books big and overlapping, lying
+   back on the table like covers spread out. Still 3D: the page block shows at
+   the foot and the fore-edge, and each casts a soft shadow. They don't float,
+   their tabs are hidden (open a book to reach its sections), and under them
+   only the Options button stays. Also the arrangement marks at the right
+   edge (pages/shelf-marks.js). */
+.foot { display: none; }
+.stage.is-spread .foot { display: block; left: calc(var(--W) * .01); width: calc(var(--W) * .975); height: var(--T); top: calc(var(--H) * .988 - var(--T) / 2); transform: rotateX(90deg); background: repeating-linear-gradient(0deg, #FFFFFF 0 1.5px, #E6E6E1 1.5px 3px); }
+.stage.is-spread .float, .stage.is-spread .ground { animation: none; }
+.stage.is-spread .ground, .stage.is-spread .slot:not(.near) .tab { display: none; } /* up close for Options, its tabs show again */
+.stage.is-spread .back { box-shadow: 0 calc(var(--W) * .066) calc(var(--W) * .066) rgba(49, 61, 69, .22); }
+.shelf.is-spread :is(.front-name, .front-line, .front-dots) { visibility: hidden; }
+
+/* The marks: one for each arrangement, the one in use long; its name in a
+   small ink pill beside them for a moment after a swipe. */
+.shape-marks { position: absolute; right: 10px; top: 42.6%; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; transition: opacity .3s; }
+.shape-marks i { width: 6px; height: 6px; border-radius: 3px; background: #D6DADD; transition: height .2s, background-color .2s; }
+.shape-marks i.on { height: 18px; background: var(--text); }
+.shape-name { position: absolute; right: 26px; top: calc(42.6% + 22px); z-index: 5; display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 14px; background: var(--text); color: var(--paper); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; pointer-events: none; opacity: 0; transition: opacity .25s; }
+.shape-name.in { opacity: 1; }
+.shelf.away :is(.shape-marks, .shape-name) { opacity: 0; }

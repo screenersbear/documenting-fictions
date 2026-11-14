@@ -57,6 +57,15 @@ window.ShelfParts.addOptions = function addOptions(ed) {
     if (window.DFStickers) window.DFStickers.paint(ed.slots[i].querySelector('.front'), ed.slots[i].querySelector('.sticker-flap'), ed.BOOKS[i].id);
   }
 
+  // Sticker edge (round 3), for the newest sticker on this cover: White
+  // border or Black outline, each shown on a little of its photo.
+  function edgeHtml(s) {
+    const St = window.DFStickers, on = s.edge === 'outline' ? 'outline' : 'white';
+    const pick = (key, label) => `<button type="button" class="edge-opt" role="radio" data-edge="${key}" aria-checked="${key === on}"><span class="edge-dot ${key}" style="background-image:url('${St.thumb(s)}')"></span>${label}</button>`;
+    return `<span class="opt-label" id="optEdgeLabel">Sticker edge</span>
+        <div class="edge-opts" role="radiogroup" aria-labelledby="optEdgeLabel">${pick('white', 'White border')}${pick('outline', 'Black outline')}</div>`;
+  }
+
   function showOptions(view) {
     const i = ed.near, b = ed.BOOKS[i];
     const St = window.DFStickers;
@@ -73,13 +82,13 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         <div class="sheet-head"><h2>${b.short}</h2><button type="button" class="ring-btn" data-close aria-label="Close"><span>${CLOSE}</span></button></div>
         <span class="opt-label" id="optColorLabel">Notebook color</span>
         <div class="opt-colors" role="radiogroup" aria-labelledby="optColorLabel">${b.colors.map((k) => `<button type="button" class="opt-color" role="radio" data-color="${k}" aria-checked="${k === now}" style="--sw:${ed.COLORS[k].band};--sp:${ed.COLORS[k].partner}"><span class="opt-swatch"></span><span>${ed.COLORS[k].name}</span></button>`).join('')}</div>
-        ${St ? `<span class="opt-label">Add a sticker</span>
+        ${St ? `<div class="opt-label-row"><span class="opt-label">Add a sticker</span>${mine.length ? `<button type="button" class="label-btn" data-remove>${TRASH}Remove one</button>` : ''}</div>
         <div class="sticker-kinds">
           <button type="button" class="sticker-kind" data-shape="circle"><span class="shape circle"></span><span>Circle</span></button>
           <button type="button" class="sticker-kind" data-shape="square"><span class="shape square"></span><span>Square</span></button>
           <button type="button" class="sticker-kind" data-shape="rect"><span class="shape rect"></span><span>Rectangle</span></button>
         </div>
-        ${mine.length ? `<button type="button" class="text-btn" data-remove>${TRASH}Remove a sticker</button>` : ''}` : ''}
+        ${mine.length ? edgeHtml(mine[mine.length - 1]) : ''}` : ''}
         <div class="opt-foot"><button type="button" class="sheet-btn" data-backup>Back up all four</button><button type="button" class="sheet-btn primary" data-close>Done</button></div>`;
     };
     const drawRemove = () => {
@@ -112,6 +121,15 @@ window.ShelfParts.addOptions = function addOptions(ed) {
       if (c) {
         setColor(i, c.dataset.color);
         sheet.querySelectorAll('[data-color]').forEach((x) => x.setAttribute('aria-checked', String(x === c)));
+        return;
+      }
+      const edge = e.target.closest('[data-edge]');
+      if (edge) {
+        const mine = St.list(b.id), s = mine[mine.length - 1];
+        if (!s) return;
+        sheet.querySelectorAll('[data-edge]').forEach((x) => x.setAttribute('aria-checked', String(x === edge)));
+        try { await St.setEdge(s, edge.dataset.edge); } catch (err) { console.error(err); ed.toast("The sticker edge wasn't saved"); }
+        paintStickers(i);
         return;
       }
       if (e.target.closest('[data-remove]')) { drawRemove(); nearFit(sheet.offsetTop); nearMove(); return; }

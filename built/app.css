@@ -79,30 +79,65 @@ button { font: inherit; color: inherit; }
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='.14'/%3E%3C/svg%3E");
 }
 .front { background: var(--grain) 0 0 / 160px 160px, var(--c); background-blend-mode: overlay, normal; box-shadow: inset calc(var(--W) * .029) 0 0 rgba(0, 0, 0, .08); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-.cover-mark { position: absolute; left: 32%; top: calc(50% - var(--W) * .18); width: calc(var(--W) * .36); height: calc(var(--W) * .36); }
-.cover-name { position: absolute; left: 0; right: 0; bottom: calc(var(--W) * .091); text-align: center; font-size: calc(var(--W) * .048); font-weight: 700; letter-spacing: .18em; line-height: 1; text-transform: uppercase; white-space: nowrap; color: var(--p); pointer-events: none; }
+/* The mark 40% of the cover's width, 30% down; the name 8% up from the foot
+   (round 2). The same cover in every arrangement, scaled with the book. */
+.cover-mark { position: absolute; left: 30%; top: 30%; width: calc(var(--W) * .4); height: calc(var(--W) * .4); }
+.cover-name { position: absolute; left: 0; right: 0; bottom: 8%; text-align: center; font-size: calc(var(--W) * .044); font-weight: 700; letter-spacing: .18em; line-height: 1; text-transform: uppercase; white-space: nowrap; color: var(--p); pointer-events: none; }
 
 /* ---- styles/cover-stickers.css ---- */
 /* Stickers on a cover (components/stickers.js), and round its fore-edge. */
 .front .stickers { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
-.sticker { position: absolute; aspect-ratio: var(--r, 1); transform: translate(-50%, -50%); padding: calc(var(--W) * .012); background: #f1eee6; box-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 calc(var(--W) * .008) calc(var(--W) * .02) rgba(0, 0, 0, .18); overflow: hidden; pointer-events: none; }
+/* Its edge (round 3): White border (a thick white die-cut edge) or Black
+   outline (a thin ink line, no white); either way a thin lift shadow under
+   it, so it sits on the cover (round 4). */
+.sticker { position: absolute; aspect-ratio: var(--r, 1); transform: translate(-50%, -50%); padding: calc(var(--W) * .012); background: #FFFFFF; box-shadow: 0 calc(var(--W) * .006) calc(var(--W) * .01) calc(var(--W) * .004) rgba(49, 61, 69, .35); overflow: hidden; pointer-events: none; isolation: isolate; }
 .sticker.square, .sticker.rect { border-radius: calc(var(--W) * .012); }
 .sticker.circle { border-radius: 50%; }
 .sticker.printed { padding: 0; background: none; }
-.sticker .photo { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; filter: saturate(.74) contrast(.86) brightness(1.06) sepia(.1); -webkit-touch-callout: none; }
-.sticker.printed .photo { filter: none; }
-.sticker::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(118deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, .04) 42%, rgba(30, 30, 40, .12)); }
-.sticker .crease { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; }
-.fold { position: absolute; z-index: 2; pointer-events: none; }
-.fold.r, .fold.l { top: 0; bottom: 0; }
-.fold.t, .fold.b { left: 0; right: 0; }
-.fold.r { background: linear-gradient(90deg, rgba(25, 20, 15, 0), rgba(25, 20, 15, .1) 45%, rgba(25, 20, 15, .36) 88%, rgba(255, 255, 255, .55) 97%, rgba(255, 255, 255, .8)); }
-.fold.l { background: linear-gradient(270deg, rgba(25, 20, 15, 0), rgba(25, 20, 15, .1) 45%, rgba(25, 20, 15, .36) 88%, rgba(255, 255, 255, .55) 97%, rgba(255, 255, 255, .8)); }
-.fold.b { background: linear-gradient(180deg, rgba(25, 20, 15, 0), rgba(25, 20, 15, .1) 45%, rgba(25, 20, 15, .36) 88%, rgba(255, 255, 255, .55) 97%, rgba(255, 255, 255, .8)); }
-.fold.t { background: linear-gradient(0deg, rgba(25, 20, 15, 0), rgba(25, 20, 15, .1) 45%, rgba(25, 20, 15, .36) 88%, rgba(255, 255, 255, .55) 97%, rgba(255, 255, 255, .8)); }
+.sticker.outline { padding: 0; background: none; box-shadow: 0 0 0 max(1px, calc(var(--W) * .0075)) #313D45, 0 calc(var(--W) * .006) calc(var(--W) * .01) calc(var(--W) * .004) rgba(49, 61, 69, .35); }
+.sticker .photo { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; -webkit-touch-callout: none; }
+/* The vinyl (components/sticker-art.js): grain and wrinkles in soft light,
+   the wrinkles stronger toward the edges, the sheen screened on, one faint
+   fold and a soft diagonal gloss. The photo keeps its colours. */
+.sticker .vinyl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: inherit; pointer-events: none; }
+.sticker .vinyl.grain { mix-blend-mode: soft-light; opacity: .55; }
+.sticker .vinyl.wrinkle { mix-blend-mode: soft-light; opacity: .9; -webkit-mask-image: radial-gradient(closest-side, rgba(0, 0, 0, .45) 30%, #000 100%); mask-image: radial-gradient(closest-side, rgba(0, 0, 0, .45) 30%, #000 100%); }
+.sticker .vinyl.sheen { mix-blend-mode: screen; opacity: .2; }
+.sticker .gloss { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(118deg, rgba(255, 255, 255, 0) 26%, rgba(255, 255, 255, .14) 42%, rgba(255, 255, 255, 0) 54%); }
+/* Past the cover's edge it bends over: shaded where it bends. */
+.bend { position: absolute; z-index: 2; pointer-events: none; }
+.bend.r, .bend.l { top: 0; bottom: 0; }
+.bend.t, .bend.b { left: 0; right: 0; }
+.bend.r { background: linear-gradient(90deg, rgba(25, 20, 15, 0), rgba(25, 20, 15, .1) 45%, rgba(25, 20, 15, .36) 88%, rgba(255, 255, 255, .55) 97%, rgba(255, 255, 255, .8)); }
+.bend.l { background: linear-gradient(270deg, rgba(25, 20, 15, 0), rgba(25, 20, 15, .1) 45%, rgba(25, 20, 15, .36) 88%, rgba(255, 255, 255, .55) 97%, rgba(255, 255, 255, .8)); }
+.bend.b { background: linear-gradient(180deg, rgba(25, 20, 15, 0), rgba(25, 20, 15, .1) 45%, rgba(25, 20, 15, .36) 88%, rgba(255, 255, 255, .55) 97%, rgba(255, 255, 255, .8)); }
+.bend.t { background: linear-gradient(0deg, rgba(25, 20, 15, 0), rgba(25, 20, 15, .1) 45%, rgba(25, 20, 15, .36) 88%, rgba(255, 255, 255, .55) 97%, rgba(255, 255, 255, .8)); }
 .leaf > .sticker-flap { left: 100%; top: 0; width: var(--T); height: 100%; overflow: hidden; transform-origin: 0 50%; transform: translateZ(1px) rotateY(90deg); pointer-events: none; }
 .sticker-flap .sticker { filter: brightness(.84); box-shadow: none; }
 .slot.open .sticker-flap { visibility: hidden; }
+
+/* ---- styles/shelf-spread.css ---- */
+/* Spread (round 2, 03-shelf-spread): the books big and overlapping, lying
+   back on the table like covers spread out. Still 3D: the page block shows at
+   the foot and the fore-edge, and each casts a soft shadow. They don't float,
+   their tabs are hidden (open a book to reach its sections), and under them
+   only the Options button stays. Also the arrangement marks at the right
+   edge (pages/shelf-marks.js). */
+.foot { display: none; }
+.stage.is-spread .foot { display: block; left: calc(var(--W) * .01); width: calc(var(--W) * .975); height: var(--T); top: calc(var(--H) * .988 - var(--T) / 2); transform: rotateX(90deg); background: repeating-linear-gradient(0deg, #FFFFFF 0 1.5px, #E6E6E1 1.5px 3px); }
+.stage.is-spread .float, .stage.is-spread .ground { animation: none; }
+.stage.is-spread .ground, .stage.is-spread .slot:not(.near) .tab { display: none; } /* up close for Options, its tabs show again */
+.stage.is-spread .back { box-shadow: 0 calc(var(--W) * .066) calc(var(--W) * .066) rgba(49, 61, 69, .22); }
+.shelf.is-spread :is(.front-name, .front-line, .front-dots) { visibility: hidden; }
+
+/* The marks: one for each arrangement, the one in use long; its name in a
+   small ink pill beside them for a moment after a swipe. */
+.shape-marks { position: absolute; right: 10px; top: 42.6%; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; transition: opacity .3s; }
+.shape-marks i { width: 6px; height: 6px; border-radius: 3px; background: #D6DADD; transition: height .2s, background-color .2s; }
+.shape-marks i.on { height: 18px; background: var(--text); }
+.shape-name { position: absolute; right: 26px; top: calc(42.6% + 22px); z-index: 5; display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 14px; background: var(--text); color: var(--paper); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; pointer-events: none; opacity: 0; transition: opacity .25s; }
+.shape-name.in { opacity: 1; }
+.shelf.away :is(.shape-marks, .shape-name) { opacity: 0; }
 
 /* ---- styles/shelf-bar.css ---- */
 /* Up close (Options): the book in front on its own, the others gone. */
@@ -161,13 +196,23 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .opt-color[aria-checked="true"] { font-weight: 700; }
 .opt-color[aria-checked="true"] .opt-swatch { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--text); }
 .sticker-kinds { display: flex; gap: 8px; }
-.sticker-kind { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 76px; padding: 0; border: 0; border-radius: 12px; background: var(--paper); box-shadow: inset 0 0 0 1px #E1E1DC; color: var(--text); font-size: 14px; cursor: pointer; }
+.sticker-kind { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 68px; padding: 0; border: 0; border-radius: 12px; background: var(--paper); box-shadow: inset 0 0 0 1px #E1E1DC; color: var(--text); font-size: 14px; cursor: pointer; }
 .sticker-kind .shape { display: block; width: 28px; height: 28px; box-shadow: inset 0 0 0 2px var(--text); }
 .sticker-kind .shape.circle { width: 30px; height: 30px; border-radius: 50%; }
 .sticker-kind .shape.square { border-radius: 3px; }
 .sticker-kind .shape.rect { width: 40px; height: 26px; border-radius: 3px; }
-.text-btn { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; padding: 0; border: 0; background: none; color: var(--dim); font-size: 15px; cursor: pointer; }
-.text-btn svg { width: 16px; height: 16px; }
+/* ADD A STICKER with REMOVE ONE beside it (round 3). */
+.opt-label-row { display: flex; align-items: center; justify-content: space-between; margin: 12px 0 4px; }
+.opt-label-row .opt-label { margin: 0; }
+.label-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 0 0 8px; border: 0; background: none; color: var(--dim); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+.label-btn svg { width: 14px; height: 14px; }
+/* STICKER EDGE: White border or Black outline, on a grey track, the picked one white. */
+.edge-opts { display: flex; height: 50px; padding: 3px; border-radius: 10px; background: #EFEFEA; }
+.edge-opt { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 0; height: 44px; padding: 0 6px; border: 0; border-radius: 8px; background: none; color: var(--text); font-size: 15px; font-weight: 400; white-space: nowrap; cursor: pointer; }
+.edge-opt[aria-checked="true"] { background: #FFFFFF; box-shadow: 0 1px 2px rgba(49, 61, 69, .15); font-weight: 500; }
+.edge-dot { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #D6DADD center / cover no-repeat; }
+.edge-dot.white { box-shadow: 0 0 0 2.5px #FFFFFF, 0 0 0 3.5px #E1E1DC; }
+.edge-dot.outline { box-shadow: 0 0 0 1.5px #313D45; }
 .opt-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; }
 .opt-foot.one { grid-template-columns: 1fr; }
 .opt-foot .sheet-btn { margin-top: 0; }
@@ -175,6 +220,7 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .sticker-pick { aspect-ratio: var(--r, 1); overflow: hidden; padding: 0; border: 0; background: #f1eee6; border-radius: 6px; cursor: pointer; }
 .sticker-pick.circle { border-radius: 50%; }
 .sticker-pick img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.sticker-kinds + .opt-label { margin-top: 14px; }
 
 /* ---- styles/sticker-new.css ---- */
 /* A new sticker: fitting the photo in its shape, then placing it on the cover. */

@@ -8,6 +8,7 @@ built/app.css
   styles/shelf.css
   styles/cover.css
   styles/cover-stickers.css
+  styles/shelf-spread.css
   styles/shelf-bar.css
   styles/ring-button.css
   styles/sheet.css
@@ -27,6 +28,7 @@ built/app.js
   pages/shelf-turntable.js
   pages/shelf-hands.js
   pages/shelf-caption.js
+  pages/shelf-marks.js
   pages/shelf-options.js
   components/toast.js
   pages/shelf-open.js

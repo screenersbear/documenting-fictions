@@ -26,16 +26,22 @@
   // shutting) stands up straight again, so its page still fills the screen.
   const TILT = 10; ed.TILT = TILT;
   const STEP = 360 / N; ed.STEP = STEP;
-  // Three ways to stand the books, swapped with a swipe up or down on them
+  // Four ways to stand the books, swapped with a swipe up or down on them
   // (user, 11-12): the ring; dominoes (the front book low on the left, each
   // one behind it a little further up and to the right, all at one angle);
-  // and a row facing the screen, swiped through side to side. The last one
-  // used is kept.
-  const LAYOUTS = ['ring', 'dominoes', 'row']; ed.LAYOUTS = LAYOUTS;
+  // a row facing the screen, swiped through side to side; and Spread (round
+  // 2): big and overlapping, lying back like covers spread on a table, the
+  // one in front on top. The last one used is kept.
+  const LAYOUTS = ['ring', 'dominoes', 'row', 'spread']; ed.LAYOUTS = LAYOUTS;
+  // Spread, from the top book down, on a 390 x 844 screen (larger screens
+  // keep its shape in the middle): [middle x, middle y, width, turn degrees].
+  const SPREAD = [[0.254, 0.671, 0.692, -4], [0.823, 0.697, 0.641, 5], [0.167, 0.296, 0.692, -3], [0.808, 0.315, 0.641, 4]]; ed.SPREAD = SPREAD;
+  const SPREAD_TILT = 16; ed.SPREAD_TILT = SPREAD_TILT; // each lies back this far (degrees)
+  const RECENT_KEY = 'df-suite-recent'; ed.RECENT_KEY = RECENT_KEY; // the notebooks in front last, newest first (Spread's order)
   const LAYOUT_KEY = 'df-suite-layout'; ed.LAYOUT_KEY = LAYOUT_KEY;
   const DOM = { x0: -0.55, up: 0.1, dx: 0.4, dy: 0.32, dz: 0.55, yaw: -22 }; ed.DOM = DOM; // of W, per book behind the front one (up: the whole line, a little higher than the ring)
   const ROW_GAP = 1.22; ed.ROW_GAP = ROW_GAP; // of W, from one book to the next in the row
-  const DRAG = { ring: 1.15, dominoes: 1.05, row: ROW_GAP }; ed.DRAG = DRAG; // a finger this far (of W) moves the books one along
+  const DRAG = { ring: 1.15, dominoes: 1.05, row: ROW_GAP, spread: 1.2 }; ed.DRAG = DRAG; // a finger this far (of W) moves the books one along
   const RESHAPE_MS = 620; ed.RESHAPE_MS = RESHAPE_MS;
   const OPEN_MS = 900, ZOOM_MS = 760, TURN_MS = 420; ed.OPEN_MS = OPEN_MS; ed.ZOOM_MS = ZOOM_MS; ed.TURN_MS = TURN_MS;
   const OVER = 12; ed.OVER = OVER; // how far the page's white goes past every edge of the screen once it has grown
@@ -82,7 +88,7 @@
     // The cover: flat colour with grain, the notebook's mark big in the
     // middle, its name near the foot, and any stickers.
     slot.innerHTML = `<div class="ground"></div><div class="float"><div class="book">
-      <div class="face back"></div><div class="spine"></div><div class="top"></div><div class="edge"></div>
+      <div class="face back"></div><div class="spine"></div><div class="top"></div><div class="foot"></div><div class="edge"></div>
       <div class="face page"></div>${tabs}
       <div class="leaf"><div class="face front" role="img" aria-label="${b.name}"><svg class="cover-mark" viewBox="0 0 24 24" aria-hidden="true">${b.mark}</svg><span class="cover-name">${b.short}</span><div class="stickers"></div></div><div class="face inside"></div><div class="face fog"></div><div class="lip"></div><div class="sticker-flap"></div></div>
     </div></div>`;
@@ -109,11 +115,13 @@
     const barTop = window.innerHeight - bar.getBoundingClientRect().top; // from the laid-out bottom, where the bar is held
     const y = Math.max(vh * 0.4, Math.min(vh * 0.64, vh - barTop - 64 - ed.W * 0.68));
     stage.style.setProperty('--y', `${y.toFixed(1)}px`);
+    ed.Y = y; ed.VH = vh; // where the books' middles are, and the screen's height (Spread places from them)
     stage.style.perspectiveOrigin = `50% ${(y - vh * 0.2).toFixed(1)}px`;
   }
   window.ShelfParts.addTurntable(ed);
   window.ShelfParts.addHands(ed);
   window.ShelfParts.addCaption(ed);
+  window.ShelfParts.addShapeMarks(ed);
   window.ShelfParts.addOptions(ed);
   window.ShelfParts.addToast(ed);
   window.ShelfParts.addOpening(ed);

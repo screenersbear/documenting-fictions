@@ -11,12 +11,14 @@
 // here once, the first time the shelf opens with this, and left where they
 // were.
 //
-//   df-stickers / stickers  { id, app, shape, ratio, x, y, size, seed, bytes, type, printed, createdAt }
+//   df-stickers / stickers  { id, app, shape, ratio, x, y, size, seed, bytes, type, printed, edge, createdAt }
 //     x, y: its middle, as a share of the cover's width and height; size: its
 //     width, as a share of the cover's width; ratio: width over height;
 //     bytes: the photo (an ArrayBuffer: Safari's stored Blobs break when a
 //     record is saved again); printed: the photo already has its paper edge
-//     (Contact Sheet's prints), so none is drawn round it.
+//     (Contact Sheet's prints), so none is drawn round it; edge: 'white' (or
+//     missing) for the white die-cut edge, 'outline' for a thin ink line;
+//     seed: picked when it's made, so its vinyl's wrinkles and fold never change.
 (function () {
   'use strict';
   const ed = {}; // what the stickers' parts share (the files it runs below)
@@ -30,5 +32,5 @@
   window.StickerParts.addStickerArt(ed);
   window.StickerParts.addNewSticker(ed);
 
-  window.DFStickers = { ready: ed.ready, list: ed.listOf, paint: ed.paint, pick: ed.pick, crop: ed.crop, place: ed.stick, remove: ed.remove, putBack: ed.putBack, thumb: ed.urlOf, ratioOf };
+  window.DFStickers = { ready: ed.ready, list: ed.listOf, paint: ed.paint, pick: ed.pick, crop: ed.crop, place: ed.stick, remove: ed.remove, putBack: ed.putBack, setEdge: ed.setEdge, thumb: ed.urlOf, ratioOf };
 })();

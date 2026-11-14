@@ -6,5 +6,7 @@
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='.14'/%3E%3C/svg%3E");
 }
 .front { background: var(--grain) 0 0 / 160px 160px, var(--c); background-blend-mode: overlay, normal; box-shadow: inset calc(var(--W) * .029) 0 0 rgba(0, 0, 0, .08); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-.cover-mark { position: absolute; left: 32%; top: calc(50% - var(--W) * .18); width: calc(var(--W) * .36); height: calc(var(--W) * .36); }
-.cover-name { position: absolute; left: 0; right: 0; bottom: calc(var(--W) * .091); text-align: center; font-size: calc(var(--W) * .048); font-weight: 700; letter-spacing: .18em; line-height: 1; text-transform: uppercase; white-space: nowrap; color: var(--p); pointer-events: none; }
+/* The mark 40% of the cover's width, 30% down; the name 8% up from the foot
+   (round 2). The same cover in every arrangement, scaled with the book. */
+.cover-mark { position: absolute; left: 30%; top: 30%; width: calc(var(--W) * .4); height: calc(var(--W) * .4); }
+.cover-name { position: absolute; left: 0; right: 0; bottom: 8%; text-align: center; font-size: calc(var(--W) * .044); font-weight: 700; letter-spacing: .18em; line-height: 1; text-transform: uppercase; white-space: nowrap; color: var(--p); pointer-events: none; }

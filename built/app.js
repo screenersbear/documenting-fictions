@@ -68,7 +68,7 @@ window.ShelfColors = {
 window.StickerParts = window.StickerParts || {};
 window.StickerParts.addStickerStore = function addStickerStore(ed) {
   'use strict';
-  Object.assign(ed, { write });
+  Object.assign(ed, { write, setEdge });
   // ---------- Keeping them ----------
   let dbp = null;
   const open = () => dbp || (dbp = new Promise((ok, no) => {
@@ -97,6 +97,16 @@ window.StickerParts.addStickerStore = function addStickerStore(ed) {
       q.onsuccess = () => ok(q.result || []);
       q.onerror = () => no(q.error);
     });
+  }
+
+  // A sticker's edge (round 3): 'outline' (a thin ink line) or 'white' (the
+  // white die-cut edge, also what a sticker saved before had). Only that
+  // field changes; the rest of the sticker is kept as it was.
+  async function setEdge(s, edge) {
+    const next = Object.assign({}, s, { edge: edge === 'outline' ? 'outline' : 'white' });
+    await write((os) => os.put(next));
+    ed.all = ed.all.map((x) => (x.id === s.id ? next : x));
+    return next;
   }
 
   ed.all = [];
@@ -186,8 +196,8 @@ window.StickerParts.addStickerStore = function addStickerStore(ed) {
 ;
 
 // ---- components/sticker-art.js ----
-// Drawing a sticker: its creases, its picture, and where it sits on a cover
-// (folding over an edge). (Loaded before components/stickers.js.)
+// Drawing a sticker: its picture, its vinyl, its edge, and where it sits on a
+// cover (folding over an edge). (Loaded before components/stickers.js.)
 window.StickerParts = window.StickerParts || {};
 window.StickerParts.addStickerArt = function addStickerArt(ed) {
   'use strict';
@@ -203,64 +213,33 @@ window.StickerParts.addStickerArt = function addStickerArt(ed) {
     };
   }
   const seedOf = (s) => (Number.isFinite(s.seed) ? s.seed : [...String(s.id)].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) | 0, 7));
-  const creases = new Map();
-  function creaseArt(seed, aspect) { // aspect: height over width
+  // The vinyl (round 4): every sticker looks like printed vinyl stuck on,
+  // mostly flat with a fine grain, small wrinkles gathering toward its edges,
+  // a satin sheen on their ridges, one faint fold and a soft gloss. Each
+  // layer is a picture made once per sticker (its seed keeps it the same),
+  // laid over the photo in soft light, so a flat patch is mid grey and the
+  // photo keeps its colours and darks. Shelf only: never on photos in the apps.
+  const svgSrc = (w, h, body, box = `0 0 ${w} ${h}`, fit = '') => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${box}"${fit}>${body}</svg>`)}`;
+  const lit = (light) => `<filter id="f" x="0" y="0" width="100%" height="100%">${light}</filter><rect width="100%" height="100%" filter="url(#f)"/>`;
+  const vinyls = new Map();
+  function vinylArt(seed, aspect) { // aspect: height over width
     const key = `${seed}:${aspect.toFixed(3)}`;
-    if (creases.has(key)) return creases.get(key);
-    const W = 480, H = Math.round(W * aspect), r = randomFrom(seed);
-    const c = document.createElement('canvas');
-    c.width = W; c.height = H;
-    const g = c.getContext('2d');
-    // Soft shadows lying on the paper, mostly around its edge.
-    for (let i = 0, n = 3 + Math.floor(r() * 3); i < n; i++) {
-      const side = Math.floor(r() * 4), along = r();
-      const x = side === 0 ? 0 : side === 1 ? W : along * W, y = side === 2 ? 0 : side === 3 ? H : along * H;
-      const rad = W * (0.18 + r() * 0.24);
-      const shade = g.createRadialGradient(x, y, 0, x, y, rad);
-      shade.addColorStop(0, `rgba(58, 50, 42, ${0.13 + r() * 0.12})`);
-      shade.addColorStop(1, 'rgba(58, 50, 42, 0)');
-      g.fillStyle = shade;
-      g.fillRect(0, 0, W, H);
-    }
-    // Creases: soft, wide bends rather than lines, each a gentle curve from an
-    // edge drawn only as blurred light and shade either side of it.
-    const edgePoint = (side) => { const t = 0.1 + r() * 0.8; return [[t * W, 0], [W, t * H], [t * W, H], [0, t * H]][side]; };
-    const soft = (path, width, blur, color, dx, dy) => { // a stroke's shadow only, blurred
-      const far = W * 4;
-      g.save();
-      g.lineCap = 'round'; g.lineJoin = 'round';
-      g.lineWidth = width;
-      g.strokeStyle = '#000';
-      g.shadowColor = color;
-      g.shadowBlur = blur;
-      g.shadowOffsetX = far + dx; g.shadowOffsetY = dy;
-      g.translate(-far, 0);
-      path();
-      g.stroke();
-      g.restore();
+    if (vinyls.has(key)) return vinyls.get(key);
+    const w = 110, h = Math.max(20, Math.round(w * aspect)), n = Math.abs(seed % 9973), r = randomFrom(seed);
+    const wrinkles = `<feTurbulence type="fractalNoise" baseFrequency=".045 .085" numOctaves="4" seed="${n + 5}" result="n0"/><feGaussianBlur in="n0" stdDeviation=".35" result="n"/>`;
+    // One curving fold, edge to edge, at low strength.
+    const across = r() < 0.5, a = 15 + r() * 70, b = 15 + r() * 70, c1 = 25 + r() * 25, c2 = 50 + r() * 25, bend = (r() - 0.5) * 30;
+    const d = across
+      ? `M-2 ${a.toFixed(1)} C${c1.toFixed(1)} ${(a + bend).toFixed(1)} ${c2.toFixed(1)} ${(b - bend).toFixed(1)} 102 ${b.toFixed(1)}`
+      : `M${a.toFixed(1)} -2 C${(a + bend).toFixed(1)} ${c1.toFixed(1)} ${(b - bend).toFixed(1)} ${c2.toFixed(1)} ${b.toFixed(1)} 102`;
+    const art = {
+      grain: svgSrc(w, h, lit(`<feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="${n}" result="n"/><feDiffuseLighting in="n" surfaceScale=".7" diffuseConstant=".65" lighting-color="#FFFFFF"><feDistantLight azimuth="225" elevation="50"/></feDiffuseLighting>`)),
+      wrinkle: svgSrc(w, h, lit(`${wrinkles}<feDiffuseLighting in="n" surfaceScale="3.2" diffuseConstant=".78" lighting-color="#FFFFFF"><feDistantLight azimuth="225" elevation="40"/></feDiffuseLighting>`)),
+      sheen: svgSrc(w, h, lit(`${wrinkles}<feSpecularLighting in="n" surfaceScale="3.2" specularConstant=".8" specularExponent="30" lighting-color="#FFFFFF" result="s"><feDistantLight azimuth="225" elevation="35"/></feSpecularLighting><feColorMatrix in="s" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  .33 .33 .33 0 0"/>`)),
+      fold: svgSrc(w, h, `<filter id="w" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter><filter id="t" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.3"/></filter><path d="${d}" fill="none" stroke="rgba(0,0,0,.07)" stroke-width="18" filter="url(#w)" transform="translate(4 3)"/><path d="${d}" fill="none" stroke="rgba(0,0,0,.12)" stroke-width="2" filter="url(#t)"/><path d="${d}" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="2.6" filter="url(#t)" transform="translate(-2 -1.6)"/>`, '0 0 100 100', ' preserveAspectRatio="none"'),
     };
-    for (let i = 0, n = 2 + Math.floor(r() * 3); i < n; i++) {
-      const side = Math.floor(r() * 4);
-      const [ax, ay] = edgePoint(side);
-      let [bx, by] = edgePoint((side + 1 + Math.floor(r() * 3)) % 4);
-      const reach = 0.45 + r() * 0.55;
-      bx = ax + (bx - ax) * reach; by = ay + (by - ay) * reach;
-      const len = Math.hypot(bx - ax, by - ay), nx = -(by - ay) / len, ny = (bx - ax) / len;
-      const bow = (r() - 0.5) * len * 0.18;
-      const cx = (ax + bx) / 2 + nx * bow, cy = (ay + by) / 2 + ny * bow;
-      const path = () => { g.beginPath(); g.moveTo(ax, ay); g.quadraticCurveTo(cx, cy, bx, by); };
-      const depth = 0.55 + r() * 0.45;
-      const spread = W * (0.035 + r() * 0.035);
-      const sx = nx > 0 ? 1 : -1, sy = ny > 0 ? 1 : -1; // the shaded side falls away from the light, top left
-      const ox = sx * Math.abs(nx), oy = sy * Math.abs(ny);
-      soft(path, spread * 0.9, spread * 1.3, `rgba(52, 44, 38, ${0.16 * depth})`, ox * spread * 0.6, oy * spread * 0.6);
-      soft(path, spread * 0.35, spread * 0.6, `rgba(52, 44, 38, ${0.1 * depth})`, ox * spread * 0.25, oy * spread * 0.25);
-      soft(path, spread * 0.7, spread * 1.1, `rgba(255, 255, 255, ${0.32 * depth})`, -ox * spread * 0.55, -oy * spread * 0.55);
-    }
-    const url = c.toDataURL('image/png');
-    c.width = c.height = 0;
-    creases.set(key, url);
-    return url;
+    vinyls.set(key, art);
+    return art;
   }
 
   const urls = new Map();
@@ -270,11 +249,12 @@ window.StickerParts.addStickerArt = function addStickerArt(ed) {
   }; ed.urlOf = urlOf;
   function make(s, src, onFlap) {
     const el = document.createElement('div');
-    el.className = `sticker ${s.shape}${s.printed ? ' printed' : ''}`;
+    el.className = `sticker ${s.shape}${s.printed ? ' printed' : ''}${s.edge === 'outline' ? ' outline' : ''}`;
     el.style.setProperty('--r', String(ed.ratioOf(s)));
-    el.innerHTML = `<img class="photo" alt="" draggable="false" /><img class="crease" alt="" draggable="false" />${onFlap ? '' : '<i class="fold r" hidden></i><i class="fold l" hidden></i><i class="fold t" hidden></i><i class="fold b" hidden></i>'}`;
+    const v = vinylArt(seedOf(s), 1 / ed.ratioOf(s));
+    const layer = (cls) => `<img class="vinyl ${cls}" src="${v[cls]}" alt="" draggable="false" />`;
+    el.innerHTML = `<img class="photo" alt="" draggable="false" />${layer('grain')}${layer('wrinkle')}${layer('sheen')}${layer('fold')}<i class="gloss"></i>${onFlap ? '' : '<i class="bend r" hidden></i><i class="bend l" hidden></i><i class="bend t" hidden></i><i class="bend b" hidden></i>'}`;
     el.querySelector('.photo').src = src;
-    el.querySelector('.crease').src = creaseArt(seedOf(s), 1 / ed.ratioOf(s));
     (onFlap ? placeOnFlap : seat)(el, s);
     return el;
   }
@@ -287,7 +267,7 @@ window.StickerParts.addStickerArt = function addStickerArt(ed) {
     const w = s.size, h = (s.size / ed.ratioOf(s)) / ed.COVER;
     const left = s.x - w / 2, top = s.y - h / 2;
     const across = (BEND / w) * 100, down = ((BEND / ed.COVER) / h) * 100;
-    const set = (cls, on, css) => { const f = el.querySelector(`.fold.${cls}`); f.hidden = !on; if (on) Object.assign(f.style, css); };
+    const set = (cls, on, css) => { const f = el.querySelector(`.bend.${cls}`); f.hidden = !on; if (on) Object.assign(f.style, css); };
     set('r', left + w > 1, { left: `${((1 - left) / w) * 100 - across}%`, width: `${across}%` });
     set('l', left < 0, { left: `${(-left / w) * 100}%`, width: `${across}%` });
     set('b', top + h > 1, { top: `${((1 - top) / h) * 100 - down}%`, height: `${down}%` });
@@ -416,7 +396,9 @@ window.StickerParts.addNewSticker = function addNewSticker(ed) {
   // front/flap: that book's; laidOut(footTop): called once the buttons are
   // up, so the book can make room for them. Resolves true once it's saved.
   function stick(app, shape, bytes, front, flap, laidOut) {
-    const draft = { id: ed.uid(), app, shape, ratio: ed.RATIO[shape], x: 0.5, y: 0.42, size: 0.44, seed: Math.floor(Math.random() * 2 ** 31), bytes, type: 'image/jpeg' };
+    // A new sticker takes the edge of the last one on this cover.
+    const last = ed.listOf(app).slice(-1)[0];
+    const draft = { id: ed.uid(), app, shape, ratio: ed.RATIO[shape], x: 0.5, y: 0.42, size: 0.44, seed: Math.floor(Math.random() * 2 ** 31), bytes, type: 'image/jpeg', edge: last && last.edge === 'outline' ? 'outline' : 'white' };
     const url = URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
     const layerOn = front.querySelector('.stickers');
     const el = ed.make(draft, url);
@@ -506,12 +488,14 @@ window.StickerParts.addNewSticker = function addNewSticker(ed) {
 // here once, the first time the shelf opens with this, and left where they
 // were.
 //
-//   df-stickers / stickers  { id, app, shape, ratio, x, y, size, seed, bytes, type, printed, createdAt }
+//   df-stickers / stickers  { id, app, shape, ratio, x, y, size, seed, bytes, type, printed, edge, createdAt }
 //     x, y: its middle, as a share of the cover's width and height; size: its
 //     width, as a share of the cover's width; ratio: width over height;
 //     bytes: the photo (an ArrayBuffer: Safari's stored Blobs break when a
 //     record is saved again); printed: the photo already has its paper edge
-//     (Contact Sheet's prints), so none is drawn round it.
+//     (Contact Sheet's prints), so none is drawn round it; edge: 'white' (or
+//     missing) for the white die-cut edge, 'outline' for a thin ink line;
+//     seed: picked when it's made, so its vinyl's wrinkles and fold never change.
 (function () {
   'use strict';
   const ed = {}; // what the stickers' parts share (the files it runs below)
@@ -525,7 +509,7 @@ window.StickerParts.addNewSticker = function addNewSticker(ed) {
   window.StickerParts.addStickerArt(ed);
   window.StickerParts.addNewSticker(ed);
 
-  window.DFStickers = { ready: ed.ready, list: ed.listOf, paint: ed.paint, pick: ed.pick, crop: ed.crop, place: ed.stick, remove: ed.remove, putBack: ed.putBack, thumb: ed.urlOf, ratioOf };
+  window.DFStickers = { ready: ed.ready, list: ed.listOf, paint: ed.paint, pick: ed.pick, crop: ed.crop, place: ed.stick, remove: ed.remove, putBack: ed.putBack, setEdge: ed.setEdge, thumb: ed.urlOf, ratioOf };
 })();
 ;
 
@@ -549,6 +533,24 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
   ed.near = null; // the book brought up close for its options (the film roll)
   ed.nearAt = { y: 0, k: 1 }; // where it is then: how far up, how much bigger
   ed.layout = ed.LAYOUTS.includes(ed.store.get(ed.LAYOUT_KEY)) ? ed.store.get(ed.LAYOUT_KEY) : 'ring';
+  // The notebooks in front last, newest first: Spread lays them in that order.
+  const ids = ed.BOOKS.map((b) => b.id);
+  let recent = [];
+  try { recent = JSON.parse(ed.store.get(ed.RECENT_KEY) || '[]').map((id) => ids.indexOf(id)).filter((i) => i >= 0); } catch (e) { recent = []; }
+  function remember(i) {
+    if (recent[0] === i) return;
+    recent = [i, ...recent.filter((x) => x !== i)];
+    ed.store.set(ed.RECENT_KEY, JSON.stringify(recent.map((x) => ids[x])));
+  }
+  if (fromAt >= 0) remember(fromAt);
+  // Where book i lies in Spread: 0 on top (the one in front), then the ones
+  // in front before it, then the rest round the ring.
+  function spreadRank(i) {
+    const front = mod(Math.round(ed.pos));
+    const order = [front, ...recent.filter((x) => x !== front)];
+    for (let k = 1; k < ed.N; k++) if (!order.includes(mod(front + k))) order.push(mod(front + k));
+    return order.indexOf(i);
+  }
 
   // Where book i stands, wherever the turning has got to: [x, y, z, yaw, depth
   // order, fog]. pos is the book in front (fractions while turning).
@@ -593,6 +595,15 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
       fogTo(i, '0');
       return Infinity;
     }
+    if (ed.layout === 'spread') { // big, overlapping, lying back; a book opening sits up to face you
+      const r = spreadRank(i), [fx, fy, fw, turn] = ed.SPREAD[r];
+      const vw = window.innerWidth, vh = ed.VH || window.innerHeight, u = Math.min(vw, vh * 390 / 844);
+      const x = (fx - 0.5) * u, y = vh / 2 + (fy - 0.5) * u * (844 / 390) - (ed.Y || vh * 0.6), k = (fw * u) / ed.W;
+      const up = ed.facing === i;
+      s.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0px) rotateX(${up ? 0 : ed.SPREAD_TILT}deg) rotateZ(${up ? 0 : turn}deg) scale3d(${k.toFixed(3)}, ${k.toFixed(3)}, ${k.toFixed(3)})`;
+      fogTo(i, '0');
+      return 100 - r * 10;
+    }
     const [x, y, z, yaw, order, fog] = spot(i);
     const tilt = ed.layout === 'row' ? 0 : ed.TILT; // the row looks at you straight on
     const upright = ed.facing === i ? tilt : 0;
@@ -605,6 +616,7 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
     const at = Math.round(ed.pos);
     if (ed.layout === 'dominoes') return mod(i - at); // the ones behind come forward
     if (ed.layout === 'row') return mod(i - at + ed.N / 2) - ed.N / 2;
+    if (ed.layout === 'spread') return mod(i - at);
     return wrap((i - at) * ed.STEP) / ed.STEP;
   }
   // A swipe up: the next way of standing them; down: the one before.
@@ -615,11 +627,14 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
     ed.pos = mod(Math.round(ed.pos));
     ed.slots.forEach((sl) => sl.classList.add('reshaping'));
     render();
+    if (ed.shapeMarks) ed.shapeMarks(true); // the marks at the right edge, and the name for a moment (pages/shelf-marks.js)
     clearTimeout(reshape.t);
     reshape.t = setTimeout(() => ed.slots.forEach((sl) => sl.classList.remove('reshaping')), ed.RESHAPE_MS + 40);
     ed.store.set(ed.FRONT_KEY, String(ed.pos));
   }
+  let spread = null;
   function render() {
+    if (spread !== (ed.layout === 'spread')) { spread = ed.layout === 'spread'; ed.stage.classList.toggle('is-spread', spread); ed.shelf.classList.toggle('is-spread', spread); }
     const order = ed.slots.map((s, i) => place(i));
     // Which book is in front of which, 1 to 4: that only changes as two of
     // them pass, so the shelf is restacked then and not on every frame of a turn.
@@ -648,6 +663,7 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
   }
   function settle() {
     ed.pos = mod(Math.round(ed.pos));
+    remember(ed.pos);
     render();
     ed.store.set(ed.FRONT_KEY, String(ed.pos));
   }
@@ -656,7 +672,8 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
 
 // ---- pages/shelf-hands.js ----
 // Hands on the shelf: a finger or the mouse turns it, a tap brings a notebook
-// round or opens the one in front; the arrow keys too. (Loaded before app.js.)
+// round or opens the one in front (in Spread, any one); up or down changes
+// how they stand; the arrow keys too. (Loaded before app.js.)
 window.ShelfParts = window.ShelfParts || {};
 window.ShelfParts.addHands = function addHands(ed) {
   'use strict';
@@ -679,7 +696,7 @@ window.ShelfParts.addHands = function addHands(ed) {
       d.moved = true;
       d.upDown = Math.abs(dy) > Math.abs(dx); // up or down changes how they stand; across turns them
     }
-    if (!d.moved || d.upDown) return;
+    if (!d.moved || d.upDown || ed.layout === 'spread') return; // Spread doesn't turn: tap the one you want
     const dt = Math.max(1, e.timeStamp - d.lastT);
     d.v = 0.7 * d.v + 0.3 * ((e.clientX - d.lastX) / dt);
     d.lastX = e.clientX; d.lastT = e.timeStamp;
@@ -693,6 +710,7 @@ window.ShelfParts.addHands = function addHands(ed) {
     if (!d.moved) {
       if (e.type === 'pointercancel') { ed.go(Math.round(ed.pos)); return; }
       const front = ed.mod(Math.round(ed.pos));
+      if (ed.layout === 'spread' && d.slot >= 0) { ed.openBook(d.slot, null); return; } // any cover opens
       if (d.slot >= 0 && d.slot !== front) {
         // A tap on a book behind brings it round to the front.
         ed.go(Math.round(ed.pos) + ed.stepsTo(d.slot));
@@ -707,6 +725,7 @@ window.ShelfParts.addHands = function addHands(ed) {
       if (e.type === 'pointerup' && Math.abs(dy) > 36) ed.reshape(dy < 0 ? 1 : -1);
       return;
     }
+    if (ed.layout === 'spread') return;
     const fling = -d.v * 260 / (ed.W * ed.DRAG[ed.layout]);
     const base = Math.round(d.pos);
     ed.go(Math.max(base - 1, Math.min(base + 1, Math.round(ed.pos + fling))));
@@ -747,6 +766,38 @@ window.ShelfParts.addCaption = function addCaption(ed) {
     [...dots.children].forEach((d, i) => d.classList.toggle('on', i === at));
     ed.optionsBtn.setAttribute('aria-label', `Options for ${b.short}`);
   };
+};
+;
+
+// ---- pages/shelf-marks.js ----
+// The marks at the shelf's right edge (round 2): one for each way the books
+// can stand, the one in use long, so the swipe up or down can be found. After
+// a swipe its name shows beside them for a moment. (Loaded before app.js.)
+window.ShelfParts = window.ShelfParts || {};
+window.ShelfParts.addShapeMarks = function addShapeMarks(ed) {
+  'use strict';
+  const NAMES = { ring: 'Ring', dominoes: 'Dominoes', row: 'Row', spread: 'Spread' };
+  const marks = document.createElement('div');
+  marks.className = 'shape-marks';
+  marks.setAttribute('role', 'img');
+  marks.innerHTML = ed.LAYOUTS.map(() => '<i></i>').join('');
+  const name = document.createElement('span');
+  name.className = 'shape-name';
+  name.setAttribute('aria-live', 'polite');
+  ed.shelf.append(marks, name);
+  let hide = 0;
+  // say: a swipe just changed it, so its name shows for 1.5 s.
+  ed.shapeMarks = function shapeMarks(say) {
+    const at = ed.LAYOUTS.indexOf(ed.layout);
+    [...marks.children].forEach((m, i) => m.classList.toggle('on', i === at));
+    marks.setAttribute('aria-label', `Arrangement: ${NAMES[ed.layout].toLowerCase()}, ${at + 1} of ${ed.LAYOUTS.length}`);
+    if (!say) return;
+    name.textContent = NAMES[ed.layout];
+    name.classList.add('in');
+    clearTimeout(hide);
+    hide = setTimeout(() => name.classList.remove('in'), 1500);
+  };
+  ed.shapeMarks(false);
 };
 ;
 
@@ -810,6 +861,15 @@ window.ShelfParts.addOptions = function addOptions(ed) {
     if (window.DFStickers) window.DFStickers.paint(ed.slots[i].querySelector('.front'), ed.slots[i].querySelector('.sticker-flap'), ed.BOOKS[i].id);
   }
 
+  // Sticker edge (round 3), for the newest sticker on this cover: White
+  // border or Black outline, each shown on a little of its photo.
+  function edgeHtml(s) {
+    const St = window.DFStickers, on = s.edge === 'outline' ? 'outline' : 'white';
+    const pick = (key, label) => `<button type="button" class="edge-opt" role="radio" data-edge="${key}" aria-checked="${key === on}"><span class="edge-dot ${key}" style="background-image:url('${St.thumb(s)}')"></span>${label}</button>`;
+    return `<span class="opt-label" id="optEdgeLabel">Sticker edge</span>
+        <div class="edge-opts" role="radiogroup" aria-labelledby="optEdgeLabel">${pick('white', 'White border')}${pick('outline', 'Black outline')}</div>`;
+  }
+
   function showOptions(view) {
     const i = ed.near, b = ed.BOOKS[i];
     const St = window.DFStickers;
@@ -826,13 +886,13 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         <div class="sheet-head"><h2>${b.short}</h2><button type="button" class="ring-btn" data-close aria-label="Close"><span>${CLOSE}</span></button></div>
         <span class="opt-label" id="optColorLabel">Notebook color</span>
         <div class="opt-colors" role="radiogroup" aria-labelledby="optColorLabel">${b.colors.map((k) => `<button type="button" class="opt-color" role="radio" data-color="${k}" aria-checked="${k === now}" style="--sw:${ed.COLORS[k].band};--sp:${ed.COLORS[k].partner}"><span class="opt-swatch"></span><span>${ed.COLORS[k].name}</span></button>`).join('')}</div>
-        ${St ? `<span class="opt-label">Add a sticker</span>
+        ${St ? `<div class="opt-label-row"><span class="opt-label">Add a sticker</span>${mine.length ? `<button type="button" class="label-btn" data-remove>${TRASH}Remove one</button>` : ''}</div>
         <div class="sticker-kinds">
           <button type="button" class="sticker-kind" data-shape="circle"><span class="shape circle"></span><span>Circle</span></button>
           <button type="button" class="sticker-kind" data-shape="square"><span class="shape square"></span><span>Square</span></button>
           <button type="button" class="sticker-kind" data-shape="rect"><span class="shape rect"></span><span>Rectangle</span></button>
         </div>
-        ${mine.length ? `<button type="button" class="text-btn" data-remove>${TRASH}Remove a sticker</button>` : ''}` : ''}
+        ${mine.length ? edgeHtml(mine[mine.length - 1]) : ''}` : ''}
         <div class="opt-foot"><button type="button" class="sheet-btn" data-backup>Back up all four</button><button type="button" class="sheet-btn primary" data-close>Done</button></div>`;
     };
     const drawRemove = () => {
@@ -865,6 +925,15 @@ window.ShelfParts.addOptions = function addOptions(ed) {
       if (c) {
         setColor(i, c.dataset.color);
         sheet.querySelectorAll('[data-color]').forEach((x) => x.setAttribute('aria-checked', String(x === c)));
+        return;
+      }
+      const edge = e.target.closest('[data-edge]');
+      if (edge) {
+        const mine = St.list(b.id), s = mine[mine.length - 1];
+        if (!s) return;
+        sheet.querySelectorAll('[data-edge]').forEach((x) => x.setAttribute('aria-checked', String(x === edge)));
+        try { await St.setEdge(s, edge.dataset.edge); } catch (err) { console.error(err); ed.toast("The sticker edge wasn't saved"); }
+        paintStickers(i);
         return;
       }
       if (e.target.closest('[data-remove]')) { drawRemove(); nearFit(sheet.offsetTop); nearMove(); return; }
@@ -1178,16 +1247,22 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
   // shutting) stands up straight again, so its page still fills the screen.
   const TILT = 10; ed.TILT = TILT;
   const STEP = 360 / N; ed.STEP = STEP;
-  // Three ways to stand the books, swapped with a swipe up or down on them
+  // Four ways to stand the books, swapped with a swipe up or down on them
   // (user, 11-12): the ring; dominoes (the front book low on the left, each
   // one behind it a little further up and to the right, all at one angle);
-  // and a row facing the screen, swiped through side to side. The last one
-  // used is kept.
-  const LAYOUTS = ['ring', 'dominoes', 'row']; ed.LAYOUTS = LAYOUTS;
+  // a row facing the screen, swiped through side to side; and Spread (round
+  // 2): big and overlapping, lying back like covers spread on a table, the
+  // one in front on top. The last one used is kept.
+  const LAYOUTS = ['ring', 'dominoes', 'row', 'spread']; ed.LAYOUTS = LAYOUTS;
+  // Spread, from the top book down, on a 390 x 844 screen (larger screens
+  // keep its shape in the middle): [middle x, middle y, width, turn degrees].
+  const SPREAD = [[0.254, 0.671, 0.692, -4], [0.823, 0.697, 0.641, 5], [0.167, 0.296, 0.692, -3], [0.808, 0.315, 0.641, 4]]; ed.SPREAD = SPREAD;
+  const SPREAD_TILT = 16; ed.SPREAD_TILT = SPREAD_TILT; // each lies back this far (degrees)
+  const RECENT_KEY = 'df-suite-recent'; ed.RECENT_KEY = RECENT_KEY; // the notebooks in front last, newest first (Spread's order)
   const LAYOUT_KEY = 'df-suite-layout'; ed.LAYOUT_KEY = LAYOUT_KEY;
   const DOM = { x0: -0.55, up: 0.1, dx: 0.4, dy: 0.32, dz: 0.55, yaw: -22 }; ed.DOM = DOM; // of W, per book behind the front one (up: the whole line, a little higher than the ring)
   const ROW_GAP = 1.22; ed.ROW_GAP = ROW_GAP; // of W, from one book to the next in the row
-  const DRAG = { ring: 1.15, dominoes: 1.05, row: ROW_GAP }; ed.DRAG = DRAG; // a finger this far (of W) moves the books one along
+  const DRAG = { ring: 1.15, dominoes: 1.05, row: ROW_GAP, spread: 1.2 }; ed.DRAG = DRAG; // a finger this far (of W) moves the books one along
   const RESHAPE_MS = 620; ed.RESHAPE_MS = RESHAPE_MS;
   const OPEN_MS = 900, ZOOM_MS = 760, TURN_MS = 420; ed.OPEN_MS = OPEN_MS; ed.ZOOM_MS = ZOOM_MS; ed.TURN_MS = TURN_MS;
   const OVER = 12; ed.OVER = OVER; // how far the page's white goes past every edge of the screen once it has grown
@@ -1234,7 +1309,7 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
     // The cover: flat colour with grain, the notebook's mark big in the
     // middle, its name near the foot, and any stickers.
     slot.innerHTML = `<div class="ground"></div><div class="float"><div class="book">
-      <div class="face back"></div><div class="spine"></div><div class="top"></div><div class="edge"></div>
+      <div class="face back"></div><div class="spine"></div><div class="top"></div><div class="foot"></div><div class="edge"></div>
       <div class="face page"></div>${tabs}
       <div class="leaf"><div class="face front" role="img" aria-label="${b.name}"><svg class="cover-mark" viewBox="0 0 24 24" aria-hidden="true">${b.mark}</svg><span class="cover-name">${b.short}</span><div class="stickers"></div></div><div class="face inside"></div><div class="face fog"></div><div class="lip"></div><div class="sticker-flap"></div></div>
     </div></div>`;
@@ -1261,11 +1336,13 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
     const barTop = window.innerHeight - bar.getBoundingClientRect().top; // from the laid-out bottom, where the bar is held
     const y = Math.max(vh * 0.4, Math.min(vh * 0.64, vh - barTop - 64 - ed.W * 0.68));
     stage.style.setProperty('--y', `${y.toFixed(1)}px`);
+    ed.Y = y; ed.VH = vh; // where the books' middles are, and the screen's height (Spread places from them)
     stage.style.perspectiveOrigin = `50% ${(y - vh * 0.2).toFixed(1)}px`;
   }
   window.ShelfParts.addTurntable(ed);
   window.ShelfParts.addHands(ed);
   window.ShelfParts.addCaption(ed);
+  window.ShelfParts.addShapeMarks(ed);
   window.ShelfParts.addOptions(ed);
   window.ShelfParts.addToast(ed);
   window.ShelfParts.addOpening(ed);

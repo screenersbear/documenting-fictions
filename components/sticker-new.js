@@ -103,7 +103,9 @@ window.StickerParts.addNewSticker = function addNewSticker(ed) {
   // front/flap: that book's; laidOut(footTop): called once the buttons are
   // up, so the book can make room for them. Resolves true once it's saved.
   function stick(app, shape, bytes, front, flap, laidOut) {
-    const draft = { id: ed.uid(), app, shape, ratio: ed.RATIO[shape], x: 0.5, y: 0.42, size: 0.44, seed: Math.floor(Math.random() * 2 ** 31), bytes, type: 'image/jpeg' };
+    // A new sticker takes the edge of the last one on this cover.
+    const last = ed.listOf(app).slice(-1)[0];
+    const draft = { id: ed.uid(), app, shape, ratio: ed.RATIO[shape], x: 0.5, y: 0.42, size: 0.44, seed: Math.floor(Math.random() * 2 ** 31), bytes, type: 'image/jpeg', edge: last && last.edge === 'outline' ? 'outline' : 'white' };
     const url = URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
     const layerOn = front.querySelector('.stickers');
     const el = ed.make(draft, url);
