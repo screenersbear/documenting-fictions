@@ -136,9 +136,14 @@ h1, h2, h3 {
   padding-bottom: calc(72px + var(--sa-bottom));
 }
 
-.view { padding-top: 4px; }
-
-#view-overview { padding-top: 0; }
+/* Each section's band reaches up to the top of the screen by its negative
+   top margin (styles/header-band.css). flow-root keeps that margin inside
+   the section: otherwise it slips through to the section's own top, and the
+   copy of the page that turns in (components/page-turn.js) is drawn that
+   much higher, under the clock, then jumps down (Starky's iPhone, 11-13).
+   No padding above it either, or white shows over the band. */
+.view { display: flow-root; padding-top: 0; }
+.view[hidden] { display: none; }
 
 .subtitle {
   margin: 2px 0 0;
@@ -6895,7 +6900,7 @@ html:not(.df-suite) .band-books { display: none; }
 }
 
 /* ---- styles/shoot-rows.css ---- */
-/* A shoot in a list (DESIGN.md 9): a portrait cover (44 by 56, radius 6), the
+/* A shoot in a list (DESIGN.md 9): a portrait cover (56 by 72, radius 6), the
    name in 18px light, one line of status and dates in small dim capitals
    (crimson and bold once a deadline has gone by), and the flags for what it
    still needs. The More button sits at the right on Shoots. */
@@ -6904,7 +6909,7 @@ html:not(.df-suite) .band-books { display: none; }
   background: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; cursor: pointer; color: var(--text);
 }
 .shoot-row .shoot-thumb {
-  position: relative; flex: none; width: 44px; height: 56px; border: 0; border-radius: 6px; overflow: hidden;
+  position: relative; flex: none; width: 56px; height: 72px; border: 0; border-radius: 6px; overflow: hidden;
   background: #EFEFEA; box-shadow: none;
 }
 .shoot-row .shoot-thumb-empty { color: var(--off); opacity: 1; }

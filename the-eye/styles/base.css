@@ -133,9 +133,14 @@ h1, h2, h3 {
   padding-bottom: calc(72px + var(--sa-bottom));
 }
 
-.view { padding-top: 4px; }
-
-#view-overview { padding-top: 0; }
+/* Each section's band reaches up to the top of the screen by its negative
+   top margin (styles/header-band.css). flow-root keeps that margin inside
+   the section: otherwise it slips through to the section's own top, and the
+   copy of the page that turns in (components/page-turn.js) is drawn that
+   much higher, under the clock, then jumps down (Starky's iPhone, 11-13).
+   No padding above it either, or white shows over the band. */
+.view { display: flow-root; padding-top: 0; }
+.view[hidden] { display: none; }
 
 .subtitle {
   margin: 2px 0 0;
