@@ -6,6 +6,7 @@ import { reasonFor } from '../data/reasons.js';
 import { handleText } from '../data/contact.js';
 import { firstName } from '../data/fill.js';
 import { stops } from '../data/today.js';
+import { draftWaiting } from '../data/person.js';
 import { flairHtml, tagHtml } from '../components/marks.js';
 import { photoHtml } from '../components/photo.js';
 import { esc } from '../components/util.js';
@@ -13,14 +14,16 @@ import { esc } from '../components/util.js';
 export function cardHtml(p, today) {
   const kind = p.next.kind;
   const handle = handleText(p);
+  const draft = draftWaiting(p);
   return `
-    <div class="card top" role="button" tabindex="0" data-open aria-label="${esc(`${KINDS[kind].name}, ${p.name}. Open the move`)}">
+    <div class="card top${draft ? ' has-draft' : ''}" role="button" tabindex="0" data-open aria-label="${esc(`${KINDS[kind].name}, ${p.name}. Open the move`)}">
       ${flairHtml(kind)}${photoHtml(p)}
       <div class="card-words">
         ${tagHtml(kind)}
         <p class="card-name">${esc(p.name)}</p>
         ${handle ? `<p class="card-handle">${esc(handle)}</p>` : ''}
         <p class="card-why">${esc(reasonFor(p, today))}</p>
+        ${draft ? '<p class="card-draft">Draft waiting in Gmail</p>' : ''}
       </div>
     </div>`;
 }

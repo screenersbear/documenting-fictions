@@ -115,3 +115,23 @@ describe('doneOn', () => {
     expect(doneOn([line('1', 'a', T, 1)], [], T)).toEqual([]);
   });
 });
+
+describe('work days (a Pitch or Follow up waits for one)', () => {
+  const SAT = T; // 14 Nov 2026 is a Saturday
+  const people = [p('pitch', 'pitch', SAT), p('fu', 'followup', '2026-11-13'), p('thanks', 'thanks', SAT)];
+  it('on a day off, only the moves that come up any day are due', () => {
+    expect(dueOn(people, SAT, [1, 2, 3, 4, 5]).map((x) => x.id)).toEqual(['thanks']);
+    expect(dueOn(people, SAT).map((x) => x.id)).toEqual(['thanks', 'fu', 'pitch']);
+    expect(dueOn(people, SAT, [6]).map((x) => x.id)).toEqual(['thanks', 'fu', 'pitch']);
+  });
+  it('on the next work day they come up', () => {
+    expect(dueOn(people, '2026-11-16', [1, 2, 3, 4, 5]).map((x) => x.id)).toEqual(['thanks', 'fu', 'pitch']);
+    expect(dueOn(people, '2026-11-15', [1, 2, 3, 4, 5]).map((x) => x.id)).toEqual(['thanks']);
+  });
+  it("the day's pick leaves them for a work day, and keeps what's already done", () => {
+    expect(pickFor(people, null, SAT, 3, [1, 2, 3, 4, 5])).toEqual({ date: SAT, ids: ['thanks'], marks: {} });
+    const saved = { date: SAT, ids: ['pitch', 'fu', 'thanks'], marks: { pitch: 'done' } };
+    expect(pickFor(people, saved, SAT, 3, [1, 2, 3, 4, 5])).toEqual({ date: SAT, ids: ['pitch', 'thanks'], marks: { pitch: 'done' } });
+    expect(pickFor(people, saved, SAT, 3).ids).toEqual(['pitch', 'fu', 'thanks']);
+  });
+});

@@ -354,45 +354,283 @@ function shortBandHtml({ place, back, more }) {
     </header>`;
 }
 
+// data/merge.js
+const STORES = [
+	"people",
+	"moves",
+	"messages",
+	"settings",
+	"passed",
+	"tombstones"
+];
+const RECORDS = STORES.filter((s) => s !== "tombstones");
+const STAMPS = new Set([
+	"id",
+	"createdAt",
+	"updatedAt"
+]);
+const WHOLE = new Set(["next", "draft"]);
+const QUIET = new Set([
+	"lastMove",
+	"lastShot",
+	"shoots",
+	"photoKey",
+	"groupPicked"
+]);
+function canonical(v) {
+	if (Array.isArray(v)) return `[${v.map(canonical).join(",")}]`;
+	if (v && typeof v === "object") {
+		return `{${Object.keys(v).filter((k) => v[k] !== undefined).sort().map((k) => `${JSON.stringify(k)}:${canonical(v[k])}`).join(",")}}`;
+	}
+	return v === undefined ? "null" : JSON.stringify(v);
+}
+const same = (a, b) => canonical(a) === canonical(b);
+const byId = (a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+const dataKey = (data) => canonical(STORES.map((s) => [...data[s] || []].sort(byId)));
+function content(r) {
+	const { id, createdAt, updatedAt, ...rest } = r;
+	return rest;
+}
+const sameContent = (a, b) => same(content(a), content(b));
+const newer = (a, b) => (a.updatedAt || "") > (b.updatedAt || "");
+const isPlain = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const after = (t, r) => (t.deletedAt || "") >= (r.updatedAt || "");
+const keyOf = (store, id) => `${store}/${id}`;
+const split = (key) => [key.slice(0, key.indexOf("/")), key.slice(key.indexOf("/") + 1)];
+const getPath = (obj, path) => path.split(".").reduce((o, k) => o == null ? undefined : o[k], obj);
+function setPath(obj, path, value) {
+	const keys = path.split(".");
+	let o = obj;
+	for (const k of keys.slice(0, -1)) {
+		if (!isPlain(o[k])) o[k] = {};
+		o = o[k];
+	}
+	const last = keys[keys.length - 1];
+	if (value === undefined) delete o[last];
+	else o[last] = value;
+}
+function quietField(path) {
+	const last = path.split(".").pop();
+	return last.endsWith("At") || QUIET.has(path.split(".")[0]);
+}
+function mergeFields(b, mine, theirs, prefix = "") {
+	const merged = {};
+	const clashes = [];
+	const keys = new Set([
+		...Object.keys(b || {}),
+		...Object.keys(mine),
+		...Object.keys(theirs)
+	]);
+	for (const k of keys) {
+		if (!prefix && STAMPS.has(k)) continue;
+		const [bv, mv, tv] = [
+			b ? b[k] : undefined,
+			mine[k],
+			theirs[k]
+		];
+		if (same(mv, tv) || same(tv, bv)) merged[k] = mv;
+		else if (same(mv, bv)) merged[k] = tv;
+		else if (!WHOLE.has(prefix + k) && isPlain(mv) && isPlain(tv) && (bv === undefined || isPlain(bv))) {
+			const sub = mergeFields(bv || {}, mv, tv, `${prefix}${k}.`);
+			merged[k] = sub.merged;
+			clashes.push(...sub.clashes);
+		} else {
+			merged[k] = mv;
+			clashes.push(prefix + k);
+		}
+	}
+	for (const k of Object.keys(merged)) if (merged[k] === undefined) delete merged[k];
+	return {
+		merged,
+		clashes
+	};
+}
+function resolvedRecord(c, side) {
+	const out = JSON.parse(JSON.stringify(c.merged));
+	const src = side === "mine" ? c.mine : c.theirs;
+	for (const p of c.clashes) setPath(out, p, getPath(src, p));
+	return {
+		...out,
+		id: c.id,
+		createdAt: c.mine.createdAt || c.theirs.createdAt
+	};
+}
+function both(s, l, r, b, ltomb, rtomb, now) {
+	if (same(l, r)) return {};
+	if (!b) {
+		const tomb = rtomb || ltomb;
+		if (newer(r, l) && !(tomb && after(tomb, r))) return { put: r };
+		return rtomb && after(rtomb, l) && after(rtomb, r) ? { del: true } : {};
+	}
+	const lc = !sameContent(l, b);
+	const rc = !sameContent(r, b);
+	if (!rc) return !lc && newer(r, l) ? { put: r } : {};
+	if (!lc || sameContent(l, r)) return newer(r, l) || !lc ? { put: r } : {};
+	const { merged, clashes } = mergeFields(b, l, r);
+	const loud = clashes.filter((p) => !quietField(p));
+	if (loud.length) return { conflict: {
+		kind: "both",
+		store: s,
+		id: l.id,
+		mine: l,
+		theirs: r,
+		base: b,
+		merged,
+		clashes,
+		loud
+	} };
+	const src = newer(r, l) ? r : l;
+	for (const p of clashes) setPath(merged, p, getPath(src, p));
+	return { put: {
+		...merged,
+		id: l.id,
+		createdAt: l.createdAt || r.createdAt,
+		updatedAt: now
+	} };
+}
+function planMerge(local, remote, base, { now = new Date().toISOString() } = {}) {
+	const puts = Object.fromEntries(STORES.map((s) => [s, []]));
+	const dels = Object.fromEntries(STORES.map((s) => [s, []]));
+	const conflicts = [];
+	const held = new Set();
+	const map = (side, s) => new Map((side[s] || []).map((r) => [r.id, r]));
+	const lt = map(local, "tombstones");
+	const rt = map(remote, "tombstones");
+	const hold = (c) => {
+		conflicts.push(c);
+		held.add(keyOf(c.store, c.id));
+	};
+	for (const s of RECORDS) {
+		const L = map(local, s);
+		const R = map(remote, s);
+		for (const id of new Set([...L.keys(), ...R.keys()])) {
+			const [l, r] = [L.get(id), R.get(id)];
+			const b = base && base[s] && base[s][id] || null;
+			const [ltomb, rtomb] = [lt.get(id), rt.get(id)];
+			if (l && r) {
+				const out = both(s, l, r, b, ltomb, rtomb, now);
+				if (out.conflict) hold(out.conflict);
+				else if (out.put) puts[s].push(out.put);
+				else if (out.del) dels[s].push(id);
+			} else if (l) {
+				if (!rtomb) continue;
+				if (b && sameContent(l, b)) dels[s].push(id);
+				else if (b) hold({
+					kind: "deletedThere",
+					store: s,
+					id,
+					mine: l,
+					theirs: null,
+					tomb: rtomb,
+					base: b
+				});
+				else if (after(rtomb, l)) dels[s].push(id);
+			} else if (!ltomb) {
+				if (!(rtomb && after(rtomb, r))) puts[s].push(r);
+			} else if (b && !sameContent(r, b)) {
+				hold({
+					kind: "deletedHere",
+					store: s,
+					id,
+					mine: null,
+					theirs: r,
+					tomb: ltomb,
+					base: b
+				});
+			} else if (!b && !after(ltomb, r)) {
+				puts[s].push(r);
+			}
+		}
+	}
+	for (const t of rt.values()) {
+		if (held.has(keyOf(t.store, t.id))) continue;
+		const mine = lt.get(t.id);
+		if (!mine || (t.deletedAt || "") > (mine.deletedAt || "")) puts.tombstones.push(t);
+	}
+	const changed = STORES.some((s) => puts[s].length || dels[s].length);
+	return {
+		puts,
+		dels,
+		conflicts,
+		held,
+		changed
+	};
+}
+function fileData(localAfter, remote, held) {
+	const out = Object.fromEntries(STORES.map((s) => [s, [...localAfter[s] || []]]));
+	for (const key of held) {
+		const [s, id] = split(key);
+		out[s] = out[s].filter((r) => r.id !== id);
+		out.tombstones = out.tombstones.filter((t) => t.id !== id);
+		const r = (remote[s] || []).find((x) => x.id === id);
+		const t = (remote.tombstones || []).find((x) => x.id === id);
+		if (r) out[s].push(r);
+		if (t) out.tombstones.push(t);
+	}
+	for (const s of STORES) out[s].sort(byId);
+	return out;
+}
+function nextBase(written, oldBase, held) {
+	const out = {};
+	for (const s of RECORDS) out[s] = Object.fromEntries((written[s] || []).map((r) => [r.id, r]));
+	for (const key of held) {
+		const [s, id] = split(key);
+		const b = oldBase && oldBase[s] && oldBase[s][id];
+		if (b) out[s][id] = b;
+		else delete out[s][id];
+	}
+	return out;
+}
+
 // data/db.js
-const DB_NAME = "rounds";
+const DB_NAME$1 = "rounds";
 const KEYS = {
 	people: "id",
 	moves: "id",
 	photos: "id",
 	messages: "kind",
-	settings: "key"
+	settings: "key",
+	passed: "id",
+	tombstones: "id"
 };
-let dbPromise = null;
-function openDb() {
-	if (dbPromise) return dbPromise;
-	dbPromise = new Promise((resolve, reject) => {
-		const req = indexedDB.open(DB_NAME, 1);
+const SYNCED_SETTINGS = [
+	"perDay",
+	"workDays",
+	"offer",
+	"city"
+];
+let dbPromise$1 = null;
+function openDb$1() {
+	if (dbPromise$1) return dbPromise$1;
+	dbPromise$1 = new Promise((resolve, reject) => {
+		const req = indexedDB.open(DB_NAME$1, 2);
 		req.onupgradeneeded = () => {
-			for (const [s, keyPath] of Object.entries(KEYS)) req.result.createObjectStore(s, { keyPath });
+			for (const [s, keyPath] of Object.entries(KEYS)) if (!req.result.objectStoreNames.contains(s)) req.result.createObjectStore(s, { keyPath });
 		};
 		req.onsuccess = () => {
 			req.result.onversionchange = () => {
 				req.result.close();
-				dbPromise = null;
+				dbPromise$1 = null;
 			};
 			resolve(req.result);
 		};
 		req.onerror = () => {
-			dbPromise = null;
+			dbPromise$1 = null;
 			reject(req.error);
 		};
 	});
-	return dbPromise;
+	return dbPromise$1;
 }
-async function tx(store, mode, fn) {
-	const db = await openDb();
+__name(openDb$1, "openDb");
+async function tx(stores, mode, fn) {
+	const db = await openDb$1();
+	const names = [].concat(stores);
 	return new Promise((resolve, reject) => {
-		const t = db.transaction([store], mode);
+		const t = db.transaction(names, mode);
 		let out;
 		t.oncomplete = () => resolve(out);
 		t.onabort = () => reject(t.error || new Error("That wasn't saved. Your phone may be out of space."));
-		fn(t.objectStore(store), (v) => {
+		fn(...names.map((n) => t.objectStore(n)), (v) => {
 			out = v;
 		});
 	});
@@ -409,15 +647,53 @@ const put = (store, value) => tx(store, "readwrite", (s) => {
 const drop = (store, key) => tx(store, "readwrite", (s) => {
 	s.delete(key);
 });
+let heard = () => {};
+const onSyncedChange = (fn) => {
+	heard = fn;
+};
+async function putStamped(store, list) {
+	const now = nowISO();
+	const changed = await tx([store, "tombstones"], "readwrite", (s, tombs, set) => {
+		let n = 0;
+		set(n);
+		for (const r of list) {
+			const key = r[s.keyPath];
+			s.get(key).onsuccess = (e) => {
+				const old = e.target.result;
+				if (old && sameContent(old, r)) return;
+				s.put({
+					...r,
+					createdAt: old && old.createdAt || r.createdAt || now,
+					updatedAt: now
+				});
+				tombs.delete(key);
+				set(++n);
+			};
+		}
+	});
+	if (changed) heard();
+}
+async function dropStamped(store, key) {
+	const now = nowISO();
+	await tx([store, "tombstones"], "readwrite", (s, tombs) => {
+		s.delete(key);
+		tombs.put({
+			id: key,
+			store,
+			deletedAt: now,
+			createdAt: now,
+			updatedAt: now
+		});
+	});
+	heard();
+}
 const listPeople = () => all("people");
 const getPerson = (id) => one("people", id);
-const savePeople = (list) => tx("people", "readwrite", (s) => {
-	list.forEach((p) => s.put(p));
-});
-const savePerson = (p) => put("people", p);
-const logMove = (m) => put("moves", m);
+const savePeople = (list) => putStamped("people", list);
+const savePerson = (p) => putStamped("people", [p]);
+const logMove = (m) => putStamped("moves", [m]);
 const listMoves = () => all("moves");
-const dropMove = (id) => drop("moves", id);
+const dropMove = (id) => dropStamped("moves", id);
 async function getPhoto(id) {
 	const r = await one("photos", id);
 	return r ? new Blob([r.bytes], { type: r.type }) : null;
@@ -431,19 +707,69 @@ const dropPhoto = (id) => drop("photos", id);
 async function getMessages() {
 	return Object.fromEntries((await all("messages")).map((r) => [r.kind, r.text]));
 }
-const saveMessage = (kind, text) => put("messages", {
+const saveMessage = (kind, text) => putStamped("messages", [{
 	kind,
 	text
-});
-const resetMessage = (kind) => drop("messages", kind);
+}]);
+const resetMessage = (kind) => dropStamped("messages", kind);
 async function getSetting(key, fallback) {
 	const r = await one("settings", key);
 	return r === undefined ? fallback : r.value;
 }
-const setSetting = (key, value) => put("settings", {
+const setSetting = (key, value) => SYNCED_SETTINGS.includes(key) ? putStamped("settings", [{
+	key,
+	value
+}]) : put("settings", {
 	key,
 	value
 });
+const listPassed = () => all("passed");
+const addPassed = (list) => putStamped("passed", list);
+const SYNCED = [
+	"people",
+	"moves",
+	"messages",
+	"settings",
+	"passed",
+	"tombstones"
+];
+const AS_ID = {
+	messages: "kind",
+	settings: "key"
+};
+const toFile = (s, r) => {
+	if (!AS_ID[s]) return r;
+	const { [AS_ID[s]]: id, ...rest } = r;
+	return {
+		id,
+		...rest
+	};
+};
+const fromFile = (s, r) => {
+	if (!AS_ID[s]) return r;
+	const { id, ...rest } = r;
+	return {
+		[AS_ID[s]]: id,
+		...rest
+	};
+};
+async function exportData() {
+	const lists = await Promise.all(SYNCED.map((s) => all(s)));
+	const out = Object.fromEntries(SYNCED.map((s, i) => [s, lists[i].map((r) => toFile(s, r))]));
+	out.settings = out.settings.filter((r) => SYNCED_SETTINGS.includes(r.id));
+	return out;
+}
+async function applySync(puts, dels) {
+	const stores = SYNCED.filter((s) => (puts[s] || []).length || (dels[s] || []).length);
+	if (!stores.length) return false;
+	await tx(stores, "readwrite", (...os) => {
+		stores.forEach((s, i) => {
+			for (const r of puts[s] || []) os[i].put(fromFile(s, r));
+			for (const id of dels[s] || []) os[i].delete(id);
+		});
+	});
+	return true;
+}
 
 // data/dates.js
 const pad = (n) => String(n).padStart(2, "0");
@@ -502,6 +828,13 @@ function sinceWords(day, today) {
 	const n = daysBetween(day, today);
 	if (n < 14) return "";
 	return n < 60 ? `${Math.round(n / 7)} weeks` : `${Math.round(n / 30.44)} months`;
+}
+function agoWords(iso, now = new Date()) {
+	const mins = Math.round((now - new Date(iso)) / 6e4);
+	if (!(mins >= 1)) return "just now";
+	if (mins < 60) return `${mins} min ago`;
+	if (mins < 24 * 60) return `${Math.round(mins / 60)} hr ago`;
+	return short(new Date(iso));
 }
 
 // data/plan.js
@@ -600,6 +933,7 @@ function cleanSite(text) {
 	if (!t) return "";
 	return /^https?:\/\//i.test(t) ? t : `https://${t}`;
 }
+const GMAIL_DRAFTS = "https://mail.google.com/mail/u/0/#drafts";
 const siteName = (url) => url.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/+$/, "");
 function contactFor(person, text = "") {
 	if (person.instagram) return {
@@ -725,15 +1059,17 @@ function markDone(person, today) {
 		due,
 		step
 	};
+	const { draft, ...rest } = person;
 	return {
 		person: {
-			...person,
+			...rest,
 			lastMove: today,
 			next: afterDone(person, today)
 		},
 		log
 	};
 }
+const draftWaiting = (p) => !!(p.draft && p.next && p.draft.kind === p.next.kind);
 function followupBefore(person) {
 	const next = person.next;
 	if (next && next.kind === "followup") return Math.max(0, next.step - 1);
@@ -966,22 +1302,69 @@ function forget(id) {
 }
 const hasOwnPhoto = async (person) => !!await getPhoto(person.id);
 
+// data/work-days.js
+const WORK_DAYS = [
+	1,
+	2,
+	3,
+	4,
+	5
+];
+const EVERY_DAY = [
+	0,
+	1,
+	2,
+	3,
+	4,
+	5,
+	6
+];
+const WORK_ONLY = ["pitch", "followup"];
+const WEEK = [
+	[1, "Mon"],
+	[2, "Tue"],
+	[3, "Wed"],
+	[4, "Thu"],
+	[5, "Fri"],
+	[6, "Sat"],
+	[0, "Sun"]
+];
+const byNumber = (a, b) => a - b;
+function workDaysOf(v) {
+	const days = Array.isArray(v) ? [...new Set(v.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort(byNumber) : [];
+	return days.length ? days : [...WORK_DAYS];
+}
+function toggleDay(v, day) {
+	const on = workDaysOf(v);
+	if (!on.includes(day)) return [...on, day].sort(byNumber);
+	return on.length > 1 ? on.filter((d) => d !== day) : on;
+}
+function whenDue(next, v, today = "") {
+	if (!next) return "";
+	if (!WORK_ONLY.includes(next.kind)) return next.due;
+	const on = workDaysOf(v);
+	let day = next.due > today ? next.due : today;
+	while (!on.includes(dateOf(day).getDay())) day = addDays(day, 1);
+	return day;
+}
+const comesUp = (next, today, v) => !!next && whenDue(next, v, today) <= today;
+
 // data/today.js
 const PER_DAY = 3;
 const MOST = 5;
 const rank = (k) => KIND_KEYS.indexOf(k);
 const perDayOf = (n) => Math.min(5, Math.max(1, Math.floor(Number(n)) || 3));
-const isDue = (p, today) => !!p.next && !p.letGo && p.next.due <= today;
-function dueOn(people, today) {
-	return people.filter((p) => isDue(p, today)).sort((a, b) => rank(a.next.kind) - rank(b.next.kind) || a.next.due.localeCompare(b.next.due) || a.added.localeCompare(b.added) || a.name.localeCompare(b.name));
+const isDue = (p, today, days) => !p.letGo && comesUp(p.next, today, days);
+function dueOn(people, today, days = EVERY_DAY) {
+	return people.filter((p) => isDue(p, today, days)).sort((a, b) => rank(a.next.kind) - rank(b.next.kind) || a.next.due.localeCompare(b.next.due) || a.added.localeCompare(b.added) || a.name.localeCompare(b.name));
 }
-function pickFor(people, saved, today, perDay = 3) {
+function pickFor(people, saved, today, perDay = 3, days = EVERY_DAY) {
 	const same = !!saved && saved.date === today;
 	const marks = same ? { ...saved.marks } : {};
 	const byId = new Map(people.map((p) => [p.id, p]));
-	const keep = same ? saved.ids.filter((id) => byId.has(id) && (marks[id] || isDue(byId.get(id), today))) : [];
+	const keep = same ? saved.ids.filter((id) => byId.has(id) && (marks[id] || isDue(byId.get(id), today, days))) : [];
 	const room = Math.max(0, perDayOf(perDay) - keep.length);
-	const more = dueOn(people, today).map((p) => p.id).filter((id) => !keep.includes(id)).slice(0, room);
+	const more = dueOn(people, today, days).map((p) => p.id).filter((id) => !keep.includes(id)).slice(0, room);
 	return {
 		date: today,
 		ids: [...keep, ...more],
@@ -1017,7 +1400,7 @@ function unmarkPick(pick, id) {
 		marks
 	};
 }
-function stops(n) {
+function stops$1(n) {
 	return Array.from({ length: n }, (_, i) => {
 		const a = (n === 1 ? 90 : 135 - 90 * i / (n - 1)) * Math.PI / 180;
 		return {
@@ -1026,19 +1409,23 @@ function stops(n) {
 		};
 	});
 }
+__name(stops$1, "stops");
 
 // data/moves.js
+const getWorkDays = async () => workDaysOf(await getSetting("workDays", null));
 async function loadToday() {
-	const [people, saved, perDay] = await Promise.all([
+	const [people, saved, perDay, days] = await Promise.all([
 		listPeople(),
 		getSetting("pick", null),
-		getSetting("perDay", 3)
+		getSetting("perDay", 3),
+		getWorkDays()
 	]);
-	const pick = pickFor(people, saved, dayOf(), perDay);
+	const pick = pickFor(people, saved, dayOf(), perDay, days);
 	if (JSON.stringify(pick) !== JSON.stringify(saved)) await setSetting("pick", pick);
 	return {
 		people,
-		pick
+		pick,
+		days
 	};
 }
 async function markInPick(id, how) {
@@ -1157,14 +1544,16 @@ const miniHtml = (kind) => kind ? `<span class="mini" style="background:${KINDS[
 function cardHtml$1(p, today) {
 	const kind = p.next.kind;
 	const handle = handleText(p);
+	const draft = draftWaiting(p);
 	return `
-    <div class="card top" role="button" tabindex="0" data-open aria-label="${esc(`${KINDS[kind].name}, ${p.name}. Open the move`)}">
+    <div class="card top${draft ? " has-draft" : ""}" role="button" tabindex="0" data-open aria-label="${esc(`${KINDS[kind].name}, ${p.name}. Open the move`)}">
       ${flairHtml(kind)}${photoHtml(p)}
       <div class="card-words">
         ${tagHtml(kind)}
         <p class="card-name">${esc(p.name)}</p>
         ${handle ? `<p class="card-handle">${esc(handle)}</p>` : ""}
         <p class="card-why">${esc(reasonFor(p, today))}</p>
+        ${draft ? "<p class=\"card-draft\">Draft waiting in Gmail</p>" : ""}
       </div>
     </div>`;
 }
@@ -1172,7 +1561,7 @@ __name(cardHtml$1, "cardHtml");
 const behindHtml = (p, n) => `<div class="card behind-${n}" aria-hidden="true">${flairHtml(p.next.kind)}</div>`;
 const writeLabel = (p) => p.group === "prospect" ? "Write to them" : `Write to ${firstName(p.name)}`;
 function arcHtml(pick, current, label) {
-	const pts = stops(pick.ids.length);
+	const pts = stops$1(pick.ids.length);
 	const dots = pick.ids.map((id, i) => {
 		const { x, y } = pts[i];
 		if (id === current) return `<circle cx="${x}" cy="${y}" r="7" fill="#14BFA0" stroke="#313D45" stroke-width="2"/>`;
@@ -1299,6 +1688,7 @@ async function openMove(person, { onDone, onLater }) {
 	const text = fill(messages[kind] ?? KINDS[kind].starter, fillValues(person, me, dayOf()));
 	const where = contactFor(person);
 	const handle = handleText(person);
+	const draft = draftWaiting(person);
 	let away = false;
 	const s = openSheet({
 		title: KINDS[kind].name,
@@ -1306,8 +1696,8 @@ async function openMove(person, { onDone, onLater }) {
 		onClose: () => document.removeEventListener("visibilitychange", back),
 		body: `
       <div class="move-who">${photoHtml(person, "small")}<span class="move-who-words"><span class="move-name">${esc(person.name)}</span>${handle ? `<span class="move-handle">${esc(handle)}</span>` : ""}</span></div>
-      <label class="label" for="moveText">Your message</label>
-      <textarea class="move-text" id="moveText" rows="6">${esc(text)}</textarea>
+      ${draft ? "<p class=\"move-draft\">Draft waiting in Gmail, written by Claude.</p>" : `<label class="label" for="moveText">Your message</label>
+      <textarea class="move-text" id="moveText" rows="6">${esc(text)}</textarea>`}
       <div class="move-actions"></div>`
 	});
 	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(kind);
@@ -1315,7 +1705,7 @@ async function openMove(person, { onDone, onLater }) {
 	const actions = s.body.querySelector(".move-actions");
 	const buttons = () => {
 		actions.innerHTML = `
-      <button type="button" class="btn primary move-go" data-go ${where ? "data-test-skip" : ""}>${where ? `Copy and open ${esc(where.how)}` : "Copy the message"} ${ARROW}</button>
+      ${draft ? `<button type="button" class="btn primary move-go" data-gmail data-test-skip>Open Gmail ${ARROW}</button>` : `<button type="button" class="btn primary move-go" data-go ${where ? "data-test-skip" : ""}>${where ? `Copy and open ${esc(where.how)}` : "Copy the message"} ${ARROW}</button>`}
       <div class="move-more"><button type="button" class="text-btn" data-done>Done</button><button type="button" class="text-btn" data-later>Later</button></div>`;
 	};
 	buttons();
@@ -1336,7 +1726,10 @@ async function openMove(person, { onDone, onLater }) {
 			s.close();
 			onLater();
 		} else if (b.matches("[data-not-yet]")) buttons();
-		else if (b.matches("[data-go]")) {
+		else if (b.matches("[data-gmail]")) {
+			away = true;
+			window.open(GMAIL_DRAFTS, "_blank", "noopener");
+		} else if (b.matches("[data-go]")) {
 			const words = s.body.querySelector(".move-text").value;
 			const copied = await copy(words);
 			const to = contactFor(person, words);
@@ -1418,6 +1811,736 @@ async function openDoneToday(onChange) {
 	});
 }
 
+// data/csv.js
+function parseCsv(text) {
+	const s = String(text ?? "").replace(/^﻿/, "");
+	const rows = [];
+	let row = [];
+	let field = "";
+	let quoted = false;
+	const endRow = () => {
+		row.push(field);
+		rows.push(row);
+		row = [];
+		field = "";
+	};
+	for (let i = 0; i < s.length; i++) {
+		const c = s[i];
+		if (quoted) {
+			if (c !== "\"") field += c;
+			else if (s[i + 1] === "\"") {
+				field += "\"";
+				i++;
+			} else quoted = false;
+		} else if (c === "\"" && field === "") quoted = true;
+		else if (c === ",") {
+			row.push(field);
+			field = "";
+		} else if (c === "\n") endRow();
+		else if (c === "\r") {
+			if (s[i + 1] === "\n") i++;
+			endRow();
+		} else field += c;
+	}
+	if (field !== "" || row.length) endRow();
+	return rows.filter((r) => r.some((f) => f.trim() !== ""));
+}
+const cell = (v) => {
+	const t = String(v ?? "");
+	return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, "\"\"")}"` : t;
+};
+const toCsv = (rows) => rows.map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";
+function rowOf(f) {
+	const text = (k) => String(f[k] ?? "").trim();
+	return {
+		name: text("name"),
+		group: groupFromName(text("group")) || "prospect",
+		instagram: cleanHandle(text("instagram")),
+		website: cleanSite(text("website")),
+		email: text("email"),
+		where: text("where_met"),
+		note: text("note"),
+		firstMove: kindFromName(text("first_move"))
+	};
+}
+function readPeople(text) {
+	const [head = [], ...body] = parseCsv(text);
+	const col = new Map(head.map((h, i) => [h.trim().toLowerCase().replace(/[\s-]+/g, "_"), i]));
+	if (!col.has("name")) throw new Error("This file has no name column. Its first row should name the columns: name, group, instagram and the rest.");
+	const rows = [];
+	let bad = 0;
+	for (const r of body) {
+		const row = rowOf(Object.fromEntries([...col].map(([k, i]) => [k, r[i]])));
+		if (row.name) rows.push(row);
+		else bad++;
+	}
+	return {
+		rows,
+		bad
+	};
+}
+function newOnes(rows, people) {
+	const known = [...people];
+	const fresh = [];
+	let skipped = 0;
+	for (const r of rows) {
+		if (findMatch(known, r)) {
+			skipped++;
+			continue;
+		}
+		known.push(r);
+		fresh.push(r);
+	}
+	return {
+		fresh,
+		skipped
+	};
+}
+
+// data/inbox.js
+const INBOX = "inbox.json";
+const DRAFTED = ["pitch", "followup"];
+function parseInbox(text) {
+	if (!String(text ?? "").trim()) return [];
+	try {
+		const v = JSON.parse(text);
+		return Array.isArray(v) ? v.filter((e) => e && typeof e === "object" && e.id != null) : null;
+	} catch {
+		return null;
+	}
+}
+const inboxText = (entries, handled) => JSON.stringify(entries.filter((e) => !handled.includes(e.id)), null, 2);
+const leadOf = (e) => ({
+	id: e.id,
+	row: rowOf(e),
+	foundBy: String(e.found_by ?? "").trim()
+});
+function reviewLeads(entries, people) {
+	const known = [...people];
+	const fresh = [];
+	let skipped = 0;
+	let bad = 0;
+	for (const lead of entries.map(leadOf)) {
+		if (!lead.row.name) bad++;
+		else if (findMatch(known, lead.row)) skipped++;
+		else {
+			known.push(lead.row);
+			fresh.push(lead);
+		}
+	}
+	return {
+		fresh,
+		skipped,
+		bad
+	};
+}
+function planInbox(entries, people, passed, handled = []) {
+	const drafts = [];
+	const drop = [];
+	const waiting = [];
+	for (const e of entries) {
+		if (handled.includes(e.id)) drop.push(e.id);
+		else if (e.type === "drafted") {
+			const kind = kindFromName(e.kind);
+			const match = String(e.match ?? "").trim();
+			const handle = match.startsWith("@") || !match.includes(" ") ? cleanHandle(match) : "";
+			const person = DRAFTED.includes(kind) && match ? findMatch(people, {
+				name: match,
+				instagram: handle
+			}) || findMatch(people, {
+				name: match,
+				instagram: ""
+			}) : null;
+			if (person) drafts.push({
+				personId: person.id,
+				draft: {
+					kind,
+					where: String(e.where ?? "").trim(),
+					added: String(e.added ?? "")
+				}
+			});
+			drop.push(e.id);
+		} else if (e.type === "lead") {
+			if (findMatch(passed, rowOf(e))) drop.push(e.id);
+			else waiting.push(e);
+		}
+	}
+	if (waiting.length && !reviewLeads(waiting, people).fresh.length) {
+		drop.push(...waiting.map((e) => e.id));
+		return {
+			drafts,
+			drop,
+			leads: []
+		};
+	}
+	return {
+		drafts,
+		drop,
+		leads: waiting
+	};
+}
+const passedOf = (lead) => ({
+	id: lead.id,
+	name: lead.row.name,
+	instagram: lead.row.instagram
+});
+
+// data/device.js
+const DB_NAME = "rounds-device";
+let dbPromise = null;
+function openDb() {
+	if (dbPromise) return dbPromise;
+	dbPromise = new Promise((resolve, reject) => {
+		const req = indexedDB.open(DB_NAME, 1);
+		req.onupgradeneeded = () => {
+			req.result.createObjectStore("meta", { keyPath: "key" });
+		};
+		req.onsuccess = () => {
+			req.result.onversionchange = () => {
+				req.result.close();
+				dbPromise = null;
+			};
+			resolve(req.result);
+		};
+		req.onerror = () => {
+			dbPromise = null;
+			reject(req.error);
+		};
+	});
+	return dbPromise;
+}
+async function run(mode, fn) {
+	const db = await openDb();
+	return new Promise((resolve, reject) => {
+		const t = db.transaction(["meta"], mode);
+		let out;
+		t.oncomplete = () => resolve(out);
+		t.onabort = () => reject(t.error || new Error("That wasn't saved. Your phone may be out of space."));
+		fn(t.objectStore("meta"), (v) => {
+			out = v;
+		});
+	});
+}
+async function getMeta(key, fallback = null) {
+	const r = await run("readonly", (s, set) => {
+		s.get(key).onsuccess = (e) => set(e.target.result);
+	});
+	return r === undefined || r.value == null ? fallback : r.value;
+}
+const setMeta = (key, value) => run("readwrite", (s) => {
+	s.put({
+		key,
+		value
+	});
+});
+
+// data/github.js
+const GITHUB = "https://api.github.com";
+var SyncError = class extends Error {
+	constructor(message, kind) {
+		super(message);
+		this.kind = kind;
+	}
+};
+const validRepo = (repo) => /^[\w.-]+\/[\w.-]+$/.test(repo);
+function repoOf(text) {
+	const t = String(text ?? "").trim().replace(/^(https?:\/\/)?(www\.)?github\.com\//i, "").replace(/\.git$/i, "").replace(/\/+$/, "");
+	return t.split("/").slice(0, 2).join("/");
+}
+async function call(cfg, path, { accept = "application/vnd.github+json", ...opts } = {}) {
+	const headers = {
+		Authorization: `Bearer ${cfg.token}`,
+		Accept: accept,
+		"X-GitHub-Api-Version": "2022-11-28"
+	};
+	if (opts.body) headers["Content-Type"] = "application/json";
+	try {
+		return await fetch(`${GITHUB}${path}`, {
+			cache: "no-store",
+			...opts,
+			headers
+		});
+	} catch {
+		throw new SyncError("Couldn't reach GitHub. Rounds tries again once you're online.", "offline");
+	}
+}
+function explain(res, cfg) {
+	if (res.status === 401) return new SyncError("GitHub turned the key down. Check you copied all of it; if it expired or was deleted, make a new one and paste it in.", "auth");
+	if (res.status === 403 && res.headers.get("x-ratelimit-remaining") === "0") return new SyncError("GitHub asked Rounds to slow down. It tries again in a few minutes.", "server");
+	if (res.status === 403) return new SyncError(`The key isn't allowed to change ${cfg.repo}. Give it Contents: Read and write for that repository.`, "auth");
+	if (res.status === 404) return new SyncError(`GitHub can't find ${cfg.repo}, or the key can't see it. Check the name, and that the key was given that repository.`, "repo");
+	return new SyncError(`GitHub answered with an error (${res.status}). Rounds tries again by itself.`, "server");
+}
+function toBase64(text) {
+	const bytes = new TextEncoder().encode(text);
+	let bin = "";
+	for (let i = 0; i < bytes.length; i += 32768) bin += String.fromCharCode(...bytes.subarray(i, i + 32768));
+	return btoa(bin);
+}
+function fromBase64(b64) {
+	const bin = atob(b64.replace(/\s/g, ""));
+	return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+}
+async function readFile$1(cfg, name) {
+	const path = `/repos/${cfg.repo}/contents/${name}`;
+	const res = await call(cfg, path);
+	if (res.status === 404) {
+		const repo = await call(cfg, `/repos/${cfg.repo}`);
+		if (repo.ok) return {
+			sha: null,
+			text: null
+		};
+		throw explain(repo, cfg);
+	}
+	if (!res.ok) throw explain(res, cfg);
+	const meta = await res.json();
+	if (meta.encoding === "base64" && meta.content) return {
+		sha: meta.sha,
+		text: fromBase64(meta.content)
+	};
+	const raw = await call(cfg, path, { accept: "application/vnd.github.raw" });
+	if (!raw.ok) throw explain(raw, cfg);
+	return {
+		sha: meta.sha,
+		text: await raw.text()
+	};
+}
+__name(readFile$1, "readFile");
+async function writeFile(cfg, name, text, sha) {
+	const body = {
+		message: `Sync from ${cfg.device || "a device"}`,
+		content: toBase64(text)
+	};
+	if (sha) body.sha = sha;
+	const res = await call(cfg, `/repos/${cfg.repo}/contents/${name}`, {
+		method: "PUT",
+		body: JSON.stringify(body)
+	});
+	if (res.status === 409 || res.status === 422) return null;
+	if (!res.ok) throw explain(res, cfg);
+	return (await res.json()).content.sha;
+}
+
+// data/sync-file.js
+const FILE = "rounds.json";
+const VERSION = 1;
+const plainNext = (p) => p.next && !p.letGo && KINDS[p.next.kind] ? {
+	kind: KINDS[p.next.kind].name,
+	due: p.next.due
+} : null;
+function fileText(data, { device = null, now }) {
+	const out = Object.fromEntries(STORES.map((s) => [s, data[s] || []]));
+	out.people = out.people.map((p) => ({
+		...p,
+		nextMove: plainNext(p)
+	}));
+	return JSON.stringify({
+		app: "rounds",
+		version: 1,
+		exportedAt: now,
+		syncedFrom: device,
+		data: out
+	}, null, 2);
+}
+function readFile(text, repo) {
+	let payload;
+	try {
+		payload = JSON.parse(text);
+	} catch {
+		payload = null;
+	}
+	if (!payload || payload.app !== "rounds" || !payload.data || typeof payload.data !== "object") {
+		throw new Error(`${FILE} in ${repo} isn't a Rounds file. Use a repository just for Rounds.`);
+	}
+	const data = Object.fromEntries(STORES.map((s) => [s, Array.isArray(payload.data[s]) ? payload.data[s] : []]));
+	data.people = data.people.map(({ nextMove, ...p }) => p);
+	return {
+		data,
+		syncedFrom: payload.syncedFrom || null
+	};
+}
+function deviceLabel(ua) {
+	if (/iPhone/.test(ua)) return "iPhone";
+	if (/iPad/.test(ua)) return "iPad";
+	if (/Android/.test(ua)) return "Android phone";
+	if (/Macintosh/.test(ua)) return "Mac";
+	return "browser";
+}
+
+// data/sync.js
+const TRIES = 4;
+const empty = () => Object.fromEntries(STORES.map((s) => [s, []]));
+async function syncConfig() {
+	const cfg = await getMeta("sync");
+	return cfg && cfg.repo && cfg.token ? cfg : null;
+}
+async function syncData(cfg) {
+	const oldBase = cfg.joined ? await getMeta("syncBase") : null;
+	let changedHere = false;
+	for (let tries = 0; tries < TRIES; tries++) {
+		const remote = await readFile$1(cfg, FILE);
+		const read = remote.text == null ? null : readFile(remote.text, cfg.repo);
+		const theirs = read ? read.data : empty();
+		let held = new Set();
+		let conflicts = [];
+		if (read) {
+			const plan = planMerge(await exportData(), theirs, oldBase, { now: nowISO() });
+			if (await applySync(plan.puts, plan.dels)) changedHere = true;
+			held = plan.held;
+			const from = read.syncedFrom && read.syncedFrom !== cfg.device ? read.syncedFrom : null;
+			conflicts = plan.conflicts.map((c) => ({
+				...c,
+				from,
+				foundAt: nowISO()
+			}));
+		}
+		const out = fileData(await exportData(), theirs, held);
+		const done = read && dataKey(out) === dataKey(theirs) || !!await writeFile(cfg, "rounds.json", fileText(out, {
+			device: cfg.device,
+			now: nowISO()
+		}), remote.sha);
+		if (done) return {
+			changedHere,
+			conflicts,
+			base: nextBase(out, oldBase, held)
+		};
+	}
+	throw new SyncError("Another device kept syncing at the same moment. Rounds tries again shortly.", "busy");
+}
+async function syncInbox(cfg) {
+	let changedHere = false;
+	for (let tries = 0; tries < TRIES; tries++) {
+		const remote = await readFile$1(cfg, INBOX);
+		const entries = remote.text == null ? [] : parseInbox(remote.text);
+		if (!entries) return { changedHere };
+		const [people, passed, handled] = await Promise.all([
+			listPeople(),
+			listPassed(),
+			getMeta("inboxHandled", [])
+		]);
+		const plan = planInbox(entries, people, passed, handled);
+		const byId = new Map(people.map((p) => [p.id, p]));
+		const marked = plan.drafts.filter((d) => byId.get(d.personId).next?.kind === d.draft.kind).map((d) => ({
+			...byId.get(d.personId),
+			draft: d.draft
+		}));
+		if (marked.length) {
+			await savePeople(marked);
+			changedHere = true;
+		}
+		await setMeta("leads", plan.leads);
+		if (!plan.drop.length || await writeFile(cfg, "inbox.json", inboxText(entries, plan.drop), remote.sha)) {
+			await setMeta("inboxHandled", handled.filter((id) => !plan.drop.includes(id)));
+			return { changedHere };
+		}
+	}
+	throw new SyncError("Claude was adding to the inbox at the same moment. Rounds tries again shortly.", "busy");
+}
+async function syncNow(newCfg = null) {
+	const cfg = newCfg || await syncConfig();
+	if (!cfg) return { off: true };
+	let data;
+	let inbox;
+	try {
+		data = await syncData(cfg);
+		inbox = await syncInbox(cfg);
+	} catch (err) {
+		const e = err instanceof SyncError ? err : new SyncError(err && err.message ? err.message : "Sync stopped partway. Rounds tries again shortly.", "server");
+		if (!newCfg) await setMeta("sync", {
+			...cfg,
+			lastError: e.message,
+			lastErrorKind: e.kind,
+			lastErrorAt: nowISO()
+		});
+		throw e;
+	}
+	const before = new Set((await getConflicts()).map((c) => keyOf(c.store, c.id)));
+	await setMeta("syncBase", data.base);
+	await setMeta("syncConflicts", data.conflicts);
+	await setMeta("sync", {
+		...cfg,
+		joined: true,
+		lastSyncAt: nowISO(),
+		lastError: null,
+		lastErrorKind: null
+	});
+	const fresh = data.conflicts.filter((c) => !before.has(keyOf(c.store, c.id))).length;
+	return {
+		changedHere: data.changedHere || inbox.changedHere,
+		conflicts: data.conflicts.length,
+		newConflicts: fresh,
+		leads: (await waitingLeads()).length
+	};
+}
+async function turnOff() {
+	for (const k of [
+		"sync",
+		"syncBase",
+		"syncConflicts",
+		"leads",
+		"inboxHandled"
+	]) await setMeta(k, null);
+}
+const getConflicts = () => getMeta("syncConflicts", []);
+const waitingLeads = () => getMeta("leads", []);
+async function leadsHandled(ids) {
+	const [leads, handled] = await Promise.all([waitingLeads(), getMeta("inboxHandled", [])]);
+	await setMeta("leads", leads.filter((e) => !ids.includes(e.id)));
+	await setMeta("inboxHandled", [...new Set([...handled, ...ids])]);
+}
+async function answer(c, side) {
+	const base = await getMeta("syncBase") || {};
+	base[c.store] = base[c.store] || {};
+	const here = await exportData();
+	const mine = here[c.store].find((r) => r.id === c.id) || null;
+	const puts = empty();
+	const dels = empty();
+	const now = nowISO();
+	const tomb = {
+		id: c.id,
+		store: c.store,
+		deletedAt: now,
+		createdAt: now,
+		updatedAt: now
+	};
+	let stale = false;
+	if (c.kind === "both") {
+		if (!mine || mine.updatedAt !== c.mine.updatedAt) stale = true;
+		else {
+			puts[c.store].push({
+				...resolvedRecord(c, side),
+				updatedAt: now
+			});
+			base[c.store][c.id] = c.theirs;
+		}
+	} else if (c.kind === "deletedThere") {
+		if (side === "keep") {
+			if (mine) puts[c.store].push({
+				...mine,
+				updatedAt: now
+			});
+		} else {
+			if (mine) dels[c.store].push(c.id);
+			puts.tombstones.push(tomb);
+		}
+		delete base[c.store][c.id];
+	} else {
+		if (side === "keep") {
+			puts[c.store].push(c.theirs);
+			dels.tombstones.push(c.id);
+		} else if (!here.tombstones.some((t) => t.id === c.id)) puts.tombstones.push(tomb);
+		base[c.store][c.id] = c.theirs;
+	}
+	await applySync(puts, dels);
+	await setMeta("syncBase", base);
+	await setMeta("syncConflicts", (await getConflicts()).filter((x) => keyOf(x.store, x.id) !== keyOf(c.store, c.id)));
+	return { stale };
+}
+
+// data/auto-sync.js
+const SOON = 4e3;
+const EVERY = 12e4;
+const AGAIN = 15e3;
+let timer = null;
+let lastRun = 0;
+let chain = Promise.resolve();
+let onResult = () => {};
+function inTurn(fn) {
+	const p = chain.then(fn);
+	chain = p.catch(() => {});
+	return p;
+}
+const queued = (cfg = null) => inTurn(() => syncNow(cfg));
+function request(delay = 0) {
+	clearTimeout(timer);
+	timer = setTimeout(() => {
+		timer = null;
+		lastRun = Date.now();
+		queued().then((r) => {
+			if (!r.off) onResult(r);
+		}, (error) => onResult({ error }));
+	}, delay);
+}
+function resolve(c, side) {
+	return inTurn(() => answer(c, side)).then((r) => {
+		request(0);
+		return r;
+	});
+}
+let stops = [];
+function listen(target, type, fn) {
+	target.addEventListener(type, fn);
+	stops.push(() => target.removeEventListener(type, fn));
+}
+function startAutoSync(handler) {
+	stopAutoSync();
+	onResult = handler;
+	onSyncedChange(() => request(SOON));
+	listen(document, "visibilitychange", () => {
+		if (document.visibilityState === "visible") {
+			if (Date.now() - lastRun > AGAIN) request(0);
+		} else if (timer) request(0);
+	});
+	listen(window, "focus", () => {
+		if (Date.now() - lastRun > AGAIN) request(0);
+	});
+	listen(window, "online", () => request(0));
+	const every = setInterval(() => {
+		if (document.visibilityState === "visible") request(0);
+	}, EVERY);
+	stops.push(() => clearInterval(every));
+	request(0);
+}
+function stopAutoSync() {
+	stops.forEach((f) => f());
+	stops = [];
+	clearTimeout(timer);
+	timer = null;
+	onSyncedChange(() => {});
+}
+
+// pages/review.js
+const metaOf = (r) => [
+	GROUPS[r.group],
+	r.instagram && `@${r.instagram}`,
+	r.note || r.where
+].filter(Boolean).join(" · ");
+function openReview({ title, notes = "", items, onAdd, none = "" }) {
+	const s = openSheet({
+		title,
+		body: `
+      ${notes ? `<p class="import-sum">${esc(notes)}</p>` : ""}
+      <div class="import-list">${items.map(({ row, from }, i) => `
+        <label class="import-row"><input type="checkbox" checked data-i="${i}" />
+          <span class="import-who"><span class="import-name">${esc(row.name)}</span><span class="import-meta">${esc(metaOf(row))}</span>${from ? `<span class="import-from">${esc(from)}</span>` : ""}</span></label>`).join("")}</div>
+      <div class="sheet-actions one"><button type="button" class="btn primary" data-add></button></div>`
+	});
+	const ticks = [...s.body.querySelectorAll("[data-i]")];
+	const add = s.body.querySelector("[data-add]");
+	const label = () => {
+		const n = ticks.filter((t) => t.checked).length;
+		add.textContent = n === 1 ? "Add 1 person" : n || !none ? `Add ${n} people` : none;
+		add.disabled = !n && !none;
+	};
+	label();
+	s.body.addEventListener("change", label);
+	add.addEventListener("click", async () => {
+		add.disabled = true;
+		await onAdd(ticks.map((t) => t.checked));
+		s.close();
+	});
+	return s;
+}
+
+// components/files.js
+async function saveFile(file) {
+	if (navigator.canShare && navigator.canShare({ files: [file] })) {
+		try {
+			await navigator.share({
+				files: [file],
+				title: file.name
+			});
+			return "shared";
+		} catch (e) {
+			if (e && e.name === "AbortError") return "cancelled";
+		}
+	}
+	const url = URL.createObjectURL(file);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = file.name;
+	document.body.appendChild(a);
+	a.click();
+	a.remove();
+	setTimeout(() => URL.revokeObjectURL(url), 4e3);
+	return "downloaded";
+}
+function pickFile(accept) {
+	return new Promise((ok) => {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = accept;
+		input.style.display = "none";
+		input.addEventListener("change", () => {
+			ok(input.files && input.files[0] ? input.files[0] : null);
+			input.remove();
+		});
+		document.body.appendChild(input);
+		input.click();
+	});
+}
+
+// pages/import.js
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const leftOut = (skipped, bad, [one, many] = ["row", "rows"]) => [skipped && `${plural(skipped, "person is", "people are")} in Rounds already and won't be added again.`, bad && `${plural(bad, `${one} has`, `${many} have`)} no name and ${bad === 1 ? "is" : "are"} left out.`].filter(Boolean).join(" ");
+async function addRows(rows) {
+	const perDay = perDayOf(await getSetting("perDay", 3));
+	await savePeople(fromImport(rows, dayOf(), perDay, uuid));
+	toast(`${plural(rows.length, "person", "people")} added. Their first moves join Today a few at a time.`, { ms: 5e3 });
+}
+async function openImport(onAdded) {
+	const file = await pickFile(".csv,text/csv,text/comma-separated-values");
+	if (!file) return null;
+	let found;
+	try {
+		found = readPeople(await file.text());
+	} catch (e) {
+		toast(e.message, { ms: 6e3 });
+		return null;
+	}
+	const { fresh, skipped } = newOnes(found.rows, await listPeople());
+	const notes = leftOut(skipped, found.bad);
+	if (!fresh.length) {
+		toast(`No one new to add. ${notes}`.trim(), { ms: 6e3 });
+		return null;
+	}
+	return openReview({
+		title: "Import people",
+		notes,
+		items: fresh.map((row) => ({ row })),
+		onAdd: async (ticked) => {
+			await addRows(fresh.filter((_, i) => ticked[i]));
+			onAdded();
+		}
+	});
+}
+
+// pages/leads.js
+async function leadsHtml(people) {
+	const n = reviewLeads(await waitingLeads(), people).fresh.length;
+	return n ? `<div class="today-leads"><span>${esc(plural(n, "new lead", "new leads"))} from Claude</span><button type="button" class="text-btn" data-leads>Review</button></div>` : "";
+}
+async function openLeads(onChange) {
+	const [entries, people] = await Promise.all([waitingLeads(), listPeople()]);
+	const { fresh, skipped, bad } = reviewLeads(entries, people);
+	const done = async () => {
+		await leadsHandled(entries.map((e) => e.id));
+		request(0);
+		onChange();
+	};
+	if (!fresh.length) {
+		await done();
+		return null;
+	}
+	return openReview({
+		title: "Leads from Claude",
+		notes: leftOut(skipped, bad, ["lead", "leads"]),
+		items: fresh.map((l) => ({
+			row: l.row,
+			from: l.foundBy
+		})),
+		none: "Pass on them all",
+		onAdd: async (ticked) => {
+			const add = fresh.filter((_, i) => ticked[i]);
+			const pass = fresh.filter((_, i) => !ticked[i]);
+			if (pass.length) await addPassed(pass.map(passedOf));
+			if (add.length) await addRows(add.map((l) => l.row));
+			else toast(`${plural(pass.length, "lead", "leads")} passed on. Claude won't offer ${pass.length === 1 ? "it" : "them"} again.`);
+			await done();
+		}
+	});
+}
+
 // pages/today.js
 const doneHtml = (n) => n ? `<button type="button" class="text-btn today-done" data-done-today>Done today <span>${n}</span></button>` : "";
 const head = (count, arc) => `<div class="today-head"><span class="today-count">${count}</span>${arc}</div>`;
@@ -1433,7 +2556,7 @@ function stackHtml(pick, left, today) {
       <button type="button" class="btn primary" data-write><span>${esc(writeLabel(top))}</span></button>
     </div>`;
 }
-function calmHtml(people, pick, today) {
+function calmHtml(people, pick, today, days) {
 	const n = pick.ids.length;
 	if (n) return `${head(`${n} of ${n} today`, arcHtml(pick, "", `All ${n} done`))}<div class="today-calm"><h2>That's today.</h2><p>Rounds picks the next ones tomorrow.</p></div>`;
 	const here = people.filter((p) => !p.letGo);
@@ -1442,24 +2565,26 @@ function calmHtml(people, pick, today) {
 		return `<div class="today-calm"><h2>No one here yet.</h2><p>Add the people you work with, and Rounds picks a few to write to each day.${eye}</p>
       <button type="button" class="btn primary" data-add>${PLUS}Add someone</button></div>`;
 	}
-	const next = here.filter((p) => p.next).map((p) => p.next.due).sort()[0];
+	const next = here.filter((p) => p.next).map((p) => whenDue(p.next, days, today)).sort()[0];
 	const when = next ? `The next move is due ${dueWords(next, today).replace("Tomorrow", "tomorrow")}.` : "Nothing is planned.";
 	return `<div class="today-calm"><h2>Nothing today.</h2><p>${when}</p></div>`;
 }
 async function todayScreen(view, { beside = false } = {}) {
 	const today = dayOf();
-	const [{ people, pick }, { done: doneToday }] = await Promise.all([loadToday(), loadDone()]);
+	const [{ people, pick, days }, { done: doneToday }] = await Promise.all([loadToday(), loadDone()]);
+	const leads = await leadsHtml(people);
 	const byId = new Map(people.map((p) => [p.id, p]));
 	const left = waiting$1(pick).map((id) => byId.get(id));
 	view.innerHTML = `<div class="screen"><div class="scroll">${bandHtml({
 		title: "Rounds",
 		place: "Today"
-	})}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today)}${doneHtml(doneToday.length)}</div></div>`;
+	})}${leads}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today, days)}${doneHtml(doneToday.length)}</div></div>`;
 	fillPhotos(view, people);
 	if (beside) return;
 	const redraw = () => todayScreen(view).then(() => view.querySelector(".screen")?.classList.add("still"));
 	view.querySelector("[data-add]")?.addEventListener("click", () => openAddPerson(() => todayScreen(view)));
 	view.querySelector("[data-done-today]")?.addEventListener("click", () => openDoneToday(redraw));
+	view.querySelector("[data-leads]")?.addEventListener("click", () => openLeads(redraw));
 	if (!left.length) return;
 	const top = left[0];
 	const card = view.querySelector(".card.top");
@@ -1488,13 +2613,13 @@ async function todayScreen(view, { beside = false } = {}) {
 }
 
 // pages/people.js
-const order = (a, b) => (a.next ? a.next.due : "~").localeCompare(b.next ? b.next.due : "~") || a.name.localeCompare(b.name);
+const order = (days, today) => (a, b) => (whenDue(a.next, days, today) || "~").localeCompare(whenDue(b.next, days, today) || "~") || a.name.localeCompare(b.name);
 const cardHtml = (p) => `
   <a class="person-card" href="#/person/${encodeURIComponent(p.id)}">${photoHtml(p)}
     <span class="person-card-name">${p.letGo ? "" : miniHtml(p.next?.kind)}<span>${esc(p.name)}</span></span></a>`;
 async function peopleScreen(view, { beside = false } = {}) {
-	const people = await listPeople();
-	const here = people.filter((p) => !p.letGo).sort(order);
+	const [people, days] = await Promise.all([listPeople(), getWorkDays()]);
+	const here = people.filter((p) => !p.letGo).sort(order(days, dayOf()));
 	const gone = people.filter((p) => p.letGo).sort((a, b) => a.name.localeCompare(b.name));
 	const eye = window.DF_SUITE ? " People from your shoots in The Eye come in on their own." : "";
 	view.innerHTML = `<div class="screen"><div class="scroll">
@@ -2080,44 +3205,6 @@ const dockEnd = (e) => {
 bar.addEventListener("pointerup", dockEnd);
 bar.addEventListener("pointercancel", dockEnd);
 
-// components/files.js
-async function saveFile(file) {
-	if (navigator.canShare && navigator.canShare({ files: [file] })) {
-		try {
-			await navigator.share({
-				files: [file],
-				title: file.name
-			});
-			return "shared";
-		} catch (e) {
-			if (e && e.name === "AbortError") return "cancelled";
-		}
-	}
-	const url = URL.createObjectURL(file);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = file.name;
-	document.body.appendChild(a);
-	a.click();
-	a.remove();
-	setTimeout(() => URL.revokeObjectURL(url), 4e3);
-	return "downloaded";
-}
-function pickFile(accept) {
-	return new Promise((ok) => {
-		const input = document.createElement("input");
-		input.type = "file";
-		input.accept = accept;
-		input.style.display = "none";
-		input.addEventListener("change", () => {
-			ok(input.files && input.files[0] ? input.files[0] : null);
-			input.remove();
-		});
-		document.body.appendChild(input);
-		input.click();
-	});
-}
-
 // pages/person-edit.js
 const field = (label, name, value, more = "") => `<label class="field"><span class="field-label">${label}</span><input type="text" name="${name}" value="${esc(value)}" autocomplete="off" ${more} /></label>`;
 const HANDLE = "autocapitalize=\"off\" spellcheck=\"false\" placeholder=\"@handle\"";
@@ -2255,7 +3342,7 @@ function restHtml(p) {
 	return "Nothing planned. Rounds let this one rest.";
 }
 async function personScreen(view, id) {
-	const p = await getPerson(id);
+	const [p, days] = await Promise.all([getPerson(id), getWorkDays()]);
 	if (!p) {
 		location.replace("#/people");
 		return;
@@ -2277,7 +3364,7 @@ async function personScreen(view, id) {
       <!-- The handle opens their profile on Instagram (or TikTok, or their website): the button clicker leaves it alone. -->
       <p class="person-line">${esc(line.endsWith(".") ? line : `${line}.`)}</p>
     </div>
-    ${next ? `<button type="button" class="person-next" data-move>${miniHtml(p.next.kind)}<span class="person-next-what">${esc(phrase(p.next.kind, p.name))}</span><span class="person-next-when">${esc(dueWords(p.next.due, dayOf()))} ${CHEV_SMALL}</span></button>` : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
+    ${next ? `<button type="button" class="person-next" data-move>${miniHtml(p.next.kind)}<span class="person-next-what">${esc(phrase(p.next.kind, p.name))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, days, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>` : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
   </div></div>`;
 	fillPhotos(view, [p]);
 	const redraw = () => personScreen(view, id).then(() => view.querySelector(".screen")?.classList.add("still"));
@@ -2300,143 +3387,6 @@ function listRows(people, which) {
 	const on = people.filter((p) => !p.letGo && p.lists[which]);
 	if (which === "email") return [["name", "email"], ...on.filter((p) => p.email).map((p) => [p.name, p.email])];
 	return [["name", "address"], ...on.filter((p) => p.address).map((p) => [p.name, p.address])];
-}
-
-// data/csv.js
-function parseCsv(text) {
-	const s = String(text ?? "").replace(/^﻿/, "");
-	const rows = [];
-	let row = [];
-	let field = "";
-	let quoted = false;
-	const endRow = () => {
-		row.push(field);
-		rows.push(row);
-		row = [];
-		field = "";
-	};
-	for (let i = 0; i < s.length; i++) {
-		const c = s[i];
-		if (quoted) {
-			if (c !== "\"") field += c;
-			else if (s[i + 1] === "\"") {
-				field += "\"";
-				i++;
-			} else quoted = false;
-		} else if (c === "\"" && field === "") quoted = true;
-		else if (c === ",") {
-			row.push(field);
-			field = "";
-		} else if (c === "\n") endRow();
-		else if (c === "\r") {
-			if (s[i + 1] === "\n") i++;
-			endRow();
-		} else field += c;
-	}
-	if (field !== "" || row.length) endRow();
-	return rows.filter((r) => r.some((f) => f.trim() !== ""));
-}
-const cell = (v) => {
-	const t = String(v ?? "");
-	return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, "\"\"")}"` : t;
-};
-const toCsv = (rows) => rows.map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";
-function readPeople(text) {
-	const [head = [], ...body] = parseCsv(text);
-	const col = new Map(head.map((h, i) => [h.trim().toLowerCase().replace(/[\s-]+/g, "_"), i]));
-	if (!col.has("name")) throw new Error("This file has no name column. Its first row should name the columns: name, group, instagram and the rest.");
-	const get = (r, k) => col.has(k) ? String(r[col.get(k)] ?? "").trim() : "";
-	const rows = [];
-	let bad = 0;
-	for (const r of body) {
-		const name = get(r, "name");
-		if (!name) {
-			bad++;
-			continue;
-		}
-		rows.push({
-			name,
-			group: groupFromName(get(r, "group")) || "prospect",
-			instagram: cleanHandle(get(r, "instagram")),
-			website: cleanSite(get(r, "website")),
-			email: get(r, "email"),
-			where: get(r, "where_met"),
-			note: get(r, "note"),
-			firstMove: kindFromName(get(r, "first_move"))
-		});
-	}
-	return {
-		rows,
-		bad
-	};
-}
-function newOnes(rows, people) {
-	const known = [...people];
-	const fresh = [];
-	let skipped = 0;
-	for (const r of rows) {
-		if (findMatch(known, r)) {
-			skipped++;
-			continue;
-		}
-		known.push(r);
-		fresh.push(r);
-	}
-	return {
-		fresh,
-		skipped
-	};
-}
-
-// pages/import.js
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-async function openImport(onAdded) {
-	const file = await pickFile(".csv,text/csv,text/comma-separated-values");
-	if (!file) return null;
-	let found;
-	try {
-		found = readPeople(await file.text());
-	} catch (e) {
-		toast(e.message, { ms: 6e3 });
-		return null;
-	}
-	const { fresh, skipped } = newOnes(found.rows, await listPeople());
-	const notes = [skipped && `${plural(skipped, "person is", "people are")} in Rounds already and won't be added again.`, found.bad && `${plural(found.bad, "row has", "rows have")} no name and ${found.bad === 1 ? "is" : "are"} left out.`].filter(Boolean).join(" ");
-	if (!fresh.length) {
-		toast(`No one new to add. ${notes}`.trim(), { ms: 6e3 });
-		return null;
-	}
-	const s = openSheet({
-		title: "Import people",
-		body: `
-      ${notes ? `<p class="import-sum">${esc(notes)}</p>` : ""}
-      <div class="import-list">${fresh.map((r, i) => `
-        <label class="import-row"><input type="checkbox" checked data-i="${i}" />
-          <span class="import-who"><span class="import-name">${esc(r.name)}</span><span class="import-meta">${esc([
-			GROUPS[r.group],
-			r.instagram && `@${r.instagram}`,
-			r.note || r.where
-		].filter(Boolean).join(" · "))}</span></span></label>`).join("")}</div>
-      <div class="sheet-actions one"><button type="button" class="btn primary" data-add></button></div>`
-	});
-	const ticks = [...s.body.querySelectorAll("[data-i]")];
-	const add = s.body.querySelector("[data-add]");
-	const label = () => {
-		const n = ticks.filter((t) => t.checked).length;
-		add.textContent = n === 1 ? "Add 1 person" : `Add ${n} people`;
-		add.disabled = !n;
-	};
-	label();
-	s.body.addEventListener("change", label);
-	add.addEventListener("click", async () => {
-		const rows = fresh.filter((_, i) => ticks[i].checked);
-		const perDay = perDayOf(await getSetting("perDay", 3));
-		await savePeople(fromImport(rows, dayOf(), perDay, uuid));
-		s.close();
-		toast(`${plural(rows.length, "person", "people")} added. Their first moves join Today a few at a time.`, { ms: 5e3 });
-		onAdded();
-	});
-	return s;
 }
 
 // pages/intro.js
@@ -2490,15 +3440,238 @@ function openIntro() {
 	return s;
 }
 
+// data/clash.js
+const FIELDS = {
+	name: "Name",
+	group: "Group",
+	instagram: "Instagram",
+	tiktok: "TikTok",
+	website: "Website",
+	email: "Email",
+	where: "Where you met",
+	note: "Note",
+	address: "Address",
+	next: "Next move",
+	draft: "Draft in Gmail",
+	letGo: "Let go",
+	"lists.email": "Email newsletter",
+	"lists.mail": "Mail newsletter",
+	text: "Message"
+};
+const SETTINGS = {
+	perDay: "Moves a day",
+	workDays: "Work days",
+	offer: "Your offer",
+	city: "Your city"
+};
+function valueWords(path, v, id = "") {
+	if (v === undefined || v === null || v === "") return "Nothing";
+	if (typeof v === "boolean") return v ? "Yes" : "No";
+	if (path === "group") return GROUPS[v] || String(v);
+	if (path === "next" || path === "draft") return KINDS[v.kind] ? [KINDS[v.kind].name, v.due && `due ${v.due}`].filter(Boolean).join(", ") : "Nothing";
+	if (id === "workDays" && Array.isArray(v)) return WEEK.filter(([d]) => v.includes(d)).map(([, n]) => n).join(", ") || "Nothing";
+	return typeof v === "object" ? JSON.stringify(v) : String(v);
+}
+function subjectOf(c) {
+	const r = c.mine || c.theirs || {};
+	if (c.store === "people") return r.name || "Someone";
+	if (c.store === "messages") return `The ${KINDS[c.id] ? KINDS[c.id].name : c.id} message`;
+	if (c.store === "settings") return SETTINGS[c.id] || "A setting";
+	if (c.store === "moves") return "A move marked done";
+	return "A lead passed on";
+}
+function clashRows(c) {
+	return (c.loud || []).map((p) => ({
+		label: c.store === "settings" && p === "value" ? SETTINGS[c.id] || "Setting" : FIELDS[p] || p,
+		theirs: valueWords(p, getPath(c.theirs, p), c.id),
+		mine: valueWords(p, getPath(c.mine, p), c.id)
+	}));
+}
+const newerSide = (c) => (c.theirs && c.theirs.updatedAt || "") > (c.mine && c.mine.updatedAt || "") ? "theirs" : "mine";
+
+// pages/conflicts.js
+const btn = (side, label, main) => `<button type="button" class="btn ${main ? "primary" : "secondary"}" data-side="${side}">${esc(label)}</button>`;
+function clashHtml(c, at, of) {
+	const there = c.from ? `the ${c.from}` : "the other device";
+	const here = `this ${deviceLabel(navigator.userAgent)}`;
+	const count = of > 1 ? `<p class="clash-count">${at} of ${of}</p>` : "";
+	if (c.kind !== "both") {
+		const what = c.kind === "deletedThere" ? `Deleted on ${there}, changed on ${here}.` : `Deleted on ${here}, changed on ${there}.`;
+		return `${count}<h3 class="clash-what">${esc(subjectOf(c))}</h3><p class="clash-note">${esc(what)}</p>
+      <div class="sheet-actions">${btn("delete", "Delete", false)}${btn("keep", "Keep", true)}</div>`;
+	}
+	const newer = newerSide(c);
+	const rows = clashRows(c).map((r) => `<div class="clash-row"><span class="field-label">${esc(r.label)}</span>
+    <span class="clash-side"><span class="clash-who">${esc(there)}${newer === "theirs" ? " (newer)" : ""}</span>${esc(r.theirs)}</span>
+    <span class="clash-side"><span class="clash-who">${esc(here)}${newer === "mine" ? " (newer)" : ""}</span>${esc(r.mine)}</span></div>`).join("");
+	return `${count}<h3 class="clash-what">${esc(subjectOf(c))}</h3>${rows}
+    <div class="sheet-actions">${btn("theirs", `Keep ${there}'s`, newer === "theirs")}${btn("mine", `Keep ${here}'s`, newer === "mine")}</div>`;
+}
+async function openConflicts(onChange) {
+	let list = await getConflicts();
+	if (!list.length) return null;
+	let at = 0;
+	const s = openSheet({
+		title: "Changed on two devices",
+		className: "sheet-small",
+		body: "<div class=\"clash\"></div>"
+	});
+	const box = s.body.querySelector(".clash");
+	const draw = () => {
+		box.innerHTML = clashHtml(list[at], at + 1, list.length);
+	};
+	draw();
+	box.addEventListener("click", async (e) => {
+		const b = e.target.closest("[data-side]");
+		if (!b) return;
+		box.querySelectorAll("button").forEach((x) => {
+			x.disabled = true;
+		});
+		const { stale } = await resolve(list[at], b.dataset.side);
+		if (stale) toast("That changed here again since. Rounds asks again after the next sync.", { ms: 5e3 });
+		list = await getConflicts();
+		onChange();
+		if (!list.length) s.close();
+		else {
+			at = Math.min(at, list.length - 1);
+			draw();
+		}
+	});
+	return s;
+}
+
+// pages/sync-sheet.js
+const statusOf = (c) => `On, through ${c.repo}. Last synced: ${c.lastSyncAt ? agoWords(c.lastSyncAt) : "not yet"}`;
+async function syncRowHtml() {
+	const c = await syncConfig();
+	return `<button type="button" class="choice" data-sync><span class="choice-text"><span class="choice-label">Sync</span><span class="choice-detail">${esc(c ? statusOf(c) : "Off. Lets Claude read Rounds and leave leads in it.")}</span></span>${CHEV}</button>`;
+}
+async function openSync(onSynced, autoHandler) {
+	const c = await syncConfig();
+	if (!c) return openSetup(null, onSynced, autoHandler);
+	const clashes = (await getConflicts()).length;
+	const s = openSheet({
+		title: "Sync",
+		className: "sheet-small",
+		body: `
+      <p class="sync-status">${esc(statusOf(c))}</p>
+      ${c.lastError ? `<p class="field-error">${esc(c.lastError)}</p>` : ""}
+      ${clashes ? `<p class="sync-status">${clashes === 1 ? "One thing was" : `${clashes} things were`} changed on two devices at once.</p>` : ""}
+      <div class="choice-list">
+        ${clashes ? "<button type=\"button\" class=\"choice\" data-clashes><span class=\"choice-text\"><span class=\"choice-label\">Choose which to keep</span></span></button>" : ""}
+        <button type="button" class="choice" data-now data-test-skip><span class="choice-text"><span class="choice-label">Sync now</span></span></button>
+        <button type="button" class="choice" data-key><span class="choice-text"><span class="choice-label">Change key</span></span></button>
+        <button type="button" class="choice is-danger" data-off data-test-skip><span class="choice-text"><span class="choice-label">Turn off sync</span><span class="choice-detail">Rounds keeps everything on this phone.</span></span></button>
+      </div>`
+	});
+	s.body.addEventListener("click", async (e) => {
+		const b = e.target.closest("button");
+		if (!b) return;
+		if (b.matches("[data-clashes]")) {
+			s.close();
+			openConflicts(onSynced);
+		} else if (b.matches("[data-key]")) {
+			s.close();
+			openSetup(c, onSynced, autoHandler);
+		} else if (b.matches("[data-off]")) {
+			await turnOff();
+			stopAutoSync();
+			s.close();
+			toast("Sync is off. Everything stays on this phone.");
+			onSynced();
+		} else if (b.matches("[data-now]")) {
+			b.disabled = true;
+			try {
+				const r = await queued();
+				s.close();
+				toast(r.changedHere ? "Synced. Changes from the repository are in." : "Synced.");
+				onSynced();
+			} catch (ex) {
+				b.disabled = false;
+				toast(ex.message, { ms: 6e3 });
+			}
+		}
+	});
+	return s;
+}
+function openSetup(c, onSynced, autoHandler) {
+	const s = openSheet({
+		title: c ? "Change key" : "Turn on sync",
+		body: `<form class="form" novalidate>
+      <details class="sync-how"${c ? "" : " open"}>
+        <summary>How to make the repository and key</summary>
+        <ol class="sync-steps">
+          <li>On github.com, make a new private repository just for Rounds, like rounds-data, and tick Add a README file.</li>
+          <li>In your GitHub settings: Developer settings, Personal access tokens, Fine-grained tokens, Generate new token.</li>
+          <li>Repository access: Only select repositories, then pick that repository.</li>
+          <li>Permissions, Repository permissions: Contents, Read and write.</li>
+          <li>Generate it and paste it below. It stays on this phone.</li>
+        </ol>
+      </details>
+      <label class="field"><span class="field-label">Repository</span><input name="repo" value="${esc(c ? c.repo : "")}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="your-name/rounds-data" /></label>
+      <p class="field-error" data-error="repo" hidden>Write it as owner/name, like your-name/rounds-data.</p>
+      <label class="field"><span class="field-label">Key</span><input name="token" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="github_pat_..." /></label>
+      <p class="field-error" data-error="token" hidden>Paste the key from GitHub.</p>
+      <p class="field-error" data-error="sync" hidden></p>
+      <div class="sheet-actions one"><button type="submit" class="btn primary" data-save data-test-skip>${c ? "Save and sync" : "Turn on sync"}</button></div>
+    </form>`
+	});
+	const form = s.body.querySelector("form");
+	const show = (k, msg) => {
+		const el = form.querySelector(`[data-error="${k}"]`);
+		if (msg) el.textContent = msg;
+		el.hidden = false;
+	};
+	form.addEventListener("submit", async (e) => {
+		e.preventDefault();
+		const repo = repoOf(form.repo.value);
+		const token = form.token.value.trim();
+		form.querySelectorAll(".field-error").forEach((el) => {
+			el.hidden = true;
+		});
+		if (!validRepo(repo)) return show("repo");
+		if (!token) return show("token");
+		const btn = form.querySelector("[data-save]");
+		const label = btn.textContent;
+		btn.disabled = true;
+		btn.textContent = "Connecting...";
+		try {
+			const r = await queued({
+				repo,
+				token,
+				device: deviceLabel(navigator.userAgent),
+				joined: !!(c && c.repo === repo && c.joined)
+			});
+			s.close();
+			startAutoSync(autoHandler);
+			toast(r.changedHere ? "Sync is on. What was in the repository is in Rounds too." : "Sync is on.");
+			onSynced();
+		} catch (ex) {
+			show("sync", ex.message);
+			btn.disabled = false;
+			btn.textContent = label;
+		}
+		return null;
+	});
+	return s;
+}
+
 // pages/options.js
 const row = (attr, label, detail = "") => `<button type="button" class="choice" ${attr}><span class="choice-text"><span class="choice-label">${label}</span>${detail ? `<span class="choice-detail">${detail}</span>` : ""}</span>${CHEV}</button>`;
 const LISTS = {
 	email: ["Email newsletter list", "rounds-email-list"],
 	mail: ["Mail newsletter list", "rounds-mail-list"]
 };
-async function openOptions(onChange) {
-	const [perDay, people] = await Promise.all([getSetting("perDay", 3), listPeople()]);
+async function openOptions(onChange, autoHandler) {
+	const [perDay, people, workDays, syncRow] = await Promise.all([
+		getSetting("perDay", 3),
+		listPeople(),
+		getSetting("workDays", null),
+		syncRowHtml()
+	]);
 	let n = perDayOf(perDay);
+	let days = workDaysOf(workDays);
+	const chips = () => WEEK.map(([d, name]) => `<button type="button" class="day-chip${days.includes(d) ? " on" : ""}" data-day="${d}" aria-pressed="${days.includes(d)}">${name}</button>`).join("");
 	const count = (which) => listRows(people, which).length - 1;
 	const people1 = (k) => k === 1 ? "1 person" : `${k} people`;
 	const s = openSheet({
@@ -2506,7 +3679,9 @@ async function openOptions(onChange) {
 		body: `
       <div class="switch-row"><span>Moves a day</span>
         <span class="stepper"><button type="button" data-step="-1" aria-label="Fewer"><span>−</span></button><output data-n>${n}</output><button type="button" data-step="1" aria-label="More"><span>+</span></button></span></div>
+      <div class="work-days"><span class="field-label">Work days</span><div class="day-chips">${chips()}</div><p class="work-days-note">Pitches and follow ups wait for these days.</p></div>
       <div class="choice-list">
+        ${syncRow}
         ${row("data-import", "Import people", "From a CSV file")}
         ${row("data-list=\"email\"", "Export the email list", `${people1(count("email"))}, for your newsletter tool`)}
         ${row("data-list=\"mail\"", "Export the mail list", `${people1(count("mail"))}, names and addresses`)}
@@ -2517,7 +3692,12 @@ async function openOptions(onChange) {
 	s.body.addEventListener("click", async (e) => {
 		const b = e.target.closest("button");
 		if (!b) return;
-		if (b.dataset.step) {
+		if (b.dataset.day) {
+			days = toggleDay(days, Number(b.dataset.day));
+			s.body.querySelector(".day-chips").innerHTML = chips();
+			await setSetting("workDays", days);
+			onChange();
+		} else if (b.dataset.step) {
 			const to = Math.min(5, Math.max(1, n + Number(b.dataset.step)));
 			if (to === n) return;
 			n = to;
@@ -2527,6 +3707,9 @@ async function openOptions(onChange) {
 		} else if (b.matches("[data-import]")) {
 			s.close();
 			openImport(onChange);
+		} else if (b.matches("[data-sync]")) {
+			s.close();
+			openSync(onChange, autoHandler);
 		} else if (b.matches("[data-intro]")) {
 			s.close();
 			openIntro();
@@ -2629,7 +3812,7 @@ async function route() {
 }
 document.addEventListener("click", (e) => {
 	if (e.target.closest("[data-books]")) location.hash = "#/";
-	else if (e.target.closest("[data-app-menu]")) openOptions(redrawSoon);
+	else if (e.target.closest("[data-app-menu]")) openOptions(redrawSoon, onSynced);
 });
 let waiting = null;
 function redrawSoon() {
@@ -2641,9 +3824,26 @@ function redrawSoon() {
 		route();
 	}, 200);
 }
+let leadsSeen = null;
+function onSynced(r) {
+	if (r.error) return;
+	if (r.newConflicts) {
+		if (!document.querySelector(".sheet-overlay")) {
+			openConflicts(redrawSoon);
+			return;
+		}
+		toast("Something was changed on two devices at once. Options, Sync has it.", { ms: 6e3 });
+	}
+	const leadsNew = leadsSeen === null ? r.leads > 0 : r.leads !== leadsSeen;
+	leadsSeen = r.leads;
+	if (r.changedHere || leadsNew) redrawSoon();
+}
 window.addEventListener("hashchange", route);
 if ((location.hash || "#/") === "#/") history.replaceState(null, "", suite && suite.at ? `#/${suite.at}` : "#/today");
-bringInFromEye().catch(console.error).finally(route);
+bringInFromEye().catch(console.error).finally(() => {
+	route();
+	startAutoSync(onSynced);
+});
 document.addEventListener("visibilitychange", () => {
 	if (document.hidden || document.querySelector(".sheet-overlay")) return;
 	bringInFromEye().then((n) => {

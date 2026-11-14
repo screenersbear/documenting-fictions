@@ -1,6 +1,6 @@
 // rounds/data/person.js: a person as Rounds keeps them, and what happens to them.
 import { describe, it, expect } from 'vitest';
-import { newPerson, fromImport, markDone, undoDone, markLater, applyEdit, letGo, bringBack } from '../../../rounds/data/person.js';
+import { newPerson, fromImport, markDone, undoDone, draftWaiting, markLater, applyEdit, letGo, bringBack } from '../../../rounds/data/person.js';
 import { move } from '../../../rounds/data/plan.js';
 
 const T = '2026-11-14';
@@ -145,5 +145,22 @@ describe('undoDone', () => {
     expect(back.name).toBe('Abrams');
     expect(after.next).toEqual(move('followup', '2026-11-21', 1));
     expect(after.lastMove).toBe(T);
+  });
+});
+
+describe("Claude's drafts", () => {
+  const pitch = { ...newPerson({ id: 'a', name: 'Abrams', group: 'prospect' }, T), draft: { kind: 'pitch', where: 'Gmail', added: T } };
+  it('a draft for the move that is next is waiting', () => {
+    expect(draftWaiting(pitch)).toBe(true);
+  });
+  it('a draft for another move, no draft, or no move: not', () => {
+    expect(draftWaiting({ ...pitch, next: move('followup', T, 1) })).toBe(false);
+    expect(draftWaiting({ ...pitch, draft: undefined })).toBe(false);
+    expect(draftWaiting({ ...pitch, next: null })).toBe(false);
+  });
+  it('the move done uses the draft up; LATER keeps it', () => {
+    expect('draft' in markDone(pitch, T).person).toBe(false);
+    expect(markLater(pitch, T).draft).toEqual(pitch.draft);
+    expect(pitch.draft.kind).toBe('pitch');
   });
 });

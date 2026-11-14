@@ -48,12 +48,17 @@ export function fromImport(rows, today, perDay, makeId) {
 }
 
 // The move is done: what comes next, and the line for the log, which keeps
-// the move as it was (its due day and step) so it can be put back.
+// the move as it was (its due day and step) so it can be put back. A draft
+// Claude left for it is used up.
 export function markDone(person, today) {
   const { kind, due, step } = person.next;
   const log = { personId: person.id, kind, day: today, due, step };
-  return { person: { ...person, lastMove: today, next: afterDone(person, today) }, log };
+  const { draft, ...rest } = person;
+  return { person: { ...rest, lastMove: today, next: afterDone(person, today) }, log };
 }
+
+// Claude drafted this move in Gmail (inbox.json): "Draft waiting in Gmail".
+export const draftWaiting = (p) => !!(p.draft && p.next && p.draft.kind === p.next.kind);
 
 // A move marked done by mistake (Today's Done today): the person as they
 // were before it, from its line in the log. Lines from before 14 Nov keep

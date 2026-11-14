@@ -227,6 +227,9 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .card-name { margin: 10px 0 0; font: 300 30px/34px var(--ui); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card-handle { margin: 4px 0 0; font: 400 15px/20px var(--ui); color: var(--dim); }
 .card-why { margin: 14px 0 0; font: 300 17px/24px var(--ui); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+/* Claude drafted it in Gmail: one line under the reason (two lines of reason then). */
+.card-draft { margin: 8px 0 0; font: 500 15px/20px var(--ui); color: var(--text); }
+.card.has-draft .card-why { -webkit-line-clamp: 2; }
 .today-btns { display: flex; gap: 8px; margin-top: 6px; }
 .today-btns .btn.secondary { flex: 1; }
 .today-btns .btn.primary { flex: 1.6; min-width: 0; }
@@ -243,6 +246,9 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .done-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .done-row:last-child { border-bottom: 0; }
 .done-row .text-btn { margin-right: -10px; }
+/* Leads from Claude: one quiet line above the cards, with REVIEW. */
+.today-leads { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin: 0 0 4px; border-bottom: 1px solid var(--line); font: 400 15px/20px var(--ui); }
+.today-leads .text-btn { margin-right: -10px; color: var(--text); }
 
 /* ---- styles/move.css ---- */
 /* A move opened (02-move): the move's tag and the close ring, the person,
@@ -256,6 +262,7 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .move-name { font: 300 20px/26px var(--ui); }
 .move-handle { font: 400 14px/18px var(--ui); color: var(--dim); }
 .move-sheet .label { margin: 18px 0 6px; }
+.move-draft { margin: 18px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--paper); font: 400 17px/24px var(--ui); }
 .move-text { display: block; width: 100%; min-height: 140px; field-sizing: content; max-height: 40vh; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--paper);
   box-shadow: inset 0 0 0 1px var(--line); font: 400 16px/23px var(--ui); color: var(--text); resize: none; outline: none; -webkit-appearance: none; }
 .move-text:focus { box-shadow: inset 0 0 0 1.5px var(--text); }
@@ -316,8 +323,32 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .import-row input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--text); }
 .import-who { display: flex; flex-direction: column; min-width: 0; }
 .import-name { font: 400 17px/22px var(--ui); }
+.import-from { font: 400 12px/16px var(--ui); color: var(--dim); }
 .import-meta { font: 400 13px/18px var(--ui); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stepper { display: flex; align-items: center; gap: 4px; }
 .stepper button { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; }
 .stepper button span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--text); font: 400 20px/1 var(--ui); }
 .stepper output { min-width: 24px; text-align: center; font: 700 17px/22px var(--ui); font-variant-numeric: tabular-nums; }
+/* Work days: seven chips, Monday first, the picked ones in ink. */
+.work-days { padding: 8px 0 12px; }
+.day-chips { display: flex; gap: 6px; margin-top: 8px; }
+.day-chip { flex: 1; min-width: 0; height: 40px; border-radius: 20px; box-shadow: inset 0 0 0 1px var(--line); background: var(--paper); font: 500 13px/16px var(--ui); color: var(--text); }
+.day-chip.on { background: var(--ink); box-shadow: none; color: var(--on-ink); }
+.work-days-note { margin: 8px 0 0; font: 400 13px/18px var(--ui); color: var(--dim); }
+
+/* ---- styles/sync.css ---- */
+/* Sync (Options) and "Changed on two devices": the status in plain type,
+   the how-to steps folded away once sync is on, each clash's two sides. */
+.sync-status { margin: 0 0 8px; font: 400 15px/21px var(--ui); color: var(--dim); }
+.sync-how { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; background: var(--paper); }
+.sync-how summary { font: 500 15px/20px var(--ui); cursor: pointer; }
+.sync-steps { margin: 10px 0 0; padding-left: 20px; font: 400 15px/21px var(--ui); color: var(--dim); }
+.sync-steps li + li { margin-top: 6px; }
+.clash-count { margin: 0 0 4px; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.clash-what { margin: 0 0 12px; font: 300 24px/30px var(--ui); }
+.clash-note { margin: 0 0 16px; font: 400 17px/24px var(--ui); }
+.clash-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.clash-row .field-label { grid-column: 1 / -1; }
+.clash-side { display: flex; flex-direction: column; min-width: 0; font: 400 17px/22px var(--ui); overflow-wrap: anywhere; }
+.clash-who { font: 400 13px/18px var(--ui); color: var(--dim); }
+.clash .sheet-actions { margin-top: 16px; }

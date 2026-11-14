@@ -1,6 +1,6 @@
 // rounds/data/csv.js: reading and writing CSV, and Import people's file (rounds/NOTES.md).
 import { describe, it, expect } from 'vitest';
-import { parseCsv, toCsv, readPeople, newOnes } from '../../../rounds/data/csv.js';
+import { parseCsv, toCsv, readPeople, newOnes, rowOf } from '../../../rounds/data/csv.js';
 
 describe('parseCsv', () => {
   it('reads rows and fields', () => {
@@ -76,5 +76,20 @@ describe('newOnes', () => {
     const { fresh, skipped } = newOnes(rows, []);
     expect(fresh.map((r) => r.name)).toEqual(['Jules', 'Bo']);
     expect(skipped).toBe(3);
+  });
+});
+
+describe('rowOf', () => {
+  it("cleans one person's fields, as a file or Claude's inbox gives them", () => {
+    expect(rowOf({ name: ' Ana ', group: 'Clients', instagram: 'https://instagram.com/ana.l', website: 'ana.com', email: ' a@ana.com ', where_met: ' Meetup ', note: ' Hi ', first_move: 'say hello' }))
+      .toEqual({ name: 'Ana', group: 'client', instagram: 'ana.l', website: 'https://ana.com', email: 'a@ana.com', where: 'Meetup', note: 'Hi', firstMove: 'hello' });
+  });
+  it('a prospect with nothing else, unless said', () => {
+    expect(rowOf({ name: 'Bo' })).toEqual({ name: 'Bo', group: 'prospect', instagram: '', website: '', email: '', where: '', note: '', firstMove: null });
+    expect(rowOf({ name: 'Bo', group: 'nonsense' }).group).toBe('prospect');
+  });
+  it('numbers and nothing at all read as text', () => {
+    expect(rowOf({ name: 42, note: null })).toMatchObject({ name: '42', note: '' });
+    expect(rowOf({}).name).toBe('');
   });
 });

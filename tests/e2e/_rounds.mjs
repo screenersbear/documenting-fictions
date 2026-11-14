@@ -19,8 +19,9 @@ export function eyeShoot() {
 }
 
 // Rounds at phone size, as someone who's been before. seed: run on every load.
-export async function openRounds(browser, testInfo, path = '/rounds/', seed = null) {
-  const { ctx, page, problems } = await freshPage(browser, testInfo, path, { returning: true });
+// opts: freshPage's (serviceWorkers).
+export async function openRounds(browser, testInfo, path = '/rounds/', seed = null, opts = {}) {
+  const { ctx, page, problems } = await freshPage(browser, testInfo, path, { returning: true, ...opts });
   if (seed) await ctx.addInitScript(seed);
   await page.setViewportSize({ width: 390, height: 844 });
   // Drawn again at the new size (the page measures the screen as it loads).
@@ -47,4 +48,17 @@ export async function opened(page, title) {
   await expect(s).toBeVisible();
   await page.waitForTimeout(500);
   return s;
+}
+
+// Options, from the band's menu.
+export async function options(page) {
+  await page.click('#view [data-app-menu]');
+  return opened(page, 'Options');
+}
+
+// Import people, with a CSV file picked from Files.
+export async function importCsv(page, text) {
+  const s = await options(page);
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), s.locator('[data-import]').click()]);
+  await chooser.setFiles({ name: 'people.csv', mimeType: 'text/csv', buffer: Buffer.from(text) });
 }

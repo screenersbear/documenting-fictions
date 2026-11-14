@@ -106,7 +106,9 @@ export async function markClickables(page) {
 // returning: start with safety.config.json's returningVisitor.localStorage saved,
 // as someone who has opened the app before. Otherwise storage is empty, and we
 // wait firstVisitWaitMs for anything shown on a first visit to come up.
-export async function freshPage(browser, testInfo, path, { returning = false } = {}) {
+// serviceWorkers: 'block' when a test stands in for another site with
+// ctx.route (in WebKit a service worker's requests get past it).
+export async function freshPage(browser, testInfo, path, { returning = false, serviceWorkers = 'allow' } = {}) {
   const u = testInfo.project.use;
   const ctx = await browser.newContext({
     baseURL: u.baseURL,
@@ -115,6 +117,7 @@ export async function freshPage(browser, testInfo, path, { returning = false } =
     deviceScaleFactor: u.deviceScaleFactor,
     isMobile: u.isMobile,
     hasTouch: u.hasTouch,
+    serviceWorkers,
   });
   if (returning) {
     await ctx.addInitScript((saved) => {

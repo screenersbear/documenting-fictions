@@ -41,7 +41,16 @@
     "rounds/data/csv.js",
     "rounds/data/lists.js",
     "rounds/data/eye-people.js",
-    "rounds/data/db.js"
+    "rounds/data/db.js",
+    "rounds/data/work-days.js",
+    "rounds/data/merge.js",
+    "rounds/data/device.js",
+    "rounds/data/github.js",
+    "rounds/data/sync-file.js",
+    "rounds/data/inbox.js",
+    "rounds/data/sync.js",
+    "rounds/data/auto-sync.js",
+    "rounds/data/clash.js"
   ],
   "ignore": [
     "**/vendor/**",

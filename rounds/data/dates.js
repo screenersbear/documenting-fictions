@@ -45,3 +45,12 @@ export function sinceWords(day, today) {
   if (n < 14) return '';
   return n < 60 ? `${Math.round(n / 7)} weeks` : `${Math.round(n / 30.44)} months`;
 }
+
+// When something happened, from a time (ISO): just now, 5 min ago, 3 hr ago, then the day.
+export function agoWords(iso, now = new Date()) {
+  const mins = Math.round((now - new Date(iso)) / 60000);
+  if (!(mins >= 1)) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  if (mins < 24 * 60) return `${Math.round(mins / 60)} hr ago`;
+  return short(new Date(iso));
+}

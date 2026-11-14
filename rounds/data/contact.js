@@ -15,6 +15,8 @@ export function cleanSite(text) {
   if (!t) return '';
   return /^https?:\/\//i.test(t) ? t : `https://${t}`;
 }
+// Gmail's drafts, where Claude's Monday task leaves the pitches it writes.
+export const GMAIL_DRAFTS = 'https://mail.google.com/mail/u/0/#drafts';
 export const siteName = (url) => url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$/, '');
 
 // Where COPY AND OPEN goes: { how, url }, or null with nowhere to go.

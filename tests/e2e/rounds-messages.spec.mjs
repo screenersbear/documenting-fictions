@@ -3,21 +3,9 @@
 // and back to the example; your offer and city; how many moves a day; and
 // Import people from a CSV file, every row ticked, to untick anyone.
 import { test, expect } from '@playwright/test';
-import { openRounds, goTo, opened } from './_rounds.mjs';
+import { openRounds, goTo, opened, options, importCsv } from './_rounds.mjs';
 
 const row = (page, kind) => page.locator(`#view .msg-row[data-kind="${kind}"]`);
-
-async function options(page) {
-  await page.click('#view [data-app-menu]');
-  return opened(page, 'Options');
-}
-
-// Import people, with a CSV file picked from Files.
-async function importCsv(page, text) {
-  const s = await options(page);
-  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), s.locator('[data-import]').click()]);
-  await chooser.setFiles({ name: 'people.csv', mimeType: 'text/csv', buffer: Buffer.from(text) });
-}
 
 test.describe('Rounds: Messages and Options', () => {
   test('a message written in your words, with a fill-in, and back to the example', async ({ browser }, testInfo) => {

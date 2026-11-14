@@ -33,28 +33,35 @@ const cell = (v) => {
 };
 export const toCsv = (rows) => rows.map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n';
 
+// One person from a file's row or one of Claude's leads (data/inbox.js),
+// cleaned up: f has the file's columns (name, group, instagram, website,
+// email, where_met, note, first_move). A prospect unless said otherwise.
+export function rowOf(f) {
+  const text = (k) => String(f[k] ?? '').trim();
+  return {
+    name: text('name'),
+    group: groupFromName(text('group')) || 'prospect',
+    instagram: cleanHandle(text('instagram')),
+    website: cleanSite(text('website')),
+    email: text('email'),
+    where: text('where_met'),
+    note: text('note'),
+    firstMove: kindFromName(text('first_move')),
+  };
+}
+
 // The people in an import file: { rows, bad } (bad: rows with no name,
 // skipped and counted). A file with no name column throws, in plain words.
 export function readPeople(text) {
   const [head = [], ...body] = parseCsv(text);
   const col = new Map(head.map((h, i) => [h.trim().toLowerCase().replace(/[\s-]+/g, '_'), i]));
   if (!col.has('name')) throw new Error('This file has no name column. Its first row should name the columns: name, group, instagram and the rest.');
-  const get = (r, k) => (col.has(k) ? String(r[col.get(k)] ?? '').trim() : '');
   const rows = [];
   let bad = 0;
   for (const r of body) {
-    const name = get(r, 'name');
-    if (!name) { bad++; continue; }
-    rows.push({
-      name,
-      group: groupFromName(get(r, 'group')) || 'prospect',
-      instagram: cleanHandle(get(r, 'instagram')),
-      website: cleanSite(get(r, 'website')),
-      email: get(r, 'email'),
-      where: get(r, 'where_met'),
-      note: get(r, 'note'),
-      firstMove: kindFromName(get(r, 'first_move')),
-    });
+    const row = rowOf(Object.fromEntries([...col].map(([k, i]) => [k, r[i]])));
+    if (row.name) rows.push(row);
+    else bad++;
   }
   return { rows, bad };
 }

@@ -6,7 +6,7 @@ import './components/keyboard-fit.js';
 import './components/screen-fit.js';
 import './components/no-zoom.js';
 import { closeAllSheets } from './components/sheet.js';
-import { hideToast } from './components/toast.js';
+import { hideToast, toast } from './components/toast.js';
 import { showSection } from './components/navbar.js';
 import { esc } from './components/util.js';
 import { drawSection } from './pages/sections.js';
@@ -15,6 +15,8 @@ import { openOptions } from './pages/options.js';
 import { introSeen, openIntro } from './pages/intro.js';
 import { welcome } from './pages/welcome.js';
 import { bringInFromEye } from './data/eye.js';
+import { startAutoSync } from './data/auto-sync.js';
+import { openConflicts } from './pages/conflicts.js';
 
 const view = document.getElementById('view');
 const suite = window.DF_SUITE;
@@ -48,7 +50,7 @@ async function route() {
 // The band's notebooks button: back to the shelf. Options: from the menu ring.
 document.addEventListener('click', (e) => {
   if (e.target.closest('[data-books]')) location.hash = '#/';
-  else if (e.target.closest('[data-app-menu]')) openOptions(redrawSoon);
+  else if (e.target.closest('[data-app-menu]')) openOptions(redrawSoon, onSynced);
 });
 // A change made in Options shows once its sheets have closed.
 let waiting = null;
@@ -62,11 +64,27 @@ function redrawSoon() {
   }, 200);
 }
 
+// After each sync (data/auto-sync.js): changes from the repository, or new
+// leads from Claude, show once no sheet is open; a new clash asks which to
+// keep (or says where to find it, if something else is open). What went
+// wrong is shown in Options, Sync.
+let leadsSeen = null;
+function onSynced(r) {
+  if (r.error) return;
+  if (r.newConflicts) {
+    if (!document.querySelector('.sheet-overlay')) { openConflicts(redrawSoon); return; }
+    toast('Something was changed on two devices at once. Options, Sync has it.', { ms: 6000 });
+  }
+  const leadsNew = leadsSeen === null ? r.leads > 0 : r.leads !== leadsSeen;
+  leadsSeen = r.leads;
+  if (r.changedHere || leadsNew) redrawSoon();
+}
+
 window.addEventListener('hashchange', route);
 if ((location.hash || '#/') === '#/') history.replaceState(null, '', suite && suite.at ? `#/${suite.at}` : '#/today');
 // People from The Eye's shoots come in first, then the notebook's drawn;
 // and again whenever Rounds comes back on screen.
-bringInFromEye().catch(console.error).finally(route);
+bringInFromEye().catch(console.error).finally(() => { route(); startAutoSync(onSynced); });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || document.querySelector('.sheet-overlay')) return;
   bringInFromEye().then((n) => { if (n && !document.querySelector('.sheet-overlay')) route(); }).catch(console.error);

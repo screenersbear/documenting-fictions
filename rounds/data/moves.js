@@ -5,13 +5,17 @@ import { listPeople, savePerson, logMove, listMoves, dropMove, getSetting, setSe
 import { pickFor, markPick, unmarkPick, doneOn, PER_DAY } from './today.js';
 import { markDone, markLater, undoDone as undoPerson } from './person.js';
 import { dayOf } from './dates.js';
+import { workDaysOf } from './work-days.js';
 import { uuid } from '../components/util.js';
 
+// The work days (Options), Monday to Friday unless changed.
+export const getWorkDays = async () => workDaysOf(await getSetting('workDays', null));
+
 export async function loadToday() {
-  const [people, saved, perDay] = await Promise.all([listPeople(), getSetting('pick', null), getSetting('perDay', PER_DAY)]);
-  const pick = pickFor(people, saved, dayOf(), perDay);
+  const [people, saved, perDay, days] = await Promise.all([listPeople(), getSetting('pick', null), getSetting('perDay', PER_DAY), getWorkDays()]);
+  const pick = pickFor(people, saved, dayOf(), perDay, days);
   if (JSON.stringify(pick) !== JSON.stringify(saved)) await setSetting('pick', pick);
-  return { people, pick };
+  return { people, pick, days };
 }
 
 async function markInPick(id, how) {

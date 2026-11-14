@@ -7,18 +7,21 @@ import { miniHtml } from '../components/marks.js';
 import { esc } from '../components/util.js';
 import { PLUS } from '../components/icons.js';
 import { listPeople } from '../data/db.js';
+import { getWorkDays } from '../data/moves.js';
+import { whenDue } from '../data/work-days.js';
+import { dayOf } from '../data/dates.js';
 import { openAddPerson } from './add-person.js';
 
-// The soonest move first; no move, then by name.
-const order = (a, b) => (a.next ? a.next.due : '~').localeCompare(b.next ? b.next.due : '~') || a.name.localeCompare(b.name);
+// The soonest move first (a Pitch or Follow up on its next work day); no move, then by name.
+const order = (days, today) => (a, b) => (whenDue(a.next, days, today) || '~').localeCompare(whenDue(b.next, days, today) || '~') || a.name.localeCompare(b.name);
 
 const cardHtml = (p) => `
   <a class="person-card" href="#/person/${encodeURIComponent(p.id)}">${photoHtml(p)}
     <span class="person-card-name">${p.letGo ? '' : miniHtml(p.next?.kind)}<span>${esc(p.name)}</span></span></a>`;
 
 export async function peopleScreen(view, { beside = false } = {}) {
-  const people = await listPeople();
-  const here = people.filter((p) => !p.letGo).sort(order);
+  const [people, days] = await Promise.all([listPeople(), getWorkDays()]);
+  const here = people.filter((p) => !p.letGo).sort(order(days, dayOf()));
   const gone = people.filter((p) => p.letGo).sort((a, b) => a.name.localeCompare(b.name));
   const eye = window.DF_SUITE ? ' People from your shoots in The Eye come in on their own.' : '';
   view.innerHTML = `<div class="screen"><div class="scroll">

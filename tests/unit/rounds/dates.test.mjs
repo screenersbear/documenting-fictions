@@ -1,6 +1,6 @@
 // rounds/data/dates.js: days as 'YYYY-MM-DD' in the phone's own time, and how they read.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { dayOf, dateOf, isDay, addDays, daysBetween, later, whenWords, dueWords, sinceWords } from '../../../rounds/data/dates.js';
+import { dayOf, dateOf, isDay, addDays, daysBetween, later, whenWords, dueWords, sinceWords, agoWords } from '../../../rounds/data/dates.js';
 
 afterEach(() => vi.useRealTimers());
 const SAT = '2026-11-14'; // a Saturday
@@ -104,5 +104,30 @@ describe('sinceWords', () => {
     expect(sinceWords(addDays(SAT, -60), SAT)).toBe('2 months');
     expect(sinceWords(addDays(SAT, -91), SAT)).toBe('3 months');
     expect(sinceWords(addDays(SAT, -400), SAT)).toBe('13 months');
+  });
+});
+
+describe('agoWords', () => {
+  const now = new Date('2026-11-14T12:00:00.000Z');
+  const ago = (min) => new Date(now - min * 60000).toISOString();
+  it('just now, under a minute (or a clock ahead)', () => {
+    expect(agoWords(ago(0), now)).toBe('just now');
+    expect(agoWords(ago(0.4), now)).toBe('just now');
+    expect(agoWords(ago(-5), now)).toBe('just now');
+    expect(agoWords('not a time', now)).toBe('just now');
+  });
+  it('minutes, then hours', () => {
+    expect(agoWords(ago(1), now)).toBe('1 min ago');
+    expect(agoWords(ago(59), now)).toBe('59 min ago');
+    expect(agoWords(ago(60), now)).toBe('1 hr ago');
+    expect(agoWords(ago(150), now)).toBe('3 hr ago');
+    expect(agoWords(ago(24 * 60 - 1), now)).toBe('24 hr ago');
+  });
+  it('a day or more: the day', () => {
+    expect(agoWords(ago(24 * 60), now)).toMatch(/^1[34] Nov$/);
+    expect(agoWords('2026-10-02T12:00:00.000Z', now)).toBe('2 Oct');
+  });
+  it('now, unless given', () => {
+    expect(agoWords(new Date().toISOString())).toBe('just now');
   });
 });
