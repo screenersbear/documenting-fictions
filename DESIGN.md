@@ -1,10 +1,10 @@
 # STKY Design Rulebook
 
 STKY is Starky's private name for his app suite: Documenting Fictions, which is the shelf, Ref, The Eye, Layouts (was
-Contact Sheet) and Overthoughts. This file is how every one of them should look. Read it before any change you can see.
+Contact Sheet) and Rounds (in Overthoughts' place on the shelf since 14 Nov). This file is how every one of them should look. Read it before any change you can see.
 **Never show "STKY" in the apps.**
 
-**Status, 2026-11-13, round 2.** The round-2 mockups (`../STKY mockup handoff/round-2/`, README first, then each folder's
+**Status, 2026-11-14, round 2 and its 14 Nov additions.** The round-2 mockups (`../STKY mockup handoff/round-2/`, README first, then each folder's
 NOTES.md, latest round wins) settled most of what was open. Where this file and a mockup disagree, the mockup wins. Each rule
 is marked:
 
@@ -13,7 +13,9 @@ is marked:
   as a side effect of other work.
 - **Proposed**: still waiting, usually on a mockup. Don't build it.
 
-Overthoughts and Callback are being redesigned and aren't in round 2: leave them as they are.
+**Rounds replaces Overthoughts on the shelf** (Starky, 14 Nov). Overthoughts' code, folder and saved data stay: it's only
+hidden from the shelf, and nothing of it is removed without asking Starky. Callback is being redesigned and isn't in round 2:
+leave its look as it is.
 
 ---
 
@@ -97,8 +99,9 @@ The seven pairs (Starky, "They work"):
 The steps are the band colour blended into paper at 75%, 50%, 25% and 10%. The mango, berry and ocean rows are the mockups'
 own values; the other four are worked out the same way.
 
-**Defaults per app (Decided, round 2):** The Eye `mango`, Ref `ocean`, Layouts `berry` (was `orange`). Overthoughts `leaf`
-stays Proposed until its redesign. The shelf has no colour of its own: paper, with each book in its notebook's colour.
+**Defaults per app (Decided, round 2):** The Eye `mango`, Ref `ocean`, Layouts `berry` (was `orange`). **Rounds (14 Nov):**
+inside, the Black pair (band `#313D45` with mango `#FFD100`); its cover on the shelf is `leaf` teal `#14BFA0` with the arc in
+ink and mango stops. It is the one notebook whose inside differs from its cover, on purpose: don't make them match. The shelf has no colour of its own: paper, with each book in its notebook's colour.
 
 ### 4.3 Mark colours
 
@@ -209,7 +212,8 @@ The app marks:
 | Ref | a square cut into a 2 × 2 board |
 | The Eye | a ring with a dot: an eye |
 | Layouts | three bars side by side: a strip of shots |
-| Overthoughts | the four-lobe shape (ref 6): a thought |
+| Rounds | an arc with three stops: a round of moves (in the band: a mango arc with teal and white stops) |
+| Overthoughts | the four-lobe shape (ref 6): a thought (hidden from the shelf since 14 Nov) |
 
 The section marks are drawn in the round-2 mockups' section bars (for example The Eye's OVERVIEW is a ring with a mango dot,
 Ref's MOOD BOARDS a circle in quarters, TAGS a half circle over a dot). Inactive marks are `#9AA3A8` and `#D6DADD`.
@@ -235,9 +239,15 @@ Ref's MOOD BOARDS a circle in quarters, TAGS a half circle over a dot). Inactive
 - **Title:** the section's name at the left, 16px in, 67px down (5.1). On a notebook's first section the title is the app's
   name and the label line says the section (The Eye's Overview: THE EYE over OVERVIEW).
 - **Buttons:** alone at the top right (67px down, 8px from the edge), 44px targets each holding a 40px ring: a 1.5px ring and a
-  glyph in the partner colour. Nothing you press sits over the mark.
+  glyph in the partner colour. Nothing you press sits over the mark. **Only two (14 Nov): Notebooks and Options.** No + and
+  no bell in any band.
+- **Adding sits beside the list it adds to (14 Nov):** a text button with a 16px + glyph, 44px tall, 13px 700 capitals at
+  `.12em`, in the app's colour (ink where the app colour is mango), right of the list's title or count. The Eye's NEW SHOOT
+  beside the Shoots count, Ref's NEW BOARD and NEW TAG beside their titles, Layouts' NEW LAYOUT, Rounds' ADD SOMEONE. The
+  Eye's bell is gone: its Today card links to the full report.
 - **The mark:** the app's mark, 80 × 40 (its top half), rising from the band's bottom edge at the lower left, its left edge in
-  line with the title. Decoration only: it is not a button.
+  line with the title. Decoration only: it is not a button. **Ref's (14 Nov)** is its 2 × 2 board turned 45 degrees and cut
+  by the band's edge, rising like a peak (scaled 1.41 so its top half fills 80 × 40); the board on its cover and icon stays square.
 - **Label line:** 127px down, starting to the right of the mark (108px in) and running to 16px from the edge: the place in
   capitals, a 1px hairline in the partner colour, the date.
 - The page starts under the steps, 204px down.
@@ -259,8 +269,9 @@ button. Used for a shoot's page, a guide, a board.
 
 - The old bottom page switcher becomes **section marks**: a 98px bar (home area included) on paper, a 1px `line` rule on top,
   each section a 28px mark with its name under it (5.1). This section's mark is in colour, the others are `off`.
-- Every section is always shown. Tap a mark to go there; swiping the page or the bar still turns sections with the page-turn
-  animation, and holding the bar still opens the Dock-style row.
+- Every section is always shown. Tap a mark to go there; swiping the page or the bar turns sections with **a plain slide
+  (14 Nov)**: the page follows the finger and settles in 240ms, `cubic-bezier(.4, 0, .2, 1)`, no bounce or curl; with Reduce
+  Motion, a 150ms crossfade. No page-turn animation. Holding the bar still opens the Dock-style row.
 - **Hidden when an app has only one section** (Layouts).
 
 ### 9.5 Parts
@@ -308,7 +319,7 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
   bottom, and any stickers. They replace the cover pictures made per colour, so a new colour needs no new art.
 - **Side tabs** in Figtree 600, alternating the light step colour with berry blade black text and berry blade black with paper
   text. Ref: Mood boards, Tags. The Eye: Overview, Shoots, Reflections, Archive, Stats. Layouts: All layouts, New layout.
-  Overthoughts: Entries, Reviews (until its redesign).
+  Rounds: Today, People, Messages (14 Nov; Overthoughts' Entries and Reviews went with it).
 - **Top left:** DOCUMENTING FICTIONS, 13px 700 capitals.
 - **Arrangements:** Ring, Dominoes, Row and Spread (the books big, overlapping, lying back), changed by swiping up or down.
   Marks at the right edge, one for each, the one in use long; its name shows in a small ink pill for a moment after a swipe.
@@ -335,6 +346,7 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
 
 - Parts move like pieces of card: halves slide along their cut, quarters turn a quarter turn, rings grow from the centre.
 - 180–320ms, `cubic-bezier(.4, 0, .2, 1)`, the shelf's curve. No bounce.
+- Turning a notebook's sections is a plain slide, never a page turn (9.4, 14 Nov).
 - Turn it all off for `prefers-reduced-motion`.
 - The shelf's 3D turntable, its float and bob, and the opening and shutting animations stay as they are (Live, Starky 13 Nov).
 
@@ -386,6 +398,9 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
 | — | Notebooks button | In every main section's band, suite only (round 2) |
 | — | Contact Sheet | Renamed Layouts, for now (round 2) |
 | — | Shelf | The floating notebooks stay, on paper (round 2) |
+| — | Bands | Only Notebooks and Options; adding beside its list; The Eye's bell gone (14 Nov) |
+| — | Turning sections | A plain slide, no page turn (14 Nov) |
+| — | Fourth notebook | Rounds, a light networking checklist, in Overthoughts' place (14 Nov) |
 
-Still open: the shelf's own mark (7), Overthoughts' default colour and look (its redesign), and the hidden up/down swipe on the
+Still open: the shelf's own mark (7), whether Overthoughts' folder and data are ever removed (ask Starky), and the hidden up/down swipe on the
 shelf (ring, dominoes, row), which round 2 doesn't show: it stays until Starky decides.
