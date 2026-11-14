@@ -5,7 +5,8 @@
 //
 // A zip (df-data.js's zipBackup), put together from what's stored so the
 // phone never holds all four in memory: every notebook's database (Ref,
-// Contact Sheet, Overthoughts, and The Eye's photos, starky-moodboards),
+// Contact Sheet, Rounds, and The Eye's photos, starky-moodboards; and
+// Overthoughts', kept though it's off the shelf since 14 Nov),
 // df-links (the boards sent from Ref to The Eye's shoots) and df-stickers
 // (the covers' stickers), plus from localStorage The Eye's shoots and
 // journal (dailies_state_v1) and each notebook's cover colour. A notebook's
@@ -24,7 +25,8 @@
   const DBS = [
     { id: 'ref', db: 'ref-notebook', app: 'ref', book: 'ref-notebook-book' },
     { id: 'contact-sheet', db: 'contact-sheet', app: 'contact-sheet', book: 'contact-sheet-book' },
-    { id: 'overthoughts', db: 'overthoughts', app: 'overthoughts', book: 'overthoughts-book' },
+    { id: 'overthoughts', db: 'overthoughts', app: 'overthoughts', book: 'overthoughts-book' }, // off the shelf since 14 Nov, its data kept
+    { id: 'rounds', db: 'rounds', app: 'rounds', book: 'rounds-book' },
     { id: 'links', db: 'df-links', app: 'documenting-fictions', book: null }, // boards sent from Ref to The Eye's shoots
     { id: 'stickers', db: 'df-stickers', app: 'documenting-fictions', book: null }, // the stickers on the four covers (stickers.js)
   ];

@@ -1,0 +1,30 @@
+/* Today (01-today): "1 OF 3 TODAY" and the arc's stops, then a short stack
+   of cards, the next two peeking out behind (turned 3 and -2.5 degrees).
+   The top card (358 x 380 on a phone, white, radius 6): the move's mark as
+   a big corner flair, the person's photo, the move's tag, the name in light
+   30px, the handle, one line of why. Under the stack: LATER and WRITE TO. */
+.today-head { display: flex; align-items: flex-end; justify-content: space-between; margin-top: -2px; }
+.today-count { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.today-arc { width: 80px; height: 44px; overflow: visible; }
+.stack { position: relative; height: 404px; margin: 4px -16px 0; }
+.card { position: absolute; top: 14px; left: 16px; right: 16px; height: 380px; border-radius: 6px; overflow: hidden; background: var(--card); color: var(--text);
+  box-shadow: 0 1px 0 #E1E1DC, 0 10px 24px rgba(49, 61, 69, .10); }
+.card.top { z-index: 3; touch-action: pan-y; cursor: pointer; text-align: left; }
+.card.behind-1 { z-index: 2; top: 6px; left: 26px; right: 34px; transform: rotate(-2.5deg); }
+.card.behind-2 { z-index: 1; top: 0; left: 34px; right: 34px; transform: rotate(3deg); }
+.flair { position: absolute; right: 0; top: 0; width: 150px; height: 150px; border-radius: 0 0 0 75px; overflow: hidden; }
+.flair svg { position: absolute; right: -22px; top: -22px; width: 132px; height: 132px; }
+.card .ph { position: absolute; left: 20px; top: 22px; width: 104px; height: 130px; }
+.card-words { position: absolute; left: 20px; right: 20px; top: 172px; bottom: 16px; overflow: hidden; }
+.card-name { margin: 10px 0 0; font: 300 30px/34px var(--ui); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-handle { margin: 4px 0 0; font: 400 15px/20px var(--ui); color: var(--dim); }
+.card-why { margin: 14px 0 0; font: 300 17px/24px var(--ui); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.today-btns { display: flex; gap: 8px; margin-top: 6px; }
+.today-btns .btn.secondary { flex: 1; }
+.today-btns .btn.primary { flex: 1.6; min-width: 0; }
+.today-btns .btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* When the day's cards are done, or there were none: a calm line. */
+.today-calm { margin-top: 56px; }
+.today-calm h2 { margin: 0; font: 300 30px/34px var(--ui); }
+.today-calm p { margin: 10px 0 0; max-width: 32em; font: 400 17px/24px var(--ui); color: var(--dim); }
+.today-calm .btn { margin-top: 24px; }

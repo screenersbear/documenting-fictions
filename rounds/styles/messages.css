@@ -1,0 +1,12 @@
+/* Messages (05-messages): one starter message per kind of move, each with
+   its tiny mark, written once; then the user's own fill-ins. */
+.msg-list { margin-top: 10px; border-top: 1px solid var(--text); }
+.msg-row { display: flex; gap: 12px; width: 100%; padding: 14px 0; border-bottom: 1px solid var(--line); text-align: left; color: var(--text); }
+.msg-row .mini { margin-top: 3px; }
+.msg-words { flex: 1; min-width: 0; }
+.msg-kind { display: block; font: 400 17px/22px var(--ui); }
+.msg-text { display: block; margin-top: 4px; font: 300 15px/20px var(--ui); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-row .chev { margin-top: 3px; }
+.msg-fills { margin-top: 32px; }
+.fill-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 16px; }
+.fill-chip { min-height: 32px; padding: 0 12px; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line); background: var(--paper); font: 500 13px/16px var(--ui); color: var(--text); }

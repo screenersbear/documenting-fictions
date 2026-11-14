@@ -66,6 +66,10 @@
     set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* private mode: nothing kept */ } },
   }; ed.store = store;
   const colorOf = (b) => { const c = store.get(b.key); return c && Object.prototype.hasOwnProperty.call(COLORS, c) ? c : b.color; }; ed.colorOf = colorOf;
+  // What's drawn on a book's cover in colour c: the colour's partner, unless
+  // the book has its own (Rounds, components/books.js inks).
+  const inksOf = (b, c) => (b.inks && b.inks[c]) || {};
+  const partnerOf = (b, c) => inksOf(b, c).p || COLORS[c].partner; ed.partnerOf = partnerOf;
 
   // ---------- Building the books ----------
   // A book's colour: its cover (--c), what's drawn on it (--p), its light
@@ -73,7 +77,8 @@
   function paint(i) {
     const b = BOOKS[i], c = colorOf(b), s = slots[i];
     s.style.setProperty('--c', COLORS[c].band);
-    s.style.setProperty('--p', COLORS[c].partner);
+    s.style.setProperty('--p', partnerOf(b, c));
+    if (inksOf(b, c).s) s.style.setProperty('--s', inksOf(b, c).s); else s.style.removeProperty('--s');
     s.style.setProperty('--c25', COLORS[c].light);
     s.style.setProperty('--block', artUrl(b.block(c)));
   }

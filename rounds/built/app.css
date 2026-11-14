@@ -1,0 +1,316 @@
+/* Made by tools/join.mjs from the files listed in files.txt. Never edit it: change those files, then run node tools/join.mjs. */
+
+/* ---- styles/base.css ---- */
+/* Rounds' basics: its font, its colours and the page itself (DESIGN.md 4
+   and 5). The other stylesheets are listed in files.txt, in the order they
+   apply. */
+@font-face { font-family: "Figtree"; src: url("../fonts/figtree-latin.woff2") format("woff2"); font-weight: 300 900; font-display: swap; size-adjust: 96.5%; }
+:root {
+  --paper: #FAFAF7; --card: #FFFFFF; --text: #313D45; --dim: #5C666D; --line: #E1E1DC; --off-1: #9AA3A8; --off-2: #D6DADD;
+  --teal: #14BFA0; --crimson: #A1062A;
+  /* The band: berry blade black with mango (the Black pair), and its four
+     steps. Inside only: the cover on the shelf is teal (rounds/NOTES.md). */
+  --band: #313D45; --partner: #FFD100; --band-small: #FAFAF7; --step1: #636C72; --step2: #969C9E; --step3: #C8CBCA; --step4: #E6E7E5;
+  --ink: var(--band); --on-ink: var(--band-small);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='.14'/%3E%3C/svg%3E");
+  --ui: "Figtree", "Helvetica Neue", Arial, sans-serif;
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --nb-top: max(var(--safe-t), 10px);
+  --app-h: 100vh; /* the real height, from components/screen-fit.js */
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; background: var(--paper); color: var(--text); font: 400 17px/24px var(--ui); font-synthesis: none; overscroll-behavior: none; overflow-x: clip; }
+body { overflow: hidden; -webkit-text-size-adjust: 100%; }
+html.ios-nudge body, html.ios-hold body { min-height: calc(var(--screen-h, 100vh) + 160px); overflow-y: visible; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+button:disabled { opacity: .35; cursor: default; }
+a { color: inherit; text-decoration: none; }
+svg { display: block; }
+:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* ---- styles/screen.css ---- */
+/* The open notebook: plain pages the size of the screen, above the section
+   bar, with the band's colour above them behind the clock. Each screen has
+   a part that scrolls; the band scrolls with it. */
+.frame {
+  position: fixed; top: var(--nb-top); height: calc(var(--app-h) - var(--nb-top) - var(--nb-bar));
+  left: max(0px, calc(50% - 310px)); right: max(0px, calc(50% - 310px)); z-index: 1;
+}
+.frame[data-swipe="1"] #view { touch-action: pan-y; }
+.frame::before, .slide-leaf::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: calc(var(--nb-top) + 1px);
+  background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal;
+}
+.paper { position: absolute; inset: 0; background: var(--paper); overflow: hidden; }
+#view { position: absolute; inset: 0; outline: none; }
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; animation: page-in .16s ease-out; }
+.screen.still { animation: none; }
+@keyframes page-in { from { opacity: 0; } }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; scrollbar-width: none; padding: 0 16px 32px; }
+.scroll::-webkit-scrollbar { display: none; }
+/* Going between sections (components/spread.js): the section beside, a page along. */
+.slide-leaf { position: absolute; z-index: 1; inset: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .screen { animation: none; } }
+
+/* ---- styles/band.css ---- */
+/* The band on top of Today, People and Messages (DESIGN.md 9.1): from the
+   top of the screen, 92px under the safe area, with its grain; the title
+   (34px light capitals) and its two ring buttons on one line; the mark (an
+   arc with three stops: a mango arc, teal and white stops) at its foot; the
+   label line (the place, a hairline, the date); then four steps fading into
+   the paper. The short band, on a person's page (9.3): back, the place on
+   the hairline, the ... menu, then two steps. (components/band.js draws them.) */
+.band {
+  position: relative; flex: none; display: flex; align-items: flex-start; gap: 8px; height: 92px; margin: 0 -16px 53px; padding: 8px 8px 0 16px;
+  background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal; color: var(--partner);
+}
+.band::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 41.4px; pointer-events: none;
+  background: linear-gradient(var(--step1) 0 14px, var(--step2) 14px 25.2px, var(--step3) 25.2px 34.2px, var(--step4) 34.2px); }
+.band-title { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 300 34px/40px var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--partner); }
+.band-btns { display: flex; flex: none; }
+.band-mark { position: absolute; left: 16px; bottom: 0; width: 80px; height: 40px; pointer-events: none; }
+.band-line { position: absolute; left: 108px; right: 16px; top: 68px; display: flex; align-items: center; gap: 10px; margin: 0;
+  font: 500 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: var(--band-small); }
+.band-line b { font-weight: 700; }
+.band-rule { flex: 1; height: 1px; background: var(--partner); }
+.band-date { font-variant-numeric: tabular-nums; }
+.band.band-short { height: 56px; justify-content: space-between; margin-bottom: 48px; padding: 6px 8px 0; }
+.band-short::after { height: 18px; background: linear-gradient(var(--step1) 0 10px, var(--step3) 10px); }
+.band-short .band-line { left: 64px; right: 64px; top: 21px; }
+/* A ring button (DESIGN.md 8): a 44px target, a 40px ring 1.5px thick. */
+.ring-btn { display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; color: inherit; }
+.ring-btn > span { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
+/* The notebooks button is the suite's: Rounds on its own has no shelf to go back to. */
+html:not(.df-suite) [data-books] { display: none; }
+/* A list's heading: its name in small capitals, a count, an action at the right. */
+.list-head { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.list-head h2 { margin: 0; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.list-head h2 span { font-weight: 500; color: var(--dim); font-variant-numeric: tabular-nums; }
+.list-act { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 8px; margin-right: -8px; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.list-act svg { width: 16px; height: 16px; }
+.label { margin: 0; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.note { margin: 8px 0 0; font: 400 15px/21px var(--ui); color: var(--dim); }
+
+/* ---- styles/section-bar.css ---- */
+/* The section bar (DESIGN.md 9.4): on paper, a 1px line on top, each
+   section's mark (28px) over its name (10px capitals). The one you're on is
+   in berry blade black and teal, its name bold; the others in two greys.
+   Held, its icon swells into a row of every section (components/navbar.js). */
+:root { --nb-foot: max(11px, calc(var(--safe-b) - 13px)); --nb-bar: calc(64px + var(--nb-foot)); }
+html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by, 0px))); }
+.nav-bar {
+  position: fixed; left: 0; right: 0; top: calc(var(--app-h) - var(--nb-bar)); height: var(--nb-bar); max-width: 620px; margin: 0 auto;
+  padding: 8px 12px var(--nb-foot); background: var(--paper); border-top: 1px solid var(--line); z-index: 0;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.nav-bar.is-docked { z-index: 2; } /* over the page while the row is up */
+/* Installed, the bar shows once iOS has its height right (screen-fit.js adds .settled). */
+@media (display-mode: standalone) { html:not(.settled) .nav-bar { visibility: hidden; } }
+.sec-row { display: flex; justify-content: center; align-items: flex-start; gap: 48px; }
+.sec { --mk-1: var(--off-1); --mk-2: var(--off-2); display: flex; flex-direction: column; align-items: center; gap: 6px; width: 96px; height: 52px;
+  font: 500 10px/14px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); -webkit-touch-callout: none; }
+.sec[aria-current="page"] { --mk-1: var(--teal); --mk-2: var(--text); color: var(--text); font-weight: 700; }
+.sec-today[aria-current="page"] { --mk-1: var(--text); --mk-2: var(--teal); } /* the ring dark, the round teal */
+.sec svg, .nav-dock-icon svg { width: 28px; height: 28px; }
+.mk-1 { fill: var(--mk-1, var(--off-1)); }
+.mk-2 { fill: var(--mk-2, var(--off-2)); }
+.mk-ring { fill: none; stroke: var(--mk-1, var(--off-1)); stroke-width: 4; }
+.nav-dock { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 3; display: flex; align-items: flex-end; padding: 8px 10px; border-radius: 26px; background: var(--paper);
+  box-shadow: 0 0 14px 10px var(--paper); pointer-events: none; opacity: 0; visibility: hidden; transform: translateY(8px) scale(.9);
+  transition: opacity .14s ease, transform .16s ease, visibility 0s .16s; }
+.nav-dock.is-open { opacity: 1; visibility: visible; transform: none; transition: opacity .14s ease, transform .16s ease, visibility 0s; }
+.nav-dock-slot { position: relative; flex: 0 0 46px; height: 44px; display: flex; align-items: flex-end; justify-content: center; }
+.nav-dock-icon { --mk-1: var(--text); --mk-2: var(--teal); display: grid; place-items: center; width: 30px; height: 30px; transform-origin: 50% 100%; transition: transform .09s ease-out; }
+.nav-dock-slot.is-here::after { content: ''; position: absolute; left: 50%; bottom: -6px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--text); }
+.nav-dock-label { position: absolute; left: 0; bottom: calc(100% + 10px); transform: translateX(-50%); white-space: nowrap; padding: 0 6px; background: var(--paper);
+  box-shadow: 0 0 8px 6px var(--paper); border-radius: 10px; color: var(--text); font: 700 11px/22px var(--ui); letter-spacing: .1em; text-transform: uppercase; }
+@media (prefers-reduced-motion: reduce) { .nav-dock, .nav-dock.is-open, .nav-dock-icon { transition: none; } }
+
+/* ---- styles/sheet.css ---- */
+/* Sheets (DESIGN.md 9.5): white, rising from the bottom, a grip on top, the
+   title in section type and a close ring; and the buttons and choices in them. */
+.sheet-overlay { position: fixed; left: 0; right: 0; top: var(--vv-top, 0px); height: var(--vv-height, 100%); background: rgba(49, 61, 69, .5); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 620px; max-height: calc(var(--vv-height, 100svh) * .92); background: var(--card); color: var(--text); display: flex; flex-direction: column; outline: none; border-radius: 20px 20px 0 0; }
+.sheet::before { content: ''; flex: none; width: 36px; height: 5px; margin: 8px auto 0; border-radius: 3px; background: var(--off-2); }
+.sheet-header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 8px 0 16px; }
+.sheet-header h2 { margin: 0; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.close-btn { position: relative; flex: none; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: var(--text); }
+.close-btn::before { content: ''; position: absolute; inset: 2px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
+.x-icon { width: 18px; height: 18px; stroke-width: 2; }
+.sheet-body { padding: 12px 16px calc(20px + var(--safe-b)); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.sheet-message { margin: 0 0 8px; font: 400 17px/24px var(--ui); }
+.sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; }
+.sheet-actions.one { grid-template-columns: 1fr; }
+.intro-dots { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 20px; border-radius: 8px;
+  font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.btn.primary { background: var(--ink); color: var(--on-ink); }
+.btn.secondary { box-shadow: inset 0 0 0 1.5px var(--text); color: var(--text); }
+.btn.danger { background: var(--crimson); color: #FFFFFF; }
+.btn svg { width: 16px; height: 16px; }
+.text-btn { min-height: 40px; padding: 0 10px; font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.choice-list { display: flex; flex-direction: column; }
+.choice { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 6px 0; border-bottom: 1px solid var(--line); text-align: left; color: var(--text); }
+.choice:last-child { border-bottom: 0; }
+.choice-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.choice-label { font: 400 17px/22px var(--ui); }
+.choice.current .choice-label { font-weight: 700; }
+.choice.is-danger { color: var(--crimson); }
+.choice-detail { font: 400 13px/18px var(--ui); color: var(--dim); }
+.choice-heading { display: block; margin-top: 16px; }
+
+/* ---- styles/forms.css ---- */
+/* Fields (DESIGN.md 9.5): an 11px label over the value; a field row (a
+   label over a value, a chevron, 52px tall) opens a choice; a switch row. */
+.form { display: block; }
+.field { display: block; margin-bottom: 14px; }
+.field-label, .choice-heading { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.field input, .field textarea {
+  display: block; width: 100%; margin-top: 6px; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--line); font: 400 17px/23px var(--ui); color: var(--text); outline: none; -webkit-appearance: none;
+}
+.field textarea { min-height: 96px; resize: none; }
+.field input:focus, .field textarea:focus { box-shadow: inset 0 0 0 1.5px var(--text); }
+.field-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; margin-bottom: 14px; padding: 6px 0; border-bottom: 1px solid var(--line); text-align: left; }
+.field-row .choice-text { flex: 1; }
+.field-row .field-value { font: 400 17px/22px var(--ui); }
+.chev { flex: none; width: 16px; height: 16px; color: var(--off-1); }
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; font: 400 17px/22px var(--ui); }
+.switch { -webkit-appearance: none; appearance: none; position: relative; flex: none; width: 51px; height: 31px; margin: 0; border-radius: 16px; background: var(--off-2); transition: background .15s ease; cursor: pointer; }
+.switch::after { content: ''; position: absolute; left: 2px; top: 2px; width: 27px; height: 27px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(49, 61, 69, .25); transition: transform .15s ease; }
+.switch:checked { background: var(--ink); }
+.switch:checked::after { transform: translateX(20px); }
+.field-error { margin: 4px 0 0; font: 400 15px/21px var(--ui); color: var(--crimson); }
+
+/* ---- styles/toast.css ---- */
+/* The toast: a short message over the section bar, with an optional button (like UNDO). */
+.toast { position: fixed; left: 50%; bottom: calc(var(--nb-bar) + 12px); transform: translateX(-50%); z-index: 90; display: flex; align-items: center; gap: 16px;
+  width: max-content; max-width: calc(100vw - 32px); padding: 8px 8px 8px 16px; min-height: 44px; border-radius: 8px; background: var(--text); color: var(--paper); font: 400 15px/20px var(--ui); }
+.toast.show { animation: page-in .2s ease-out; }
+.toast-action { min-height: 32px; padding: 0 8px; font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--partner); }
+
+/* ---- styles/marks.css ---- */
+/* A move's marks (components/marks.js): the notched tag in its colour pair,
+   the tiny 16px square, and a person's photo or, with none, their initials
+   on a pale grey (never a tint over a photo). */
+.tag { display: inline-flex; align-items: center; height: 26px; padding: 0 22px 0 10px; border-radius: 3px 0 0 3px;
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%); font: 700 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+.mini { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 3px; }
+.ph { position: relative; flex: none; display: block; overflow: hidden; border-radius: 4px; background: var(--step4); }
+.ph img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ph-initials { position: absolute; inset: 0; display: grid; place-items: center; font: 300 28px/1 var(--ui); letter-spacing: .04em; color: var(--step1); text-transform: uppercase; }
+.ph.small .ph-initials { font-size: 16px; }
+
+/* ---- styles/today.css ---- */
+/* Today (01-today): "1 OF 3 TODAY" and the arc's stops, then a short stack
+   of cards, the next two peeking out behind (turned 3 and -2.5 degrees).
+   The top card (358 x 380 on a phone, white, radius 6): the move's mark as
+   a big corner flair, the person's photo, the move's tag, the name in light
+   30px, the handle, one line of why. Under the stack: LATER and WRITE TO. */
+.today-head { display: flex; align-items: flex-end; justify-content: space-between; margin-top: -2px; }
+.today-count { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.today-arc { width: 80px; height: 44px; overflow: visible; }
+.stack { position: relative; height: 404px; margin: 4px -16px 0; }
+.card { position: absolute; top: 14px; left: 16px; right: 16px; height: 380px; border-radius: 6px; overflow: hidden; background: var(--card); color: var(--text);
+  box-shadow: 0 1px 0 #E1E1DC, 0 10px 24px rgba(49, 61, 69, .10); }
+.card.top { z-index: 3; touch-action: pan-y; cursor: pointer; text-align: left; }
+.card.behind-1 { z-index: 2; top: 6px; left: 26px; right: 34px; transform: rotate(-2.5deg); }
+.card.behind-2 { z-index: 1; top: 0; left: 34px; right: 34px; transform: rotate(3deg); }
+.flair { position: absolute; right: 0; top: 0; width: 150px; height: 150px; border-radius: 0 0 0 75px; overflow: hidden; }
+.flair svg { position: absolute; right: -22px; top: -22px; width: 132px; height: 132px; }
+.card .ph { position: absolute; left: 20px; top: 22px; width: 104px; height: 130px; }
+.card-words { position: absolute; left: 20px; right: 20px; top: 172px; bottom: 16px; overflow: hidden; }
+.card-name { margin: 10px 0 0; font: 300 30px/34px var(--ui); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-handle { margin: 4px 0 0; font: 400 15px/20px var(--ui); color: var(--dim); }
+.card-why { margin: 14px 0 0; font: 300 17px/24px var(--ui); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.today-btns { display: flex; gap: 8px; margin-top: 6px; }
+.today-btns .btn.secondary { flex: 1; }
+.today-btns .btn.primary { flex: 1.6; min-width: 0; }
+.today-btns .btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* When the day's cards are done, or there were none: a calm line. */
+.today-calm { margin-top: 56px; }
+.today-calm h2 { margin: 0; font: 300 30px/34px var(--ui); }
+.today-calm p { margin: 10px 0 0; max-width: 32em; font: 400 17px/24px var(--ui); color: var(--dim); }
+.today-calm .btn { margin-top: 24px; }
+
+/* ---- styles/move.css ---- */
+/* A move opened (02-move): the move's tag and the close ring, the person,
+   their starter message filled in and editable, then COPY AND OPEN (to
+   Instagram, their email or website), with DONE and LATER under it. */
+.move-sheet { min-height: min(614px, calc(var(--vv-height, 100svh) * .92)); }
+.move-sheet .sheet-body { display: flex; flex-direction: column; flex: 1; padding-top: 2px; }
+.move-who { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.move-who .ph { width: 44px; height: 54px; }
+.move-who-words { display: flex; flex-direction: column; min-width: 0; }
+.move-name { font: 300 20px/26px var(--ui); }
+.move-handle { font: 400 14px/18px var(--ui); color: var(--dim); }
+.move-sheet .label { margin: 18px 0 6px; }
+.move-text { display: block; width: 100%; min-height: 140px; field-sizing: content; max-height: 40vh; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--line); font: 400 16px/23px var(--ui); color: var(--text); resize: none; outline: none; -webkit-appearance: none; }
+.move-text:focus { box-shadow: inset 0 0 0 1.5px var(--text); }
+.move-actions { margin-top: auto; padding-top: 20px; }
+.move-go { width: 100%; height: 50px; }
+.move-more { display: flex; justify-content: center; gap: 12px; margin-top: 4px; }
+/* Back from Instagram: "Done?" in place of the buttons. */
+.move-ask { margin: 0 0 10px; text-align: center; font: 300 20px/26px var(--ui); }
+.move-ask-btns { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; }
+
+/* ---- styles/people.css ---- */
+/* People (03-people): plain cards, a photo over the name, with a tiny 16px
+   square in the colour and mark of their next move. No colour fields: the
+   colour lives on Today. ADD SOMEONE beside the title. Let go, at the end. */
+.people-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; row-gap: 18px; margin-top: 8px; }
+.person-card { display: block; min-width: 0; color: var(--text); }
+.person-card .ph { width: 100%; max-width: 155px; aspect-ratio: 155 / 180; }
+.person-card-name { display: flex; align-items: center; gap: 8px; margin-top: 8px; font: 400 15px/19px var(--ui); }
+.person-card-name span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.people-gone { margin-top: 32px; }
+.people-gone .people-grid { opacity: .6; }
+
+/* ---- styles/person.css ---- */
+/* A person (04-person): photo, name, handle (opens the profile), one line
+   (group and where you met), then the next move as a row that opens it. */
+.person-top { display: flex; flex-direction: column; align-items: flex-start; margin-top: 10px; }
+.person-top .ph { width: 96px; height: 120px; }
+.person-photo-btn { border-radius: 4px; }
+.person-name { margin: 14px 0 0; font: 300 28px/34px var(--ui); overflow-wrap: anywhere; }
+.person-handle { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; font: 400 15px/20px var(--ui); color: var(--text); }
+.person-handle svg { width: 12px; height: 12px; }
+.person-line { margin: 6px 0 0; font: 400 15px/21px var(--ui); color: var(--dim); }
+.person-next { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 28px; padding: 16px 0; border-top: 1px solid var(--text); border-bottom: 1px solid var(--line); text-align: left; color: var(--text); }
+.person-next-what { flex: 1; min-width: 0; font: 400 17px/22px var(--ui); }
+.person-next-when { display: inline-flex; align-items: center; gap: 4px; font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.person-next-when svg { width: 12px; height: 12px; }
+.person-rest { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--text); }
+
+/* ---- styles/messages.css ---- */
+/* Messages (05-messages): one starter message per kind of move, each with
+   its tiny mark, written once; then the user's own fill-ins. */
+.msg-list { margin-top: 10px; border-top: 1px solid var(--text); }
+.msg-row { display: flex; gap: 12px; width: 100%; padding: 14px 0; border-bottom: 1px solid var(--line); text-align: left; color: var(--text); }
+.msg-row .mini { margin-top: 3px; }
+.msg-words { flex: 1; min-width: 0; }
+.msg-kind { display: block; font: 400 17px/22px var(--ui); }
+.msg-text { display: block; margin-top: 4px; font: 300 15px/20px var(--ui); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-row .chev { margin-top: 3px; }
+.msg-fills { margin-top: 32px; }
+.fill-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 16px; }
+.fill-chip { min-height: 32px; padding: 0 12px; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line); background: var(--paper); font: 500 13px/16px var(--ui); color: var(--text); }
+
+/* ---- styles/options.css ---- */
+/* Options and Import people: the import's list, a tick beside each person. */
+.import-sum { margin: 0 0 8px; font: 400 15px/21px var(--ui); color: var(--dim); }
+.import-list { display: flex; flex-direction: column; }
+.import-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.import-row input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--text); }
+.import-who { display: flex; flex-direction: column; min-width: 0; }
+.import-name { font: 400 17px/22px var(--ui); }
+.import-meta { font: 400 13px/18px var(--ui); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stepper { display: flex; align-items: center; gap: 4px; }
+.stepper button { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; }
+.stepper button span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--text); font: 400 20px/1 var(--ui); }
+.stepper output { min-width: 24px; text-align: center; font: 700 17px/22px var(--ui); font-variant-numeric: tabular-nums; }

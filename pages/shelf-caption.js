@@ -17,11 +17,11 @@ window.ShelfParts.addCaption = function addCaption(ed) {
   // only writes when the book in front (or its colour) changes.
   ed.caption = function caption() {
     const at = ed.mod(Math.round(ed.pos));
-    const b = ed.BOOKS[at], c = ed.COLORS[ed.colorOf(b)];
-    if (`${at} ${c.band}` === shown) return;
-    shown = `${at} ${c.band}`;
+    const b = ed.BOOKS[at], k = ed.colorOf(b), c = ed.COLORS[k];
+    if (`${at} ${k}` === shown) return;
+    shown = `${at} ${k}`;
     ed.optionsBtn.style.setProperty('--disc', c.band);
-    ed.optionsBtn.style.setProperty('--dots', c.partner);
+    ed.optionsBtn.style.setProperty('--dots', ed.partnerOf(b, k));
     name.textContent = b.short;
     line.textContent = b.line;
     [...dots.children].forEach((d, i) => d.classList.toggle('on', i === at));

@@ -1,0 +1,12 @@
+/* Options and Import people: the import's list, a tick beside each person. */
+.import-sum { margin: 0 0 8px; font: 400 15px/21px var(--ui); color: var(--dim); }
+.import-list { display: flex; flex-direction: column; }
+.import-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.import-row input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--text); }
+.import-who { display: flex; flex-direction: column; min-width: 0; }
+.import-name { font: 400 17px/22px var(--ui); }
+.import-meta { font: 400 13px/18px var(--ui); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stepper { display: flex; align-items: center; gap: 4px; }
+.stepper button { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; }
+.stepper button span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--text); font: 400 20px/1 var(--ui); }
+.stepper output { min-width: 24px; text-align: center; font: 700 17px/22px var(--ui); font-variant-numeric: tabular-nums; }

@@ -1,0 +1,10 @@
+/* People (03-people): plain cards, a photo over the name, with a tiny 16px
+   square in the colour and mark of their next move. No colour fields: the
+   colour lives on Today. ADD SOMEONE beside the title. Let go, at the end. */
+.people-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; row-gap: 18px; margin-top: 8px; }
+.person-card { display: block; min-width: 0; color: var(--text); }
+.person-card .ph { width: 100%; max-width: 155px; aspect-ratio: 155 / 180; }
+.person-card-name { display: flex; align-items: center; gap: 8px; margin-top: 8px; font: 400 15px/19px var(--ui); }
+.person-card-name span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.people-gone { margin-top: 32px; }
+.people-gone .people-grid { opacity: .6; }

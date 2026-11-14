@@ -1,0 +1,25 @@
+# Rounds is made of the files below. tools/join.mjs joins the files under
+# each built/ name, in this order, into that one file, and index.html loads the
+# built file: one trip to the server instead of one per file.
+# After changing, adding or removing a file listed here, run: node tools/join.mjs
+
+# How it looks, in the order the rules apply.
+built/app.css
+  styles/base.css
+  styles/screen.css
+  styles/band.css
+  styles/section-bar.css
+  styles/sheet.css
+  styles/forms.css
+  styles/toast.css
+  styles/marks.css
+  styles/today.css
+  styles/move.css
+  styles/people.css
+  styles/person.css
+  styles/messages.css
+  styles/options.css
+
+# The scripts: app.js and every ES module it imports (and those import), joined
+# by following the imports, so they aren't listed one by one.
+built/app.js from app.js

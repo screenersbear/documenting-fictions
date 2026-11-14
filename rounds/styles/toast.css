@@ -1,0 +1,5 @@
+/* The toast: a short message over the section bar, with an optional button (like UNDO). */
+.toast { position: fixed; left: 50%; bottom: calc(var(--nb-bar) + 12px); transform: translateX(-50%); z-index: 90; display: flex; align-items: center; gap: 16px;
+  width: max-content; max-width: calc(100vw - 32px); padding: 8px 8px 8px 16px; min-height: 44px; border-radius: 8px; background: var(--text); color: var(--paper); font: 400 15px/20px var(--ui); }
+.toast.show { animation: page-in .2s ease-out; }
+.toast-action { min-height: 32px; padding: 0 8px; font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--partner); }

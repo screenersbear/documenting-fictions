@@ -1,0 +1,22 @@
+/* The open notebook: plain pages the size of the screen, above the section
+   bar, with the band's colour above them behind the clock. Each screen has
+   a part that scrolls; the band scrolls with it. */
+.frame {
+  position: fixed; top: var(--nb-top); height: calc(var(--app-h) - var(--nb-top) - var(--nb-bar));
+  left: max(0px, calc(50% - 310px)); right: max(0px, calc(50% - 310px)); z-index: 1;
+}
+.frame[data-swipe="1"] #view { touch-action: pan-y; }
+.frame::before, .slide-leaf::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: calc(var(--nb-top) + 1px);
+  background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal;
+}
+.paper { position: absolute; inset: 0; background: var(--paper); overflow: hidden; }
+#view { position: absolute; inset: 0; outline: none; }
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; animation: page-in .16s ease-out; }
+.screen.still { animation: none; }
+@keyframes page-in { from { opacity: 0; } }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; scrollbar-width: none; padding: 0 16px 32px; }
+.scroll::-webkit-scrollbar { display: none; }
+/* Going between sections (components/spread.js): the section beside, a page along. */
+.slide-leaf { position: absolute; z-index: 1; inset: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .screen { animation: none; } }

@@ -2,15 +2,15 @@
 // worker for its own folder (registered from the shelf, see app.js); this one
 // answers for the shelf itself and the first pages it shows.
 // Bump CACHE_NAME with every deploy so installed copies pick up new files.
-const CACHE_NAME = 'df-suite-v32';
+const CACHE_NAME = 'df-suite-v33';
 const ASSETS = [
   './', './index.html', './built/app.css', './built/app.js', './suite.js', './manifest.json', './icon-180.png', './icon-512.png',
   './ref/fonts/figtree-latin.woff2',
   // Cut out's worker and its sums, loaded by their address (the model itself, in ml/, looks after itself).
   './data/cut-out-worker.js', './components/cut-out.js',
-  './ref/art/ocean-block.webp', './the-eye/art/df-mango-block.webp', './contact-sheet/art/orange-block.webp', './overthoughts/art/leaf-block.webp',
+  './ref/art/ocean-block.webp', './the-eye/art/df-mango-block.webp', './contact-sheet/art/orange-block.webp', './rounds/art/leaf-block.webp',
 ];
-const NOTEBOOKS = ['ref', 'the-eye', 'contact-sheet', 'overthoughts'];
+const NOTEBOOKS = ['ref', 'the-eye', 'contact-sheet', 'rounds', 'overthoughts'];
 const base = new URL('./', self.location).pathname;
 const notebookOf = (path) => NOTEBOOKS.find((n) => path.startsWith(`${base}${n}/`));
 

@@ -19,7 +19,9 @@ window.ShelfColors = {
 // ---- components/books.js ----
 // The four notebooks on the shelf: where each one lives, where it keeps its
 // colour, the mark on its cover, the line about it under the shelf, and the
-// tabs on its fore-edge. (Loaded before app.js.)
+// tabs on its fore-edge. Rounds took Overthoughts' place on 14 Nov (Starky):
+// Overthoughts' folder and saved data are kept, it's only off the shelf.
+// (Loaded before app.js.)
 (function () {
   'use strict';
   // The marks (DESIGN.md 7), drawn in the cover's partner colour (--p) with
@@ -29,10 +31,14 @@ window.ShelfColors = {
     ref: `<rect width="12" height="12" ${P}/><rect x="12" width="12" height="12" fill="#FFFFFF"/><rect y="12" width="12" height="12" fill="#FFFFFF"/><rect x="12" y="12" width="12" height="12" ${P}/>`,
     eye: '<circle cx="12" cy="12" r="10.25" fill="none" stroke-width="3.5" style="stroke:var(--p)"/><circle cx="12" cy="12" r="4" fill="#FAFAF7"/>',
     layouts: `<rect x="1" y="4" width="6.5" height="16" ${P}/><rect x="8.75" y="6.4" width="6.5" height="13.6" fill="#FAFAF7"/><rect x="16.5" y="8.6" width="6.5" height="11.4" ${P}/>`,
-    overthoughts: `<circle cx="12" cy="6.5" r="5.5" fill="#FAFAF7"/><circle cx="12" cy="17.5" r="5.5" fill="#FAFAF7"/><circle cx="6.5" cy="12" r="5.5" fill="#FAFAF7"/><circle cx="17.5" cy="12" r="5.5" fill="#FAFAF7"/><circle cx="12" cy="12" r="2.6" ${P}/>`,
+    // Rounds: an arc with three stops (its own colours on the cover, see inks).
+    rounds: '<path d="M2 20 A10 10 0 0 1 22 20" fill="none" stroke-width="2.6" style="stroke:var(--p)"/><circle cx="3.6" cy="14.2" r="2.6" style="fill:var(--s, #FFD100)"/><circle cx="12" cy="10" r="2" fill="#FFFFFF"/><circle cx="20.4" cy="14.2" r="1.5" style="fill:var(--s, #FFD100)"/>',
   };
   // colors: the ones its Options sheet offers, its own first.
   // tabs: [label, top %, height %, width (of W), depth (of T), light?, where it opens]
+  // inks (Rounds only): on these covers, what's drawn on it (p) and the arc's
+  // stops (s), in place of the cover's own partner colour. Rounds' teal cover
+  // has an ink arc and name with mango stops (rounds/NOTES.md, deliberate).
   window.ShelfBooks = [
     {
       id: 'ref', name: 'ref, do something', short: 'Ref', line: 'Tag photos, build mood boards', key: 'ref-notebook-book', color: 'ocean',
@@ -53,10 +59,11 @@ window.ShelfColors = {
       tabs: [['All layouts', 5.7, 26, .085, .2, true, 'contents'], ['New layout', 32.5, 20, .09, -.2, false, 'new']],
     },
     {
-      id: 'overthoughts', name: 'Overthoughts', short: 'Overthoughts', line: 'Think things over', key: 'overthoughts-book', color: 'leaf',
-      colors: ['leaf', 'orange', 'mango', 'berry', 'fern', 'ocean', 'ink'], mark: MARKS.overthoughts,
-      block: (c) => `overthoughts/art/${c}-block.webp`,
-      tabs: [['Entries', 5.7, 17.7, .11, .2, true, 'entries'], ['Reviews', 24.4, 17.7, .115, -.2, false, 'reviews']],
+      id: 'rounds', name: 'Rounds', short: 'Rounds', line: 'Stay in touch, find more work', key: 'rounds-book', color: 'leaf',
+      colors: ['leaf', 'orange', 'mango', 'berry', 'fern', 'ocean', 'ink'], mark: MARKS.rounds,
+      inks: { leaf: { p: '#313D45' }, orange: { s: '#FFFFFF' }, mango: { s: '#FFFFFF' }, fern: { s: '#FFFFFF' }, ink: { s: '#14BFA0' } },
+      block: (c) => `rounds/art/${c}-block.webp`,
+      tabs: [['Today', 5.7, 17.7, .11, .2, true, 'today'], ['People', 24.4, 17.7, .115, 0, false, 'people'], ['Messages', 43.1, 17.7, .12, -.2, true, 'messages']],
     },
   ];
 })();
@@ -903,11 +910,11 @@ window.ShelfParts.addCaption = function addCaption(ed) {
   // only writes when the book in front (or its colour) changes.
   ed.caption = function caption() {
     const at = ed.mod(Math.round(ed.pos));
-    const b = ed.BOOKS[at], c = ed.COLORS[ed.colorOf(b)];
-    if (`${at} ${c.band}` === shown) return;
-    shown = `${at} ${c.band}`;
+    const b = ed.BOOKS[at], k = ed.colorOf(b), c = ed.COLORS[k];
+    if (`${at} ${k}` === shown) return;
+    shown = `${at} ${k}`;
     ed.optionsBtn.style.setProperty('--disc', c.band);
-    ed.optionsBtn.style.setProperty('--dots', c.partner);
+    ed.optionsBtn.style.setProperty('--dots', ed.partnerOf(b, k));
     name.textContent = b.short;
     line.textContent = b.line;
     [...dots.children].forEach((d, i) => d.classList.toggle('on', i === at));
@@ -1414,6 +1421,10 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
     set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* private mode: nothing kept */ } },
   }; ed.store = store;
   const colorOf = (b) => { const c = store.get(b.key); return c && Object.prototype.hasOwnProperty.call(COLORS, c) ? c : b.color; }; ed.colorOf = colorOf;
+  // What's drawn on a book's cover in colour c: the colour's partner, unless
+  // the book has its own (Rounds, components/books.js inks).
+  const inksOf = (b, c) => (b.inks && b.inks[c]) || {};
+  const partnerOf = (b, c) => inksOf(b, c).p || COLORS[c].partner; ed.partnerOf = partnerOf;
 
   // ---------- Building the books ----------
   // A book's colour: its cover (--c), what's drawn on it (--p), its light
@@ -1421,7 +1432,8 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
   function paint(i) {
     const b = BOOKS[i], c = colorOf(b), s = slots[i];
     s.style.setProperty('--c', COLORS[c].band);
-    s.style.setProperty('--p', COLORS[c].partner);
+    s.style.setProperty('--p', partnerOf(b, c));
+    if (inksOf(b, c).s) s.style.setProperty('--s', inksOf(b, c).s); else s.style.removeProperty('--s');
     s.style.setProperty('--c25', COLORS[c].light);
     s.style.setProperty('--block', artUrl(b.block(c)));
   }
@@ -2742,7 +2754,8 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
 //
 // A zip (df-data.js's zipBackup), put together from what's stored so the
 // phone never holds all four in memory: every notebook's database (Ref,
-// Contact Sheet, Overthoughts, and The Eye's photos, starky-moodboards),
+// Contact Sheet, Rounds, and The Eye's photos, starky-moodboards; and
+// Overthoughts', kept though it's off the shelf since 14 Nov),
 // df-links (the boards sent from Ref to The Eye's shoots) and df-stickers
 // (the covers' stickers), plus from localStorage The Eye's shoots and
 // journal (dailies_state_v1) and each notebook's cover colour. A notebook's
@@ -2761,7 +2774,8 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
   const DBS = [
     { id: 'ref', db: 'ref-notebook', app: 'ref', book: 'ref-notebook-book' },
     { id: 'contact-sheet', db: 'contact-sheet', app: 'contact-sheet', book: 'contact-sheet-book' },
-    { id: 'overthoughts', db: 'overthoughts', app: 'overthoughts', book: 'overthoughts-book' },
+    { id: 'overthoughts', db: 'overthoughts', app: 'overthoughts', book: 'overthoughts-book' }, // off the shelf since 14 Nov, its data kept
+    { id: 'rounds', db: 'rounds', app: 'rounds', book: 'rounds-book' },
     { id: 'links', db: 'df-links', app: 'documenting-fictions', book: null }, // boards sent from Ref to The Eye's shoots
     { id: 'stickers', db: 'df-stickers', app: 'documenting-fictions', book: null }, // the stickers on the four covers (stickers.js)
   ];
@@ -2974,7 +2988,7 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
     let steps = null;
     const s = sheet(`
       <h2>Back up all four</h2>
-      <p>One file with Ref, The Eye, Layouts and Overthoughts, photos and all. Keep it somewhere safe, like Files or iCloud Drive.</p>
+      <p>One file with Ref, The Eye, Layouts and Rounds, photos and all. Keep it somewhere safe, like Files or iCloud Drive.</p>
       <button type="button" class="sheet-btn primary" data-save>Save a backup</button>
       <button type="button" class="sheet-btn" data-restore>Restore from a backup</button>
       <p class="sheet-note" hidden></p>
@@ -3015,7 +3029,7 @@ window.ShelfParts.addScreenFit = function addScreenFit(ed) {
         if (!files.length) return;
         const c = sheet(`
           <h2>Restore all four?</h2>
-          <p>Everything in Ref, The Eye, Layouts and Overthoughts on this device is swapped for what's in the file. This can't be undone, so save a backup first if you might want today's back.</p>
+          <p>Everything in Ref, The Eye, Layouts and Rounds on this device is swapped for what's in the file. This can't be undone, so save a backup first if you might want today's back.</p>
           <button type="button" class="sheet-btn primary danger" data-yes>Restore</button>
           <button type="button" class="sheet-btn plain" data-close>Cancel</button>
           <p class="sheet-note" hidden></p>`);

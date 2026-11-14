@@ -8,7 +8,7 @@ import { join, relative, sep } from 'node:path';
 
 // The tests run from the suite's top folder.
 const ROOT = process.cwd();
-const NOTEBOOKS = ['ref', 'the-eye', 'contact-sheet', 'overthoughts'];
+const NOTEBOOKS = ['ref', 'the-eye', 'contact-sheet', 'overthoughts', 'rounds'];
 // Not ours (lib/, ml/, vendor/), made by tools/join.mjs (built/), or not app
 // files at all (pictures, fonts, the tests and tools themselves).
 const SKIP = new Set(['lib', 'ml', 'vendor', 'built', 'art', 'fonts', 'icons', 'node_modules', 'tests', 'tools', 'reports', 'docs']);

@@ -6,9 +6,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
 import { open, rows } from '../overthoughts/fake-df-data.mjs';
 
-const DBS = ['ref-notebook', 'contact-sheet', 'overthoughts', 'df-links', 'df-stickers'];
+const DBS = ['ref-notebook', 'contact-sheet', 'overthoughts', 'rounds', 'df-links', 'df-stickers'];
 const EYE_DB = 'starky-moodboards';
-const BOOKS = ['ref-notebook-book', 'contact-sheet-book', 'overthoughts-book'];
+const BOOKS = ['ref-notebook-book', 'contact-sheet-book', 'overthoughts-book', 'rounds-book'];
 const EYE = 'dailies_state_v1';
 const EYE_BAD = "The Eye's part of that file isn't right. Nothing was changed.";
 const NOT_SUITE = "That file isn't a backup of all four. A single notebook's backup goes back in from that notebook's options.";
@@ -210,11 +210,12 @@ describe('restoreZip', () => {
   });
   it('puts the cover colours back, keeping a cover the file has nothing for', async () => {
     localStorage.setItem('contact-sheet-book', 'keep');
-    const { rLocal } = zipHolding({ 'ref-notebook-book': '{"c":1}', 'overthoughts-book': '{"c":3}' });
+    const { rLocal } = zipHolding({ 'ref-notebook-book': '{"c":1}', 'overthoughts-book': '{"c":3}', 'rounds-book': '{"c":4}' });
     await B.restoreZip([]);
     expect(localStorage.getItem('ref-notebook-book')).toBe('{"c":1}');
     expect(localStorage.getItem('contact-sheet-book')).toBe('keep');
     expect(localStorage.getItem('overthoughts-book')).toBe('{"c":3}');
+    expect(localStorage.getItem('rounds-book')).toBe('{"c":4}');
     expect(rLocal.mock.calls.map(([k]) => k)).toEqual([...BOOKS, EYE]);
     expect(lsKeys()).toEqual([...BOOKS].sort());
   });
@@ -439,6 +440,7 @@ describe('restoreJson puts a notebook back', () => {
       'the-eye': eyePart({ shoots: [] }),
       stickers: part('df-stickers', {}),
       links: part('df-links', {}),
+      rounds: part('rounds', {}),
       overthoughts: part('overthoughts', {}),
       'contact-sheet': part('contact-sheet', {}),
       ref: part('ref-notebook', {}),

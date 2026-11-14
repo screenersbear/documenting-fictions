@@ -6,7 +6,7 @@
 import { test, expect } from '@playwright/test';
 import { freshPage } from './_helpers.mjs';
 
-const NOTEBOOKS = ['ref', 'the-eye', 'contact-sheet', 'overthoughts'];
+const NOTEBOOKS = ['ref', 'the-eye', 'contact-sheet', 'rounds'];
 
 // A picture drawn in the page: one red shape (with a blue block on top) on a
 // plain ground, or nothing but the ground. It's what the photo library hands

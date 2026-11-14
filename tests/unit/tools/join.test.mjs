@@ -12,7 +12,7 @@ const ROOT = process.cwd();
 
 describe('every app in the suite', () => {
   it('finds the shelf and the four notebooks', () => {
-    expect(findApps(ROOT)).toEqual(expect.arrayContaining(['.', 'ref', 'contact-sheet', 'overthoughts']));
+    expect(findApps(ROOT)).toEqual(expect.arrayContaining(['.', 'ref', 'contact-sheet', 'overthoughts', 'rounds']));
   });
   it.each(findApps(ROOT))('%s: built/ matches files.txt (run node tools/join.mjs if not)', async (app) => {
     expect(await staleFiles(join(ROOT, app))).toEqual([]);

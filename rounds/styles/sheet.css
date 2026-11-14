@@ -1,0 +1,31 @@
+/* Sheets (DESIGN.md 9.5): white, rising from the bottom, a grip on top, the
+   title in section type and a close ring; and the buttons and choices in them. */
+.sheet-overlay { position: fixed; left: 0; right: 0; top: var(--vv-top, 0px); height: var(--vv-height, 100%); background: rgba(49, 61, 69, .5); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 620px; max-height: calc(var(--vv-height, 100svh) * .92); background: var(--card); color: var(--text); display: flex; flex-direction: column; outline: none; border-radius: 20px 20px 0 0; }
+.sheet::before { content: ''; flex: none; width: 36px; height: 5px; margin: 8px auto 0; border-radius: 3px; background: var(--off-2); }
+.sheet-header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 8px 0 16px; }
+.sheet-header h2 { margin: 0; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.close-btn { position: relative; flex: none; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: var(--text); }
+.close-btn::before { content: ''; position: absolute; inset: 2px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
+.x-icon { width: 18px; height: 18px; stroke-width: 2; }
+.sheet-body { padding: 12px 16px calc(20px + var(--safe-b)); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.sheet-message { margin: 0 0 8px; font: 400 17px/24px var(--ui); }
+.sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; }
+.sheet-actions.one { grid-template-columns: 1fr; }
+.intro-dots { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 20px; border-radius: 8px;
+  font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.btn.primary { background: var(--ink); color: var(--on-ink); }
+.btn.secondary { box-shadow: inset 0 0 0 1.5px var(--text); color: var(--text); }
+.btn.danger { background: var(--crimson); color: #FFFFFF; }
+.btn svg { width: 16px; height: 16px; }
+.text-btn { min-height: 40px; padding: 0 10px; font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.choice-list { display: flex; flex-direction: column; }
+.choice { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 6px 0; border-bottom: 1px solid var(--line); text-align: left; color: var(--text); }
+.choice:last-child { border-bottom: 0; }
+.choice-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.choice-label { font: 400 17px/22px var(--ui); }
+.choice.current .choice-label { font-weight: 700; }
+.choice.is-danger { color: var(--crimson); }
+.choice-detail { font: 400 13px/18px var(--ui); color: var(--dim); }
+.choice-heading { display: block; margin-top: 16px; }

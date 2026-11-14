@@ -23,7 +23,7 @@
     var inside = localStorage.getItem('df-suite-in');
     var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
     var back = nav && nav.type === 'back_forward';
-    if (inside && !back && !/[?&]from=/.test(location.search) && /^(ref|the-eye|contact-sheet|overthoughts)$/.test(inside)) {
+    if (inside && !back && !/[?&]from=/.test(location.search) && /^(ref|the-eye|contact-sheet|overthoughts|rounds)$/.test(inside)) {
       document.documentElement.style.visibility = 'hidden';
       location.replace(inside + '/');
     }

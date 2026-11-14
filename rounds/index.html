@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Rounds</title>
+<meta name="description" content="A light networking checklist for photographers: a few people to write to each day." />
+<!-- Inside Documenting Fictions this says so (the suite's own file); copied out on its own the notebook has no ../suite.js and is an app of its own. -->
+<script src="../suite.js"></script>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#313D45" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Rounds" />
+<link rel="apple-touch-icon" href="icons/icon-180.png" />
+<link rel="icon" type="image/png" href="icons/icon-192.png" />
+<link rel="preload" href="fonts/figtree-latin.woff2" as="font" type="font/woff2" crossorigin />
+<!-- How it looks: the stylesheets in styles/, joined in order into one file (files.txt lists them). -->
+<link rel="stylesheet" href="built/app.css" />
+</head>
+<body>
+<div id="frame" class="frame">
+  <div class="paper"><main id="view" tabindex="-1"></main></div>
+</div>
+<nav class="nav-bar" id="navbar" aria-label="Sections" hidden></nav>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<noscript><p>This app needs JavaScript turned on.</p></noscript>
+<!-- The scripts: app.js and every module it imports, joined into one file (files.txt says how). -->
+<script type="module" src="built/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+/* The band on top of Today, People and Messages (DESIGN.md 9.1): from the
+   top of the screen, 92px under the safe area, with its grain; the title
+   (34px light capitals) and its two ring buttons on one line; the mark (an
+   arc with three stops: a mango arc, teal and white stops) at its foot; the
+   label line (the place, a hairline, the date); then four steps fading into
+   the paper. The short band, on a person's page (9.3): back, the place on
+   the hairline, the ... menu, then two steps. (components/band.js draws them.) */
+.band {
+  position: relative; flex: none; display: flex; align-items: flex-start; gap: 8px; height: 92px; margin: 0 -16px 53px; padding: 8px 8px 0 16px;
+  background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal; color: var(--partner);
+}
+.band::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 41.4px; pointer-events: none;
+  background: linear-gradient(var(--step1) 0 14px, var(--step2) 14px 25.2px, var(--step3) 25.2px 34.2px, var(--step4) 34.2px); }
+.band-title { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 300 34px/40px var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--partner); }
+.band-btns { display: flex; flex: none; }
+.band-mark { position: absolute; left: 16px; bottom: 0; width: 80px; height: 40px; pointer-events: none; }
+.band-line { position: absolute; left: 108px; right: 16px; top: 68px; display: flex; align-items: center; gap: 10px; margin: 0;
+  font: 500 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: var(--band-small); }
+.band-line b { font-weight: 700; }
+.band-rule { flex: 1; height: 1px; background: var(--partner); }
+.band-date { font-variant-numeric: tabular-nums; }
+.band.band-short { height: 56px; justify-content: space-between; margin-bottom: 48px; padding: 6px 8px 0; }
+.band-short::after { height: 18px; background: linear-gradient(var(--step1) 0 10px, var(--step3) 10px); }
+.band-short .band-line { left: 64px; right: 64px; top: 21px; }
+/* A ring button (DESIGN.md 8): a 44px target, a 40px ring 1.5px thick. */
+.ring-btn { display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; color: inherit; }
+.ring-btn > span { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
+/* The notebooks button is the suite's: Rounds on its own has no shelf to go back to. */
+html:not(.df-suite) [data-books] { display: none; }
+/* A list's heading: its name in small capitals, a count, an action at the right. */
+.list-head { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.list-head h2 { margin: 0; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.list-head h2 span { font-weight: 500; color: var(--dim); font-variant-numeric: tabular-nums; }
+.list-act { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 8px; margin-right: -8px; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.list-act svg { width: 16px; height: 16px; }
+.label { margin: 0; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.note { margin: 8px 0 0; font: 400 15px/21px var(--ui); color: var(--dim); }
