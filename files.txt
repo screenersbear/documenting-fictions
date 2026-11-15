@@ -2,9 +2,11 @@
 # each built/ name, in this order, into that one file, and index.html loads the
 # built file: one trip to the server instead of one per file.
 # After changing, adding or removing a file listed here, run: node tools/join.mjs
+# "smaller" after a built name: its comments and extra spaces are taken out
+# (tools/smaller.mjs), so the page arrives sooner. Read the files listed, not it.
 
 # How it looks, in the order the rules apply.
-built/app.css
+built/app.css smaller
   styles/shelf.css
   styles/cover.css
   styles/cover-stickers.css
@@ -20,7 +22,7 @@ built/app.css
   styles/type.css
 
 # What it does, in the order the scripts run.
-built/app.js
+built/app.js smaller
   components/colors.js
   components/books.js
   data/sticker-store.js

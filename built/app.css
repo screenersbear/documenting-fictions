@@ -1,41 +1,35 @@
 /* Made by tools/join.mjs from the files listed in files.txt. Never edit it: change those files, then run node tools/join.mjs. */
 
 /* ---- styles/shelf.css ---- */
-/* Documenting Fictions: the shelf. The four notebooks float shut on paper on a
-   turntable; swipe to bring one round, tap it to open it. */
-
 :root {
-  --text: #313d45; /* berry blade black */
-  --paper: #FAFAF7;
-  --dim: #5C666D;
-  --safe-t: env(safe-area-inset-top, 0px);
-  --safe-b: env(safe-area-inset-bottom, 0px);
+--text: #313d45;
+--paper: #FAFAF7;
+--dim: #5C666D;
+--safe-t: env(safe-area-inset-top, 0px);
+--safe-b: env(safe-area-inset-bottom, 0px);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--paper); color: var(--text); overflow: hidden; overscroll-behavior: none; }
 body { font-family: "Figtree", "Helvetica Neue", Arial, sans-serif; }
 button { font: inherit; color: inherit; }
-
-.shelf { position: fixed; inset: 0; overflow: hidden; background: var(--paper); padding-top: var(--safe-t); } /* (the padding only tells app.js where the top is) */
-/* The quiet title, top left. */
+.shelf { position: fixed; inset: 0; overflow: hidden; background: var(--paper); padding-top: var(--safe-t); }
 .shelf-title { position: absolute; left: 16px; top: max(16px, calc(var(--safe-t) + 7px)); margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .16em; line-height: 16px; text-transform: uppercase; pointer-events: none; transition: opacity .3s; }
 .shelf.away .shelf-title { opacity: 0; }
 .stage {
-  --W: 242px; --H: calc(var(--W) * 1.36); --T: calc(var(--W) * 0.19); --y: 60%;
-  position: absolute; inset: 0; perspective: 1100px; perspective-origin: 50% 40%;
-  touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab;
-  transform-origin: 0 0; transition: opacity .25s;
+--W: 242px; --H: calc(var(--W) * 1.36); --T: calc(var(--W) * 0.19); --y: 60%;
+position: absolute; inset: 0; perspective: 1100px; perspective-origin: 50% 40%;
+touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab;
+transform-origin: 0 0; transition: opacity .25s;
 }
-.stage.waiting { opacity: 0; } /* until the covers are in (app.js whenArtIn) */
+.stage.waiting { opacity: 0; }
 .stage.measuring, .stage.measuring * { transition: none !important; }
 .stage.zooming { transition: transform var(--zoom-ms, 760ms) cubic-bezier(.5, 0, .2, 1); }
 .slot { position: absolute; left: 50%; top: var(--y); width: 0; height: 0; transform-style: preserve-3d; }
 .slot.turning { transition: transform 420ms cubic-bezier(.4, 0, .2, 1); }
-.slot.reshaping { transition: transform 620ms cubic-bezier(.4, 0, .2, 1); } /* ring, dominoes, row */
+.slot.reshaping { transition: transform 620ms cubic-bezier(.4, 0, .2, 1); }
 .float { position: absolute; transform-style: preserve-3d; animation: nbFloat 5.2s ease-in-out infinite; }
 @keyframes nbFloat { 0%, 100% { transform: translateY(-7px) rotateZ(-0.7deg) rotateY(-2deg); } 50% { transform: translateY(7px) rotateZ(0.7deg) rotateY(2deg); } }
 .slot.still .float, .slot.still .ground { animation: none; }
-
 .book { position: absolute; left: calc(var(--W) / -2); top: calc(var(--H) / -2); width: var(--W); height: var(--H); transform-style: preserve-3d; }
 .book > div, .leaf > div { position: absolute; box-sizing: border-box; }
 .face { left: 0; top: 0; width: 100%; height: 100%; border-radius: 0 calc(var(--W) * .035) calc(var(--W) * .035) 0; }
@@ -46,66 +40,44 @@ button { font: inherit; color: inherit; }
 .top { left: calc(var(--W) * .01); width: calc(var(--W) * .975); height: var(--T); top: calc(var(--H) * .012 - var(--T) / 2); transform: rotateX(90deg); background: repeating-linear-gradient(0deg, #fdfdfd 0 1.6px, #e2e2e2 1.6px 2.3px); }
 .spine { top: 0; height: 100%; width: var(--T); left: calc(var(--T) / -2); transform: rotateY(-90deg); background: var(--c); }
 .spine::after { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, .22); }
-/* The first page, under the cover: the notebook's own page art, white inside a rim of the cover. */
 .page { background: #fff var(--block) center / 100% 100% no-repeat; transform: translateZ(calc(var(--T) / 2 - 1px)); }
 .tab { left: calc(var(--W) * .975); border-radius: 0 calc(var(--W) * .03) calc(var(--W) * .03) 0; display: flex; align-items: center; justify-content: center; background: var(--text); color: var(--paper); }
-.tab.light { background: var(--c25); color: var(--text); } /* the light step of the book's colour (components/colors.js) */
+.tab.light { background: var(--c25); color: var(--text); }
 .tab span { writing-mode: vertical-rl; font-size: calc(var(--W) * .04); font-weight: 600; white-space: nowrap; transform: translateX(calc(var(--W) * .006)); letter-spacing: .02em; pointer-events: none; }
-
-/* The cover swings open on the spine. */
 .leaf { left: 0; top: 0; width: 100%; height: 100%; transform-style: preserve-3d; transform-origin: 0 50%; transform: translateZ(calc(var(--T) / 2)) rotateY(0deg); }
 .slot.opening .leaf { transition: transform var(--open-ms, 900ms) cubic-bezier(.45, .05, .3, 1); }
 .slot.open .leaf { transform: translateZ(calc(var(--T) / 2)) rotateY(-178deg); }
 .inside { background: #fff; border-radius: calc(var(--W) * .035) 0 0 calc(var(--W) * .035); transform: rotateY(180deg) translateZ(.5px); backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: inset 0 0 0 calc(var(--W) * .012) var(--c); }
 .fog { background: #fff; transform: translateZ(.6px); pointer-events: none; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .lip { top: calc(var(--W) * .035); height: calc(var(--H) - var(--W) * .07); width: calc(var(--W) * .012); left: calc(var(--W) * .994); transform: translateZ(calc(var(--W) * -.006)) rotateY(90deg); background: var(--c); filter: brightness(.82); }
-/* The same colour as brightness(.82) gives, without a filter to run on every frame (the shelf lagged as it moved, 11-12). */
 @supports (background: color-mix(in srgb, red 50%, #000)) { .lip { background: color-mix(in srgb, var(--c) 82%, #000); filter: none; } }
-/* The first page is only seen once the cover opens: under the shut cover it isn't drawn at all. */
 .slot:not(.opening):not(.open) .page { visibility: hidden; }
-
 .ground { position: absolute; left: calc(var(--W) * -0.55); top: calc(var(--H) / 2 + var(--W) * .02); width: calc(var(--W) * 1.1); height: calc(var(--W) * .5); transform-origin: 50% 0; transform: rotateX(90deg); background: radial-gradient(closest-side, rgba(40, 42, 48, .34), rgba(40, 42, 48, .14) 55%, rgba(40, 42, 48, 0)); animation: nbGround 5.2s ease-in-out infinite; }
 @keyframes nbGround { 0%, 100% { opacity: .78; transform: rotateX(90deg) scale(1.06); } 50% { opacity: 1; transform: rotateX(90deg) scale(.96); } }
 .slot.open .ground { opacity: 0; transition: opacity .3s; }
-
 @media (prefers-reduced-motion: reduce) { .float, .ground { animation: none; } }
 
 /* ---- styles/cover.css ---- */
-/* A notebook's cover (DESIGN.md 9.8): flat colour with a faint grain, the
-   notebook's mark big in the middle, its name in the partner colour near the
-   foot. Stickers go over it (styles/cover-stickers.css). */
 :root {
-  /* Paper grain: fractal noise at 14%, laid over the colour (DESIGN.md 11). A picture drawn once, not a filter run on every frame. */
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='.14'/%3E%3C/svg%3E");
+--grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='.14'/%3E%3C/svg%3E");
 }
 .front { background: var(--grain) 0 0 / 160px 160px, var(--c); background-blend-mode: overlay, normal; box-shadow: inset calc(var(--W) * .029) 0 0 rgba(0, 0, 0, .08); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-/* The mark 40% of the cover's width, 30% down; the name 8% up from the foot
-   (round 2). The same cover in every arrangement, scaled with the book. */
 .cover-mark { position: absolute; left: 30%; top: 30%; width: calc(var(--W) * .4); height: calc(var(--W) * .4); }
 .cover-name { position: absolute; left: 0; right: 0; bottom: 8%; text-align: center; font-size: calc(var(--W) * .044); font-weight: 700; letter-spacing: .18em; line-height: 1; text-transform: uppercase; white-space: nowrap; color: var(--p); pointer-events: none; }
 
 /* ---- styles/cover-stickers.css ---- */
-/* Stickers on a cover (components/stickers.js), and round its fore-edge. */
 .front .stickers { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
-/* Its edge (round 3): White border (a thick white die-cut edge, 1.2% of the
-   cover) or Black outline (an ink line, 1% of it, round 5: 2.5px against 3px
-   of white); either way a thin lift shadow under it, so it sits on the cover
-   (round 4). Turned as it was placed (--turn, round 5). */
 .sticker { position: absolute; aspect-ratio: var(--r, 1); transform: translate(-50%, -50%) rotate(var(--turn, 0deg)); padding: calc(var(--W) * .012); background: #FFFFFF; box-shadow: 0 calc(var(--W) * .006) calc(var(--W) * .01) calc(var(--W) * .004) rgba(49, 61, 69, .35); overflow: hidden; pointer-events: none; isolation: isolate; }
 .sticker.square, .sticker.rect { border-radius: calc(var(--W) * .012); }
 .sticker.circle { border-radius: 50%; }
 .sticker.printed { padding: 0; background: none; }
 .sticker.outline { padding: 0; background: none; box-shadow: 0 0 0 max(1px, calc(var(--W) * .01)) #313D45, 0 calc(var(--W) * .006) calc(var(--W) * .01) calc(var(--W) * .004) rgba(49, 61, 69, .35); }
 .sticker .photo { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; -webkit-touch-callout: none; }
-/* The vinyl (components/sticker-art.js): grain and wrinkles in soft light,
-   the wrinkles stronger toward the edges, the sheen screened on, one faint
-   fold and a soft diagonal gloss. The photo keeps its colours. */
 .sticker .vinyl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: inherit; pointer-events: none; }
 .sticker .vinyl.grain { mix-blend-mode: soft-light; opacity: .55; }
 .sticker .vinyl.wrinkle { mix-blend-mode: soft-light; opacity: .9; -webkit-mask-image: radial-gradient(closest-side, rgba(0, 0, 0, .45) 30%, #000 100%); mask-image: radial-gradient(closest-side, rgba(0, 0, 0, .45) 30%, #000 100%); }
 .sticker .vinyl.sheen { mix-blend-mode: screen; opacity: .2; }
 .sticker .gloss { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(118deg, rgba(255, 255, 255, 0) 26%, rgba(255, 255, 255, .14) 42%, rgba(255, 255, 255, 0) 54%); }
-/* Past the cover's edge it bends over: shaded where it bends. */
 .bend { position: absolute; z-index: 2; pointer-events: none; }
 .bend.r, .bend.l { top: 0; bottom: 0; }
 .bend.t, .bend.b { left: 0; right: 0; }
@@ -116,29 +88,17 @@ button { font: inherit; color: inherit; }
 .leaf > .sticker-flap { left: 100%; top: 0; width: var(--T); height: 100%; overflow: hidden; transform-origin: 0 50%; transform: translateZ(1px) rotateY(90deg); pointer-events: none; }
 .sticker-flap .sticker { filter: brightness(.84); box-shadow: none; }
 .slot.open .sticker-flap { visibility: hidden; }
-/* Cut out (round 5): the picture's own outline, with its white border or black
-   outline already painted in. Everything in it (picture, vinyl, gloss, bends)
-   is clipped to its shape (--cut), and the lift shadow follows the shape. */
 .sticker.cut, .sticker.cut.outline { padding: 0; background: none; border-radius: 0; box-shadow: none; overflow: visible; filter: drop-shadow(0 calc(var(--W) * .006) calc(var(--W) * .006) rgba(49, 61, 69, .35)); }
 .sticker .cut-in { position: absolute; inset: 0; -webkit-mask: var(--cut) center / 100% 100% no-repeat; mask: var(--cut) center / 100% 100% no-repeat; }
 .sticker-flap .sticker.cut { filter: brightness(.84); }
 
 /* ---- styles/shelf-spread.css ---- */
-/* Spread (round 2, 03-shelf-spread): the books big and overlapping, lying
-   back on the table like covers spread out. Still 3D: the page block shows at
-   the foot and the fore-edge, and each casts a soft shadow. They don't float,
-   their tabs are hidden (open a book to reach its sections), and under them
-   only the Options button stays. Also the arrangement marks at the right
-   edge (pages/shelf-marks.js). */
 .foot { display: none; }
 .stage.is-spread .foot { display: block; left: calc(var(--W) * .01); width: calc(var(--W) * .975); height: var(--T); top: calc(var(--H) * .988 - var(--T) / 2); transform: rotateX(90deg); background: repeating-linear-gradient(0deg, #FFFFFF 0 1.5px, #E6E6E1 1.5px 3px); }
 .stage.is-spread .float, .stage.is-spread .ground { animation: none; }
-.stage.is-spread .ground, .stage.is-spread .slot:not(.near) .tab { display: none; } /* up close for Options, its tabs show again */
+.stage.is-spread .ground, .stage.is-spread .slot:not(.near) .tab { display: none; }
 .stage.is-spread .back { box-shadow: 0 calc(var(--W) * .066) calc(var(--W) * .066) rgba(49, 61, 69, .22); }
 .shelf.is-spread :is(.front-name, .front-line, .front-dots) { visibility: hidden; }
-
-/* The marks: one for each arrangement, the one in use long; its name in a
-   small ink pill beside them for a moment after a swipe. */
 .shape-marks { position: absolute; right: 10px; top: 42.6%; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; transition: opacity .3s; }
 .shape-marks i { width: 6px; height: 6px; border-radius: 3px; background: #D6DADD; transition: height .2s, background-color .2s; }
 .shape-marks i.on { height: 18px; background: var(--text); }
@@ -147,55 +107,37 @@ button { font: inherit; color: inherit; }
 .shelf.away :is(.shape-marks, .shape-name) { opacity: 0; }
 
 /* ---- styles/shelf-bar.css ---- */
-/* Up close (Options): the book in front on its own, the others gone. */
 .slot.nearing { transition: transform 560ms cubic-bezier(.4, 0, .2, 1); }
 .stage.near .slot:not(.near) :is(.face, .spine, .top, .edge, .tab, .lip, .ground, .sticker-flap) { opacity: 0 !important; transition: opacity .3s; }
 .stage.unnear .slot :is(.face, .spine, .top, .edge, .tab, .lip, .ground, .sticker-flap) { transition: opacity .3s; }
-
-/* Under the books (pages/shelf-caption.js): the front book's name and a line
-   about it, a dot for each notebook, and the Options ring button, over the
-   bottom safe area (DESIGN.md 9.8). */
-.shelf-bar { position: absolute; left: 16px; right: 16px; bottom: max(16px, var(--safe-b)); display: flex; flex-direction: column; align-items: center; text-align: center; pointer-events: none; user-select: none; -webkit-user-select: none; transition: opacity .3s; } /* a swipe over the words still turns the shelf */
-.front-name { min-height: 16px; margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .14em; line-height: 16px; text-transform: uppercase; } /* min-heights: app.js places the books from the bar before the words are in */
+.shelf-bar { position: absolute; left: 16px; right: 16px; bottom: max(16px, var(--safe-b)); display: flex; flex-direction: column; align-items: center; text-align: center; pointer-events: none; user-select: none; -webkit-user-select: none; transition: opacity .3s; }
+.front-name { min-height: 16px; margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .14em; line-height: 16px; text-transform: uppercase; }
 .front-line { min-height: 22px; margin: 4px 0 0; font-size: 17px; font-weight: 300; line-height: 22px; color: var(--dim); }
 .front-dots { display: flex; gap: 8px; margin-top: 28px; }
 .front-dots span { width: 6px; height: 6px; border-radius: 3px; background: #D6DADD; transition: width .2s, background-color .2s; }
 .front-dots span.on { width: 18px; background: var(--text); }
-/* Options (round 5): a 52px disc in the front notebook's colour, three dots
-   in its partner colour (7, 5.5, 4px, 4px apart), no ring. Where the 44px
-   ring button was, so nothing above it moves. */
 .opts-disc { display: flex; align-items: center; justify-content: center; gap: 4px; width: 52px; height: 52px; margin-top: 40px; padding: 0; border: 0; border-radius: 50%; background: var(--disc, #FFD100); cursor: pointer; pointer-events: auto; transition: background-color .25s; }
 .opts-disc i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--dots, #313D45); transition: background-color .25s; }
 .opts-disc i + i { width: 5.5px; height: 5.5px; }
 .opts-disc i + i + i { width: 4px; height: 4px; }
 .shelf.away .shelf-bar { opacity: 0; pointer-events: none; }
-/* Coming back from a notebook: hidden from the first paint (index.html, app.js). */
 html.arriving .shelf-bar { opacity: 0; transition: none; }
-/* The iPhone home-screen app (components/screen-fit.js): for a moment the page is
-   taller than the screen, so iOS measures itself again. If it stays short,
-   the bar comes down by that much less. */
 html.ios-nudge, html.ios-hold { overflow-x: clip; overflow-y: visible; }
 html.ios-nudge body, html.ios-hold body { height: auto; min-height: calc(var(--screen-h, 100vh) + 160px); overflow-x: clip; overflow-y: visible; }
 html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by, 0px))); }
-/* Installed, the bar shows once iOS has its height right (components/screen-fit.js
-   adds .settled), so it never shows high and then drops. */
 @media (display-mode: standalone) { html:not(.settled) .shelf-bar { opacity: 0; pointer-events: none; } }
 
 /* ---- styles/ring-button.css ---- */
-/* A ring button (DESIGN.md 8): a 44px target, a 40px ring 1.5px thick, the
-   glyph in the middle. Options under the shelf, Close in the sheet. */
 .ring-btn { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; background: none; color: var(--text); cursor: pointer; flex: none; }
 .ring-btn > span { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
 .ring-btn svg { width: 18px; height: 18px; fill: currentColor; }
 .ring-btn svg[fill="none"] { fill: none; }
 
 /* ---- styles/sheet.css ---- */
-/* The sheet that comes up from the foot of the screen (DESIGN.md 9.5), and
-   the options in it: the notebook's colours and its stickers. */
 .sheet-dim { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-end; justify-content: center; background: rgba(49, 61, 69, 0); transition: background .2s; }
 .sheet-dim.in { background: rgba(49, 61, 69, .28); }
 .sheet { width: 100%; max-width: 480px; box-sizing: border-box; padding: 0 16px calc(16px + var(--safe-b)); border-radius: 20px 20px 0 0; background: #fff; color: var(--text); box-shadow: 0 -2px 16px rgba(49, 61, 69, .08); transform: translateY(100%); transition: transform .22s ease-out; }
-.sheet::before { content: ''; display: block; width: 36px; height: 5px; margin: 8px auto 14px; border-radius: 3px; background: #D6DADD; } /* the grabber */
+.sheet::before { content: ''; display: block; width: 36px; height: 5px; margin: 8px auto 14px; border-radius: 3px; background: #D6DADD; }
 .sheet-dim.in .sheet { transform: none; }
 .sheet-dim.near, .sheet-dim.near.in { background: transparent; }
 .sheet.opts { max-height: calc(100% - 140px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -207,11 +149,9 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .opt-colors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .opt-color { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 0; border: 0; background: none; color: var(--text); font-size: 13px; text-align: left; cursor: pointer; }
 .opt-swatch { position: relative; display: block; height: 52px; border-radius: 8px; background: var(--sw); }
-.opt-swatch::before { content: ''; position: absolute; left: 10px; top: 12px; width: 32px; height: 4px; border-radius: 2px; background: var(--sp); } /* its partner */
+.opt-swatch::before { content: ''; position: absolute; left: 10px; top: 12px; width: 32px; height: 4px; border-radius: 2px; background: var(--sp); }
 .opt-color[aria-checked="true"] { font-weight: 700; }
 .opt-color[aria-checked="true"] .opt-swatch { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--text); }
-/* STICKERS with REMOVE ONE beside it, then one ADD A STICKER button and a
-   line on what comes next (round 5: shape and edge are picked while placing). */
 .opt-label-row { display: flex; align-items: center; justify-content: space-between; margin: 12px 0 4px; }
 .opt-label-row .opt-label { margin: 0; }
 .label-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 0 0 8px; border: 0; background: none; color: var(--dim); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
@@ -228,10 +168,6 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .sticker-pick img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 /* ---- styles/sticker-new.css ---- */
-/* Placing a new sticker (round 5, components/sticker-place.js): NEW STICKER
-   and the notebook's name at the top; the book up close with the sticker on
-   it, a dashed line round it while it's placed; under it a white sheet with
-   the hint, SHAPE and EDGE as segmented controls, and BACK and STICK IT ON. */
 .place-layer { position: fixed; inset: 0; z-index: 1100; touch-action: none; }
 .place-label { position: absolute; left: 16px; top: max(16px, calc(var(--safe-t) + 15px)); margin: 0; font-size: 11px; font-weight: 500; letter-spacing: .12em; line-height: 14px; text-transform: uppercase; color: var(--dim); pointer-events: none; }
 .place-sheet { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px max(16px, calc((100% - 560px) / 2)) max(16px, var(--safe-b)); border-radius: 20px 20px 0 0; background: #FFFFFF; box-shadow: 0 -2px 16px rgba(49, 61, 69, .08); touch-action: auto; }
@@ -248,26 +184,21 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .seg-mark.white { width: 16px; height: 16px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 0 0 1px #E1E1DC; }
 .seg-mark.outline { width: 16px; height: 16px; border-radius: 50%; }
 .seg-mark.cut { width: 16px; height: 16px; box-shadow: none; }
-/* Cut out at work: a bar filling as it goes, in place of the hint; then, if
-   it found nothing clear, why, and USE CARD (a text button, its line no taller). */
 .place-hint .cut-bar { display: inline-block; vertical-align: middle; width: 60px; height: 4px; margin: -2px 10px 0 0; border-radius: 2px; background: #EFEFEA; overflow: hidden; }
 .place-hint .cut-bar > span { display: block; height: 100%; background: var(--text); }
 .place-card { position: relative; margin: 0 0 0 4px; padding: 0 4px; border: 0; background: none; color: var(--text); font: inherit; font-size: 12px; font-weight: 700; line-height: inherit; letter-spacing: .12em; text-transform: uppercase; vertical-align: top; cursor: pointer; }
-.place-card::before { content: ""; position: absolute; inset: -12px -4px; } /* 44px to tap */
+.place-card::before { content: ""; position: absolute; inset: -12px -4px; }
 .place-foot { display: flex; gap: 8px; margin-top: 20px; }
 .place-foot .sheet-btn { flex: 1 1 auto; width: auto; margin-top: 0; padding: 0 20px; }
 .place-foot .sheet-btn.primary { flex: 1.4 1 auto; padding: 0; }
 .sticker.placing { outline: 1.5px dashed rgba(49, 61, 69, .5); outline-offset: calc(var(--W) * .02); }
 
 /* ---- styles/toast.css ---- */
-/* The toast: a word at the foot of the screen. */
 .toast { position: fixed; left: 50%; bottom: calc(24px + var(--safe-b)); z-index: 1200; display: flex; align-items: center; gap: 14px; max-width: calc(100% - 32px); padding: 11px 16px; border-radius: 12px; background: #334045; color: #fff; font-size: 15px; transform: translate(-50%, 16px); opacity: 0; transition: transform .2s, opacity .2s; }
 .toast.in { transform: translate(-50%, 0); opacity: 1; }
 .toast button { padding: 0; border: 0; background: none; color: #ffd100; font-size: 15px; cursor: pointer; }
 
 /* ---- styles/sheet-words.css ---- */
-/* The sheet's words and buttons: the title in section type, buttons in
-   button type (DESIGN.md 5.1, 9.5). */
 .sheet h2 { margin: 0 0 8px; font-size: 13px; font-weight: 700; letter-spacing: .12em; line-height: 16px; text-transform: uppercase; }
 .sheet p { margin: 0 0 16px; font-size: 15px; line-height: 1.45; }
 .sheet .sheet-note { margin: 12px 0 0; text-align: center; }
@@ -278,15 +209,8 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .sheet-btn:disabled { opacity: .6; }
 
 /* ---- styles/shared/connect.css ---- */
-/* How the notebooks connect, the looks every notebook shares (round 2,
-   connect/NOTES.md): the two minis with an arrow, a slip at the top of a
-   list ("FROM THE EYE"), and the rows of what passed on and came in.
-   The markup comes from shared/data/connect.js. This is the master copy:
-   tools/sync.py shared copies it into each notebook's styles/shared/. */
 .df-pair { flex: none; display: inline-flex; align-items: center; gap: 4px; color: #313D45; }
 .df-mini { flex: none; display: inline-flex; width: 20px; height: 20px; border-radius: 4px; }
-
-/* PASSED ON and CAME IN: a record, each row opening the other notebook. */
 .df-record { margin-top: 8px; border-top: 1px solid #313D45; }
 .df-record-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 0; border: 0; border-bottom: 1px solid #E1E1DC; background: none; color: #313D45; font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
 .df-record-row[aria-disabled="true"] { cursor: default; }
@@ -295,11 +219,6 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .df-record-line { display: block; margin-top: 2px; font-size: 14px; line-height: 19px; color: #5C666D; }
 .df-record-chev { flex: none; display: inline-flex; color: #9AA3A8; }
 .df-record-chev svg { width: 18px; height: 18px; }
-
-/* A slip at the top of a notebook's list (connect/03, 05, 06): white, the
-   Rounds card shadow, a notched FROM tag in the sender's colours, a light
-   title, one dim line, what it brought, then the main button (in the
-   receiving notebook's colour: --df-slip-main, --df-slip-main-text) and NOT NOW. */
 .df-slip { margin-top: 12px; padding: 14px 14px 10px; border-radius: 8px; background: #FFFFFF; color: #313D45; box-shadow: 0 1px 0 #E1E1DC, 0 10px 24px rgba(49, 61, 69, .10); }
 .df-slip-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .df-slip-tag { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 20px 0 4px; border-radius: 3px 0 0 3px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); font-size: 11px; font-weight: 700; letter-spacing: .12em; line-height: 14px; text-transform: uppercase; white-space: nowrap; }
@@ -312,11 +231,8 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .df-slip-later { height: 44px; padding: 0 12px; border: 0; background: none; color: #5C666D; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
 
 /* ---- styles/shelf-connect.css ---- */
-/* How the notebooks connect (pages/shelf-connect.js): HOW THEY CONNECT,
-   its row in Options, and the slips tucked into the covers. */
 .opt-row { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 52px; margin-top: 18px; padding: 0; border: 0; border-top: 1px solid #E1E1DC; border-bottom: 1px solid #E1E1DC; background: none; color: var(--text); font: inherit; font-size: 17px; text-align: left; cursor: pointer; }
 .opt-row svg { width: 18px; height: 18px; color: var(--dim); }
-
 .connect-page { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; background: var(--paper); color: var(--text); opacity: 0; transform: translateX(24px); transition: opacity .2s ease-out, transform .2s ease-out; }
 .connect-page.in { opacity: 1; transform: none; }
 .connect-head { display: flex; align-items: center; gap: 10px; padding: calc(var(--safe-t, 0px) + 12px) 16px 6px 12px; }
@@ -333,12 +249,9 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .df-switch span { position: absolute; left: 3px; top: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(49, 61, 69, .25); transition: transform .15s; }
 .df-switch[aria-checked="true"] { background: var(--text); }
 .df-switch[aria-checked="true"] span { transform: translateX(20px); }
-
-/* A slip tucked behind the top edge of a notebook with a hand-off waiting. */
 .book > .cover-slip { left: 62%; top: calc(var(--W) * -.17); width: calc(var(--W) * .124); height: calc(var(--W) * .207); border-radius: 3px; display: flex; justify-content: center; padding-top: calc(var(--W) * .02); transform: translateZ(calc(var(--T) * .2)) rotate(7deg); box-shadow: 0 1px 2px rgba(49, 61, 69, .2); pointer-events: none; }
 .book > .cover-slip svg { width: calc(var(--W) * .09); height: calc(var(--W) * .09); }
 .slot.open .cover-slip, .slot.opening .cover-slip { visibility: hidden; }
 
 /* ---- styles/type.css ---- */
-/* ===== The shelf's type: Figtree only (DESIGN.md 5), the weights 300 to 700 in one file. ===== */
 @font-face { font-family: "Figtree"; src: url("../ref/fonts/figtree-latin.woff2") format("woff2"); font-weight: 300 900; font-display: swap; size-adjust: 96.5%; }
