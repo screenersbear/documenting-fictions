@@ -573,6 +573,8 @@
     <div class="menu-divider" aria-hidden="true"></div>
     <button type="button" class="options-item" id="shootMoreShareBtn">Share as PDF</button>
     <div class="menu-divider" aria-hidden="true" id="shootMoreShareDivider"></div>
+    <button type="button" class="options-item" id="shootMoreFinalsRefBtn" hidden>Send finals to Ref</button>
+    <div class="menu-divider" aria-hidden="true" id="shootMoreFinalsRefDivider" hidden></div>
     <button type="button" class="options-item options-delete" id="shootMoreDeleteBtn">Delete shoot</button>
     <div class="menu-divider" aria-hidden="true" id="shootMoreDeleteDivider"></div>
     <button type="button" class="options-item options-cancel" id="shootMoreCancelBtn">Go back</button>
@@ -596,6 +598,20 @@
     <h2 class="sheet-title" id="shootStatusSheetTitle">Change status</h2>
     <div id="shootStatusSheetList"></div>
     <button type="button" class="options-item options-cancel" id="shootStatusSheetCancelBtn">Cancel</button>
+  </div>
+</div>
+<div id="finalsRefOverlay" class="modal-overlay" hidden>
+  <div class="modal rounded-modal finals-ref opt-sheet" role="dialog" aria-modal="true" aria-labelledby="finalsRefTitle">
+    <div class="finals-ref-head"><span id="finalsRefPair"></span><h2 class="finals-ref-title" id="finalsRefTitle">Send finals to Ref?</h2>
+      <button type="button" class="finals-ref-close" id="finalsRefClose" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>
+    <p class="finals-ref-line" id="finalsRefLine"></p>
+    <div class="finals-ref-grid" id="finalsRefGrid"></div>
+    <p class="finals-ref-label">Tags</p>
+    <div class="finals-ref-tags" id="finalsRefTags"></div>
+    <div class="finals-ref-foot">
+      <button type="button" class="finals-ref-later" id="finalsRefLater">Not now</button>
+      <button type="button" class="finals-ref-send" id="finalsRefSend" disabled>Send to Ref</button>
+    </div>
   </div>
 </div>
 <!-- ============ LOCATION MODAL ============ -->

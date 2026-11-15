@@ -1,0 +1,29 @@
+/* Send finals to Ref? (round 2, connect/18): The Eye and Ref's marks with the
+   title in small caps and a Close ring; the line on how many are picked;
+   the finals three across, picked ones ringed in Ref's blue with a tick;
+   TAGS as pills (on: Ref's blue, off: paper grey, + Tag ringed); NOT NOW in
+   quiet caps beside SEND N TO REF. On the usual bottom sheet (modal.css);
+   opt-sheet keeps the old heading and weight rules off it, as on Options. */
+.finals-ref { padding: 10px 16px calc(24px + env(safe-area-inset-bottom)); border-color: var(--ink); color: #313D45; }
+.finals-ref-head { display: flex; align-items: center; gap: 10px; }
+.finals-ref-head .df-pair { flex: none; }
+#finalsRefOverlay .finals-ref-title { flex: 1; margin: 0; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: #313D45; } /* over .modal-overlay h2 */
+.finals-ref-close { flex: none; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-right: -8px; padding: 0; border: 0; background: none; color: #313D45; }
+.finals-ref-close svg { box-sizing: content-box; padding: 11px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #313D45; }
+.finals-ref-line { margin: 6px 0 0; font: 400 15px/21px var(--ui); color: #5C666D; }
+.finals-ref-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; max-height: 296px; overflow-y: auto; padding: 3px; }
+.finals-ref-pick { position: relative; display: block; aspect-ratio: 4 / 5; padding: 0; border: 0; border-radius: 4px; background: #EFEFEA; }
+.finals-ref-pick img { display: block; width: 100%; height: 100%; border-radius: 4px; object-fit: cover; }
+.finals-ref-pick[aria-checked="true"] { box-shadow: 0 0 0 3px #0A4FD6; }
+.finals-ref-tick { position: absolute; right: 6px; top: 6px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, .85); box-shadow: inset 0 0 0 1.5px #313D45; color: #fff; }
+.finals-ref-pick[aria-checked="true"] .finals-ref-tick { background: #0A4FD6; box-shadow: none; }
+.finals-ref-label { margin: 16px 0 8px; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: #5C666D; }
+.finals-ref-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.finals-ref-tag { display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 12px; border: 0; border-radius: 17px; background: #EFEFEA; font: 400 14px/18px var(--ui); letter-spacing: 0; color: #313D45; white-space: nowrap; }
+.finals-ref-tag[aria-pressed="true"] { background: #0A4FD6; color: #fff; }
+.finals-ref-add { background: none; box-shadow: inset 0 0 0 1.5px #313D45; }
+.finals-ref-new { height: 34px; width: 140px; padding: 0 12px; border: 0; border-radius: 17px; background: #fff; box-shadow: inset 0 0 0 1.5px #313D45; font: 400 14px/18px var(--ui); color: #313D45; outline: none; }
+.finals-ref-foot { display: flex; align-items: center; gap: 4px; margin-top: 24px; }
+.finals-ref-later { height: 44px; padding: 0 12px; border: 0; background: none; font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: #5C666D; }
+.finals-ref-send { flex: 1; height: 50px; padding: 0 18px; border: 0; border-radius: 8px; background: #0A4FD6; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: #fff; }
+.finals-ref-send:disabled { opacity: .4; }

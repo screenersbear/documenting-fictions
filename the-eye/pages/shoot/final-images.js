@@ -44,8 +44,10 @@ window.EyeParts.addShootFinalImages = function addShootFinalImages(ed) {
     // Belt-and-braces: the section is hidden for video, but a picker opened
     // just before a category flip could still land here.
     if (ed.isVideoCategory(document.getElementById('shootCategory').value)) return;
+    const shootId = ed.currentShootId;
+    let added = [];
     Promise.all(files.map(f => ed.resizeImageFile(f, 1280, 0.72)))
-      .then(newImages => ed.idbGetImages(ed.finalImagesKey(ed.currentShootId)).then(existing => {
+      .then(newImages => { added = newImages; return ed.idbGetImages(ed.finalImagesKey(ed.currentShootId)).then(existing => {
         const shouldSetCover = existing.length === 0 && newImages.length > 0;
         const combined = existing.concat(newImages.map(src => ({ src, caption: '' })));
         return ed.idbSetImages(ed.finalImagesKey(ed.currentShootId), combined).then(() => {
@@ -56,13 +58,15 @@ window.EyeParts.addShootFinalImages = function addShootFinalImages(ed) {
             });
           }
         });
-      }))
+      }); })
       .then(() => {
         ed.shootHasImages = true;
         ed.scheduleShootAutosave();
         renderFinalImages();
         return ed.passFinalsOn(ed.currentShootId).then(ed.renderPassedOn);
       })
+      // Then, in the suite: send any of the new ones to Ref? (finals-ref.js)
+      .then(() => ed.offerFinalsToRef(shootId, added.map(src => ({ src }))))
       .catch(ed.noteStorageFull);
   });
 };

@@ -12,6 +12,7 @@
   window.EyeParts.addPeopleOut(ed);
   window.EyeParts.addTalentSince(ed);
   window.EyeParts.addLessonsToRef(ed);
+  window.EyeParts.addFinalsTags(ed);
   window.EyeParts.addStatusSteps(ed);
   window.EyeParts.addHelpers(ed);
   // iOS Safari only computes :active styles on elements it thinks have a
@@ -137,6 +138,7 @@
   window.EyeParts.addShootReportCards(ed);
   window.EyeParts.addShootNextStep(ed);
   window.EyeParts.addShootStatusSheet(ed);
+  window.EyeParts.addFinalsToRef(ed);
   window.EyeParts.addShootStatusCard(ed);
   window.EyeParts.addToast(ed);
   window.EyeParts.addConfirm(ed);
