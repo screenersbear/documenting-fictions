@@ -29,7 +29,7 @@ describe('addPeopleOut', () => {
   it('adds what it shares, and keeps the parts already there', async () => {
     const ed = {};
     window.EyeParts.addPeopleOut(ed);
-    expect(Object.keys(ed)).toEqual(['peopleThings', 'tellPeople', 'takePeopleEdits']);
+    expect(Object.keys(ed)).toEqual(['peopleThings', 'tellPeople', 'takePeopleEdits', 'dayWords']);
     window.EyeParts.other = 1;
     await import('../../../the-eye/components/people-out.js?again');
     expect(window.EyeParts.other).toBe(1);

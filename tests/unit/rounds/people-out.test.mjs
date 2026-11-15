@@ -34,7 +34,7 @@ describe('personThing', () => {
       id: 'r1', kind: 'person', title: 'June Park', line: 'Check in, due 2 Dec', day: '2026-12-02',
       people: [{ name: 'June Park', instagram: 'junepark.jpg', tiktok: '', roundsId: 'r1', at: '2026-11-01T00:00:00.000Z' }],
       params: { person: 'r1' }, coverKey: '',
-      more: { next: { title: 'Check in', line: 'Due 2 Dec', bg: '#0A4FD6' }, group: 'Regular' },
+      more: { next: { title: 'Check in', line: 'Due 2 Dec', bg: '#0A4FD6' }, group: 'Regular', happened: [] },
     });
     expect(t.more.next.icon).toContain('<svg');
   });
@@ -73,10 +73,13 @@ describe('tellPeople', () => {
   it('tells the list its people a moment after the last change, and after every change from then on', async () => {
     await db.savePeople([person(), person({ id: 'r2', name: 'Leo', instagram: '' })]);
     await db.savePhoto('r2', new Uint8Array([1]).buffer, 'image/jpeg');
+    await db.logMove({ id: 'm1', personId: 'r1', kind: 'checkin', day: '2026-11-12', at: 1 });
     const spy = vi.spyOn(D, 'publishThings');
     R.tellPeople(0);
     await vi.waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
     await vi.waitFor(async () => expect((await D.thingsAll()).map((t) => [t.key, t.coverKey])).toEqual([['rounds:r1', ''], ['rounds:r2', 'own:r2']]));
+    // What's happened with each, from the moves log.
+    expect((await D.thingsAll()).map((t) => t.more.happened)).toEqual([[{ day: '2026-11-12', words: 'you checked in' }], []]);
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     R.tellPeopleFromNowOn();
     await db.savePerson(person({ name: 'June P.' }));

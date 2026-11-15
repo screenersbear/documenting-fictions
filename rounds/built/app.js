@@ -1464,7 +1464,7 @@ const comesUp = (next, today, week) => !!next && whenDue(next, week, today) <= t
 
 // data/today.js
 const PER_DAY = 3;
-const MOST = 5;
+const MOST$1 = 5;
 const rank = (k) => KIND_KEYS.indexOf(k);
 const perDayOf = (n) => Math.min(5, Math.max(1, Math.floor(Number(n)) || 3));
 const isDue = (p, today, week) => !p.letGo && comesUp(p.next, today, week);
@@ -3516,6 +3516,43 @@ const clientFor = (person, pitched) => ({
 	pitched: pitched || ""
 });
 
+// data/happened.js
+const DONE = {
+	thanks: "you said thanks",
+	yes: "you said thanks for the yes",
+	photos: "you let [whom] know the photos were up",
+	hello: "you said hello",
+	checkin: "you checked in",
+	intros: "you asked [whom] for intros",
+	refresh: "you offered [whom] a refresh",
+	followup: "you followed up",
+	pitch: "you pitched [whom]"
+};
+const ANSWERED = {
+	yes: "[who] said yes",
+	no: "[who] said not now"
+};
+const MOST = 5;
+function happened(person, lines = []) {
+	const first = firstName(person.name);
+	const fill = (s) => s.replace("[who]", first || "they").replace("[whom]", first || "them");
+	const done = lines.filter((l) => l.personId === person.id && DONE[l.kind] && l.day).map((l) => ({
+		day: l.day,
+		at: l.at || 0,
+		words: fill(DONE[l.kind])
+	}));
+	const pitch = person.pitch || {};
+	const answer = ANSWERED[pitch.answer] && pitch.on ? [{
+		day: pitch.on,
+		at: Infinity,
+		words: fill(ANSWERED[pitch.answer])
+	}] : [];
+	return [...done, ...answer].sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at).slice(0, MOST).map(({ day, words }) => ({
+		day,
+		words
+	}));
+}
+
 // data/people-out.js
 const D$1 = /* @__PURE__ */ __name(() => window.DFData, "D");
 function dueLine(next, week, today) {
@@ -3534,7 +3571,7 @@ async function shelfPageOf(p) {
 	const r = await D$1().personFor(listedAs(p)).catch(() => null);
 	return r ? D$1().personUrl(r.id) : null;
 }
-function personThing(p, today, week, ownPhoto) {
+function personThing(p, today, week, ownPhoto, lines = []) {
 	const next = p.next && !p.letGo ? p.next : null;
 	const what = next ? phrase(next.kind, p.name) : p.letGo ? "Let go" : "Nothing planned";
 	const when = next ? dueLine(next, week, today) : "";
@@ -3553,7 +3590,8 @@ function personThing(p, today, week, ownPhoto) {
 				bg: next ? KINDS[next.kind].bg : "#E1E1DC",
 				icon: next ? markSvg(next.kind, 10) : ""
 			},
-			group: GROUPS[p.group] || ""
+			group: GROUPS[p.group] || "",
+			happened: happened(p, lines)
 		},
 		coverKey: ownPhoto ? `own:${p.id}` : p.photoKey ? `eye:${p.photoKey}` : "",
 		covers: () => photoOf$1(p, ownPhoto)
@@ -3577,13 +3615,14 @@ function tellPeople(wait = 1500) {
 	clearTimeout(soon);
 	soon = setTimeout(async () => {
 		try {
-			const [people, week, ids] = await Promise.all([
+			const [people, week, ids, lines] = await Promise.all([
 				listPeople(),
 				getWeek(),
-				photoIds()
+				photoIds(),
+				listMoves()
 			]);
 			const own = new Set(ids);
-			await D$1().publishThings("rounds", people.map((p) => personThing(p, dayOf(), week, own.has(p.id))));
+			await D$1().publishThings("rounds", people.map((p) => personThing(p, dayOf(), week, own.has(p.id), lines)));
 		} catch (e) {}
 	}, wait);
 }

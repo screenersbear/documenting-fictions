@@ -42,21 +42,22 @@ window.EyeParts.addShootFrontCards = function addShootFrontCards(ed) {
     </div>`;
   }
 
-  // Who's in it: their photo, name, and whether they've been in a shoot before.
+  // Who's in it: their photo, name and handle, and whether they've been in
+  // a shoot before (their 4th shoot); under each, LAST TIME and Rounds' line
+  // (components/talent-since.js). Each opens Basic info.
+  const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`;
   function talentBlock(s) {
     const talents = (s.talents || []).filter(t => has(t.name));
-    const others = ed.state.shoots.filter(x => x.id !== s.id);
-    const returning = t => others.some(x => (x.talents || []).some(o => has(o.name) && o.name.trim().toLowerCase() === t.name.trim().toLowerCase()));
+    if (!talents.length) return frontTitle('Talent') + frontBlock('front-talents', 'basicInfoHeading', '<span class="front-empty"><span class="front-empty-big">No talent yet.</span><span>Add who it\'s with.</span></span>');
     const rows = talents.map((t) => {
       const handle = (t.socialHandles || []).map(h => h.handle || h.value || '').find(has);
-      const meta = ed.metaLine([returning(t) ? 'Returning talent' : '', handle ? `@${handle.replace(/^@/, '')}` : '']);
-      return `<span class="front-talent">
+      const past = ed.talentPast(t, s);
+      return `<div class="front-talent-card">${frontBlock('front-talent', 'basicInfoHeading', `
         <span class="front-talent-photo">${t.photo ? `<img src="${t.photo}" alt="" />` : ''}</span>
-        <span class="front-talent-words"><span class="front-talent-name">${esc(t.name)}</span>${meta ? `<span class="front-talent-meta">${esc(meta)}</span>` : ''}</span>
-      </span>`;
+        <span class="front-talent-words"><span class="front-talent-name">${esc(t.name)}</span>${handle ? `<span class="front-talent-meta">@${esc(handle.replace(/^@/, ''))}</span>` : ''}
+        ${past.count > 1 ? `<span class="front-talent-returning">Returning talent · ${ordinal(past.count)} shoot</span>` : ''}</span>`)}${ed.talentSinceHtml(t, s, past)}</div>`;
     }).join('');
-    return frontTitle('Talent') + frontBlock('front-talents', 'basicInfoHeading', rows
-      || '<span class="front-empty"><span class="front-empty-big">No talent yet.</span><span>Add who it\'s with.</span></span>');
+    return frontTitle('Talent') + `<div class="front-talents">${rows}</div>`;
   }
 
   // The first board from Ref, else the shoot's own photos, else how to add one.
@@ -112,6 +113,7 @@ window.EyeParts.addShootFrontCards = function addShootFrontCards(ed) {
     }
     box.innerHTML = html;
     if (box.querySelector('#shootPassedOn')) ed.renderPassedOn();
+    ed.fillTalentSince(box);
     // An empty shot list isn't on the front page, so it stays a row.
     if (!box.querySelector('[data-page="shotListHeading"]')) onFront = onFront.filter(k => k !== 'shotList');
     return onFront;

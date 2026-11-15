@@ -4,7 +4,8 @@
 // shared/data/people-things.js). And the other way: a person changed on that
 // page comes back into Rounds, their name and handles (and from here to the
 // other devices, like any change), unless Rounds changed them since.
-import { listPeople, savePeople, getPhoto, photoIds, onChange } from './db.js';
+import { listPeople, savePeople, getPhoto, photoIds, listMoves, onChange } from './db.js';
+import { happened } from './happened.js';
 import { eyePhoto } from './eye.js';
 import { KINDS, markSvg } from './kinds.js';
 import { phrase } from './reasons.js';
@@ -22,8 +23,6 @@ export function dueLine(next, week, today) {
   return `Due ${w === 'Today' || w === 'Tomorrow' ? w.toLowerCase() : w}`;
 }
 
-// A person as the list keeps them: their name, their next move ("Check in,
-// due 2 Dec"), their group, and their photo (asked for only when it changed).
 // A Rounds person as the list knows them: found again by their id.
 export const listedAs = (p) => ({ name: p.name, instagram: p.instagram, tiktok: p.tiktok, roundsId: p.id, at: p.updatedAt || '' });
 
@@ -35,7 +34,10 @@ export async function shelfPageOf(p) {
   return r ? D().personUrl(r.id) : null;
 }
 
-export function personThing(p, today, week, ownPhoto) {
+// A person as the list keeps them: their name, their next move ("Check in,
+// due 2 Dec"), their group, what's happened with them (lines: the moves log,
+// for The Eye's talent card) and their photo (asked for only when it changed).
+export function personThing(p, today, week, ownPhoto, lines = []) {
   const next = p.next && !p.letGo ? p.next : null;
   const what = next ? phrase(next.kind, p.name) : p.letGo ? 'Let go' : 'Nothing planned';
   const when = next ? dueLine(next, week, today) : '';
@@ -50,6 +52,7 @@ export function personThing(p, today, week, ownPhoto) {
     more: {
       next: { title: what, line: when, bg: next ? KINDS[next.kind].bg : '#E1E1DC', icon: next ? markSvg(next.kind, 10) : '' },
       group: GROUPS[p.group] || '',
+      happened: happened(p, lines),
     },
     coverKey: ownPhoto ? `own:${p.id}` : p.photoKey ? `eye:${p.photoKey}` : '',
     covers: () => photoOf(p, ownPhoto),
@@ -73,9 +76,9 @@ export function tellPeople(wait = 1500) {
   clearTimeout(soon);
   soon = setTimeout(async () => {
     try {
-      const [people, week, ids] = await Promise.all([listPeople(), getWeek(), photoIds()]);
+      const [people, week, ids, lines] = await Promise.all([listPeople(), getWeek(), photoIds(), listMoves()]);
       const own = new Set(ids);
-      await D().publishThings('rounds', people.map((p) => personThing(p, dayOf(), week, own.has(p.id))));
+      await D().publishThings('rounds', people.map((p) => personThing(p, dayOf(), week, own.has(p.id), lines)));
     } catch (e) { /* the list just doesn't hear this time */ }
   }, wait);
 }

@@ -12,6 +12,7 @@ window.EyeParts.addPeopleOut = function addPeopleOut(ed) {
   const D = () => window.DFData;
   // "7 Nov" for 2026-11-07 ('' for no day).
   const dayWords = (day) => { const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(day || ''); return m ? `${Number(m[2])} ${MONTHS[Number(m[1]) - 1]}` : ''; };
+  ed.dayWords = dayWords; // the talent card's LAST TIME says it too (talent-since.js)
   // A picture's key, to tell when it changed without reading it.
   const coverKey = (url) => (url ? `${url.length}:${url.slice(-24)}` : '');
 

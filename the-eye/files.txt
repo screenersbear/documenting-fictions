@@ -181,6 +181,7 @@ built/app.js smaller
   components/today-items.js
   components/shelf-items.js
   components/people-out.js
+  components/talent-since.js
   components/status-steps.js
   components/helpers.js
   components/held-upright.js
