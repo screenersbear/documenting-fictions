@@ -17,13 +17,13 @@
 <script>
 /* Launched while a notebook was open, the app goes straight back into it,
    before the shelf draws. Coming back from a notebook (?from) or with the
-   browser's back button, the shelf stays. */
+   browser's back button, or to a person's page (?person), the shelf stays. */
 (function () {
   try {
     var inside = localStorage.getItem('df-suite-in');
     var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
     var back = nav && nav.type === 'back_forward';
-    if (inside && !back && !/[?&]from=/.test(location.search) && /^(ref|the-eye|contact-sheet|overthoughts|rounds)$/.test(inside)) {
+    if (inside && !back && !/[?&](from|person)=/.test(location.search) && /^(ref|the-eye|contact-sheet|overthoughts|rounds)$/.test(inside)) {
       document.documentElement.style.visibility = 'hidden';
       location.replace(inside + '/');
     }

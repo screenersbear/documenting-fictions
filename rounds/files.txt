@@ -11,6 +11,8 @@ built/shared-data.js
   data/shared/links.js
   data/shared/connect.js
   data/shared/waiting.js
+  data/shared/people.js
+  data/shared/people-things.js
   data/shared/df-data.js
 
 # How it looks, in the order the rules apply.

@@ -451,6 +451,17 @@ describe('boards', () => {
     await db.deleteBoard('not-there');
     expect(await db.listBoards()).toHaveLength(1);
   });
+  it('tells everyone listening when a board is saved or deleted', async () => {
+    const one = vi.fn();
+    const two = vi.fn();
+    db.onBoardsChange(one);
+    db.onBoardsChange(two);
+    const b = await db.saveBoard(board('a', []));
+    expect(b.id).toBe('a');
+    await db.deleteBoard('a');
+    expect(one).toHaveBeenCalledTimes(2);
+    expect(two).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('stickers', () => {

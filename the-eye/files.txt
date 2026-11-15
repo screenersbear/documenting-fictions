@@ -22,6 +22,8 @@ built/shared-data.js smaller
   data/shared/links.js
   data/shared/connect.js
   data/shared/waiting.js
+  data/shared/people.js
+  data/shared/people-things.js
   data/shared/df-data.js
 
 # How it looks, in the order the rules apply.
@@ -178,6 +180,7 @@ built/app.js smaller
   components/shoot-stage.js
   components/today-items.js
   components/shelf-items.js
+  components/people-out.js
   components/status-steps.js
   components/helpers.js
   components/held-upright.js

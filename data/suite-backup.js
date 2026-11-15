@@ -7,8 +7,8 @@
 // phone never holds all four in memory: every notebook's database (Ref,
 // Contact Sheet, Rounds, and The Eye's photos, starky-moodboards; and
 // Overthoughts', kept though it's off the shelf since 14 Nov),
-// df-links (the boards sent from Ref to The Eye's shoots) and df-stickers
-// (the covers' stickers), plus from localStorage The Eye's shoots and
+// df-links (the boards sent from Ref to The Eye's shoots), df-stickers
+// (the covers' stickers) and df-people (the one list of people), plus from localStorage The Eye's shoots and
 // journal (dailies_state_v1) and each notebook's cover colour. A notebook's
 // own Restore takes its part out of this file too.
 //
@@ -16,7 +16,8 @@
 //   { app: 'documenting-fictions', kind: 'suite-backup', version: 1, exportedAt,
 //     notebooks: { ref, 'the-eye', 'contact-sheet', overthoughts, links, stickers } }, a part null
 //   if that notebook had nothing; one from before the stickers has no stickers part, and leaves
-//   them as they are) still go back in.
+//   them as they are, and none has a people part) still go back in. A zip from before 15 Nov
+//   has no df-people, and leaves the list of people as it is.
 (function () {
   'use strict';
   const D = window.DFData;
@@ -29,6 +30,7 @@
     { id: 'rounds', db: 'rounds', app: 'rounds', book: 'rounds-book' },
     { id: 'links', db: 'df-links', app: 'documenting-fictions', book: null }, // boards sent from Ref to The Eye's shoots
     { id: 'stickers', db: 'df-stickers', app: 'documenting-fictions', book: null }, // the stickers on the four covers (stickers.js)
+    { id: 'people', db: 'df-people', app: 'documenting-fictions', book: null }, // the one list of people (people.js): names changed and "Same person?" answers
   ];
   const EYE_STATE = 'dailies_state_v1';
   const EYE_LAST_BACKUP = 'dailies_last_backup_v1'; // The Eye's "Last backup", so its monthly reminder counts this one

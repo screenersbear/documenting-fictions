@@ -9,6 +9,7 @@
   window.EyeParts.addShootStage(ed);
   window.EyeParts.addTodayItems(ed);
   window.EyeParts.addShelfItems(ed);
+  window.EyeParts.addPeopleOut(ed);
   window.EyeParts.addStatusSteps(ed);
   window.EyeParts.addHelpers(ed);
   // iOS Safari only computes :active styles on elements it thinks have a
@@ -190,4 +191,7 @@
   window.EyeParts.addSwipeTabs(ed);
   window.EyeParts.addNavigator(ed);
   window.EyeParts.addBand(ed);
+  // The one list of people: a name changed on its page comes in first, then
+  // The Eye tells the list its shoots (components/people-out.js).
+  ed.takePeopleEdits().catch(() => 0).then(() => ed.tellPeople(3000));
 })();

@@ -354,6 +354,20 @@ describe('listProjects', () => {
   });
 });
 
+describe('hearing of layouts changing', () => {
+  it('tells everyone listening when a layout is saved, gets its thumb, or is deleted', async () => {
+    const one = vi.fn();
+    const two = vi.fn();
+    db.onProjectsChange(one);
+    db.onProjectsChange(two);
+    await db.saveProject({ id: 'p', name: 'A' });
+    await db.saveProjectThumb('p', 'thumb');
+    await db.deleteProject('p');
+    expect(one).toHaveBeenCalledTimes(3);
+    expect(two).toHaveBeenCalledTimes(3);
+  });
+});
+
 describe('saveProjectThumb', () => {
   it('sets the thumb without moving the project in the list', async () => {
     await db.saveProject({ id: 'p', name: 'A' });

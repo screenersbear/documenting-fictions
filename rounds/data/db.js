@@ -60,6 +60,11 @@ const drop = (store, key) => tx(store, 'readwrite', (s) => { s.delete(key); });
 // its own writes (applySync) are quiet.
 let heard = () => {};
 export const onSyncedChange = (fn) => { heard = fn; };
+// Anything else that hears of your changes (the one list of people,
+// data/people-out.js): photos too, which sync doesn't carry.
+const others = [];
+export const onChange = (fn) => { others.push(fn); };
+const tellOthers = () => others.forEach((fn) => fn());
 
 // Saves records that changed, stamped (when first made, when last changed);
 // one saved as it was is left alone, so nothing is sent for nothing. A
@@ -80,7 +85,7 @@ async function putStamped(store, list) {
       };
     }
   });
-  if (changed) heard();
+  if (changed) { heard(); tellOthers(); }
 }
 // Deletes a record, and keeps that it was deleted.
 async function dropStamped(store, key) {
@@ -90,6 +95,7 @@ async function dropStamped(store, key) {
     tombs.put({ id: key, store, deletedAt: now, createdAt: now, updatedAt: now });
   });
   heard();
+  tellOthers();
 }
 
 export const listPeople = () => all('people');
@@ -106,8 +112,10 @@ export async function getPhoto(id) {
   const r = await one('photos', id);
   return r ? new Blob([r.bytes], { type: r.type }) : null;
 }
-export const savePhoto = (id, bytes, type) => put('photos', { id, bytes, type });
-export const dropPhoto = (id) => drop('photos', id);
+export const savePhoto = (id, bytes, type) => put('photos', { id, bytes, type }).then(tellOthers);
+export const dropPhoto = (id) => drop('photos', id).then(tellOthers);
+// Whose photos there are (their ids), without reading the photos.
+export const photoIds = () => tx('photos', 'readonly', (s, set) => { s.getAllKeys().onsuccess = (e) => set(e.target.result); });
 
 // The rewritten starter messages, { kind: text }.
 export async function getMessages() {

@@ -296,6 +296,10 @@ describe('the loaded script', () => {
       'moveJournal', 'notebookUrl', 'nowIso', 'open', 'overthoughts', 'pickFile', 'pickFiles', 'pictureUrl', 'putMany', 'readBoardFile',
       'readEyeFile', 'reflectionId', 'reflections', 'restoreZip', 'rows', 'saveFile', 'saveLink', 'saveReflections', 'sizeText',
       'somethingToMove', 'todayStr', 'uid', 'zipBackup',
+      // The one list of people (people.js, people-things.js).
+      'cleanHandle', 'personKeys', 'findPerson', 'maybePairs', 'peopleAll', 'getPerson', 'gatherPeople', 'answerSame',
+      'editPerson', 'personFor', 'personUrl', 'PEOPLE_APPS', 'pictureOf', 'shootPeople', 'publishThings', 'thingsAll',
+      'personView', 'searchIn', 'searchAll',
     ].sort());
   });
   it('opens no database just by loading', async () => {

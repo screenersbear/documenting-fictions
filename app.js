@@ -130,6 +130,8 @@
   window.ShelfParts.addOptions(ed);
   window.ShelfParts.addConnect(ed);
   window.ShelfParts.addWaiting(ed);
+  window.ShelfParts.addPerson(ed);
+  window.ShelfParts.addPersonEdit(ed);
   window.ShelfParts.addToast(ed);
   window.ShelfParts.addOpening(ed);
 
@@ -157,6 +159,15 @@
     history.replaceState(null, '', location.pathname);
     if (quiet || ed.still()) { ed.settle(); store.set(FRONT_KEY, String(ed.fromAt)); }
     else { ed.busy = true; shelf.classList.add('away'); }
+  }
+  // A name tapped in a notebook (?person=<id>): their page, over the shelf.
+  // Its back button goes back to that notebook. (After this whole script has
+  // run: the shared files come after it.)
+  const personId = new URLSearchParams(location.search).get('person');
+  if (personId) {
+    history.replaceState(null, '', location.pathname);
+    const fromNotebook = /\/(ref|the-eye|contact-sheet|rounds|overthoughts)\//.test(document.referrer) && document.referrer.startsWith(location.origin);
+    queueMicrotask(() => ed.openPerson(personId, fromNotebook ? () => history.back() : null));
   }
   // index.html hid the bar from the first paint while a book comes back;
   // .away hides it from here (until the book has shut), so it never shows

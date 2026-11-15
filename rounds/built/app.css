@@ -335,6 +335,9 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .person-next-when { display: inline-flex; align-items: center; gap: 4px; font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
 .person-next-when svg { width: 12px; height: 12px; }
 .person-rest { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--text); }
+/* EVERYTHING WITH <NAME>: their page on the shelf (suite only). */
+.person-everything { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 8px; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); text-decoration: none; }
+.person-everything svg { width: 12px; height: 12px; }
 
 /* ---- styles/messages.css ---- */
 /* Messages (05-messages): one starter message per kind of move, each with

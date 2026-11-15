@@ -1,7 +1,9 @@
 // A person (04-person): photo, name, handle (opens their profile), one line
 // (their group, and where you met or why they're a fit), then their next
 // move, which opens it. After a pitch, HOW DID THE PITCH GO? comes between
-// (pages/person-pitch.js). The ... menu: Edit, a photo, Yes, and Let go.
+// (pages/person-pitch.js). In the suite, EVERYTHING WITH <NAME> under it
+// opens their page on the shelf (connect/08): everything with them in all
+// four. The ... menu: Edit, a photo, Yes, and Let go.
 import { shortBandHtml } from '../components/band.js';
 import { photoHtml, fillPhotos } from '../components/photo.js';
 import { miniHtml } from '../components/marks.js';
@@ -16,6 +18,8 @@ import { handleText, profileUrl } from '../data/contact.js';
 import { dayOf, dueWords } from '../data/dates.js';
 import { doMove, undoMove, laterMove, getWeek } from '../data/moves.js';
 import { whenDue } from '../data/work-days.js';
+import { shelfPageOf } from '../data/people-out.js';
+import { firstName } from '../data/fill.js';
 import { openMove } from './move.js';
 import { openPersonMenu } from './person-menu.js';
 import { pitchHtml, wirePitch } from './person-pitch.js';
@@ -50,6 +54,11 @@ export async function personScreen(view, id) {
       : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
   </div></div>`;
   fillPhotos(view, [p]);
+  const screen = view.querySelector('.screen');
+  shelfPageOf(p).then((page) => {
+    if (!page || !screen.isConnected) return; // drawn again meanwhile: that one adds its own
+    screen.querySelector('.person-next, .person-rest').insertAdjacentHTML('afterend', `<a class="person-everything" href="${esc(page)}">Everything with ${esc(firstName(p.name) || 'them')} ${CHEV_SMALL}</a>`);
+  });
   const redraw = () => personScreen(view, id).then(() => view.querySelector('.screen')?.classList.add('still'));
   view.querySelector('[data-band-more]').addEventListener('click', () => openPersonMenu(p, redraw, { asks, pitched }));
   wirePitch(view, p, pitched, redraw);

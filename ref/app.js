@@ -22,6 +22,7 @@ import { showSection } from './components/navbar.js';
 import { sideOf } from './components/spread.js';
 import { paintStickers } from './components/stickers.js';
 import { esc } from './components/util.js';
+import { tellPeople, tellPeopleFromNowOn } from './data/people-out.js';
 import { keepUp } from './data/sendshoot.js';
 import './components/pull-shut.js';
 
@@ -78,6 +79,9 @@ if (suite && suite.get('board')) history.replaceState(null, '', `#/board/${encod
 else if (client) history.replaceState(null, '', '#/boards');
 else if (suite && (location.hash || '#/') === '#/') history.replaceState(null, '', suite.at === 'tags' ? '#/folders' : '#/boards');
 else if (!suite && startPage() && (location.hash || '#/') === '#/') history.replaceState(null, '', startPage());
+// Ref tells the one list of people its boards, now and after each change.
+tellPeopleFromNowOn();
+tellPeople(3000);
 route().then(() => {
   if (client) startClientBoard(client, defaultShape()).catch(console.error);
   // Once the notebook is on screen; then any sent board changed elsewhere is drawn again.

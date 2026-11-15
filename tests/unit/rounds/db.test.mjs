@@ -147,6 +147,31 @@ describe('photos', () => {
     await db.dropPhoto('a');
     expect(await db.getPhoto('a')).toBe(null);
   });
+  it("gives whose photos there are, without reading them", async () => {
+    expect(await db.photoIds()).toEqual([]);
+    await db.savePhoto('b', new Uint8Array([1]).buffer, 'image/jpeg');
+    await db.savePhoto('a', new Uint8Array([2]).buffer, 'image/jpeg');
+    expect(await db.photoIds()).toEqual(['a', 'b']);
+  });
+});
+
+describe('hearing of changes', () => {
+  it('tells everyone listening of your changes and photos, and sync only of what it carries', async () => {
+    const synced = vi.fn();
+    const one = vi.fn();
+    const two = vi.fn();
+    db.onSyncedChange(synced);
+    db.onChange(one);
+    db.onChange(two);
+    await db.savePerson({ id: 'a', name: 'Ana' });
+    await db.savePerson({ id: 'a', name: 'Ana' }); // saved as it was: nothing to hear
+    await db.dropMove('m1');
+    await db.savePhoto('a', new Uint8Array([1]).buffer, 'image/jpeg');
+    await db.dropPhoto('a');
+    expect(synced).toHaveBeenCalledTimes(2);
+    expect(one).toHaveBeenCalledTimes(4);
+    expect(two).toHaveBeenCalledTimes(4);
+  });
 });
 
 describe('messages and settings', () => {

@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
 import { open, rows } from '../overthoughts/fake-df-data.mjs';
 
-const DBS = ['ref-notebook', 'contact-sheet', 'overthoughts', 'rounds', 'df-links', 'df-stickers'];
+const DBS = ['ref-notebook', 'contact-sheet', 'overthoughts', 'rounds', 'df-links', 'df-stickers', 'df-people'];
 const EYE_DB = 'starky-moodboards';
 const BOOKS = ['ref-notebook-book', 'contact-sheet-book', 'overthoughts-book', 'rounds-book'];
 const EYE = 'dailies_state_v1';
@@ -438,6 +438,7 @@ describe('restoreJson puts a notebook back', () => {
   it('puts every part back in the same order, Eye last', async () => {
     const data = suite({
       'the-eye': eyePart({ shoots: [] }),
+      people: part('df-people', {}),
       stickers: part('df-stickers', {}),
       links: part('df-links', {}),
       rounds: part('rounds', {}),

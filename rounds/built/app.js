@@ -656,6 +656,11 @@ let heard = () => {};
 const onSyncedChange = (fn) => {
 	heard = fn;
 };
+const others = [];
+const onChange = (fn) => {
+	others.push(fn);
+};
+const tellOthers = () => others.forEach((fn) => fn());
 async function putStamped(store, list) {
 	const now = nowISO();
 	const changed = await tx([store, "tombstones"], "readwrite", (s, tombs, set) => {
@@ -676,7 +681,10 @@ async function putStamped(store, list) {
 			};
 		}
 	});
-	if (changed) heard();
+	if (changed) {
+		heard();
+		tellOthers();
+	}
 }
 async function dropStamped(store, key) {
 	const now = nowISO();
@@ -691,6 +699,7 @@ async function dropStamped(store, key) {
 		});
 	});
 	heard();
+	tellOthers();
 }
 const listPeople = () => all("people");
 const getPerson = (id) => one("people", id);
@@ -707,8 +716,11 @@ const savePhoto = (id, bytes, type) => put("photos", {
 	id,
 	bytes,
 	type
+}).then(tellOthers);
+const dropPhoto = (id) => drop("photos", id).then(tellOthers);
+const photoIds = () => tx("photos", "readonly", (s, set) => {
+	s.getAllKeys().onsuccess = (e) => set(e.target.result);
 });
-const dropPhoto = (id) => drop("photos", id);
 async function getMessages() {
 	return Object.fromEntries((await all("messages")).map((r) => [r.kind, r.text]));
 }
@@ -3504,6 +3516,106 @@ const clientFor = (person, pitched) => ({
 	pitched: pitched || ""
 });
 
+// data/people-out.js
+const D$1 = /* @__PURE__ */ __name(() => window.DFData, "D");
+function dueLine(next, week, today) {
+	const w = dueWords(whenDue(next, week, today), today);
+	return `Due ${w === "Today" || w === "Tomorrow" ? w.toLowerCase() : w}`;
+}
+const listedAs = (p) => ({
+	name: p.name,
+	instagram: p.instagram,
+	tiktok: p.tiktok,
+	roundsId: p.id,
+	at: p.updatedAt || ""
+});
+async function shelfPageOf(p) {
+	if (!D$1() || !D$1().personFor) return null;
+	const r = await D$1().personFor(listedAs(p)).catch(() => null);
+	return r ? D$1().personUrl(r.id) : null;
+}
+function personThing(p, today, week, ownPhoto) {
+	const next = p.next && !p.letGo ? p.next : null;
+	const what = next ? phrase(next.kind, p.name) : p.letGo ? "Let go" : "Nothing planned";
+	const when = next ? dueLine(next, week, today) : "";
+	return {
+		id: p.id,
+		kind: "person",
+		title: p.name || (p.instagram || p.tiktok ? `@${p.instagram || p.tiktok}` : "Someone"),
+		line: next ? `${what}, ${when.replace(/^Due/, "due")}` : what,
+		day: next ? whenDue(next, week, today) : "",
+		people: [listedAs(p)],
+		params: { person: p.id },
+		more: {
+			next: {
+				title: what,
+				line: when,
+				bg: next ? KINDS[next.kind].bg : "#E1E1DC",
+				icon: next ? markSvg(next.kind, 10) : ""
+			},
+			group: GROUPS[p.group] || ""
+		},
+		coverKey: ownPhoto ? `own:${p.id}` : p.photoKey ? `eye:${p.photoKey}` : "",
+		covers: () => photoOf$1(p, ownPhoto)
+	};
+}
+async function photoOf$1(p, own) {
+	if (own) {
+		const blob = await getPhoto(p.id);
+		return blob ? [{
+			type: blob.type,
+			bytes: await blob.arrayBuffer()
+		}] : [];
+	}
+	const pic = p.photoKey ? D$1().pictureOf(await eyePhoto(p.photoKey)) : null;
+	return pic ? [pic] : [];
+}
+__name(photoOf$1, "photoOf");
+let soon = null;
+function tellPeople(wait = 1500) {
+	if (!D$1() || !D$1().publishThings) return;
+	clearTimeout(soon);
+	soon = setTimeout(async () => {
+		try {
+			const [people, week, ids] = await Promise.all([
+				listPeople(),
+				getWeek(),
+				photoIds()
+			]);
+			const own = new Set(ids);
+			await D$1().publishThings("rounds", people.map((p) => personThing(p, dayOf(), week, own.has(p.id))));
+		} catch (e) {}
+	}, wait);
+}
+const tellPeopleFromNowOn = () => onChange(() => tellPeople());
+const TAKEN = "df-people-taken-rounds";
+async function takePeopleEdits() {
+	if (!D$1() || !D$1().peopleAll) return 0;
+	let taken = "";
+	try {
+		taken = localStorage.getItem(TAKEN) || "";
+	} catch (e) {}
+	const edited = (await D$1().peopleAll()).filter((r) => r.editedAt && r.editedAt > taken);
+	if (!edited.length) return 0;
+	const changed = [];
+	for (const p of await listPeople()) {
+		const r = edited.find((x) => x.sigs.includes(`rounds:${p.id}`));
+		if (!r || p.updatedAt && p.updatedAt > r.editedAt) continue;
+		const next = {
+			...p,
+			name: r.name || p.name,
+			instagram: r.instagram,
+			tiktok: r.tiktok
+		};
+		if (next.name !== p.name || next.instagram !== p.instagram || next.tiktok !== p.tiktok) changed.push(next);
+	}
+	if (changed.length) await savePeople(changed);
+	try {
+		localStorage.setItem(TAKEN, edited.map((r) => r.editedAt).sort().pop());
+	} catch (e) {}
+	return changed.length;
+}
+
 // pages/person-edit.js
 const field = (label, name, value, more = "") => `<label class="field"><span class="field-label">${label}</span><input type="text" name="${name}" value="${esc(value)}" autocomplete="off" ${more} /></label>`;
 const HANDLE = "autocapitalize=\"off\" spellcheck=\"false\" placeholder=\"@handle\"";
@@ -3754,6 +3866,11 @@ async function personScreen(view, id) {
     ${next ? `<button type="button" class="person-next" data-move>${miniHtml(p.next.kind)}<span class="person-next-what">${esc(phrase(p.next.kind, p.name))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>` : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
   </div></div>`;
 	fillPhotos(view, [p]);
+	const screen = view.querySelector(".screen");
+	shelfPageOf(p).then((page) => {
+		if (!page || !screen.isConnected) return;
+		screen.querySelector(".person-next, .person-rest").insertAdjacentHTML("afterend", `<a class="person-everything" href="${esc(page)}">Everything with ${esc(firstName(p.name) || "them")} ${CHEV_SMALL}</a>`);
+	});
 	const redraw = () => personScreen(view, id).then(() => view.querySelector(".screen")?.classList.add("still"));
 	view.querySelector("[data-band-more]").addEventListener("click", () => openPersonMenu(p, redraw, {
 		asks,
@@ -4260,8 +4377,11 @@ function onSynced(r) {
 	if (r.changedHere || leadsNew) redrawSoon();
 }
 window.addEventListener("hashchange", route);
-if ((location.hash || "#/") === "#/") history.replaceState(null, "", suite && suite.at ? `#/${suite.at}` : "#/today");
-const bringIn = async () => await bringInFromEye() + await takeFromLayouts();
+if (suite && suite.get && suite.get("person")) history.replaceState(null, "", `#/person/${encodeURIComponent(suite.get("person"))}`);
+else if ((location.hash || "#/") === "#/") history.replaceState(null, "", suite && suite.at ? `#/${suite.at}` : "#/today");
+const bringIn = async () => await takePeopleEdits().catch(() => 0) + await bringInFromEye() + await takeFromLayouts();
+tellPeopleFromNowOn();
+tellPeople(3e3);
 bringIn().catch(console.error).finally(() => {
 	route();
 	startAutoSync(onSynced);

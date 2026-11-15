@@ -1,0 +1,41 @@
+/* The person page (pages/shelf-person.js), on HOW THEY CONNECT's page
+   (styles/shelf-connect.css), and its Edit sheet (pages/shelf-person-edit.js). */
+.person-head h2 { flex: 1; }
+.person-scroll { padding-top: 0; }
+.person-top { display: flex; gap: 16px; align-items: flex-end; max-width: 480px; margin: 14px auto 0; }
+.person-photo { display: flex; align-items: center; justify-content: center; flex: none; width: 96px; height: 120px; border-radius: 4px; overflow: hidden; background: #E9E9E4; color: #C9CDCF; }
+.person-photo img { width: 100%; height: 100%; object-fit: cover; }
+.person-who { flex: 1; min-width: 0; }
+.person-who h1 { margin: 0; font-size: 28px; font-weight: 300; line-height: 34px; overflow-wrap: anywhere; }
+.person-handle { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; color: var(--text); font-size: 15px; text-decoration: none; }
+.person-about { margin: 2px 0 0; font-size: 14px; line-height: 19px; color: var(--dim); }
+.person-same { max-width: 480px; margin: 22px auto 0; padding: 14px 16px 16px; border-radius: 12px; background: #fff; }
+.person-same h2 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .12em; line-height: 16px; text-transform: uppercase; }
+.person-same p { margin: 6px 0 0; font-size: 15px; line-height: 21px; }
+.person-same-btns { display: flex; gap: 8px; margin-top: 8px; }
+.person-same-btns .sheet-btn { flex: 1; }
+.person-part { max-width: 480px; margin: 26px auto 0; }
+.person-part-head { display: flex; align-items: center; gap: 10px; min-height: 32px; padding-bottom: 8px; border-bottom: 1px solid var(--text); }
+.person-mark { display: inline-flex; flex: none; width: 20px; height: 20px; border-radius: 4px; }
+.person-part-head h2 { flex: 1; margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .12em; line-height: 16px; text-transform: uppercase; }
+.person-part-head h2 span { font-weight: 500; color: var(--dim); }
+.person-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 0; border: 0; border-bottom: 1px solid #E1E1DC; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.person-words { flex: 1; min-width: 0; }
+.person-title { display: block; font-size: 17px; line-height: 22px; }
+.person-line { display: block; margin-top: 2px; font-size: 14px; line-height: 19px; color: var(--dim); }
+.person-chev { display: flex; color: #9AA3A8; }
+.person-handle svg { width: 16px; height: 16px; }
+.person-kind { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 16px; height: 16px; border-radius: 3px; }
+.person-kind svg { display: block; width: 10px; height: 10px; }
+.person-shoot { display: flex; align-items: center; justify-content: center; flex: none; width: 40px; height: 50px; border-radius: 4px; overflow: hidden; background: #E9E9E4; color: #9AA3A8; }
+.person-shoot img, .person-board img, .person-post img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.person-board { display: grid; flex: none; grid-template-columns: 3fr 2fr; grid-template-rows: 1fr 1fr; gap: 2px; width: 54px; height: 40px; border-radius: 6px; overflow: hidden; background: #fff; }
+.person-board > span { overflow: hidden; background: #E9E9E4; }
+.person-board > span:first-child { grid-row: 1 / 3; }
+.person-posts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding-top: 12px; }
+.person-post { aspect-ratio: 4 / 5; padding: 0; border: 0; border-radius: 4px; overflow: hidden; background: #E9E9E4; color: var(--dim); font: inherit; font-size: 11px; line-height: 14px; cursor: pointer; }
+.person-post span { display: block; padding: 6px; overflow-wrap: anywhere; }
+.person-none { margin: 12px 0 0; font-size: 15px; line-height: 21px; color: var(--dim); }
+.person-input { display: block; width: 100%; box-sizing: border-box; height: 48px; padding: 0 12px; border: 0; border-radius: 8px; box-shadow: inset 0 0 0 1.5px #E1E1DC; background: #fff; color: var(--text); font: inherit; font-size: 17px; }
+.person-input:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--text); }
+.person-edit .opt-note { margin-bottom: 8px; }

@@ -16,6 +16,7 @@ import { introSeen, openIntro } from './pages/intro.js';
 import { welcome } from './pages/welcome.js';
 import { bringInFromEye } from './data/eye.js';
 import { takeFromLayouts } from './data/from-layouts.js';
+import { takePeopleEdits, tellPeople, tellPeopleFromNowOn } from './data/people-out.js';
 import { startAutoSync } from './data/auto-sync.js';
 import { openConflicts } from './pages/conflicts.js';
 
@@ -82,12 +83,18 @@ function onSynced(r) {
 }
 
 window.addEventListener('hashchange', route);
-if ((location.hash || '#/') === '#/') history.replaceState(null, '', suite && suite.at ? `#/${suite.at}` : '#/today');
+// Opened at a person from their page on the shelf (?person=<id>).
+if (suite && suite.get && suite.get('person')) history.replaceState(null, '', `#/person/${encodeURIComponent(suite.get('person'))}`);
+else if ((location.hash || '#/') === '#/') history.replaceState(null, '', suite && suite.at ? `#/${suite.at}` : '#/today');
 // People from The Eye's shoots, and the people in posts shared from
 // Layouts, come in first, then the notebook's drawn; and again whenever
 // Rounds comes back on screen.
-// One after the other: both can change the same person.
-const bringIn = async () => (await bringInFromEye()) + (await takeFromLayouts());
+// One after the other: both can change the same person. A name changed on
+// the person page on the shelf comes in before them.
+const bringIn = async () => (await takePeopleEdits().catch(() => 0)) + (await bringInFromEye()) + (await takeFromLayouts());
+// Rounds tells the one list of people its people, now and after each change.
+tellPeopleFromNowOn();
+tellPeople(3000);
 bringIn().catch(console.error).finally(() => { route(); startAutoSync(onSynced); });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || document.querySelector('.sheet-overlay')) return;
