@@ -118,7 +118,8 @@ test("tapping the ! shows what's waiting, each row opening it in its notebook", 
 
 // The Eye: a shoot ready for its day (which starts at 5am). Rounds: the two
 // people from last week's shoot (as tests/e2e/rounds-today.spec.mjs). Set
-// once for the tab.
+// once for the tab. On a Monday The Eye would also offer last week's brief
+// (that shoot was last week): it's marked read, so only the shoot waits.
 function eyeAndRounds() {
   if (sessionStorage.getItem('shelf-waiting-seeded')) return;
   sessionStorage.setItem('shelf-waiting-seeded', '1');
@@ -131,6 +132,7 @@ function eyeAndRounds() {
       location: { name: 'Studio', address: '' }, references: [], frameworkTags: [], talents: [], shotList: [], lightingSetups: [] },
   ];
   localStorage.setItem('dailies_state_v1', JSON.stringify({ shoots, projects: [], journalEntries: [] }));
+  localStorage.setItem('dailies_monday_brief_shown_v1', day(new Date().getHours() < 5 ? -1 : 0));
 }
 
 test('Rounds and The Eye tell the shelf what is waiting in them, before the shelf opens either', async ({ browser }, testInfo) => {
