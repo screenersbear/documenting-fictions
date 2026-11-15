@@ -154,6 +154,10 @@ pointer-events: none;
 .df-slip-actions { display: flex; align-items: center; gap: 4px; margin-top: 14px; }
 .df-slip-main { height: 44px; padding: 0 18px; border: 0; border-radius: 8px; background: var(--df-slip-main, #313D45); color: var(--df-slip-main-text, #FFFFFF); font: inherit; font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
 .df-slip-later { height: 44px; padding: 0 12px; border: 0; background: none; color: #5C666D; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+.df-switch { position: relative; flex: none; width: 52px; height: 32px; padding: 0; border: 0; border-radius: 16px; background: #E1E1DC; cursor: pointer; transition: background .15s; }
+.df-switch span { position: absolute; left: 3px; top: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(49, 61, 69, .25); transition: transform .15s; }
+.df-switch[aria-checked="true"] { background: var(--text); }
+.df-switch[aria-checked="true"] span { transform: translateX(20px); }
 
 /* ---- styles/band-colors.css ---- */
 :root {
@@ -5082,6 +5086,9 @@ border-radius: 0; box-shadow: none; background: #fff;
 .eye-cards-dots[hidden] { display: none; }
 .eye-cards-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(49, 61, 69, .2); }
 .eye-cards-dots i.on { background: var(--text); }
+.lessons-ref:not([hidden]) { display: flex; align-items: center; gap: 12px; margin: 10px 0 0; padding: 12px 14px; border-radius: 8px; background: #fff; box-shadow: 0 1px 0 #E1E1DC, 0 10px 24px rgba(49, 61, 69, .10); }
+.lessons-ref .df-pair { flex: none; }
+.lessons-ref-words { flex: 1; min-width: 0; font: 400 14px/19px var(--ui); color: var(--dim); }
 
 /* ---- styles/section-slide.css ---- */
 .nb-slide { position: absolute; z-index: 6; inset: 0; overflow: hidden; pointer-events: none; }

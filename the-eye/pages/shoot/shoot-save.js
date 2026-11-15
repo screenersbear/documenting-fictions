@@ -46,6 +46,7 @@ window.EyeParts.addShootSave = function addShootSave(ed) {
       whatWentRight: document.getElementById('shootWentRight').value.trim(),
       couldBeBetter: document.getElementById('shootCouldBeBetter').value.trim(),
       lessonsLearned: document.getElementById('shootLessonsLearned').value.trim(),
+      lessonsToRef: ed.lessonsToRef, // false: kept to this shoot, not Ref's (components/lessons-to-ref.js)
       talentDirections: document.getElementById('shootTalentDirections').value.trim(),
       teamDirections: document.getElementById('shootTeamDirections').value.trim(),
       shootingNotes: document.getElementById('shootShootingNotes').value.trim(),

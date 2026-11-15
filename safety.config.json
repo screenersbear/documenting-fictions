@@ -5,7 +5,7 @@
     "data/suite-backup.js",
     "components/cut-out.js", "components/sticker-bends.js",
     "tools/join-files.mjs", "tools/join-modules.mjs", "tools/smaller.mjs", "the-eye/components/load-lib.js", "the-eye/components/row-words.js", "the-eye/components/shoot-stage.js", "the-eye/components/today-items.js", "the-eye/components/shelf-items.js", "the-eye/components/people-out.js",
-      "the-eye/components/talent-since.js", "the-eye/components/slide-steps.js", "the-eye/components/status-steps.js",
+      "the-eye/components/talent-since.js", "the-eye/components/lessons-to-ref.js", "the-eye/components/slide-steps.js", "the-eye/components/status-steps.js",
     "the-eye/components/stats-words.js",
     "ref/data/db.js",
     "ref/data/library.js",

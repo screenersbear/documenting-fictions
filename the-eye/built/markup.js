@@ -499,6 +499,8 @@
           <label>Lessons for next time
             <textarea id="shootLessonsLearned" rows="3" maxlength="4000" readonly></textarea>
           </label>
+          <!-- In the suite: they go to Ref too, or stay here (components/lessons-to-ref.js). -->
+          <div class="lessons-ref" id="lessonsRef" hidden></div>
 
           <div class="moodboard-section" id="finalImagesSection">
             <span class="moodboard-label">Final images</span>

@@ -89,3 +89,7 @@
 .eye-cards-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(49, 61, 69, .2); }
 .eye-cards-dots i.on { background: var(--text); }
 
+/* LESSONS FOR NEXT TIME going to Ref, or kept (components/lessons-to-ref.js). */
+.lessons-ref:not([hidden]) { display: flex; align-items: center; gap: 12px; margin: 10px 0 0; padding: 12px 14px; border-radius: 8px; background: #fff; box-shadow: 0 1px 0 #E1E1DC, 0 10px 24px rgba(49, 61, 69, .10); }
+.lessons-ref .df-pair { flex: none; }
+.lessons-ref-words { flex: 1; min-width: 0; font: 400 14px/19px var(--ui); color: var(--dim); }

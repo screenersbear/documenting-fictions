@@ -149,6 +149,7 @@ window.EyeParts.addShootOpen = function addShootOpen(ed) {
     document.getElementById('shootWentRight').value = s ? (s.whatWentRight || '') : '';
     document.getElementById('shootCouldBeBetter').value = s ? (s.couldBeBetter || '') : '';
     document.getElementById('shootLessonsLearned').value = s ? (s.lessonsLearned || '') : '';
+    ed.drawLessonsRef(!s || s.lessonsToRef !== false); // the lessons going to Ref, or kept (components/lessons-to-ref.js)
     document.getElementById('shootTalentDirections').value = s ? (s.talentDirections || '') : '';
     document.getElementById('shootTeamDirections').value = s ? (s.teamDirections || '') : '';
     document.getElementById('shootShootingNotes').value = s ? (s.shootingNotes || '') : '';
