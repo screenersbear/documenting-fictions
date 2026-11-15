@@ -19,6 +19,7 @@ built/app.css smaller
   styles/sheet-words.css
   styles/shared/connect.css
   styles/shelf-connect.css
+  styles/shelf-waiting.css
   styles/type.css
 
 # What it does, in the order the scripts run.
@@ -38,6 +39,7 @@ built/app.js smaller
   pages/shelf-marks.js
   pages/shelf-options.js
   pages/shelf-connect.js
+  pages/shelf-waiting.js
   components/toast.js
   pages/shelf-open.js
   components/screen-fit.js
@@ -53,6 +55,7 @@ built/app.js smaller
   shared/data/zip-restore.js
   shared/data/links.js
   shared/data/connect.js
+  shared/data/waiting.js
   shared/data/df-data.js
   data/suite-backup.js
   components/backup-sheet.js

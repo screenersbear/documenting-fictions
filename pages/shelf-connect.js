@@ -1,11 +1,12 @@
-// How the notebooks connect, on the shelf (round 2, connect/01 and 07):
-// HOW THEY CONNECT, from Options (the loop, then a switch per hand-off), and
-// a slip tucked into the top of each notebook that has a hand-off waiting.
-// The hand-offs themselves: shared/data/connect.js. (Loaded before app.js.)
+// How the notebooks connect, on the shelf (round 2, connect/01): HOW THEY
+// CONNECT, from Options (the loop, then a switch per hand-off). The slips
+// once tucked into the covers gave way to the floating ! (15 Nov,
+// pages/shelf-waiting.js). The hand-offs themselves: shared/data/connect.js.
+// (Loaded before app.js.)
 window.ShelfParts = window.ShelfParts || {};
 window.ShelfParts.addConnect = function addConnect(ed) {
   'use strict';
-  Object.assign(ed, { openConnect, paintSlips });
+  Object.assign(ed, { openConnect });
   // The shared files load after the shelf's own (files.txt), so window.DFConnect is looked up when used.
   const C = () => window.DFConnect;
   const BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
@@ -62,31 +63,4 @@ window.ShelfParts.addConnect = function addConnect(ed) {
     });
     return page;
   }
-
-  // ---------- Slips on the covers ----------
-  // A notebook with a hand-off waiting has a small slip in the sender's
-  // colour, with its mark, tucked behind its top edge; it goes once the slip
-  // in the notebook is opened or tucked away. The cover's label says what's
-  // waiting ("Layouts: finals from The Eye").
-  async function paintSlips() {
-    let waiting = {};
-    try { waiting = await C().waitingByApp(); } catch (e) { return; }
-    ed.BOOKS.forEach((b, i) => {
-      const bookEl = ed.slots[i].querySelector('.book');
-      const front = ed.slots[i].querySelector('.front');
-      const here = waiting[b.id] || [];
-      bookEl.querySelector('.cover-slip')?.remove();
-      front.setAttribute('aria-label', here.length ? `${b.name}: ${here.map((w) => w.what).join(', ')}` : b.name);
-      if (!here.length) return;
-      const from = C().NOTEBOOKS[here[0].from] || { bg: '#E1E1DC' };
-      const slip = document.createElement('div');
-      slip.className = 'cover-slip';
-      slip.style.background = from.bg;
-      slip.innerHTML = C().markSvg(here[0].from, 24);
-      bookEl.append(slip);
-    });
-  }
-  window.addEventListener('load', paintSlips);
-  window.addEventListener('pageshow', (e) => { if (e.persisted) paintSlips(); });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) paintSlips(); });
 };

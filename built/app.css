@@ -249,9 +249,27 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .df-switch span { position: absolute; left: 3px; top: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(49, 61, 69, .25); transition: transform .15s; }
 .df-switch[aria-checked="true"] { background: var(--text); }
 .df-switch[aria-checked="true"] span { transform: translateX(20px); }
-.book > .cover-slip { left: 62%; top: calc(var(--W) * -.17); width: calc(var(--W) * .124); height: calc(var(--W) * .207); border-radius: 3px; display: flex; justify-content: center; padding-top: calc(var(--W) * .02); transform: translateZ(calc(var(--T) * .2)) rotate(7deg); box-shadow: 0 1px 2px rgba(49, 61, 69, .2); pointer-events: none; }
-.book > .cover-slip svg { width: calc(var(--W) * .09); height: calc(var(--W) * .09); }
-.slot.open .cover-slip, .slot.opening .cover-slip { visibility: hidden; }
+
+/* ---- styles/shelf-waiting.css ---- */
+.waiting-marks { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
+.waiting-marks.off { visibility: hidden; }
+.waiting-mark { position: absolute; left: 0; top: 0; display: flex; align-items: flex-start; justify-content: center; width: 44px; height: 58px; padding: 0; border: 0; background: none; pointer-events: auto; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.waiting-mark[hidden] { display: none; }
+.waiting-mark .bang { display: block; width: 19.7px; height: 46px; overflow: visible; animation: bangBob 3.2s ease-in-out infinite; animation-delay: var(--d, 0s); }
+.bang-floor { position: absolute; left: 6px; bottom: -6px; width: 32px; height: 6px; border-radius: 50%; background: radial-gradient(closest-side, rgba(49, 61, 69, .28), rgba(49, 61, 69, 0)); animation: bangFloor 3.2s ease-in-out infinite; animation-delay: var(--d, 0s); }
+@keyframes bangBob { 0%, 100% { transform: translateY(-1.5px); } 50% { transform: translateY(1.5px); } }
+@keyframes bangFloor { 0%, 100% { opacity: .8; transform: scale(1.06); } 50% { opacity: 1; transform: scale(.94); } }
+@media (prefers-reduced-motion: reduce) { .waiting-mark .bang, .bang-floor { animation: none; } }
+.waiting-sheet .sheet-head { justify-content: flex-start; gap: 10px; }
+.waiting-sheet .sheet-head h2 { flex: 1; font-size: 13px; font-weight: 700; letter-spacing: .12em; line-height: 16px; text-transform: uppercase; }
+.waiting-mini { display: inline-flex; flex: none; width: 24px; height: 24px; border-radius: 4px; }
+.waiting-rows { margin-top: 10px; border-top: 1px solid var(--text); }
+.waiting-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 0; border: 0; border-bottom: 1px solid #E1E1DC; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.waiting-words { flex: 1; min-width: 0; }
+.waiting-title { display: block; font-size: 17px; line-height: 22px; }
+.waiting-line { display: block; margin-top: 2px; font-size: 14px; line-height: 19px; color: #5C666D; }
+.waiting-chev { display: flex; color: #9AA3A8; }
+.sheet-btn.primary.waiting-open { margin-top: 24px; height: 52px; color: var(--on, #FFFFFF); }
 
 /* ---- styles/type.css ---- */
 @font-face { font-family: "Figtree"; src: url("../ref/fonts/figtree-latin.woff2") format("woff2"); font-weight: 300 900; font-display: swap; size-adjust: 96.5%; }

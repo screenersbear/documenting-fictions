@@ -6,15 +6,24 @@ import { pickFor, markPick, unmarkPick, doneOn, PER_DAY } from './today.js';
 import { markDone, markLater, undoDone as undoPerson } from './person.js';
 import { dayOf } from './dates.js';
 import { weekOf } from './work-days.js';
+import { shelfItems } from './shelf-items.js';
 import { uuid } from '../components/util.js';
 
 // The work days and days off (Options): Monday to Friday, Sunday off, unless changed.
 export const getWeek = async () => weekOf(...(await Promise.all([getSetting('workDays', null), getSetting('daysOff', null)])));
 
+const loadAll = () => Promise.all([listPeople(), getSetting('pick', null), getSetting('perDay', PER_DAY), getWeek()]);
+// The cards coming up, for the floating ! over Rounds on the shelf
+// (data/shelf-items.js). The suite's shared files give DFWaiting.
+const tellShelf = (people, pick, perDay, week) => window.DFWaiting?.publishWaiting('rounds', shelfItems(people, pick, dayOf(), perDay, week));
+// After a move done, put off or undone (the pick already marked).
+const shelfAgain = () => loadAll().then(([people, pick, perDay, week]) => tellShelf(people, pick, perDay, week)).catch(() => {});
+
 export async function loadToday() {
-  const [people, saved, perDay, week] = await Promise.all([listPeople(), getSetting('pick', null), getSetting('perDay', PER_DAY), getWeek()]);
+  const [people, saved, perDay, week] = await loadAll();
   const pick = pickFor(people, saved, dayOf(), perDay, week);
   if (JSON.stringify(pick) !== JSON.stringify(saved)) await setSetting('pick', pick);
+  tellShelf(people, pick, perDay, week);
   return { people, pick, week };
 }
 
@@ -31,12 +40,14 @@ export async function doMove(person) {
   await savePerson(after);
   await logMove(line);
   await markInPick(person.id, 'done');
+  shelfAgain();
   return { before: person, after, line };
 }
 export async function undoMove({ before, line }) {
   await savePerson(before);
   await dropMove(line.id);
   await markInPick(before.id, null);
+  shelfAgain();
 }
 // Done today, from the log, and its Undo: the move back as it was, and its
 // card back in the day's pick.
@@ -53,6 +64,7 @@ export async function laterMove(person) {
   const after = markLater(person, dayOf());
   await savePerson(after);
   await markInPick(person.id, 'later');
+  shelfAgain();
   return after;
 }
 

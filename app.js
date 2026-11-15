@@ -129,6 +129,7 @@
   window.ShelfParts.addShapeMarks(ed);
   window.ShelfParts.addOptions(ed);
   window.ShelfParts.addConnect(ed);
+  window.ShelfParts.addWaiting(ed);
   window.ShelfParts.addToast(ed);
   window.ShelfParts.addOpening(ed);
 

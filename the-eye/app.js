@@ -8,6 +8,7 @@
   window.EyeParts.addRowWords(ed);
   window.EyeParts.addShootStage(ed);
   window.EyeParts.addTodayItems(ed);
+  window.EyeParts.addShelfItems(ed);
   window.EyeParts.addStatusSteps(ed);
   window.EyeParts.addHelpers(ed);
   // iOS Safari only computes :active styles on elements it thinks have a

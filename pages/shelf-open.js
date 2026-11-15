@@ -32,11 +32,13 @@ window.ShelfParts.addOpening = function addOpening(ed) {
     return `translate(${-ed.OVER - wl * sx}px, ${-ed.OVER - wt * sy}px) scale(${sx}, ${sy})`;
   }
 
+  // at: where it opens (a tab's 'shoots'), or what to open there ({ at: 'today' }).
   async function openBook(i, at) {
     if (ed.busy) return;
     ed.busy = true;
     const b = ed.BOOKS[i];
-    const url = `${b.id}/${at ? `?at=${encodeURIComponent(at)}` : ''}`;
+    const query = at && typeof at === 'object' ? new URLSearchParams(at).toString() : at ? `at=${encodeURIComponent(at)}` : '';
+    const url = `${b.id}/${query ? `?${query}` : ''}`;
     ed.store.set(ed.FRONT_KEY, String(i));
     if (still()) { leave(url); return; }
     ed.shelf.classList.add('away');
@@ -84,6 +86,7 @@ window.ShelfParts.addOpening = function addOpening(ed) {
     await wait(ed.TURN_MS);
     s.classList.remove('opening', 'turning', 'still');
     ed.busy = false;
+    if (ed.placeWaiting) ed.placeWaiting(); // the floating ! back over each book
   }
 
   function reset() {

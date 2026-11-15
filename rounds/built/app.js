@@ -1512,17 +1512,43 @@ function stops$1(n) {
 }
 __name(stops$1, "stops");
 
+// data/shelf-items.js
+const DAYS_AHEAD = 14;
+function shelfItems(people, saved, today, perDay, week, days = 14) {
+	const byId = new Map(people.map((p) => [p.id, p]));
+	const items = [];
+	for (let n = 0; n < days; n++) {
+		const day = addDays(today, n);
+		const pick = pickFor(people, n === 0 ? saved : null, day, perDay, week);
+		for (const id of waiting$1(pick)) {
+			const p = byId.get(id);
+			items.push({
+				title: p.name,
+				line: KINDS[p.next.kind].name,
+				from: day,
+				until: day,
+				params: { at: "today" }
+			});
+		}
+	}
+	return items;
+}
+
 // data/moves.js
 const getWeek = async () => weekOf(...await Promise.all([getSetting("workDays", null), getSetting("daysOff", null)]));
+const loadAll = () => Promise.all([
+	listPeople(),
+	getSetting("pick", null),
+	getSetting("perDay", 3),
+	getWeek()
+]);
+const tellShelf = (people, pick, perDay, week) => window.DFWaiting?.publishWaiting("rounds", shelfItems(people, pick, dayOf(), perDay, week));
+const shelfAgain = () => loadAll().then(([people, pick, perDay, week]) => tellShelf(people, pick, perDay, week)).catch(() => {});
 async function loadToday() {
-	const [people, saved, perDay, week] = await Promise.all([
-		listPeople(),
-		getSetting("pick", null),
-		getSetting("perDay", 3),
-		getWeek()
-	]);
+	const [people, saved, perDay, week] = await loadAll();
 	const pick = pickFor(people, saved, dayOf(), perDay, week);
 	if (JSON.stringify(pick) !== JSON.stringify(saved)) await setSetting("pick", pick);
+	tellShelf(people, pick, perDay, week);
 	return {
 		people,
 		pick,
@@ -1544,6 +1570,7 @@ async function doMove(person) {
 	await savePerson(after);
 	await logMove(line);
 	await markInPick(person.id, "done");
+	shelfAgain();
 	return {
 		before: person,
 		after,
@@ -1554,6 +1581,7 @@ async function undoMove({ before, line }) {
 	await savePerson(before);
 	await dropMove(line.id);
 	await markInPick(before.id, null);
+	shelfAgain();
 }
 async function loadDone() {
 	const [lines, people] = await Promise.all([listMoves(), listPeople()]);
@@ -1571,6 +1599,7 @@ async function laterMove(person) {
 	const after = markLater(person, dayOf());
 	await savePerson(after);
 	await markInPick(person.id, "later");
+	shelfAgain();
 	return after;
 }
 async function getMe() {

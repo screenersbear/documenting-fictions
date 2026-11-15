@@ -113,7 +113,10 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
     render();
     if (ed.shapeMarks) ed.shapeMarks(true); // the marks at the right edge, and the name for a moment (pages/shelf-marks.js)
     clearTimeout(reshape.t);
-    reshape.t = setTimeout(() => ed.slots.forEach((sl) => sl.classList.remove('reshaping')), ed.RESHAPE_MS + 40);
+    reshape.t = setTimeout(() => {
+      ed.slots.forEach((sl) => sl.classList.remove('reshaping'));
+      if (ed.placeWaiting) ed.placeWaiting(); // each ! back over its book, now it's landed
+    }, ed.RESHAPE_MS + 40);
     ed.store.set(ed.FRONT_KEY, String(ed.pos));
   }
   let spread = null;
@@ -124,6 +127,7 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
     // them pass, so the shelf is restacked then and not on every frame of a turn.
     order.map((o, i) => i).sort((a, b) => order[a] - order[b]).forEach((i, r) => { if (ed.near !== i) stack(i, String(r + 1)); });
     if (ed.caption) ed.caption(); // the name under the shelf (pages/shelf-caption.js)
+    if (ed.placeWaiting) ed.placeWaiting(); // the floating ! over each book (pages/shelf-waiting.js)
   }
   // A finger moving the books: drawn once a frame, however often it reports.
   let soon = 0;

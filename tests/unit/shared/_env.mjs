@@ -70,6 +70,7 @@ export async function loadDFData() {
   await import('../../../shared/data/zip-restore.js');
   await import('../../../shared/data/links.js');
   await import('../../../shared/data/connect.js');
+  await import('../../../shared/data/waiting.js');
   await import('../../../shared/data/df-data.js');
   return window.DFData;
 }

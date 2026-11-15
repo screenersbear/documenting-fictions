@@ -19,6 +19,7 @@ window.EyeParts.addOverviewTodayCard = function addOverviewTodayCard(ed) {
 
   function renderTodayCard() {
     const list = ed.todayItems();
+    ed.tellShelf(list); // and the shelf, for its floating !
     const left = list.length - SHOWN;
     items.innerHTML = list.slice(0, SHOWN).map(ed.todayItemHtml).join('');
     count.textContent = ed.todayCountWords(list.length);
