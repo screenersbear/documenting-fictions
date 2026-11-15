@@ -340,7 +340,7 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
 - **Placing a sticker:** pick a photo, then the placing screen: the book big with the sticker on it (drag to move, pinch to
   size, twist to turn) and a sheet under it with SHAPE (Circle, Square, Card, Cut out) and EDGE (White border, Black outline)
   as segmented controls, the sticker changing as you pick; BACK and STICK IT ON. Shape and edge are chosen there, never after.
-- **Stickers:** vinyl (fine grain, small wrinkles toward the edges, a satin sheen, one faint fold) with a lift shadow. White
+- **Stickers:** vinyl (a fine grain and a soft gloss; no wrinkles, sheen or fold since 15 Nov) with a lift shadow. White
   border: 1.2% of the cover's width (3px at 250px). Black outline: 1% (2.5px), berry blade black. Cut out traces the
   picture: a white margin of 3.5% of the sticker's width, or an ink line 60% of that; texture and shadow follow the cut.
 
