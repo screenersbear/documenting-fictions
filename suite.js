@@ -24,7 +24,7 @@
     options: false, // (the shelf no longer opens a notebook's Options over its shut book)
     at: at,
     // Anything else on the link, for one notebook opening another at a
-    // particular thing: ?entry=<id> in Overthoughts, ?shoot=<id> in The Eye.
+    // particular thing: ?shoot=<id> in The Eye.
     get: function (k) { return q.get(k); },
     // Shut: back to the shelf, which shrinks the page back into this book.
     home: function (quiet) {

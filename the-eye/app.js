@@ -82,7 +82,6 @@
   window.EyeParts.addShootFrameworkTags(ed);
   window.EyeParts.addShootKnownContacts(ed);
   window.EyeParts.addShootTalents(ed);
-  window.EyeParts.addShootOverthoughtsNotes(ed);
   window.EyeParts.addShootPastTalents(ed);
   window.EyeParts.addShootTalentPopup(ed);
   window.EyeParts.addShootTeam(ed);

@@ -12,9 +12,7 @@
 built/shared-data.js smaller
   data/shared/basics.js
   data/shared/files.js
-  data/shared/overthoughts.js
   data/shared/the-eye.js
-  data/shared/journal-move.js
   data/shared/json-backup.js
   data/shared/zip-format.js
   data/shared/zip-backup.js
@@ -236,7 +234,6 @@ built/app.js smaller
   pages/shoot/framework-tags.js
   pages/shoot/known-contacts.js
   pages/shoot/talents.js
-  pages/shoot/overthoughts-notes.js
   pages/shoot/past-talents.js
   pages/shoot/talent-popup.js
   pages/shoot/team.js

@@ -291,11 +291,10 @@ describe('inSuite and notebookUrl', () => {
 describe('the loaded script', () => {
   it('sets window.DFData with every helper and nothing else', () => {
     expect(Object.keys(window.DFData).sort()).toEqual([
-      'boardFile', 'backupSteps', 'deleteOne', 'dropLinks', 'dropReflections', 'exportDb', 'eyeBackupFile', 'eyeShootName', 'eyeState',
-      'getLink', 'getOne', 'hasText', 'importDb', 'inSuite', 'isZipFile', 'journalMoved', 'linkId', 'linkPictures', 'linksWhere',
-      'moveJournal', 'notebookUrl', 'nowIso', 'open', 'overthoughts', 'pickFile', 'pickFiles', 'pictureUrl', 'putMany', 'readBoardFile',
-      'readEyeFile', 'reflectionId', 'reflections', 'restoreZip', 'rows', 'saveFile', 'saveLink', 'saveReflections', 'sizeText',
-      'somethingToMove', 'todayStr', 'uid', 'zipBackup',
+      'boardFile', 'backupSteps', 'deleteOne', 'dropLinks', 'exportDb', 'eyeShootName', 'eyeState',
+      'getLink', 'getOne', 'hasText', 'importDb', 'inSuite', 'isZipFile', 'linkPictures', 'linksWhere',
+      'notebookUrl', 'nowIso', 'open', 'pickFile', 'pickFiles', 'pictureUrl', 'putMany', 'readBoardFile',
+      'restoreZip', 'rows', 'saveFile', 'saveLink', 'sizeText', 'todayStr', 'uid', 'zipBackup',
       // The one list of people (people.js, people-things.js).
       'cleanHandle', 'personKeys', 'findPerson', 'maybePairs', 'peopleAll', 'getPerson', 'gatherPeople', 'answerSame',
       'editPerson', 'personFor', 'personUrl', 'PEOPLE_APPS', 'pictureOf', 'shootPeople', 'publishThings', 'thingsAll',

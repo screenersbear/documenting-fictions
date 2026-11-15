@@ -59,14 +59,13 @@
 /* Visual language and framework tags, while they're hidden (App options). */
 .no-look-tags #frameworkTagsContainerEarly, .no-look-tags #frameworkTagsContainer, .no-look-tags #visualsBody > .form-section-label-row { display: none !important; }
 
-/* Under a shoot's talent: lessons from past shoots with them, and notes about this shoot from Overthoughts. */
+/* Under a shoot's talent: lessons from past shoots with them. */
 .past-lessons { margin-top: 18px; }
 .past-lesson { display: block; margin: 8px 0 0; color: inherit; text-decoration: none; }
 .past-lesson-head { display: block; font-size: 0.85em; opacity: 0.7; }
 .past-lesson-text { display: block; white-space: pre-wrap; }
-.past-lesson-link .past-lesson-head { text-decoration: underline; text-underline-offset: 3px; }
 
-/* The Weekly tab (the Journal before) is the weekly log: entries of your own are written in Overthoughts. */
+/* The Weekly tab (the Journal before) is the weekly log: no new entries of your own are written in it. */
 #addJournalBtn { display: none !important; }
 
 /* Boards from Ref on the shoot page (Send to shoot, or + Import board) */

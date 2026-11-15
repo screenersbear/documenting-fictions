@@ -51,16 +51,15 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BESIDE = os.path.dirname(ROOT)
-NOTEBOOKS = ['ref', 'the-eye', 'contact-sheet', 'overthoughts']
+NOTEBOOKS = ['ref', 'the-eye', 'contact-sheet']
 # The notebooks that get the shared copies: those above, and Rounds, which
 # lives only in the suite (it isn't exported).
 SHARED_IN = NOTEBOOKS + ['rounds']
-NAMES = {'ref': 'Ref', 'the-eye': 'The Eye', 'contact-sheet': 'Contact Sheet', 'overthoughts': 'Overthoughts'}
+NAMES = {'ref': 'Ref', 'the-eye': 'The Eye', 'contact-sheet': 'Contact Sheet'}
 TARGETS = {
     'ref': os.path.join(BESIDE, 'Ref Notebook'),
     'the-eye': os.path.join(BESIDE, 'The Eye'),
     'contact-sheet': os.path.join(BESIDE, 'Contact Sheet'),
-    'overthoughts': os.path.join(BESIDE, 'Overthoughts'),
 }
 RECORD = '.suite-export.json'
 # Never touched in DEST, and never reported as left over.

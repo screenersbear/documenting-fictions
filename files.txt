@@ -55,9 +55,7 @@ built/app.js smaller
   app.js
   shared/data/basics.js
   shared/data/files.js
-  shared/data/overthoughts.js
   shared/data/the-eye.js
-  shared/data/journal-move.js
   shared/data/json-backup.js
   shared/data/zip-format.js
   shared/data/zip-backup.js

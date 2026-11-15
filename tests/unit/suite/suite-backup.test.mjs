@@ -4,7 +4,7 @@
 // one-file (.json) backup of all four back into IndexedDB and localStorage.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
-import { open, rows } from '../overthoughts/fake-df-data.mjs';
+import { open, rows } from './fake-idb.mjs';
 
 const DBS = ['ref-notebook', 'contact-sheet', 'overthoughts', 'rounds', 'df-links', 'df-stickers', 'df-people'];
 const EYE_DB = 'starky-moodboards';

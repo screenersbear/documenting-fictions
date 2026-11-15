@@ -19,7 +19,7 @@ const MUTATING = !!process.env.STRYKER_MUTATOR_WORKER;
 
 describe('every app in the suite', () => {
   it('finds the shelf and the notebooks', () => {
-    expect(findApps(ROOT)).toEqual(expect.arrayContaining(['.', 'ref', 'contact-sheet', 'overthoughts', 'rounds']));
+    expect(findApps(ROOT)).toEqual(expect.arrayContaining(['.', 'ref', 'contact-sheet', 'rounds']));
   });
   it.each(MUTATING ? [] : findApps(ROOT))('%s: built/ matches files.txt (run node tools/join.mjs if not)', async (app) => {
     expect(await staleFiles(join(ROOT, app))).toEqual([]);

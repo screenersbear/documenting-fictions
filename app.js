@@ -169,7 +169,7 @@
   const personId = new URLSearchParams(location.search).get('person');
   if (personId) {
     history.replaceState(null, '', location.pathname);
-    const fromNotebook = /\/(ref|the-eye|contact-sheet|rounds|overthoughts)\//.test(document.referrer) && document.referrer.startsWith(location.origin);
+    const fromNotebook = /\/(ref|the-eye|contact-sheet|rounds)\//.test(document.referrer) && document.referrer.startsWith(location.origin);
     queueMicrotask(() => ed.openPerson(personId, fromNotebook ? () => history.back() : null));
   }
   // index.html hid the bar from the first paint while a book comes back;

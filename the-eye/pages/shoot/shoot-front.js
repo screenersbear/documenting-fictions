@@ -137,17 +137,15 @@ window.EyeParts.addShootFront = function addShootFront(ed) {
     visuals: { label: s => (shot(s) ? ed.moodboardTerm(s.category || '') : 'Visuals'), page: 'visualsHeading', words: (s, c) => ed.metaLine([boardWords(c), c.boards > 1 ? plural(c.boards, 'board') : '', c.moodboard ? plural(c.moodboard, 'photo') : '', (s.references || []).length ? plural(s.references.length, 'link') : '', (s.lightingSetups || []).length ? plural(s.lightingSetups.length, 'lighting setup') : '']) },
     shotList: { label: 'Shot list', page: 'shotListHeading', words: shotListWords },
     deadline: { label: 'Deadline', page: 'logisticsHeading', empty: 'Not set', words: s => (s.deadline ? `Due ${ed.rowDate(s.deadline, ed.todayStr(), false)}` : '') },
-    notes: { label: 'Notes in Overthoughts', page: 'basicInfoHeading', words: () => { const first = document.querySelector('#shootNotes .past-lesson-head'); return first ? first.textContent.trim() : ''; } },
     reflection: { label: 'Reflection', page: 'postShootHeading', empty: 'Not written yet', words: s => ['lessonsLearned', 'whatWentRight', 'couldBeBetter'].map(k => s[k]).find(has) || '' },
     finalImages: { label: 'Final images', page: 'postShootHeading', empty: 'None yet', words: (s, c) => (c.finalImages ? plural(c.finalImages, 'final image') : '') },
   };
 
   // Which rows, by stage. A part already on the front page isn't repeated.
   function rowKeys(s, c, onFront) {
-    const notes = !document.getElementById('shootNotes').hidden ? ['notes'] : [];
     let keys;
-    if (!ed.isPostCaptureStatus(s.status)) keys = ['logistics', 'team', 'direction', 'visuals', 'shotList', 'deadline', ...notes];
-    else keys = ['shotList', 'visuals', 'talent', 'team', 'logistics', 'direction', ...notes, ...(c.video ? [] : ['finalImages']), 'reflection'];
+    if (!ed.isPostCaptureStatus(s.status)) keys = ['logistics', 'team', 'direction', 'visuals', 'shotList', 'deadline'];
+    else keys = ['shotList', 'visuals', 'talent', 'team', 'logistics', 'direction', ...(c.video ? [] : ['finalImages']), 'reflection'];
     return keys.filter(k => !onFront.includes(k));
   }
 

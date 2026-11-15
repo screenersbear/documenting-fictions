@@ -1,6 +1,5 @@
 // shared/df-data.js: every helper that opens a database lets go of it again
-// when it's done (all but Overthoughts' own, which is kept open on purpose),
-// so a notebook in another tab can upgrade it.
+// when it's done, so a notebook in another tab can upgrade it.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { IDBDatabase, IDBObjectStore } from 'fake-indexeddb';
 import { loadDFData, makeDb, expectError, NodeBlob, NodeFile } from './_env.mjs';
@@ -74,12 +73,6 @@ describe('connections are let go of', () => {
     await expectError(D.restoreZip(backupZip(bad), { databases: ['nb'] }), "The backup didn't all go in. Restore it again to finish it.");
     expect(opened.length).toBe(2);
     expect(stillOpen()).toEqual([]);
-  });
-  it("by The Eye's helpers (Overthoughts' own stays open)", async () => {
-    localStorage.setItem('dailies_state_v1', JSON.stringify({ shoots: [], journalEntries: [{ id: 'j1' }] }));
-    await D.eyeBackupFile();
-    await D.moveJournal();
-    expect(stillOpen()).toEqual(['overthoughts']);
   });
   it('by the link helpers, when they work and when they fail', async () => {
     await D.saveLink({ id: 'a' }, { pages: [] });

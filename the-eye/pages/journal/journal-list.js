@@ -38,7 +38,7 @@ window.EyeParts.addJournalList = function addJournalList(ed) {
     document.getElementById('journalFilterToggle').innerHTML =
       `<span class="jt-word">Filter: </span>${ed.escapeHtml(JOURNAL_FILTERS.find(f => f.key === ed.journalFilter).label)}`;
     // The Weekly tab is the weekly log. Entries written here back when it was
-    // the Journal still show in it (new ones are written in Overthoughts), so
+    // the Journal still show in it (no new ones are added), so
     // the filter is only there when there are some.
     document.getElementById('journalFilterToggle').style.display = ed.state.journalEntries.length ? '' : 'none';
   }

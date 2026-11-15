@@ -53,7 +53,7 @@ window.EyeParts.addAppMenuBackup = function addAppMenuBackup(ed) {
   }
 
   // Save a backup: the notebooks' shared zip (df-data.js's zipBackup), the
-  // same as Ref's, Contact Sheet's and Overthoughts': the shoots (as they're
+  // same as Ref's and Contact Sheet's: the shoots (as they're
   // kept, in localStorage), every photo row, and df-links, the Ref boards on
   // the shoots (the only links there are). It's put together from the stored
   // photos, so the phone never holds them all in memory; on a phone a big

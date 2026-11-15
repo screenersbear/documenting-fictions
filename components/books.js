@@ -1,7 +1,7 @@
 // The four notebooks on the shelf: where each one lives, where it keeps its
 // colour, the mark on its cover, the line about it under the shelf, and the
-// tabs on its fore-edge. Rounds took Overthoughts' place on 14 Nov (Starky):
-// Overthoughts' folder and saved data are kept, it's only off the shelf.
+// tabs on its fore-edge. (Rounds took Overthoughts' place on 14 Nov, and
+// Overthoughts was taken out of the suite on 15 Nov: Starky.)
 // (Loaded before app.js.)
 (function () {
   'use strict';

@@ -1,7 +1,7 @@
 {
   "name": "Documenting Fictions",
   "short_name": "Documenting Fictions",
-  "description": "Four notebooks for a photographer: ref, do something, The Eye, Contact Sheet and Overthoughts.",
+  "description": "Four notebooks for a photographer: Ref, The Eye, Contact Sheet and Rounds.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#FAFAF7",

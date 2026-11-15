@@ -1,7 +1,7 @@
 # STKY Design Rulebook
 
 STKY is Starky's private name for his app suite: Documenting Fictions, which is the shelf, Ref, The Eye, Layouts (was
-Contact Sheet) and Rounds (in Overthoughts' place on the shelf since 14 Nov). This file is how every one of them should look. Read it before any change you can see.
+Contact Sheet) and Rounds (in Overthoughts' place on the shelf since 14 Nov; Overthoughts was taken out of the suite on 15 Nov). This file is how every one of them should look. Read it before any change you can see.
 **Never show "STKY" in the apps.**
 
 **Status, 2026-11-14, round 2 and its 14 Nov additions.** The round-2 mockups (`../STKY mockup handoff/round-2/`, README first, then each folder's
@@ -13,8 +13,9 @@ is marked:
   as a side effect of other work.
 - **Proposed**: still waiting, usually on a mockup. Don't build it.
 
-**Rounds replaces Overthoughts on the shelf** (Starky, 14 Nov). Overthoughts' code, folder and saved data stay: it's only
-hidden from the shelf, and nothing of it is removed without asking Starky. Callback is being redesigned and isn't in round 2:
+**Rounds replaces Overthoughts** (Starky, 14 Nov; taken out of the suite 15 Nov). Overthoughts' folder and code are gone,
+and it won't come back as a notebook of its own. What a phone still has saved from it is never wiped, and "Back up all four"
+still carries it. Rounds lives only in the suite for now (it gets a copy of its own later). Callback is being redesigned and isn't in round 2:
 leave its look as it is.
 
 ---
@@ -213,7 +214,6 @@ The app marks:
 | The Eye | a ring with a dot: an eye |
 | Layouts | three bars side by side: a strip of shots |
 | Rounds | an arc with three stops: a round of moves (in the band: a mango arc with teal and white stops) |
-| Overthoughts | the four-lobe shape (ref 6): a thought (hidden from the shelf since 14 Nov) |
 
 The section marks are drawn in the round-2 mockups' section bars (for example The Eye's OVERVIEW is a ring with a mango dot,
 Ref's MOOD BOARDS a circle in quarters, TAGS a half circle over a dot). Inactive marks are `#9AA3A8` and `#D6DADD`.
@@ -409,9 +409,9 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
 | — | Shelf | The floating notebooks stay, on paper (round 2) |
 | — | Bands | Only Notebooks and Options; adding beside its list; The Eye's bell gone (14 Nov) |
 | — | Turning sections | A plain slide, no page turn (14 Nov) |
-| — | Fourth notebook | Rounds, a light networking checklist, in Overthoughts' place (14 Nov) |
+| — | Fourth notebook | Rounds, a light networking checklist, in Overthoughts' place (14 Nov); Overthoughts taken out (15 Nov) |
 | — | Shelf slips | Replaced by the floating ! and its preview (15 Nov) |
 | — | Turned down | A Today strip on the shelf, and board colours carrying into posts (15 Nov) |
 
-Still open: the shelf's own mark (7), whether Overthoughts' folder and data are ever removed (ask Starky), and the hidden up/down swipe on the
+Still open: the shelf's own mark (7), and the hidden up/down swipe on the
 shelf (ring, dominoes, row), which round 2 doesn't show: it stays until Starky decides.

@@ -101,7 +101,7 @@ window.EyeParts.addNotebook = function addNotebook(ed) {
       : afterUpdate ? saved !== 'open'
       : resuming ? (place && (place.book === 'shut' || place.book === 'open') ? place.book === 'shut' : saved !== 'open')
       : ed.state.presentation.start !== 'first';
-    // A link to one shoot (?shoot=<id>, from an Overthoughts entry about it) opens it.
+    // A link to one shoot (?shoot=<id>, from another notebook) opens it.
     const atShoot = suite && suite.get ? ed.state.shoots.find(x => x.id === suite.get('shoot')) : null;
     // Ref's + New shoot from this board (?newShootFromBoard=<link id>).
     const fromBoard = suite && suite.get ? suite.get('newShootFromBoard') : null;

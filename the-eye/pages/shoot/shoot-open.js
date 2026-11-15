@@ -178,7 +178,6 @@ window.EyeParts.addShootOpen = function addShootOpen(ed) {
     ed.loadNotSure(s);
 
     ed.renderShootFrameworkTags(s);
-    ed.renderShootNotes(s ? s.id : null);
 
     document.getElementById('postShootContent').hidden = !ed.isPostCaptureStatus(ed.previousStatusValue);
     document.getElementById('postShootPromptOverlay').hidden = true;
