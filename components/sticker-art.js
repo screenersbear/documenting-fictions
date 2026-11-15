@@ -5,19 +5,43 @@ window.StickerParts.addStickerArt = function addStickerArt(ed) {
   'use strict';
   Object.assign(ed, { make, seat, placeOnFlap, paint });
   // ---------- Drawing them ----------
+  function randomFrom(seed) { // seeded, so a sticker keeps its own creases from one launch to the next
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
   const seedOf = (s) => (Number.isFinite(s.seed) ? s.seed : [...String(s.id)].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) | 0, 7));
-  // The vinyl (15 Nov: wrinkles, sheen and fold taken off, too much texture):
-  // a flat print with a fine grain, laid over the photo in soft light so a flat
-  // patch is mid grey and the photo keeps its colours, plus a soft gloss. Its
-  // seed keeps a sticker's grain the same. Shelf only: never on photos in the apps.
-  const svgSrc = (w, h, body) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${body}</svg>`)}`;
-  const grains = new Map();
-  function grainArt(seed, aspect) { // aspect: height over width
+  // The vinyl (round 4; barely there since 15 Nov, round 6, so the photo
+  // reads): every sticker looks like printed vinyl stuck on, mostly flat with
+  // a fine grain, small wrinkles only toward its edges, a satin sheen on their
+  // ridges, one faint fold and a soft gloss. Each
+  // layer is a picture made once per sticker (its seed keeps it the same),
+  // laid over the photo in soft light, so a flat patch is mid grey and the
+  // photo keeps its colours and darks. Shelf only: never on photos in the apps.
+  const svgSrc = (w, h, body, box = `0 0 ${w} ${h}`, fit = '') => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${box}"${fit}>${body}</svg>`)}`;
+  const lit = (light) => `<filter id="f" x="0" y="0" width="100%" height="100%">${light}</filter><rect width="100%" height="100%" filter="url(#f)"/>`;
+  const vinyls = new Map();
+  function vinylArt(seed, aspect) { // aspect: height over width
     const key = `${seed}:${aspect.toFixed(3)}`;
-    if (grains.has(key)) return grains.get(key);
-    const w = 110, h = Math.max(20, Math.round(w * aspect)), n = Math.abs(seed % 9973);
-    const art = svgSrc(w, h, `<filter id="f" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="${n}" result="n"/><feDiffuseLighting in="n" surfaceScale=".7" diffuseConstant=".65" lighting-color="#FFFFFF"><feDistantLight azimuth="225" elevation="50"/></feDiffuseLighting></filter><rect width="100%" height="100%" filter="url(#f)"/>`);
-    grains.set(key, art);
+    if (vinyls.has(key)) return vinyls.get(key);
+    const w = 110, h = Math.max(20, Math.round(w * aspect)), n = Math.abs(seed % 9973), r = randomFrom(seed);
+    const wrinkles = `<feTurbulence type="fractalNoise" baseFrequency=".045 .085" numOctaves="4" seed="${n + 5}" result="n0"/><feGaussianBlur in="n0" stdDeviation=".35" result="n"/>`;
+    // One curving fold, edge to edge, at low strength.
+    const across = r() < 0.5, a = 15 + r() * 70, b = 15 + r() * 70, c1 = 25 + r() * 25, c2 = 50 + r() * 25, bend = (r() - 0.5) * 30;
+    const d = across
+      ? `M-2 ${a.toFixed(1)} C${c1.toFixed(1)} ${(a + bend).toFixed(1)} ${c2.toFixed(1)} ${(b - bend).toFixed(1)} 102 ${b.toFixed(1)}`
+      : `M${a.toFixed(1)} -2 C${(a + bend).toFixed(1)} ${c1.toFixed(1)} ${(b - bend).toFixed(1)} ${c2.toFixed(1)} ${b.toFixed(1)} 102`;
+    const art = {
+      grain: svgSrc(w, h, lit(`<feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="${n}" result="n"/><feDiffuseLighting in="n" surfaceScale=".7" diffuseConstant=".65" lighting-color="#FFFFFF"><feDistantLight azimuth="225" elevation="50"/></feDiffuseLighting>`)),
+      wrinkle: svgSrc(w, h, lit(`${wrinkles}<feDiffuseLighting in="n" surfaceScale="1" diffuseConstant=".78" lighting-color="#FFFFFF"><feDistantLight azimuth="225" elevation="40"/></feDiffuseLighting>`)),
+      sheen: svgSrc(w, h, lit(`${wrinkles}<feSpecularLighting in="n" surfaceScale="1" specularConstant=".8" specularExponent="30" lighting-color="#FFFFFF" result="s"><feDistantLight azimuth="225" elevation="35"/></feSpecularLighting><feColorMatrix in="s" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  .33 .33 .33 0 0"/>`)),
+      fold: svgSrc(w, h, `<filter id="w" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter><filter id="t" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.3"/></filter><path d="${d}" fill="none" stroke="rgba(0,0,0,.021)" stroke-width="18" filter="url(#w)" transform="translate(4 3)"/><path d="${d}" fill="none" stroke="rgba(0,0,0,.036)" stroke-width="2" filter="url(#t)"/><path d="${d}" fill="none" stroke="rgba(255,255,255,.084)" stroke-width="2.6" filter="url(#t)" transform="translate(-2 -1.6)"/>`, '0 0 100 100', ' preserveAspectRatio="none"'),
+    };
+    vinyls.set(key, art);
     return art;
   }
 
@@ -40,8 +64,9 @@ window.StickerParts.addStickerArt = function addStickerArt(ed) {
     el.className = `sticker ${s.shape}${s.printed ? ' printed' : ''}${s.edge === 'outline' ? ' outline' : ''}`;
     el.style.setProperty('--r', String(ed.ratioOf(s)));
     el.style.setProperty('--turn', `${Number(s.turn) || 0}deg`);
-    const grain = grainArt(seedOf(s), 1 / ed.ratioOf(s));
-    const inside = `<img class="photo" alt="" draggable="false" /><img class="vinyl grain" src="${grain}" alt="" draggable="false" /><i class="gloss"></i>${onFlap ? '' : '<i class="bend r" hidden></i><i class="bend l" hidden></i><i class="bend t" hidden></i><i class="bend b" hidden></i>'}`;
+    const v = vinylArt(seedOf(s), 1 / ed.ratioOf(s));
+    const layer = (cls) => `<img class="vinyl ${cls}" src="${v[cls]}" alt="" draggable="false" />`;
+    const inside = `<img class="photo" alt="" draggable="false" />${layer('grain')}${layer('wrinkle')}${layer('sheen')}${layer('fold')}<i class="gloss"></i>${onFlap ? '' : '<i class="bend r" hidden></i><i class="bend l" hidden></i><i class="bend t" hidden></i><i class="bend b" hidden></i>'}`;
     // A cut-out: all of it (picture, vinyl, gloss, bends) clipped to its shape.
     if (s.shape === 'cut') {
       el.innerHTML = `<div class="cut-in">${inside}</div>`;

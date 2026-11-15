@@ -10,12 +10,15 @@
 .sticker.printed { padding: 0; background: none; }
 .sticker.outline { padding: 0; background: none; box-shadow: 0 0 0 max(1px, calc(var(--W) * .01)) #313D45, 0 calc(var(--W) * .006) calc(var(--W) * .01) calc(var(--W) * .004) rgba(49, 61, 69, .35); }
 .sticker .photo { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; -webkit-touch-callout: none; }
-/* The vinyl (components/sticker-art.js): a fine grain in soft light and a
-   soft diagonal gloss (15 Nov: no wrinkles, sheen or fold). The photo keeps
-   its colours. */
+/* The vinyl (components/sticker-art.js): grain and wrinkles in soft light,
+   the wrinkles only toward the edges, the sheen screened on, one faint fold
+   and a soft diagonal gloss, all barely there (round 6, 15 Nov: Barely), so
+   the photo reads. The photo keeps its colours. */
 .sticker .vinyl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: inherit; pointer-events: none; }
-.sticker .vinyl.grain { mix-blend-mode: soft-light; opacity: .3; }
-.sticker .gloss { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(118deg, rgba(255, 255, 255, 0) 26%, rgba(255, 255, 255, .14) 42%, rgba(255, 255, 255, 0) 54%); }
+.sticker .vinyl.grain { mix-blend-mode: soft-light; opacity: .2; }
+.sticker .vinyl.wrinkle { mix-blend-mode: soft-light; opacity: .15; -webkit-mask-image: radial-gradient(closest-side, rgba(0, 0, 0, 0) 30%, #000 100%); mask-image: radial-gradient(closest-side, rgba(0, 0, 0, 0) 30%, #000 100%); }
+.sticker .vinyl.sheen { mix-blend-mode: screen; opacity: .05; }
+.sticker .gloss { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(118deg, rgba(255, 255, 255, 0) 26%, rgba(255, 255, 255, .1) 42%, rgba(255, 255, 255, 0) 54%); }
 /* Past the cover's edge it bends over: shaded where it bends. */
 .bend { position: absolute; z-index: 2; pointer-events: none; }
 .bend.r, .bend.l { top: 0; bottom: 0; }
