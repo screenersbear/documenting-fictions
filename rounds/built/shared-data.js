@@ -782,18 +782,27 @@
   const fold = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const hasAll = (hay, words) => words.every((w) => hay.includes(w));
   // People first (their name or handles), then each notebook's things (their
-  // title, line or the people in them), in loop order. Empty words find nothing.
+  // title, line or the people in them, or anything a person found is in), in
+  // loop order. Empty words find nothing.
   function searchIn(records, things, q) {
     const words = fold(q).replace(/@/g, '').split(/\s+/).filter(Boolean);
     const out = { people: [], byApp: Object.fromEntries(APPS.map((a) => [a, []])) };
     if (!words.length) return out;
     out.people = records.filter((r) => hasAll(fold([r.name, r.instagram, r.tiktok].join(' ')), words)).sort((a, b) => a.name.localeCompare(b.name));
-    things.filter((t) => out.byApp[t.app] && hasAll(fold([t.title, t.line, ...t.people.map((p) => `${p.name} ${p.instagram} ${p.tiktok}`)].join(' ')), words))
+    const theirs = (t) => out.people.some((r) => isIn(r, t));
+    things.filter((t) => out.byApp[t.app] && (theirs(t) || hasAll(fold([t.title, t.line, ...t.people.map((p) => `${p.name} ${p.instagram} ${p.tiktok}`)].join(' ')), words)))
       .sort((a, b) => b.day.localeCompare(a.day) || a.title.localeCompare(b.title))
       .forEach((t) => out.byApp[t.app].push(t));
     return out;
   }
-  const searchAll = async (q) => searchIn(await parts.peopleAll(), await thingsAll(), q);
+  // Search from the shelf: as searchIn, each person with their role and their
+  // Rounds thing (their group and photo): { people: [{ person, role, rounds }], byApp }.
+  async function searchAll(q) {
+    const [records, things] = await Promise.all([parts.peopleAll(), thingsAll()]);
+    const found = searchIn(records, things, q);
+    const roundsOf = (person) => things.find((t) => t.app === 'rounds' && t.kind === 'person' && isIn(person, t)) || null;
+    return { ...found, people: found.people.map((person) => ({ person, role: roleOf(person, things), rounds: roundsOf(person) })) };
+  }
 
   Object.assign(parts, { PEOPLE_APPS: APPS, pictureOf, shootPeople, cleanThing, publishThings, thingsAll, thingsFor, roleOf, personView, searchIn, searchAll });
 })();

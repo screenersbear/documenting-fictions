@@ -155,9 +155,9 @@ describe('the person page', () => {
 
 describe('search', () => {
   const people = [
-    { id: 'p1', name: 'June Park', instagram: 'junepark.jpg', tiktok: '' },
-    { id: 'p2', name: 'José Ruiz', instagram: '', tiktok: 'jose.r' },
-    { id: 'p3', name: 'Ana', instagram: 'ana.j', tiktok: '' },
+    { id: 'p1', name: 'June Park', instagram: 'junepark.jpg', tiktok: '', sigs: ['ig:junepark.jpg|name:june park', 'ig:jp.studio'] },
+    { id: 'p2', name: 'José Ruiz', instagram: '', tiktok: 'jose.r', sigs: [] },
+    { id: 'p3', name: 'Ana', instagram: 'ana.j', tiktok: '', sigs: [] },
   ];
   const things = [
     { app: 'the-eye', title: 'Rooftop portraits', line: '7 Nov', day: '2026-11-07', people: [{ name: 'June Park', instagram: '', tiktok: '' }] },
@@ -165,6 +165,7 @@ describe('search', () => {
     { app: 'ref', title: 'Beach', line: '', day: '', people: [{ name: 'José Ruiz', instagram: '', tiktok: '' }] },
     { app: 'ref', title: 'Alpha', line: '', day: '', people: [{ name: 'José Ruiz', instagram: '', tiktok: '' }] },
     { app: 'elsewhere', title: 'June', line: '', day: '', people: [] },
+    { app: 'contact-sheet', title: 'Studio post', line: '', day: '', people: [{ name: '', instagram: 'jp.studio', tiktok: '' }] },
   ];
   it('finds people first, then each notebook in loop order, by any of the words', () => {
     const r = D.searchIn(people, things, ' june ');
@@ -172,6 +173,12 @@ describe('search', () => {
     expect(Object.keys(r.byApp)).toEqual(['rounds', 'ref', 'the-eye', 'contact-sheet']);
     expect(r.byApp['the-eye'].map((t) => t.title)).toEqual(['Rooftop portraits', 'Garden test']);
     expect(r.byApp.ref).toEqual([]);
+  });
+  it("finds everything a person found is in, by however it names them", () => {
+    // The post names June only by her studio's handle, found as her before.
+    expect(D.searchIn(people, things, 'june').byApp['contact-sheet'].map((t) => t.title)).toEqual(['Studio post']);
+    expect(D.searchIn(people, things, 'studio').byApp['contact-sheet'].map((t) => t.title)).toEqual(['Studio post']);
+    expect(D.searchIn(people, things, 'ana').byApp['contact-sheet']).toEqual([]);
   });
   it('needs every word, ignores case, accents and an @', () => {
     expect(D.searchIn(people, things, 'JOSE').people.map((p) => p.id)).toEqual(['p2']);
@@ -189,6 +196,15 @@ describe('search', () => {
     await D.publishThings('ref', [{ id: 'b1', title: 'Rooftop, golden hour', people: [june] }]);
     const r = await D.searchAll('golden');
     expect(r.byApp.ref.map((t) => t.title)).toEqual(['Rooftop, golden hour']);
-    expect((await D.searchAll('june')).people.map((p) => p.name)).toEqual(['June Park']);
+    expect(r.people).toEqual([]);
+    const j = await D.searchAll('june');
+    expect(j.people.map((p) => [p.person.name, p.role, p.rounds])).toEqual([['June Park', '', null]]);
+    expect(j.byApp.ref.map((t) => t.title)).toEqual(['Rooftop, golden hour']);
+  });
+  it("gives each person found their role from The Eye and their Rounds thing", async () => {
+    await D.publishThings('rounds', [{ id: 'r1', kind: 'person', title: 'June Park', people: [{ ...june, roundsId: 'r1', at: '' }], more: { group: 'Regular' } }, { id: 'r2', kind: 'note', title: 'June note', people: [june] }]);
+    await D.publishThings('the-eye', [{ id: 's1', title: 'Rooftop', day: '2026-11-07', people: [{ ...june, role: 'Talent' }] }]);
+    const [p] = (await D.searchAll('june')).people;
+    expect([p.person.name, p.role, p.rounds.key, p.rounds.more.group]).toEqual(['June Park', 'Talent', 'rounds:r1', 'Regular']);
   });
 });

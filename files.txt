@@ -21,6 +21,7 @@ built/app.css smaller
   styles/shelf-connect.css
   styles/shelf-waiting.css
   styles/shelf-person.css
+  styles/shelf-search.css
   styles/type.css
 
 # What it does, in the order the scripts run.
@@ -41,8 +42,10 @@ built/app.js smaller
   pages/shelf-options.js
   pages/shelf-connect.js
   pages/shelf-waiting.js
+  components/thing-rows.js
   pages/shelf-person.js
   pages/shelf-person-edit.js
+  pages/shelf-search.js
   components/toast.js
   pages/shelf-open.js
   components/screen-fit.js

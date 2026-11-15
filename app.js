@@ -132,6 +132,7 @@
   window.ShelfParts.addWaiting(ed);
   window.ShelfParts.addPerson(ed);
   window.ShelfParts.addPersonEdit(ed);
+  window.ShelfParts.addSearch(ed);
   window.ShelfParts.addToast(ed);
   window.ShelfParts.addOpening(ed);
 
