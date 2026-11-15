@@ -327,7 +327,16 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
   notebook's colour with three dots in its partner colour shrinking left to right (7, 5.5 and 4px, 4px apart), no ring. It
   changes colour as the books turn; the same button in every arrangement.
 - **Options sheet:** the front book comes up close; colour (the seven pairs), STICKERS with REMOVE ONE and one ADD A STICKER
-  button, BACK UP ALL FOUR (outline) and DONE (berry blade black).
+  button, the rows How they connect and (from December) Your year, BACK UP ALL FOUR (outline) and DONE (berry blade black).
+- **The floating ! (Live, 15 Nov):** over a notebook with something waiting (a hand-off, or its own Today items), just above
+  its top edge: an ink bar (12 x 34 units on the 24-unit grid), a gap, a mango dot (16 units). No disc behind it, a soft
+  floor shadow, the books' slow bob (still with Reduce Motion). Tapping it shows what's waiting without opening the book.
+  It replaced the slips tucked into the covers.
+- **Search (Live, 15 Nov):** a magnifier at the top right. One box: people first, then each notebook's results under its
+  mark in loop order (Rounds, Ref, The Eye, Layouts).
+- **Paper pages (Live, 15 Nov):** the person page, HOW THEY CONNECT and YOUR YEAR are paper with no band: a back ring
+  button, a small caps title, then rows on a 1px ink rule. Each notebook shows under its mark on its colour (28px tile,
+  6px corners); a move's kind under its 16px mini. YOUR YEAR's numbers are 44px light.
 - **Placing a sticker:** pick a photo, then the placing screen: the book big with the sticker on it (drag to move, pinch to
   size, twist to turn) and a sheet under it with SHAPE (Circle, Square, Card, Cut out) and EDGE (White border, Black outline)
   as segmented controls, the sticker changing as you pick; BACK and STICK IT ON. Shape and edge are chosen there, never after.
@@ -401,6 +410,8 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
 | — | Bands | Only Notebooks and Options; adding beside its list; The Eye's bell gone (14 Nov) |
 | — | Turning sections | A plain slide, no page turn (14 Nov) |
 | — | Fourth notebook | Rounds, a light networking checklist, in Overthoughts' place (14 Nov) |
+| — | Shelf slips | Replaced by the floating ! and its preview (15 Nov) |
+| — | Turned down | A Today strip on the shelf, and board colours carrying into posts (15 Nov) |
 
 Still open: the shelf's own mark (7), whether Overthoughts' folder and data are ever removed (ask Starky), and the hidden up/down swipe on the
 shelf (ring, dominoes, row), which round 2 doesn't show: it stays until Starky decides.

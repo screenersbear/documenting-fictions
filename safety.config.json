@@ -54,7 +54,7 @@
     "rounds/data/auto-sync.js",
     "rounds/data/clash.js",
     "rounds/data/pitch.js",
-    "rounds/data/photos-up.js", "rounds/data/shelf-items.js", "rounds/data/people-out.js", "rounds/data/happened.js", "rounds/data/year-since.js"
+    "rounds/data/photos-up.js", "rounds/data/shelf-items.js", "rounds/data/people-out.js", "rounds/data/happened.js", "rounds/data/year-since.js", "rounds/data/year-tally.js"
   ],
   "ignore": [
     "**/vendor/**",
