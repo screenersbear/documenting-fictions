@@ -2,12 +2,15 @@
 // folder. The app's files.txt says which files go into which built file, in
 // order. Each file's text goes in exactly as it is, so the page works the same
 // as when it loaded every file on its own, with far fewer trips to the server.
-// ES modules are joined by tools/join-modules.mjs. tools/join.mjs runs this;
+// ES modules are joined by tools/join-modules.mjs. A built file marked
+// "smaller" then has its notes and extra spaces taken out (tools/smaller.mjs).
+// tools/join.mjs runs this;
 // tests/unit/tools/join.test.mjs checks that every built/ folder matches its
 // files.txt.
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, existsSync } from 'node:fs';
 import { join, extname } from 'node:path';
 import { joinModules } from './join-modules.mjs';
+import { smallerStyles, smallerScript } from './smaller.mjs';
 
 export const NOTE = 'Made by tools/join.mjs from the files listed in files.txt. Never edit it: change those files, then run node tools/join.mjs.';
 
@@ -16,6 +19,8 @@ export const NOTE = 'Made by tools/join.mjs from the files listed in files.txt. 
 // notes. A built .css file joins stylesheets; a built .js file joins either
 // scripts or pieces of the page's markup (.html). "built/app.js from app.js"
 // joins app.js and every ES module it imports, so nothing is listed under it.
+// "smaller" after a built file's name ("built/app.css smaller") makes it
+// smaller (tools/smaller.mjs); markup can't be.
 export function readList(text) {
   const groups = [];
   const seen = new Set();
@@ -30,16 +35,17 @@ export function readList(text) {
     if (!s || s.startsWith('#')) return;
     const where = `files.txt line ${i + 1}`;
     if (line.startsWith(s)) {
-      const named = s.match(/^(built\/[\w.-]+\.(?:js|css))(?: from (\S+))?$/);
-      if (!named) throw new Error(`${where}: "${s}" should be a file in built/ ending in .js or .css (or "built/app.js from app.js")`);
-      const [, out, entry] = named;
+      const named = s.match(/^(built\/[\w.-]+\.(?:js|css))(?: from (\S+))?( smaller)?$/);
+      if (!named) throw new Error(`${where}: "${s}" should be a file in built/ ending in .js or .css (or "built/app.js from app.js"), then "smaller" if it should be`);
+      const [, out, entry, smaller] = named;
       if (groups.some((g) => g.out === out)) throw new Error(`${where}: ${out} is listed twice`);
+      const small = smaller ? { smaller: true } : {};
       if (!entry) {
-        groups.push({ out, files: [] });
+        groups.push({ out, files: [], ...small });
         return;
       }
       if (!out.endsWith('.js') || !entry.endsWith('.js')) throw new Error(`${where}: modules join from a .js file into a .js file`);
-      groups.push({ out, files: [take(entry, where)], kind: 'modules' });
+      groups.push({ out, files: [take(entry, where)], kind: 'modules', ...small });
       return;
     }
     const group = groups[groups.length - 1];
@@ -47,7 +53,10 @@ export function readList(text) {
     if (group.kind) throw new Error(`${where}: ${group.out} joins ${group.files[0]} and what it imports, so nothing is listed under it`);
     group.files.push(take(s, where));
   });
-  for (const g of groups) g.kind ??= kindOf(g);
+  for (const g of groups) {
+    g.kind ??= kindOf(g);
+    if (g.smaller && g.kind === 'markup') throw new Error(`files.txt: ${g.out} is markup, which can't be made smaller`);
+  }
   return groups;
 }
 
@@ -84,12 +93,12 @@ export function styleProblem(text) {
   return depth ? 'a { that never closes' : null;
 }
 
-export function joinStyles(parts) {
+export function joinStyles(parts, smaller = false) {
   let out = `/* ${NOTE} */\n`;
   for (const { path, text } of parts) {
     const problem = styleProblem(text);
     if (problem) throw new Error(`${path}: can't be joined: ${problem}`);
-    out += `\n/* ---- ${path} ---- */\n${withNewline(text)}`;
+    out += `\n/* ---- ${path} ---- */\n${withNewline(smaller ? smallerStyles(text) : text)}`;
   }
   return out;
 }
@@ -98,12 +107,12 @@ export function joinStyles(parts) {
 // cover every file after it, or nothing.
 const STRICT = /^(?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*(["'])use strict\1/;
 
-export function joinScripts(parts) {
+export function joinScripts(parts, smaller = false) {
   let out = `// ${NOTE}\n`;
   for (const { path, text } of parts) {
     if (STRICT.test(text)) throw new Error(`${path}: can't be joined: it starts with 'use strict' (put it inside a function instead)`);
     // The ; ends the file's last line, so the next file can't run on from it.
-    out += `\n// ---- ${path} ----\n${withNewline(text)};\n`;
+    out += `\n// ---- ${path} ----\n${withNewline(smaller ? smallerScript(path, text) : text)};\n`;
   }
   return out;
 }
@@ -123,22 +132,26 @@ export function joinMarkup(parts) {
   return `// ${NOTE}\n(function () {\n  var here = document.currentScript;\n  here.insertAdjacentHTML('beforebegin', \`${literal}\`);\n  here.remove();\n})();\n`;
 }
 
+// Each kind's joining: (parts, appDir, smaller) => the built file's text.
 const JOIN = {
-  styles: joinStyles,
-  scripts: joinScripts,
+  styles: (parts, appDir, smaller) => joinStyles(parts, smaller),
+  scripts: (parts, appDir, smaller) => joinScripts(parts, smaller),
   markup: joinMarkup,
-  modules: async (parts, appDir) => `// ${NOTE}\n${await joinModules(appDir, parts[0].path)}`,
+  modules: async (parts, appDir, smaller) => {
+    const code = await joinModules(appDir, parts[0].path);
+    return `// ${NOTE}\n${smaller ? withNewline(smallerScript(parts[0].path, code, true)) : code}`;
+  },
 };
 
 // Every built file of the app in appDir, made fresh: [{ out, text }].
 export async function joinApp(appDir) {
   const built = [];
-  for (const { out, files, kind } of readList(readFileSync(join(appDir, 'files.txt'), 'utf8'))) {
+  for (const { out, files, kind, smaller = false } of readList(readFileSync(join(appDir, 'files.txt'), 'utf8'))) {
     const parts = files.map((path) => {
       if (!existsSync(join(appDir, path))) throw new Error(`files.txt lists ${path}, which isn't there`);
       return { path, text: readFileSync(join(appDir, path), 'utf8') };
     });
-    built.push({ out, text: await JOIN[kind](parts, appDir) });
+    built.push({ out, text: await JOIN[kind](parts, appDir, smaller) });
   }
   return built;
 }
