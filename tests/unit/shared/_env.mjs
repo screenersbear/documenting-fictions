@@ -71,6 +71,7 @@ export async function loadDFData() {
   await import('../../../shared/data/links.js');
   await import('../../../shared/data/connect.js');
   await import('../../../shared/data/waiting.js');
+  await import('../../../shared/data/year.js');
   await import('../../../shared/data/people.js');
   await import('../../../shared/data/people-things.js');
   await import('../../../shared/data/df-data.js');

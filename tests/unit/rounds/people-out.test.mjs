@@ -96,6 +96,21 @@ describe('tellPeople', () => {
     await vi.waitFor(() => expect(spy).toHaveBeenCalledTimes(2));
     await vi.waitFor(async () => expect((await D.peopleAll()).map((p) => p.name).sort()).toEqual(['June P.', 'Leo']));
   });
+  it("tells the year page Rounds' part with them (from the log and The Eye's shoots), and tells the list without it", async () => {
+    localStorage.setItem('dailies_state_v1', JSON.stringify({ shoots: [{ id: 's1', status: 'delivered', date: '2026-03-01' }, { id: 's2', status: 'delivered', date: '2026-10-01' }] }));
+    await db.savePeople([person({ id: 'a', pitch: { answer: 'yes', on: '2026-05-04' }, pitched: '2026-05-01' }), person({ id: 'b', shoots: ['s1', 's2'] })]);
+    await db.logMove({ id: 'm1', personId: 'a', kind: 'pitch', day: '2026-05-01', at: 1 });
+    await db.logMove({ id: 'm2', personId: 'b', kind: 'checkin', day: '2026-09-01', at: 2 });
+    const spy = vi.spyOn(D, 'publishThings');
+    R.tellPeople(0);
+    await vi.waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+    const year = window.DFYear.readYear('rounds')[2026];
+    expect(year).toMatchObject({ pitched: 1, yes: 1 });
+    expect(year.led.map((r) => [r.title, r.line])).toEqual([['Check ins', '1 sent, 1 booked again'], ['Pitches', '1 sent, 1 yes']]);
+    delete window.DFYear;
+    R.tellPeople(0);
+    await vi.waitFor(() => expect(spy).toHaveBeenCalledTimes(2));
+  });
   it("doesn't mind a failed write, or no shared files", async () => {
     vi.spyOn(D, 'publishThings').mockRejectedValue(new Error('full'));
     R.tellPeople(0);

@@ -72,6 +72,18 @@ describe('tellPeople', () => {
     expect(spy.mock.calls[0][0]).toBe('the-eye');
     expect(spy.mock.calls[0][1].map(t => t.id)).toEqual(['s1']);
   });
+  it('tells the year page the shoots shot each year, and tells the list without it', async () => {
+    vi.useFakeTimers();
+    const spy = vi.spyOn(D, 'publishThings').mockResolvedValue({});
+    const ed = app([shoot(), shoot({ id: 's2', date: '2026-02-01', status: 'editing' }), shoot({ id: 's3', date: '2026-12-20', status: 'waiting_to_shoot' }), shoot({ id: 's4', date: '2025-08-01' })]);
+    ed.tellPeople(0);
+    vi.advanceTimersByTime(0);
+    expect(window.DFYear.readYear('the-eye')).toEqual({ 2026: { shoots: 2 }, 2025: { shoots: 1 } });
+    delete window.DFYear;
+    ed.tellPeople(0);
+    vi.advanceTimersByTime(0);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
   it("doesn't mind a failed write, or no shared files", async () => {
     vi.useFakeTimers();
     vi.spyOn(D, 'publishThings').mockRejectedValue(new Error('full'));

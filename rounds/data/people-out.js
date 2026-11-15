@@ -4,9 +4,11 @@
 // shared/data/people-things.js). And the other way: a person changed on that
 // page comes back into Rounds, their name and handles (and from here to the
 // other devices, like any change), unless Rounds changed them since.
+// With them, Rounds' part of the year page (data/year-tally.js).
 import { listPeople, savePeople, getPhoto, photoIds, listMoves, onChange } from './db.js';
 import { happened } from './happened.js';
-import { eyePhoto } from './eye.js';
+import { eyePhoto, eyeShoots } from './eye.js';
+import { yearTally } from './year-tally.js';
 import { KINDS, markSvg, moveLook } from './kinds.js';
 import { phrase } from './reasons.js';
 import { GROUPS } from './plan.js';
@@ -78,6 +80,7 @@ export function tellPeople(wait = 1500) {
     try {
       const [people, week, ids, lines] = await Promise.all([listPeople(), getWeek(), photoIds(), listMoves()]);
       const own = new Set(ids);
+      window.DFYear?.publishYear('rounds', yearTally(people, lines, eyeShoots()));
       await D().publishThings('rounds', people.map((p) => personThing(p, dayOf(), week, own.has(p.id), lines)));
     } catch (e) { /* the list just doesn't hear this time */ }
   }, wait);

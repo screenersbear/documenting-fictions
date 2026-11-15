@@ -1,8 +1,9 @@
 // What Ref tells the one list of people (round 2, connect/08): each mood
 // board, with who it's for and who was on the shoots it went to, for the
 // person page and search on the shelf (the suite's shared files, window.
-// DFData, keep the list: shared/data/people-things.js). Read only: nothing
-// here changes a board.
+// DFData, keep the list: shared/data/people-things.js). With them, the
+// boards made each year, for the year page (shared/data/year.js). Read only:
+// nothing here changes a board.
 import { listBoards, getThumbs, onBoardsChange } from './db.js';
 
 const D = () => window.DFData;
@@ -55,6 +56,8 @@ export function tellPeople(wait = 1500) {
   soon = setTimeout(async () => {
     try {
       const [boards, sent] = await Promise.all([listBoards(), shootsOf()]);
+      const Y = window.DFYear;
+      if (Y) Y.publishYear('ref', Y.byYear({ boards: Y.countByYear(boards, (b) => b.createdAt) }));
       await D().publishThings('ref', boards.map((b) => boardThing(b, sent[b.id] || [])));
     } catch (e) { /* the list just doesn't hear this time */ }
   }, wait);

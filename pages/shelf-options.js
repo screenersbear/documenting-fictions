@@ -1,5 +1,6 @@
 // The notebook in front up close, with its options under it: its colour,
-// stickers for its cover, How they connect and Back up all four. (Loaded before app.js.)
+// stickers for its cover, How they connect, Your year (from December:
+// pages/shelf-year.js) and Back up all four. (Loaded before app.js.)
 window.ShelfParts = window.ShelfParts || {};
 window.ShelfParts.addOptions = function addOptions(ed) {
   'use strict';
@@ -79,6 +80,7 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         <button type="button" class="add-sticker" data-add>${PLUS}Add a sticker</button>
         <p class="opt-note">Pick a photo, then its shape and edge as you place it.</p>` : ''}
         <button type="button" class="opt-row" data-connect><span>How they connect</span>${CHEV}</button>
+        ${ed.yearShownNow() ? `<button type="button" class="opt-row" data-year><span>Your year</span>${CHEV}</button>` : ''}
         <div class="opt-foot"><button type="button" class="sheet-btn" data-backup>Back up all four</button><button type="button" class="sheet-btn primary" data-close>Done</button></div>`;
     };
     const drawRemove = () => {
@@ -105,6 +107,12 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         await hide();
         leaveNear();
         ed.openConnect();
+        return;
+      }
+      if (e.target.closest('[data-year]')) {
+        await hide();
+        leaveNear();
+        ed.openYear();
         return;
       }
       if (e.target.closest('[data-backup]')) {

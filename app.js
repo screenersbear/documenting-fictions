@@ -129,6 +129,8 @@
   window.ShelfParts.addShapeMarks(ed);
   window.ShelfParts.addOptions(ed);
   window.ShelfParts.addConnect(ed);
+  window.ShelfParts.addYear(ed);
+  window.ShelfParts.addYearImage(ed);
   window.ShelfParts.addWaiting(ed);
   window.ShelfParts.addPerson(ed);
   window.ShelfParts.addPersonEdit(ed);

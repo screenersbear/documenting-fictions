@@ -2,7 +2,8 @@
 // layout with people in it (the handles in its caption, and everyone on the
 // shoot in The Eye its finals came from), for the person page and search on
 // the shelf (the suite's shared files, window.DFData, keep the list:
-// shared/data/people-things.js). Read only: nothing here changes a layout.
+// shared/data/people-things.js). With them, the layouts made each year, for
+// the year page (shared/data/year.js). Read only: nothing here changes a layout.
 import { listProjects, onProjectsChange } from './db.js';
 
 const D = () => window.DFData;
@@ -48,6 +49,8 @@ export function tellPeople(wait = 1500) {
       const state = D().eyeState();
       const byId = new Map(((state && state.shoots) || []).map((s) => [s.id, s]));
       const projects = await listProjects();
+      const Y = window.DFYear;
+      if (Y) Y.publishYear('contact-sheet', Y.byYear({ posts: Y.countByYear(projects, (p) => p.createdAt) }));
       const things = [];
       for (const p of projects) things.push(layoutThing(p, await shootFor(p, byId)));
       await D().publishThings('contact-sheet', things);

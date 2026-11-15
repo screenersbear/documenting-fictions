@@ -55,6 +55,18 @@ describe('tellPeople', () => {
     await vi.waitFor(() => expect(spy).toHaveBeenCalledTimes(2), { timeout: 3000 });
     await vi.waitFor(async () => expect((await D.thingsAll()).map((t) => t.key)).toEqual(['ref:b1']));
   });
+  it('tells the year page the boards made each year, and tells the list without it', async () => {
+    await db.saveBoard(board());
+    await db.saveBoard(board({ id: 'b2', createdAt: '2026-01-02T10:00:00.000Z' }));
+    await db.saveBoard(board({ id: 'b3', createdAt: '2025-12-30T10:00:00.000Z' }));
+    const spy = vi.spyOn(D, 'publishThings');
+    R.tellPeople(0);
+    await vi.waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+    expect(window.DFYear.readYear('ref')).toEqual({ 2026: { boards: 2 }, 2025: { boards: 1 } });
+    delete window.DFYear;
+    R.tellPeople(0);
+    await vi.waitFor(() => expect(spy).toHaveBeenCalledTimes(2));
+  });
   it("works without The Eye, and doesn't mind a failed write or no shared files", async () => {
     await db.saveBoard(board());
     vi.spyOn(D, 'publishThings').mockRejectedValue(new Error('full'));

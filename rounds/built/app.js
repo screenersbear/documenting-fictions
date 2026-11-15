@@ -3635,6 +3635,91 @@ function happened(person, lines = []) {
 	}));
 }
 
+// data/year-tally.js
+const WITHIN = 90;
+const THANKS = ["thanks", "yes"];
+const LED_WORDS = {
+	pitch: "Pitches",
+	followup: "Follow ups",
+	intros: "Asking past clients for intros",
+	refresh: "Refresh offers",
+	checkin: "Check ins",
+	photos: "Your photos are up",
+	hello: "Saying hello"
+};
+const yearOf = (day) => day.slice(0, 4);
+const add = (o, y, k, n = 1) => {
+	const t = o[y] = o[y] || {};
+	t[k] = (t[k] || 0) + n;
+};
+const yesesOf = (people) => people.filter((p) => p.pitch && p.pitch.answer === "yes" && isDay(p.pitch.on)).map((p) => ({
+	id: p.id,
+	day: p.pitch.on
+}));
+function bookingsOf(people, shoots) {
+	const on = new Map((shoots || []).filter((s) => s && AFTER_SHOOT.includes(s.status) && isDay(s.date)).map((s) => [s.id, s.date]));
+	const out = [];
+	for (const p of people) {
+		const days = (p.shoots || []).map((id) => on.get(id)).filter(Boolean).sort();
+		for (const day of days.slice(1)) out.push({
+			id: p.id,
+			day
+		});
+	}
+	return out;
+}
+function ledBy(lines, ev) {
+	const before = lines.filter((l) => l.personId === ev.id && !THANKS.includes(l.kind) && LED_WORDS[l.kind] && isDay(l.day) && l.day <= ev.day && daysBetween(l.day, ev.day) <= 90);
+	return before.sort((a, b) => a.day.localeCompare(b.day) || (a.at || 0) - (b.at || 0)).pop() || null;
+}
+const yesWords = (y, all) => y === all ? y === 1 ? "1 yes" : `all ${y} yeses` : `${y} of the ${all} yeses`;
+function ledLine({ sent = 0, yes = 0, booked = 0 }, allYes) {
+	return [
+		sent ? `${sent} sent` : "",
+		yes ? yesWords(yes, allYes) : "",
+		booked ? `${booked} booked again` : ""
+	].filter(Boolean).join(", ");
+}
+function yearTally(people, lines, shoots) {
+	const log = (lines || []).filter((l) => l && isDay(l.day));
+	const pitched = new Set([...log.filter((l) => l.kind === "pitch").map((l) => `${yearOf(l.day)} ${l.personId}`), ...people.filter((p) => isDay(p.pitched)).map((p) => `${yearOf(p.pitched)} ${p.id}`)]);
+	const counts = {};
+	const kinds = {};
+	for (const key of pitched) add(counts, key.slice(0, 4), "pitched");
+	for (const l of log) if (LED_WORDS[l.kind]) add(kinds, yearOf(l.day), `sent ${l.kind}`);
+	const credit = (ev, what) => {
+		const l = ledBy(log, ev);
+		if (l) add(kinds, yearOf(ev.day), `${what} ${l.kind}`);
+	};
+	for (const ev of yesesOf(people)) {
+		add(counts, yearOf(ev.day), "yes");
+		credit(ev, "yes");
+	}
+	for (const ev of bookingsOf(people, shoots)) credit(ev, "booked");
+	const out = {};
+	for (const y of new Set([...Object.keys(counts), ...Object.keys(kinds)])) {
+		const c = counts[y] || {};
+		const k = kinds[y] || {};
+		const led = KIND_KEYS.filter((kind) => (k[`yes ${kind}`] || 0) + (k[`booked ${kind}`] || 0) > 0).map((kind) => ({
+			kind,
+			sent: k[`sent ${kind}`] || 0,
+			yes: k[`yes ${kind}`] || 0,
+			booked: k[`booked ${kind}`] || 0
+		})).sort((a, b) => b.yes + b.booked - (a.yes + a.booked)).map((r) => ({
+			title: LED_WORDS[r.kind],
+			line: ledLine(r, c.yes || 0),
+			bg: KINDS[r.kind].bg,
+			icon: markSvg(r.kind, 10)
+		}));
+		out[y] = {
+			...c.pitched ? { pitched: c.pitched } : {},
+			...c.yes ? { yes: c.yes } : {},
+			led
+		};
+	}
+	return out;
+}
+
 // data/people-out.js
 const D$1 = /* @__PURE__ */ __name(() => window.DFData, "D");
 function dueLine(next, week, today) {
@@ -3704,6 +3789,7 @@ function tellPeople(wait = 1500) {
 				listMoves()
 			]);
 			const own = new Set(ids);
+			window.DFYear?.publishYear("rounds", yearTally(people, lines, eyeShoots()));
 			await D$1().publishThings("rounds", people.map((p) => personThing(p, dayOf(), week, own.has(p.id), lines)));
 		} catch (e) {}
 	}, wait);

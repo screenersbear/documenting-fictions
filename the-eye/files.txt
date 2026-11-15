@@ -22,6 +22,7 @@ built/shared-data.js smaller
   data/shared/links.js
   data/shared/connect.js
   data/shared/waiting.js
+  data/shared/year.js
   data/shared/people.js
   data/shared/people-things.js
   data/shared/df-data.js

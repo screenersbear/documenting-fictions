@@ -250,6 +250,27 @@ html.is-short .shelf-bar { bottom: max(16px, calc(var(--safe-b) - var(--short-by
 .connect-name { display: block; font-size: 17px; line-height: 22px; }
 .connect-line { display: block; margin-top: 2px; font-size: 14px; line-height: 19px; color: var(--dim); }
 
+/* ---- styles/shelf-year.css ---- */
+.opt-row + .opt-row { margin-top: 0; border-top: 0; }
+.year-page .year-share { margin-left: auto; }
+.year-title { max-width: 480px; margin: 18px auto 0; font-size: 34px; font-weight: 300; letter-spacing: .04em; line-height: 40px; }
+.year-intro { max-width: 480px; margin: 6px auto 0; font-size: 15px; line-height: 21px; color: var(--dim); }
+.year-rows { max-width: 480px; margin: 18px auto 0; border-top: 1px solid var(--text); }
+.year-row { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid #E1E1DC; }
+.year-mark { flex-shrink: 0; display: inline-flex; width: 28px; height: 28px; border-radius: 6px; }
+.year-mark svg { display: block; }
+.year-n { width: 92px; font-size: 44px; font-weight: 300; line-height: 48px; font-variant-numeric: tabular-nums; }
+.year-words { flex: 1; min-width: 0; font-size: 17px; line-height: 22px; }
+.year-label { max-width: 480px; margin: 28px auto 0; font-size: 11px; font-weight: 500; letter-spacing: .12em; line-height: 14px; text-transform: uppercase; color: var(--dim); }
+.year-leds { max-width: 480px; margin: 8px auto 0; border-top: 1px solid var(--text); }
+.year-led { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #E1E1DC; }
+.year-led-mark { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 3px; }
+.year-led-mark svg { display: block; }
+.year-led-words { flex: 1; min-width: 0; }
+.year-led-title { display: block; font-size: 17px; line-height: 22px; }
+.year-led-line { display: block; margin-top: 2px; font-size: 14px; line-height: 19px; color: var(--dim); }
+.year-none { margin: 12px 0; font-size: 15px; line-height: 21px; color: var(--dim); }
+
 /* ---- styles/shelf-waiting.css ---- */
 .waiting-marks { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
 .waiting-marks.off { visibility: hidden; }

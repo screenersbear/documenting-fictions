@@ -19,6 +19,7 @@ built/app.css smaller
   styles/sheet-words.css
   styles/shared/connect.css
   styles/shelf-connect.css
+  styles/shelf-year.css
   styles/shelf-waiting.css
   styles/shelf-person.css
   styles/shelf-search.css
@@ -41,6 +42,8 @@ built/app.js smaller
   pages/shelf-marks.js
   pages/shelf-options.js
   pages/shelf-connect.js
+  pages/shelf-year.js
+  components/year-image.js
   pages/shelf-waiting.js
   components/thing-rows.js
   pages/shelf-person.js
@@ -62,6 +65,7 @@ built/app.js smaller
   shared/data/links.js
   shared/data/connect.js
   shared/data/waiting.js
+  shared/data/year.js
   shared/data/people.js
   shared/data/people-things.js
   shared/data/df-data.js

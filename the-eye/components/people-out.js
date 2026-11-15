@@ -3,7 +3,8 @@
 // the shelf (shared/data/people-things.js). And the other way: a person
 // changed on their page comes back into The Eye's own copies, its talent and
 // team taking the new name and handles. Only names and handles change, and
-// only on the people the list says are that person.
+// only on the people the list says are that person. With them, the shoots
+// shot each year, for the year page (shared/data/year.js).
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addPeopleOut = function addPeopleOut(ed) {
@@ -36,7 +37,11 @@ window.EyeParts.addPeopleOut = function addPeopleOut(ed) {
   function tellPeople(wait = 1500) {
     if (!D() || !D().publishThings) return;
     clearTimeout(soon);
-    soon = setTimeout(() => D().publishThings('the-eye', peopleThings()).catch(() => {}), wait);
+    soon = setTimeout(() => {
+      const Y = window.DFYear;
+      if (Y) Y.publishYear('the-eye', Y.byYear({ shoots: Y.shootsByYear(ed.state.shoots) }));
+      D().publishThings('the-eye', peopleThings()).catch(() => {});
+    }, wait);
   }
 
   // ---------- Changed on the person page ----------
