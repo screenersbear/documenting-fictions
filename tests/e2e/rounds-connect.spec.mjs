@@ -5,10 +5,10 @@
 // Layouts gives the people tagged in it Your photos are up, with a slip on
 // Today. The Eye's shoot people are noted for the shoot's record.
 import { test, expect } from '@playwright/test';
-import { openRounds, eyeShoot, goTo, opened, importCsv } from './_rounds.mjs';
+import { openRounds, eyeShoot, goTo, opened, importCsv, weekdayNow } from './_rounds.mjs';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const now = new Date();
+const now = weekdayNow();
 const TODAY = `${now.getDate()} ${MONTHS[now.getMonth()]}`;
 
 async function addPeople(page, csv) {

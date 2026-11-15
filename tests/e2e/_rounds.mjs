@@ -18,10 +18,31 @@ export function eyeShoot() {
   localStorage.setItem('dailies_state_v1', JSON.stringify({ shoots, projects: [], journalEntries: [] }));
 }
 
-// Rounds at phone size, as someone who's been before. seed: run on every load.
+// Rounds rests on Sundays (nothing comes up on a day off: Options, Work days),
+// and these tests take today as a day it works. So on a Sunday the page's date
+// is moved on to Monday: only the date, every timer runs as it is.
+// weekdayNow() is that same day, for what a test works out on its own.
+export function weekdayDate() {
+  const Real = Date;
+  if (new Real().getDay() !== 0) return;
+  const now = () => Real.now() + 86400000;
+  window.Date = class extends Real {
+    constructor(...args) { super(...(args.length ? args : [now()])); }
+    static now() { return now(); }
+  };
+}
+export function weekdayNow() {
+  const d = new Date();
+  if (d.getDay() === 0) d.setDate(d.getDate() + 1);
+  return d;
+}
+
+// Rounds at phone size, as someone who's been before, on a day it works.
+// seed: run on every load.
 // opts: freshPage's (serviceWorkers).
 export async function openRounds(browser, testInfo, path = '/rounds/', seed = null, opts = {}) {
   const { ctx, page, problems } = await freshPage(browser, testInfo, path, { returning: true, ...opts });
+  await ctx.addInitScript(weekdayDate);
   if (seed) await ctx.addInitScript(seed);
   await page.setViewportSize({ width: 390, height: 844 });
   // Drawn again at the new size (the page measures the screen as it loads).
