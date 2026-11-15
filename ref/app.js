@@ -24,6 +24,7 @@ import { paintStickers } from './components/stickers.js';
 import { esc } from './components/util.js';
 import { tellPeople, tellPeopleFromNowOn } from './data/people-out.js';
 import { keepUp } from './data/sendshoot.js';
+import { attachWaiting } from './data/board-for.js';
 import './components/pull-shut.js';
 
 const view = document.getElementById('view');
@@ -87,6 +88,8 @@ route().then(() => {
   // Once the notebook is on screen; then any sent board changed elsewhere is drawn again.
   setTimeout(carryOn, 2500);
   setTimeout(() => keepUp(), 4000);
+  // Then boards waiting on someone go on, once that person has a shoot.
+  setTimeout(() => attachWaiting().catch(console.error), 4500);
 });
 // The first launch: the cards on how it works. Inside Documenting Fictions,
 // first how to get back to the shelf, and the cards only if they're wanted.

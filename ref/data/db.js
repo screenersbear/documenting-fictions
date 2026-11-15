@@ -152,6 +152,11 @@ export function saveBoard(b) {
   const r = stamp(b);
   return tx(['boards'], 'readwrite', (t, set) => { t.objectStore('boards').put(r); set(r); }).then(boardsChanged);
 }
+// A board saved as it is, its day left alone: a note kept on it (a board
+// waiting on someone, data/board-for.js), not a change made to it.
+export function keepBoard(b) {
+  return tx(['boards'], 'readwrite', (t, set) => { t.objectStore('boards').put(b); set(b); });
+}
 // Puts a deleted folder back and its photos in it.
 export function restoreFolder(f, photoIds) {
   return tx(['folders', 'photos'], 'readwrite', (t) => {

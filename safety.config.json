@@ -10,7 +10,7 @@
     "ref/data/db.js",
     "ref/data/library.js",
     "ref/data/templates.js",
-    "ref/data/client-board.js", "ref/data/people-out.js",
+    "ref/data/client-board.js", "ref/data/next-time.js", "ref/data/people-out.js",
     "ref/components/textsize.js",
     "ref/components/util.js",
     "ref/components/undo.js",

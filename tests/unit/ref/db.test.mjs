@@ -451,6 +451,21 @@ describe('boards', () => {
     await db.deleteBoard('not-there');
     expect(await db.listBoards()).toHaveLength(1);
   });
+  it('keepBoard saves a board as it is: its day stays, and nobody is told', async () => {
+    const heard = vi.fn();
+    db.onBoardsChange(heard);
+    const b = await db.saveBoard(board('a', []));
+    at(T3);
+    const kept = await db.keepBoard({ ...b, client: { name: 'June', waiting: false } });
+    expect(kept.updatedAt).toBe(T1);
+    expect(await db.getBoard('a')).toEqual({ ...b, client: { name: 'June', waiting: false } });
+    expect(heard).toHaveBeenCalledTimes(1);
+  });
+  it('keepBoard puts a board in even when it was never saved', async () => {
+    const kept = await db.keepBoard({ id: 'new', name: 'x', pages: [], updatedAt: T2 });
+    expect((await db.listBoards()).map((x) => x.id)).toEqual(['new']);
+    expect(kept.updatedAt).toBe(T2);
+  });
   it('tells everyone listening when a board is saved or deleted', async () => {
     const one = vi.fn();
     const two = vi.fn();
