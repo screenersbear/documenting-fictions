@@ -117,6 +117,14 @@ describe('undoDone', () => {
     const { person, log } = markDone(was, T);
     expect(undoDone(person, { id: 'l', ...log }, [{ id: 'l', ...log }])).toEqual(was);
   });
+  it('puts back A year since with its shoot and the move it stood in for, and logs its shoot', () => {
+    const was = { ...newPerson({ id: 'j', name: 'June', group: 'regular' }, T), next: { ...move('checkin', T), year: { shootId: 's1', shoot: 'Rooftop portraits' }, then: move('checkin', '2026-12-20') } };
+    const { person, log } = markDone(was, T);
+    expect(log.year).toEqual({ shootId: 's1', shoot: 'Rooftop portraits' });
+    expect(person.next).toEqual(move('checkin', '2026-12-20'));
+    expect(undoDone(person, { id: 'l', ...log }, [{ id: 'l', ...log }])).toEqual(was);
+    expect(markDone({ ...was, next: move('checkin', T) }, T).log).not.toHaveProperty('year');
+  });
   it('puts back the day of an earlier pitch, and the answer to it, when a pitch is undone', () => {
     const was = { ...prospect, pitched: '2026-09-01', pitch: { answer: 'no', on: '2026-09-10', before: { group: 'prospect', groupPicked: false, next: null } } };
     const { person, log } = markDone(was, T);

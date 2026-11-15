@@ -4,8 +4,11 @@
 // The Eye's backup code. The two notebooks share a website, inside the suite
 // and out. What came in is noted in df-links (a 'people' link per shoot),
 // for the shoot's record in The Eye (PASSED ON); with The shoot's people
-// switched off (HOW THEY CONNECT), new shoots are passed by.
+// switched off (HOW THEY CONNECT), new shoots are passed by. A year after
+// a shoot is delivered, its people get A year since (data/year-since.js),
+// with one of its finals.
 import { bringIn } from './eye-people.js';
+import { takeYears } from './year-since.js';
 import { listPeople, savePeople, getSetting, setSetting } from './db.js';
 import { uuid } from '../components/util.js';
 import { dayOf } from './dates.js';
@@ -33,6 +36,19 @@ export async function bringInFromEye() {
   return on ? changed.length : 0;
 }
 
+// A year since: the shoots whose year came since last time (with The
+// shoot's people switched off, passed by too).
+export async function yearsFromEye() {
+  const shoots = eyeShoots();
+  if (!shoots.length) return 0;
+  const [people, seen] = await Promise.all([listPeople(), getSetting('yearSeen', [])]);
+  const { changed, seen: now } = takeYears(people, shoots, dayOf(), seen);
+  const on = !window.DFConnect || window.DFConnect.connectOn('people');
+  if (on && changed.length) await savePeople(changed);
+  if (now.length !== seen.length) await setSetting('yearSeen', now);
+  return on ? changed.length : 0;
+}
+
 // Each shoot's people, noted for its record in The Eye.
 async function notePeople(brought) {
   const D = window.DFData;
@@ -43,7 +59,7 @@ async function notePeople(brought) {
   }
 }
 
-// A talent photo, as The Eye keeps it ('' when there's none). Opened the
+// A talent photo, or a shoot's first final, as The Eye keeps it ('' when there's none). Opened the
 // way The Eye opens it (version 1, with its one store), so it's never left
 // without that store if Rounds happens to open it first.
 export function eyePhoto(key) {
@@ -57,7 +73,7 @@ export function eyePhoto(key) {
       const db = req.result;
       try {
         const get = db.transaction('images').objectStore('images').get(key);
-        get.onsuccess = () => { const v = get.result; db.close(); done((Array.isArray(v) && v[0] && v[0].src) || ''); };
+        get.onsuccess = () => { const v = get.result; db.close(); done((Array.isArray(v) && v[0] && (typeof v[0] === 'string' ? v[0] : v[0].src)) || ''); };
         get.onerror = () => { db.close(); done(''); };
       } catch { db.close(); done(''); }
     };

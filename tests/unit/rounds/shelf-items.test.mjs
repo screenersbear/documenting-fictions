@@ -25,6 +25,10 @@ describe('shelfItems', () => {
     expect(shelfItems(people, saved, T, 2, ANY_DAY, 1)).toEqual([item('b', 'Say hello', T)]);
     expect(shelfItems(people, null, T, 1, ANY_DAY, 1)).toEqual([item('a', 'Say thanks', T)]);
   });
+  it('names A year since as itself', () => {
+    const people = [p('a', 'checkin', T, { next: { kind: 'checkin', due: T, step: 0, year: { shootId: 's1', shoot: 'Rooftop portraits' } } })];
+    expect(shelfItems(people, null, T, 3, ANY_DAY, 1)).toEqual([item('a', 'A year since', T)]);
+  });
   it('nothing on days off, and nothing for no one', () => {
     const week = { work: [1, 2, 3, 4, 5], off: [0, 6] };
     expect(shelfItems([p('a', 'thanks', T)], null, T, 3, week, 1)).toEqual([]); // the 14th is a Saturday

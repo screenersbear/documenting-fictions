@@ -55,10 +55,11 @@ export function afterShoot(person, shotOn, today) {
 }
 
 // What comes after the next move is done (null: nothing more to do). Your
-// photos are up stood in for the move they had next: that one comes back.
+// photos are up, and A year since, stood in for the move they had next:
+// that one comes back.
 export function afterDone(person, today) {
   const done = person.next;
-  if (done && done.kind === 'photos' && done.then) return done.then;
+  if (done && (done.kind === 'photos' || done.year) && done.then) return done.then;
   if (!done || person.group === 'guest') return null;
   if (person.group === 'client') return move(done.kind === 'intros' ? 'refresh' : 'intros', addDays(today, GAP.client));
   if (person.group === 'prospect') {
@@ -69,9 +70,9 @@ export function afterDone(person, today) {
 }
 
 // Their next move once they're in another group: kept if it's one of the
-// group's own, otherwise the group's first.
+// group's own (or A year since, which any group keeps), otherwise the group's first.
 export function regroup(person, group, today) {
-  if (person.next && OWN[group].includes(person.next.kind)) return person.next;
+  if (person.next && (person.next.year || OWN[group].includes(person.next.kind))) return person.next;
   return firstMove(group, today);
 }
 

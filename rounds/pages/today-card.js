@@ -1,7 +1,7 @@
 // What Today draws (01-today): the top card, the cards peeking out behind
 // it, and the arc's stops (done in berry blade black, this one teal with a
 // ring, the rest open).
-import { KINDS } from '../data/kinds.js';
+import { moveName, moveLook } from '../data/kinds.js';
 import { reasonFor } from '../data/reasons.js';
 import { handleText } from '../data/contact.js';
 import { firstName } from '../data/fill.js';
@@ -12,14 +12,14 @@ import { photoHtml } from '../components/photo.js';
 import { esc } from '../components/util.js';
 
 export function cardHtml(p, today) {
-  const kind = p.next.kind;
+  const look = moveLook(p.next);
   const handle = handleText(p);
   const draft = draftWaiting(p);
   return `
-    <div class="card top${draft ? ' has-draft' : ''}" role="button" tabindex="0" data-open aria-label="${esc(`${KINDS[kind].name}, ${p.name}. Open the move`)}">
-      ${flairHtml(kind)}${photoHtml(p)}
+    <div class="card top${draft ? ' has-draft' : ''}" role="button" tabindex="0" data-open aria-label="${esc(`${moveName(p.next)}, ${p.name}. Open the move`)}">
+      ${flairHtml(look)}${photoHtml(p)}
       <div class="card-words">
-        ${tagHtml(kind)}
+        ${tagHtml(look, moveName(p.next))}
         <p class="card-name">${esc(p.name)}</p>
         ${handle ? `<p class="card-handle">${esc(handle)}</p>` : ''}
         <p class="card-why">${esc(reasonFor(p, today))}</p>
@@ -29,7 +29,7 @@ export function cardHtml(p, today) {
 }
 
 // The next cards, peeking out behind (n: 1 the nearer, 2 the farther).
-export const behindHtml = (p, n) => `<div class="card behind-${n}" aria-hidden="true">${flairHtml(p.next.kind)}</div>`;
+export const behindHtml = (p, n) => `<div class="card behind-${n}" aria-hidden="true">${flairHtml(moveLook(p.next))}</div>`;
 
 // WRITE TO DANA; a prospect is usually a business, so WRITE TO THEM.
 export const writeLabel = (p) => (p.group === 'prospect' ? 'Write to them' : `Write to ${firstName(p.name)}`);

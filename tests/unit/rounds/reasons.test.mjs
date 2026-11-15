@@ -28,6 +28,12 @@ describe('reasonFor', () => {
     expect(reasonFor(p('refresh', { lastShot: '2026-08-14' }), T)).toBe("It's been 3 months. Time for a refresh offer?");
     expect(reasonFor(p('refresh'), T)).toBe('Time for a refresh offer?');
   });
+  it('says a year since the shoot, and to send one of the finals, for A year since', () => {
+    const year = (shoot, more = {}) => ({ ...p('checkin', { lastShot: '2025-11-15', ...more }), next: { kind: 'checkin', due: T, step: 0, year: { shootId: 's1', shoot } } });
+    expect(reasonFor(year('Rooftop portraits'), T)).toBe('A year since Rooftop portraits. Send Dana one of the finals.');
+    expect(reasonFor(year(''), T)).toBe('A year since your shoot together. Send Dana one of the finals.');
+    expect(reasonFor(year('Beach day', { name: '  June  ' }), T)).toBe('A year since Beach day. Send June one of the finals.');
+  });
   it('asks a client who they know', () => {
     expect(reasonFor(p('intros'), T)).toBe('Happy clients know people like them. Ask who Dana knows.');
   });
@@ -56,5 +62,10 @@ describe('phrase', () => {
     expect(phrase('followup', 'Dana')).toBe('Follow up');
     expect(phrase('yes', 'Dana')).toBe('Say thanks for the yes');
     expect(phrase('photos', 'Dana')).toBe('Your photos are up');
+  });
+  it('names A year since as itself, whatever its kind', () => {
+    expect(phrase('checkin', 'Dana', { shootId: 's1', shoot: 'Rooftop portraits' })).toBe('A year since');
+    expect(phrase('checkin', 'Dana', null)).toBe('Check in');
+    expect(phrase('intros', 'Dana Ortiz', undefined)).toBe('Ask who Dana knows');
   });
 });

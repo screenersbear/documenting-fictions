@@ -7,6 +7,7 @@
 import { shortBandHtml } from '../components/band.js';
 import { photoHtml, fillPhotos } from '../components/photo.js';
 import { miniHtml } from '../components/marks.js';
+import { moveLook } from '../data/kinds.js';
 import { toast } from '../components/toast.js';
 import { esc } from '../components/util.js';
 import { CHEV_SMALL } from '../components/icons.js';
@@ -50,7 +51,7 @@ export async function personScreen(view, id) {
       <p class="person-line">${esc(line.endsWith('.') ? line : `${line}.`)}</p>
     </div>
     ${asks ? await pitchHtml(p, pitched) : ''}
-    ${next ? `<button type="button" class="person-next" data-move>${miniHtml(p.next.kind)}<span class="person-next-what">${esc(phrase(p.next.kind, p.name))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>`
+    ${next ? `<button type="button" class="person-next" data-move>${miniHtml(moveLook(p.next))}<span class="person-next-what">${esc(phrase(p.next.kind, p.name, p.next.year))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>`
       : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
   </div></div>`;
   fillPhotos(view, [p]);

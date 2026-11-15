@@ -1,6 +1,6 @@
 // The words for a move: the one line on a Today card saying why now, and
 // the move as a person's page names it ("Ask who Dana knows").
-import { KINDS } from './kinds.js';
+import { KINDS, YEAR_NAME } from './kinds.js';
 import { whenWords, sinceWords, later } from './dates.js';
 import { firstName } from './fill.js';
 
@@ -21,6 +21,7 @@ export function reasonFor(person, today) {
       if (person.group === 'guest') return 'One friendly note: send them their photos.';
       return person.note || "You just met. A quick hello while it's fresh.";
     case 'checkin':
+      if (n.year) return `A year since ${n.year.shoot || 'your shoot together'}. Send ${firstName(person.name)} one of the finals.`;
       return since ? `It's been ${since}. Time to plan the next one?` : 'Time to plan the next one?';
     case 'refresh':
       return since ? `It's been ${since}. Time for a refresh offer?` : 'Time for a refresh offer?';
@@ -33,7 +34,9 @@ export function reasonFor(person, today) {
   }
 }
 
-export function phrase(kind, name) {
+// (year: A year since's shoot, data/year-since.js.)
+export function phrase(kind, name, year) {
+  if (year) return YEAR_NAME;
   if (kind === 'intros') return `Ask who ${firstName(name)} knows`;
   if (kind === 'refresh') return 'Offer a refresh';
   return KINDS[kind].name;

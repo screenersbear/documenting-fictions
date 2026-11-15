@@ -48,6 +48,13 @@ describe('personThing', () => {
     expect(R.personThing(person({ name: '', instagram: '' }), TODAY, WEEK, false).title).toBe('Someone');
     expect(R.personThing(person({ next: { kind: 'intros', due: TODAY } }), TODAY, WEEK, false).line).toBe('Ask who June knows, due today');
   });
+  it('names A year since as itself, in mango with the sun', () => {
+    const next = { kind: 'checkin', due: TODAY, step: 0, year: { shootId: 's1', shoot: 'Rooftop portraits' } };
+    const t = R.personThing(person({ next }), TODAY, WEEK, false);
+    expect(t.line).toBe('A year since, due today');
+    expect(t.more.next).toMatchObject({ title: 'A year since', bg: '#FFD100' });
+    expect(t.more.next.icon).toContain('<circle cx="12" cy="12" r="12"/>');
+  });
   it("gives their photo: one added in Rounds, else The Eye's, else none", async () => {
     await db.savePhoto('r1', new Uint8Array([7, 8]).buffer, 'image/png');
     const own = R.personThing(person(), TODAY, WEEK, true);

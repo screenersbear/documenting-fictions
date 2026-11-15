@@ -1,6 +1,7 @@
 // A starter message, filled in for one person (rounds/NOTES.md, Messages):
 // [name], [where], [offer], [brand], [when], [city] and [shoot] (the shoot a
-// post from Layouts came from, for Your photos are up). A blank with nothing
+// post from Layouts came from, for Your photos are up, or the one a year
+// since, for A year since). A blank with nothing
 // to fill it stays as it is, to be written in by hand before sending.
 import { whenWords } from './dates.js';
 
@@ -18,7 +19,7 @@ export function fillValues(person, me, today) {
     brand: whole,
     when: person.lastMove ? whenWords(person.lastMove, today) : '',
     city: me.city || '',
-    shoot: (person.next && person.next.shoot) || '',
+    shoot: (person.next && (person.next.shoot || (person.next.year && person.next.year.shoot))) || '',
   };
 }
 

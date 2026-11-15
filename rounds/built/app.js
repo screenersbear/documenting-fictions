@@ -922,7 +922,7 @@ function afterShoot(person, shotOn, today) {
 }
 function afterDone(person, today) {
 	const done = person.next;
-	if (done && done.kind === "photos" && done.then) return done.then;
+	if (done && (done.kind === "photos" || done.year) && done.then) return done.then;
 	if (!done || person.group === "guest") return null;
 	if (person.group === "client") return move(done.kind === "intros" ? "refresh" : "intros", addDays(today, GAP.client));
 	if (person.group === "prospect") {
@@ -932,7 +932,7 @@ function afterDone(person, today) {
 	return move("checkin", addDays(today, GAP.checkin));
 }
 function regroup(person, group, today) {
-	if (person.next && OWN[group].includes(person.next.kind)) return person.next;
+	if (person.next && (person.next.year || OWN[group].includes(person.next.kind))) return person.next;
 	return firstMove(group, today);
 }
 const becomesRegular = (p) => p.group === "new" && !p.groupPicked && p.shoots.length >= 3;
@@ -1030,6 +1030,9 @@ const MESSAGE_ORDER = [
 	"followup"
 ];
 const isKind = (key) => KIND_KEYS.includes(key);
+const YEAR_NAME = "A year since";
+const moveName = (m) => m.year ? YEAR_NAME : KINDS[m.kind].name;
+const moveLook = (m) => m.year ? "photos" : m.kind;
 function kindFromName(text) {
 	const t = String(text ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 	return KIND_KEYS.find((k) => KINDS[k].name.toLowerCase() === t || k === t.replace(/ /g, "")) || null;
@@ -1082,7 +1085,7 @@ function fromImport(rows, today, perDay, makeId) {
 	});
 }
 function markDone(person, today) {
-	const { kind, due, step, shoot, then } = person.next;
+	const { kind, due, step, shoot, year, then } = person.next;
 	const was = kind === "pitch" ? {
 		...person.pitched ? { pitched: person.pitched } : {},
 		...person.pitch ? { pitch: person.pitch } : {}
@@ -1094,6 +1097,7 @@ function markDone(person, today) {
 		due,
 		step,
 		...shoot ? { shoot } : {},
+		...year ? { year } : {},
 		...then ? { then } : {},
 		...Object.keys(was).length ? { was } : {}
 	};
@@ -1125,6 +1129,7 @@ function undoDone$1(person, line, lines = []) {
 	const next = {
 		...move(line.kind, line.due || line.day, step),
 		...line.shoot ? { shoot: line.shoot } : {},
+		...line.year ? { year: line.year } : {},
 		...line.then ? { then: line.then } : {}
 	};
 	const back = {
@@ -1257,6 +1262,53 @@ function bringIn$1(people, shoots, seen, today, makeId) {
 }
 __name(bringIn$1, "bringIn");
 
+// data/year-since.js
+const LATE = 30;
+const YEAR_GROUPS = ["regular", "client"];
+function yearAfter(day) {
+	const d = dateOf(day);
+	const on = new Date(d.getFullYear() + 1, d.getMonth(), d.getDate());
+	return dayOf(on.getMonth() === d.getMonth() ? on : new Date(d.getFullYear() + 1, d.getMonth() + 1, 0));
+}
+function yearsDue(shoots, today, seen = []) {
+	return (shoots || []).filter((s) => s && s.id && s.status === "delivered" && isDay(s.date) && !seen.includes(s.id)).filter((s) => {
+		const gap = daysBetween(yearAfter(s.date), today);
+		return gap >= 0 && gap <= 30;
+	}).sort((a, b) => a.date.localeCompare(b.date));
+}
+function yearSince(person, shoot, today) {
+	const had = person.next;
+	const then = had && had.year ? had.then || null : had || null;
+	const title = String(shoot.title ?? "").trim();
+	return {
+		...person,
+		next: {
+			...move("checkin", today),
+			year: {
+				shootId: shoot.id,
+				shoot: title
+			},
+			...then ? { then } : {}
+		}
+	};
+}
+function takeYears(people, shoots, today, seen = []) {
+	const now = new Map(people.map((p) => [p.id, p]));
+	const changed = new Map();
+	const due = yearsDue(shoots, today, seen);
+	for (const s of due) {
+		for (const p of [...now.values()].filter((x) => !x.letGo && YEAR_GROUPS.includes(x.group) && (x.shoots || []).includes(s.id))) {
+			const q = yearSince(p, s, today);
+			now.set(p.id, q);
+			changed.set(p.id, q);
+		}
+	}
+	return {
+		changed: [...changed.values()],
+		seen: [...seen, ...due.map((s) => s.id)]
+	};
+}
+
 // data/eye.js
 const EYE_STATE = "dailies_state_v1";
 const EYE_PHOTOS = "starky-moodboards";
@@ -1277,6 +1329,16 @@ async function bringInFromEye() {
 	if (on && changed.length) await savePeople(changed);
 	if (now.length !== seen.length) await setSetting("eyeSeen", now);
 	if (on) await notePeople(brought).catch(() => {});
+	return on ? changed.length : 0;
+}
+async function yearsFromEye() {
+	const shoots = eyeShoots();
+	if (!shoots.length) return 0;
+	const [people, seen] = await Promise.all([listPeople(), getSetting("yearSeen", [])]);
+	const { changed, seen: now } = takeYears(people, shoots, dayOf(), seen);
+	const on = !window.DFConnect || window.DFConnect.connectOn("people");
+	if (on && changed.length) await savePeople(changed);
+	if (now.length !== seen.length) await setSetting("yearSeen", now);
 	return on ? changed.length : 0;
 }
 async function notePeople(brought) {
@@ -1319,7 +1381,7 @@ function eyePhoto(key) {
 				get.onsuccess = () => {
 					const v = get.result;
 					db.close();
-					done(Array.isArray(v) && v[0] && v[0].src || "");
+					done(Array.isArray(v) && v[0] && (typeof v[0] === "string" ? v[0] : v[0].src) || "");
 				};
 				get.onerror = () => {
 					db.close();
@@ -1536,7 +1598,7 @@ function shelfItems(people, saved, today, perDay, week, days = 14) {
 			const p = byId.get(id);
 			items.push({
 				title: p.name,
-				line: KINDS[p.next.kind].name,
+				line: moveName(p.next),
 				from: day,
 				until: day,
 				params: { at: "today" }
@@ -1642,7 +1704,7 @@ function fillValues(person, me, today) {
 		brand: whole,
 		when: person.lastMove ? whenWords(person.lastMove, today) : "",
 		city: me.city || "",
-		shoot: person.next && person.next.shoot || ""
+		shoot: person.next && (person.next.shoot || person.next.year && person.next.year.shoot) || ""
 	};
 }
 function fill(text, values) {
@@ -1665,37 +1727,40 @@ function reasonFor(person, today) {
 		case "hello":
 			if (person.group === "guest") return "One friendly note: send them their photos.";
 			return person.note || "You just met. A quick hello while it's fresh.";
-		case "checkin": return since ? `It's been ${since}. Time to plan the next one?` : "Time to plan the next one?";
+		case "checkin":
+			if (n.year) return `A year since ${n.year.shoot || "your shoot together"}. Send ${firstName(person.name)} one of the finals.`;
+			return since ? `It's been ${since}. Time to plan the next one?` : "Time to plan the next one?";
 		case "refresh": return since ? `It's been ${since}. Time for a refresh offer?` : "Time for a refresh offer?";
 		case "intros": return `Happy clients know people like them. Ask who ${firstName(person.name)} knows.`;
 		case "pitch": return person.note || "Someone new to pitch.";
 		default: return n.step > 1 ? "One last follow up, then Rounds lets it rest." : "No answer yet. One friendly follow up.";
 	}
 }
-function phrase(kind, name) {
+function phrase(kind, name, year) {
+	if (year) return YEAR_NAME;
 	if (kind === "intros") return `Ask who ${firstName(name)} knows`;
 	if (kind === "refresh") return "Offer a refresh";
 	return KINDS[kind].name;
 }
 
 // components/marks.js
-function tagHtml(kind) {
+function tagHtml(kind, name = KINDS[kind].name) {
 	const k = KINDS[kind];
-	return `<span class="tag" style="background:${k.bg};color:${k.fg}">${esc(k.name)}</span>`;
+	return `<span class="tag" style="background:${k.bg};color:${k.fg}">${esc(name)}</span>`;
 }
 const flairHtml = (kind) => `<span class="flair" style="background:${KINDS[kind].bg}" aria-hidden="true">${markSvg(kind, 132)}</span>`;
 const miniHtml = (kind) => kind ? `<span class="mini" style="background:${KINDS[kind].bg}" aria-hidden="true">${markSvg(kind, 10)}</span>` : "";
 
 // pages/today-card.js
 function cardHtml$1(p, today) {
-	const kind = p.next.kind;
+	const look = moveLook(p.next);
 	const handle = handleText(p);
 	const draft = draftWaiting(p);
 	return `
-    <div class="card top${draft ? " has-draft" : ""}" role="button" tabindex="0" data-open aria-label="${esc(`${KINDS[kind].name}, ${p.name}. Open the move`)}">
-      ${flairHtml(kind)}${photoHtml(p)}
+    <div class="card top${draft ? " has-draft" : ""}" role="button" tabindex="0" data-open aria-label="${esc(`${moveName(p.next)}, ${p.name}. Open the move`)}">
+      ${flairHtml(look)}${photoHtml(p)}
       <div class="card-words">
-        ${tagHtml(kind)}
+        ${tagHtml(look, moveName(p.next))}
         <p class="card-name">${esc(p.name)}</p>
         ${handle ? `<p class="card-handle">${esc(handle)}</p>` : ""}
         <p class="card-why">${esc(reasonFor(p, today))}</p>
@@ -1704,7 +1769,7 @@ function cardHtml$1(p, today) {
     </div>`;
 }
 __name(cardHtml$1, "cardHtml");
-const behindHtml = (p, n) => `<div class="card behind-${n}" aria-hidden="true">${flairHtml(p.next.kind)}</div>`;
+const behindHtml = (p, n) => `<div class="card behind-${n}" aria-hidden="true">${flairHtml(moveLook(p.next))}</div>`;
 const writeLabel = (p) => p.group === "prospect" ? "Write to them" : `Write to ${firstName(p.name)}`;
 function arcHtml(pick, current, label) {
 	const pts = stops$1(pick.ids.length);
@@ -1811,6 +1876,44 @@ function cardAway(card, dir, dx = 0) {
 	});
 }
 
+// components/files.js
+async function saveFile(file) {
+	if (navigator.canShare && navigator.canShare({ files: [file] })) {
+		try {
+			await navigator.share({
+				files: [file],
+				title: file.name
+			});
+			return "shared";
+		} catch (e) {
+			if (e && e.name === "AbortError") return "cancelled";
+		}
+	}
+	const url = URL.createObjectURL(file);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = file.name;
+	document.body.appendChild(a);
+	a.click();
+	a.remove();
+	setTimeout(() => URL.revokeObjectURL(url), 4e3);
+	return "downloaded";
+}
+function pickFile(accept) {
+	return new Promise((ok) => {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = accept;
+		input.style.display = "none";
+		input.addEventListener("change", () => {
+			ok(input.files && input.files[0] ? input.files[0] : null);
+			input.remove();
+		});
+		document.body.appendChild(input);
+		input.click();
+	});
+}
+
 // pages/move.js
 async function copy(text) {
 	try {
@@ -1828,6 +1931,18 @@ async function copy(text) {
 		return !!ok;
 	}
 }
+async function showFinal(box, year) {
+	const src = await eyePhoto(`${year.shootId}__final`);
+	if (!src || !box.isConnected) return;
+	box.querySelector("img").src = src;
+	box.hidden = false;
+	box.querySelector("[data-share]").addEventListener("click", async () => {
+		const blob = await (await fetch(src)).blob();
+		const ext = blob.type === "image/png" ? "png" : "jpg";
+		const name = `${String(year.shoot || "Final").replace(/[\\/:*?"<>|]/g, "").trim() || "Final"}.${ext}`;
+		if (await saveFile(new File([blob], name, { type: blob.type || "image/jpeg" })) === "downloaded") toast("The photo is in your downloads.");
+	});
+}
 async function openMove(person, { onDone, onLater }) {
 	const kind = person.next.kind;
 	const [messages, me] = await Promise.all([getMessages(), getMe()]);
@@ -1835,19 +1950,24 @@ async function openMove(person, { onDone, onLater }) {
 	const where = contactFor(person);
 	const handle = handleText(person);
 	const draft = draftWaiting(person);
+	const year = person.next.year;
 	let away = false;
 	const s = openSheet({
-		title: KINDS[kind].name,
+		title: moveName(person.next),
 		className: "move-sheet",
 		onClose: () => document.removeEventListener("visibilitychange", back),
 		body: `
       <div class="move-who">${photoHtml(person, "small")}<span class="move-who-words"><span class="move-name">${esc(person.name)}</span>${handle ? `<span class="move-handle">${esc(handle)}</span>` : ""}</span></div>
+      ${year ? `<div class="move-final" hidden><img alt="${esc(`A final from ${year.shoot || "the shoot"}`)}" />
+        <!-- SHARE THE PHOTO hands it to the phone's share sheet (a download on a computer): the button clicker leaves it alone. -->
+        <button type="button" class="text-btn move-share" data-share data-test-skip>Share the photo</button></div>` : ""}
       ${draft ? "<p class=\"move-draft\">Draft waiting in Gmail, written by Claude.</p>" : `<label class="label" for="moveText">Your message</label>
       <textarea class="move-text" id="moveText" rows="6">${esc(text)}</textarea>`}
       <div class="move-actions"></div>`
 	});
-	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(kind);
+	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(moveLook(person.next), moveName(person.next));
 	fillPhotos(s.el, [person]);
+	if (year) showFinal(s.body.querySelector(".move-final"), year);
 	const actions = s.body.querySelector(".move-actions");
 	const buttons = () => {
 		actions.innerHTML = `
@@ -1928,8 +2048,8 @@ function openAddPerson(onAdded) {
 
 // pages/done-today.js
 const rowHtml = ({ line, person }, i) => `
-  <div class="done-row">${miniHtml(line.kind)}
-    <span class="choice-text"><span class="choice-label">${esc(person.name)}</span><span class="choice-detail">${esc(KINDS[line.kind].name)}</span></span>
+  <div class="done-row">${miniHtml(moveLook(line))}
+    <span class="choice-text"><span class="choice-label">${esc(person.name)}</span><span class="choice-detail">${esc(moveName(line))}</span></span>
     <button type="button" class="text-btn" data-undo="${i}">Undo</button>
   </div>`;
 async function openDoneToday(onChange) {
@@ -2577,44 +2697,6 @@ function openReview({ title, notes = "", items, onAdd, none = "" }) {
 		s.close();
 	});
 	return s;
-}
-
-// components/files.js
-async function saveFile(file) {
-	if (navigator.canShare && navigator.canShare({ files: [file] })) {
-		try {
-			await navigator.share({
-				files: [file],
-				title: file.name
-			});
-			return "shared";
-		} catch (e) {
-			if (e && e.name === "AbortError") return "cancelled";
-		}
-	}
-	const url = URL.createObjectURL(file);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = file.name;
-	document.body.appendChild(a);
-	a.click();
-	a.remove();
-	setTimeout(() => URL.revokeObjectURL(url), 4e3);
-	return "downloaded";
-}
-function pickFile(accept) {
-	return new Promise((ok) => {
-		const input = document.createElement("input");
-		input.type = "file";
-		input.accept = accept;
-		input.style.display = "none";
-		input.addEventListener("change", () => {
-			ok(input.files && input.files[0] ? input.files[0] : null);
-			input.remove();
-		});
-		document.body.appendChild(input);
-		input.click();
-	});
 }
 
 // pages/import.js
@@ -3573,7 +3655,7 @@ async function shelfPageOf(p) {
 }
 function personThing(p, today, week, ownPhoto, lines = []) {
 	const next = p.next && !p.letGo ? p.next : null;
-	const what = next ? phrase(next.kind, p.name) : p.letGo ? "Let go" : "Nothing planned";
+	const what = next ? phrase(next.kind, p.name, next.year) : p.letGo ? "Let go" : "Nothing planned";
 	const when = next ? dueLine(next, week, today) : "";
 	return {
 		id: p.id,
@@ -3587,8 +3669,8 @@ function personThing(p, today, week, ownPhoto, lines = []) {
 			next: {
 				title: what,
 				line: when,
-				bg: next ? KINDS[next.kind].bg : "#E1E1DC",
-				icon: next ? markSvg(next.kind, 10) : ""
+				bg: next ? KINDS[moveLook(next)].bg : "#E1E1DC",
+				icon: next ? markSvg(moveLook(next), 10) : ""
 			},
 			group: GROUPS[p.group] || "",
 			happened: happened(p, lines)
@@ -3902,7 +3984,7 @@ async function personScreen(view, id) {
       <p class="person-line">${esc(line.endsWith(".") ? line : `${line}.`)}</p>
     </div>
     ${asks ? await pitchHtml(p, pitched) : ""}
-    ${next ? `<button type="button" class="person-next" data-move>${miniHtml(p.next.kind)}<span class="person-next-what">${esc(phrase(p.next.kind, p.name))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>` : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
+    ${next ? `<button type="button" class="person-next" data-move>${miniHtml(moveLook(p.next))}<span class="person-next-what">${esc(phrase(p.next.kind, p.name, p.next.year))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>` : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
   </div></div>`;
 	fillPhotos(view, [p]);
 	const screen = view.querySelector(".screen");
@@ -4418,7 +4500,7 @@ function onSynced(r) {
 window.addEventListener("hashchange", route);
 if (suite && suite.get && suite.get("person")) history.replaceState(null, "", `#/person/${encodeURIComponent(suite.get("person"))}`);
 else if ((location.hash || "#/") === "#/") history.replaceState(null, "", suite && suite.at ? `#/${suite.at}` : "#/today");
-const bringIn = async () => await takePeopleEdits().catch(() => 0) + await bringInFromEye() + await takeFromLayouts();
+const bringIn = async () => await takePeopleEdits().catch(() => 0) + await bringInFromEye() + await yearsFromEye() + await takeFromLayouts();
 tellPeopleFromNowOn();
 tellPeople(3e3);
 bringIn().catch(console.error).finally(() => {

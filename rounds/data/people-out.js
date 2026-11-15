@@ -7,7 +7,7 @@
 import { listPeople, savePeople, getPhoto, photoIds, listMoves, onChange } from './db.js';
 import { happened } from './happened.js';
 import { eyePhoto } from './eye.js';
-import { KINDS, markSvg } from './kinds.js';
+import { KINDS, markSvg, moveLook } from './kinds.js';
 import { phrase } from './reasons.js';
 import { GROUPS } from './plan.js';
 import { dueWords, dayOf } from './dates.js';
@@ -39,7 +39,7 @@ export async function shelfPageOf(p) {
 // for The Eye's talent card) and their photo (asked for only when it changed).
 export function personThing(p, today, week, ownPhoto, lines = []) {
   const next = p.next && !p.letGo ? p.next : null;
-  const what = next ? phrase(next.kind, p.name) : p.letGo ? 'Let go' : 'Nothing planned';
+  const what = next ? phrase(next.kind, p.name, next.year) : p.letGo ? 'Let go' : 'Nothing planned';
   const when = next ? dueLine(next, week, today) : '';
   return {
     id: p.id,
@@ -50,7 +50,7 @@ export function personThing(p, today, week, ownPhoto, lines = []) {
     people: [listedAs(p)],
     params: { person: p.id },
     more: {
-      next: { title: what, line: when, bg: next ? KINDS[next.kind].bg : '#E1E1DC', icon: next ? markSvg(next.kind, 10) : '' },
+      next: { title: what, line: when, bg: next ? KINDS[moveLook(next)].bg : '#E1E1DC', icon: next ? markSvg(moveLook(next), 10) : '' },
       group: GROUPS[p.group] || '',
       happened: happened(p, lines),
     },

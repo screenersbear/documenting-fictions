@@ -312,6 +312,9 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 /* Back from Instagram: "Done?" in place of the buttons. */
 .move-ask { margin: 0 0 10px; text-align: center; font: 300 20px/26px var(--ui); }
 .move-ask-btns { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; }
+/* A year since: one of the shoot's finals, as it is, ready to share. */
+.move-final { display: flex; align-items: flex-end; gap: 12px; margin-top: 16px; }
+.move-final img { display: block; width: auto; height: auto; max-width: 62%; max-height: 190px; border-radius: 4px; }
 
 /* ---- styles/people.css ---- */
 /* People (03-people): plain cards, a photo over the name, with a tiny 16px

@@ -4,9 +4,10 @@
 import { KINDS, markSvg } from '../data/kinds.js';
 import { esc } from './util.js';
 
-export function tagHtml(kind) {
+// (name: when it isn't the kind's own, as for A year since.)
+export function tagHtml(kind, name = KINDS[kind].name) {
   const k = KINDS[kind];
-  return `<span class="tag" style="background:${k.bg};color:${k.fg}">${esc(k.name)}</span>`;
+  return `<span class="tag" style="background:${k.bg};color:${k.fg}">${esc(name)}</span>`;
 }
 export const flairHtml = (kind) => `<span class="flair" style="background:${KINDS[kind].bg}" aria-hidden="true">${markSvg(kind, 132)}</span>`;
 export const miniHtml = (kind) => (kind ? `<span class="mini" style="background:${KINDS[kind].bg}" aria-hidden="true">${markSvg(kind, 10)}</span>` : '');

@@ -3,20 +3,23 @@
 // that copies it and opens their Instagram (or email or website). DONE and
 // LATER under it. Coming back from Instagram, it asks "Done?". When Claude
 // drafted it in Gmail already, the button opens Gmail instead, so it's never
-// written twice.
+// written twice. A year since (data/year-since.js) shows one of the
+// shoot's finals from The Eye under the person, with SHARE THE PHOTO.
 import { openSheet } from '../components/sheet.js';
 import { tagHtml } from '../components/marks.js';
 import { photoHtml, fillPhotos } from '../components/photo.js';
 import { toast } from '../components/toast.js';
 import { esc } from '../components/util.js';
 import { ARROW } from '../components/icons.js';
-import { KINDS } from '../data/kinds.js';
+import { KINDS, moveName, moveLook } from '../data/kinds.js';
 import { fill, fillValues } from '../data/fill.js';
 import { contactFor, handleText, GMAIL_DRAFTS } from '../data/contact.js';
 import { draftWaiting } from '../data/person.js';
 import { getMessages } from '../data/db.js';
 import { getMe } from '../data/moves.js';
 import { dayOf } from '../data/dates.js';
+import { eyePhoto } from '../data/eye.js';
+import { saveFile } from '../components/files.js';
 
 async function copy(text) {
   try { await navigator.clipboard.writeText(text); return true; } catch {
@@ -32,6 +35,20 @@ async function copy(text) {
   }
 }
 
+// A year since: the shoot's first final, as The Eye keeps it (none: nothing shown).
+async function showFinal(box, year) {
+  const src = await eyePhoto(`${year.shootId}__final`);
+  if (!src || !box.isConnected) return;
+  box.querySelector('img').src = src;
+  box.hidden = false;
+  box.querySelector('[data-share]').addEventListener('click', async () => {
+    const blob = await (await fetch(src)).blob();
+    const ext = blob.type === 'image/png' ? 'png' : 'jpg';
+    const name = `${String(year.shoot || 'Final').replace(/[\\/:*?"<>|]/g, '').trim() || 'Final'}.${ext}`;
+    if (await saveFile(new File([blob], name, { type: blob.type || 'image/jpeg' })) === 'downloaded') toast('The photo is in your downloads.');
+  });
+}
+
 // onDone and onLater run once the sheet has closed.
 export async function openMove(person, { onDone, onLater }) {
   const kind = person.next.kind;
@@ -40,19 +57,24 @@ export async function openMove(person, { onDone, onLater }) {
   const where = contactFor(person);
   const handle = handleText(person);
   const draft = draftWaiting(person);
+  const year = person.next.year;
   let away = false;
   const s = openSheet({
-    title: KINDS[kind].name,
+    title: moveName(person.next),
     className: 'move-sheet',
     onClose: () => document.removeEventListener('visibilitychange', back),
     body: `
       <div class="move-who">${photoHtml(person, 'small')}<span class="move-who-words"><span class="move-name">${esc(person.name)}</span>${handle ? `<span class="move-handle">${esc(handle)}</span>` : ''}</span></div>
+      ${year ? `<div class="move-final" hidden><img alt="${esc(`A final from ${year.shoot || 'the shoot'}`)}" />
+        <!-- SHARE THE PHOTO hands it to the phone's share sheet (a download on a computer): the button clicker leaves it alone. -->
+        <button type="button" class="text-btn move-share" data-share data-test-skip>Share the photo</button></div>` : ''}
       ${draft ? '<p class="move-draft">Draft waiting in Gmail, written by Claude.</p>' : `<label class="label" for="moveText">Your message</label>
       <textarea class="move-text" id="moveText" rows="6">${esc(text)}</textarea>`}
       <div class="move-actions"></div>`,
   });
-  s.el.querySelector('.sheet-header h2').innerHTML = tagHtml(kind);
+  s.el.querySelector('.sheet-header h2').innerHTML = tagHtml(moveLook(person.next), moveName(person.next));
   fillPhotos(s.el, [person]);
+  if (year) showFinal(s.body.querySelector('.move-final'), year);
   const actions = s.body.querySelector('.move-actions');
   const buttons = () => {
     // COPY AND OPEN goes out to Instagram (or email, or a website), and OPEN GMAIL to Gmail: the button clicker leaves them alone.

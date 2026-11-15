@@ -89,6 +89,13 @@ describe('afterDone', () => {
     expect(two).toEqual(move('followup', '2026-12-05', 2));
     expect(afterDone(who('prospect', two), '2026-12-05')).toBe(null);
   });
+  it('brings back the move A year since stood in for, else carries on as after a Check in', () => {
+    const intros = move('intros', '2026-12-01');
+    expect(afterDone(who('client', { ...move('checkin', T), year: { shootId: 's1', shoot: 'Rooftop portraits' }, then: intros }), T)).toBe(intros);
+    expect(afterDone(who('regular', { ...move('checkin', T), year: { shootId: 's1', shoot: 'Rooftop portraits' } }), T)).toEqual(move('checkin', '2026-12-26'));
+    expect(afterDone(who('client', { ...move('checkin', T), year: { shootId: 's1', shoot: 'Rooftop portraits' } }), T)).toEqual(move('intros', '2027-02-12'));
+    expect(afterDone(who('regular', { ...move('checkin', T), then: intros }), T)).toEqual(move('checkin', '2026-12-26'));
+  });
   it('brings back the move Your photos are up stood in for', () => {
     const checkin = move('checkin', '2026-12-01');
     expect(afterDone(who('regular', { ...move('photos', T), then: checkin }), T)).toBe(checkin);
@@ -115,6 +122,11 @@ describe('regroup', () => {
       expect(regroup(who('client', yes), g, T)).toBe(yes);
       expect(regroup(who('new', photos), g, T)).toBe(photos);
     }
+  });
+  it('keeps A year since in any group, though it is a Check in', () => {
+    const year = { ...move('checkin', T), year: { shootId: 's1', shoot: 'Rooftop portraits' } };
+    for (const g of GROUP_KEYS) expect(regroup(who('regular', year), g, T)).toBe(year);
+    expect(regroup(who('regular', move('checkin', T)), 'client', T)).toEqual(move('intros', T));
   });
   it('gives the group\'s first move otherwise', () => {
     expect(regroup(who('new', move('thanks', T)), 'regular', T)).toEqual(move('checkin', T));

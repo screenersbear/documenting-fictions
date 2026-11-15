@@ -26,6 +26,12 @@ describe('fillValues', () => {
     expect(fillValues({ ...p, next: { kind: 'photos', due: T, step: 0 } }, {}, T).shoot).toBe('');
     expect(fillValues({ ...p, next: null }, {}, T).shoot).toBe('');
   });
+  it('fills in the shoot a year since, for A year since', () => {
+    const p = { name: 'June Park', group: 'regular', next: { kind: 'checkin', due: T, step: 0, year: { shootId: 's1', shoot: 'Rooftop portraits' } } };
+    expect(fillValues(p, {}, T).shoot).toBe('Rooftop portraits');
+    expect(fillValues({ ...p, next: { ...p.next, year: { shootId: 's1', shoot: '' } } }, {}, T).shoot).toBe('');
+    expect(fillValues({ ...p, next: { ...p.next, year: null } }, {}, T).shoot).toBe('');
+  });
   it('uses all of a prospect\'s name, a business usually', () => {
     expect(fillValues({ name: ' Hoboken Florist ', group: 'prospect' }, {}, T).name).toBe('Hoboken Florist');
   });

@@ -6,7 +6,7 @@
 // the suite's shared files); the shelf shows today's.
 import { pickFor, waiting } from './today.js';
 import { addDays } from './dates.js';
-import { KINDS } from './kinds.js';
+import { moveName } from './kinds.js';
 
 export const DAYS_AHEAD = 14;
 
@@ -19,7 +19,7 @@ export function shelfItems(people, saved, today, perDay, week, days = DAYS_AHEAD
     const pick = pickFor(people, n === 0 ? saved : null, day, perDay, week);
     for (const id of waiting(pick)) {
       const p = byId.get(id);
-      items.push({ title: p.name, line: KINDS[p.next.kind].name, from: day, until: day, params: { at: 'today' } });
+      items.push({ title: p.name, line: moveName(p.next), from: day, until: day, params: { at: 'today' } });
     }
   }
   return items;

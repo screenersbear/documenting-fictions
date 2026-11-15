@@ -54,9 +54,9 @@ export function fromImport(rows, today, perDay, makeId) {
 // PITCH GO?), and an answer to an earlier pitch is cleared; the log keeps
 // those as they were (was), for its undo.
 export function markDone(person, today) {
-  const { kind, due, step, shoot, then } = person.next;
+  const { kind, due, step, shoot, year, then } = person.next;
   const was = kind === 'pitch' ? { ...(person.pitched ? { pitched: person.pitched } : {}), ...(person.pitch ? { pitch: person.pitch } : {}) } : {};
-  const log = { personId: person.id, kind, day: today, due, step, ...(shoot ? { shoot } : {}), ...(then ? { then } : {}), ...(Object.keys(was).length ? { was } : {}) };
+  const log = { personId: person.id, kind, day: today, due, step, ...(shoot ? { shoot } : {}), ...(year ? { year } : {}), ...(then ? { then } : {}), ...(Object.keys(was).length ? { was } : {}) };
   const { draft, ...rest } = person;
   const after = { ...rest, lastMove: today, next: afterDone(person, today) };
   if (kind === 'pitch') {
@@ -84,7 +84,7 @@ export function undoDone(person, line, lines = []) {
   const guess = line.kind === 'followup' ? followupBefore(person) : 0;
   const step = Number.isInteger(line.step) ? line.step : guess;
   const lastMove = lines.filter((l) => l.personId === person.id && l.id !== line.id).map((l) => l.day).sort().pop() || '';
-  const next = { ...move(line.kind, line.due || line.day, step), ...(line.shoot ? { shoot: line.shoot } : {}), ...(line.then ? { then: line.then } : {}) };
+  const next = { ...move(line.kind, line.due || line.day, step), ...(line.shoot ? { shoot: line.shoot } : {}), ...(line.year ? { year: line.year } : {}), ...(line.then ? { then: line.then } : {}) };
   const back = { ...person, lastMove, next };
   if (line.kind === 'pitch') {
     const was = line.was || {};

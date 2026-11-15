@@ -31,6 +31,14 @@ export const MESSAGE_ORDER = ['thanks', 'yes', 'photos', 'hello', 'checkin', 're
 
 export const isKind = (key) => KIND_KEYS.includes(key);
 
+// A YEAR SINCE a shoot (round 2, connect/12; data/year-since.js) is a Check
+// in with the shoot on it (next.year). Its tag says A year since, and it's
+// drawn in the thank-yous' mango and sun, as its mockup has it. Every place
+// that names or draws a move (or a done move's line) asks these.
+export const YEAR_NAME = 'A year since';
+export const moveName = (m) => (m.year ? YEAR_NAME : KINDS[m.kind].name);
+export const moveLook = (m) => (m.year ? 'photos' : m.kind);
+
 // A kind from how a person (or a file) writes it: "Say hello", "ask for intros", "checkin".
 export function kindFromName(text) {
   const t = String(text ?? '').trim().toLowerCase().replace(/\s+/g, ' ');

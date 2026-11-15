@@ -1,6 +1,6 @@
 // rounds/data/kinds.js: the nine kinds of move, their colour pairs, marks and starter messages.
 import { describe, it, expect } from 'vitest';
-import { KINDS, KIND_KEYS, MARKS, MESSAGE_ORDER, isKind, kindFromName, markSvg } from '../../../rounds/data/kinds.js';
+import { KINDS, KIND_KEYS, MARKS, MESSAGE_ORDER, isKind, kindFromName, markSvg, moveName, moveLook, YEAR_NAME } from '../../../rounds/data/kinds.js';
 
 describe('the kinds', () => {
   it('come in the order Today takes them, thanks first and a pitch last', () => {
@@ -84,5 +84,25 @@ describe('markSvg', () => {
   it('draws a kind mark at a size, in its mark colour', () => {
     expect(markSvg('thanks', 10)).toBe('<svg viewBox="0 0 24 24" width="10" height="10" fill="#313D45" aria-hidden="true"><circle cx="12" cy="12" r="12"/></svg>');
     expect(markSvg('hello', 132)).toBe(`<svg viewBox="0 0 24 24" width="132" height="132" fill="#FFD100" aria-hidden="true">${MARKS.rise}</svg>`);
+  });
+});
+
+describe('moveName and moveLook', () => {
+  const year = { shootId: 's1', shoot: 'Rooftop portraits' };
+  it("name a move by its kind, and draw it in its kind's colours", () => {
+    expect(moveName({ kind: 'checkin' })).toBe('Check in');
+    expect(moveName({ kind: 'photos', shoot: 'Rooftop portraits' })).toBe('Your photos are up');
+    expect(moveLook({ kind: 'pitch' })).toBe('pitch');
+  });
+  it('call A year since by its own name, drawn in mango and the sun (as Your photos are up)', () => {
+    expect(moveName({ kind: 'checkin', year })).toBe('A year since');
+    expect(YEAR_NAME).toBe('A year since');
+    expect(moveLook({ kind: 'checkin', year })).toBe('photos');
+    expect(KINDS[moveLook({ kind: 'checkin', year })]).toMatchObject({ bg: '#FFD100', mark: 'sun' });
+  });
+  it('work for a done move\'s line too, and a year left empty', () => {
+    expect(moveName({ personId: 'j', kind: 'checkin', day: '2026-11-15', year })).toBe('A year since');
+    expect(moveName({ kind: 'checkin', year: null })).toBe('Check in');
+    expect(moveLook({ kind: 'hello', year: undefined })).toBe('hello');
   });
 });

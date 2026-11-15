@@ -5,12 +5,12 @@ import { openSheet } from '../components/sheet.js';
 import { miniHtml } from '../components/marks.js';
 import { toast } from '../components/toast.js';
 import { esc } from '../components/util.js';
-import { KINDS } from '../data/kinds.js';
+import { moveName, moveLook } from '../data/kinds.js';
 import { loadDone, undoDone } from '../data/moves.js';
 
 const rowHtml = ({ line, person }, i) => `
-  <div class="done-row">${miniHtml(line.kind)}
-    <span class="choice-text"><span class="choice-label">${esc(person.name)}</span><span class="choice-detail">${esc(KINDS[line.kind].name)}</span></span>
+  <div class="done-row">${miniHtml(moveLook(line))}
+    <span class="choice-text"><span class="choice-label">${esc(person.name)}</span><span class="choice-detail">${esc(moveName(line))}</span></span>
     <button type="button" class="text-btn" data-undo="${i}">Undo</button>
   </div>`;
 
