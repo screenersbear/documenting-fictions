@@ -1,6 +1,6 @@
 // Options, from the band's menu: how many moves a day (three, at most five),
 // the work days and days off, Sync (with Claude, through GitHub), Import people, the two
-// newsletter lists to export, and How it works.
+// newsletter lists to export, Back up and Restore a backup (pages/backup.js), and How it works.
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 import { CHEV } from '../components/icons.js';
@@ -14,6 +14,7 @@ import { dayOf } from '../data/dates.js';
 import { openImport } from './import.js';
 import { openIntro } from './intro.js';
 import { syncRowHtml, openSync } from './sync-sheet.js';
+import { backUp, restoreBackup } from './backup.js';
 
 const row = (attr, label, detail = '') => `<button type="button" class="choice" ${attr}><span class="choice-text"><span class="choice-label">${label}</span>${detail ? `<span class="choice-detail">${detail}</span>` : ''}</span>${CHEV}</button>`;
 const LISTS = { email: ['Email newsletter list', 'rounds-email-list'], mail: ['Mail newsletter list', 'rounds-mail-list'] };
@@ -40,6 +41,8 @@ export async function openOptions(onChange, autoHandler) {
         ${row('data-import', 'Import people', 'From a CSV file')}
         ${row('data-list="email"', 'Export the email list', `${people1(count('email'))}, for your newsletter tool`)}
         ${row('data-list="mail"', 'Export the mail list', `${people1(count('mail'))}, names and addresses`)}
+        ${row('data-backup', 'Back up')}
+        ${row('data-restore', 'Restore a backup')}
         ${row('data-intro', 'How it works')}
       </div>`,
   });
@@ -67,6 +70,8 @@ export async function openOptions(onChange, autoHandler) {
     } else if (b.matches('[data-import]')) { s.close(); openImport(onChange); }
     else if (b.matches('[data-sync]')) { s.close(); openSync(onChange, autoHandler); }
     else if (b.matches('[data-intro]')) { s.close(); openIntro(); }
+    else if (b.matches('[data-backup]')) backUp();
+    else if (b.matches('[data-restore]')) restoreBackup(() => s.close());
     else if (b.dataset.list) {
       const which = b.dataset.list;
       if (!count(which)) { toast(`No one is on the ${which} list yet. Edit a person to add them.`); return; }

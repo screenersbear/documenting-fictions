@@ -14,8 +14,9 @@ is marked:
 - **Proposed**: still waiting, usually on a mockup. Don't build it.
 
 **Rounds replaces Overthoughts** (Starky, 14 Nov; taken out of the suite 15 Nov). Overthoughts' folder and code are gone,
-and it won't come back as a notebook of its own. What a phone still has saved from it is never wiped, and "Back up all four"
-still carries it. Rounds lives only in the suite for now (it gets a copy of its own later). Callback is being redesigned and isn't in round 2:
+and it won't come back as a notebook of its own. What a phone still kept from it (its database, its few saved settings, its
+offline copy) is taken off as the shelf opens (Starky, 15 Nov). New backups leave it out; an old backup that still has it
+restores fine and skips that part. Rounds lives only in the suite for now (it gets a copy of its own later). Callback is being redesigned and isn't in round 2:
 leave its look as it is.
 
 ---
@@ -327,7 +328,17 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
   notebook's colour with three dots in its partner colour shrinking left to right (7, 5.5 and 4px, 4px apart), no ring. It
   changes colour as the books turn; the same button in every arrangement.
 - **Options sheet:** the front book comes up close; colour (the seven pairs), STICKERS with REMOVE ONE and one ADD A STICKER
-  button, the rows How they connect and (from December) Your year, BACK UP ALL FOUR (outline) and DONE (berry blade black).
+  button, the rows How they connect, (from December) Your year and Restore a backup, BACK UP (outline) and DONE (berry blade
+  black).
+- **Back up (Live, 15 Nov, backup/01):** one Back up, in the shelf's Options and in each notebook's, opens a white sheet from
+  the foot titled BACK UP (13px caps, the 40px ring close) with two rows under a navy rule, each with a chevron: **Just <the
+  notebook in front>** (a 30px tile in its colour with its mark; one dim line, "The notebook in front." then what's in it;
+  inside a notebook, "Just this notebook") and **All four notebooks** (the four 14px minis in a 2 x 2; "Ref, The Eye,
+  Layouts and Rounds in one backup, with the shelf."). Tapping one makes it there and then; SAVE THE BACKUP (berry blade
+  black) saves it, a tap a file on a phone; the row it's of stays bold. A notebook on its own has only the first row.
+  **Restore** takes either kind: on the shelf, a backup of one notebook says which ("RESTORE THE EYE?") and puts back only
+  that one; inside a notebook, a backup of all four asks first, "This backup has all four notebooks.", JUST REF (main)
+  or ALL FOUR (outline). The sheet looks the same everywhere: styles/shared/backup.css.
 - **The floating ! (Live, 15 Nov):** over a notebook with something waiting (a hand-off, or its own Today items), just above
   its top edge: an ink bar (12 x 34 units on the 24-unit grid), a gap, a mango dot (16 units). No disc behind it, a soft
   floor shadow, the books' slow bob (still with Reduce Motion). Tapping it shows what's waiting without opening the book.

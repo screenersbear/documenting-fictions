@@ -4372,6 +4372,20 @@ function openSetup(c, onSynced, autoHandler) {
 	return s;
 }
 
+// pages/backup.js
+function backUp() {
+	window.DFBackupSheet.open({ here: "rounds" });
+}
+async function restoreBackup(close) {
+	const R = window.DFRestore;
+	const files = await window.DFData.pickFiles(R.PICK);
+	if (!files.length) return;
+	const pick = await R.which(files, "rounds");
+	if (!pick) return;
+	close();
+	R.confirm(pick.all ? files : pick.files, { only: pick.all ? null : "rounds" });
+}
+
 // pages/options.js
 const row = (attr, label, detail = "") => `<button type="button" class="choice" ${attr}><span class="choice-text"><span class="choice-label">${label}</span>${detail ? `<span class="choice-detail">${detail}</span>` : ""}</span>${CHEV}</button>`;
 const LISTS = {
@@ -4404,6 +4418,8 @@ async function openOptions(onChange, autoHandler) {
         ${row("data-import", "Import people", "From a CSV file")}
         ${row("data-list=\"email\"", "Export the email list", `${people1(count("email"))}, for your newsletter tool`)}
         ${row("data-list=\"mail\"", "Export the mail list", `${people1(count("mail"))}, names and addresses`)}
+        ${row("data-backup", "Back up")}
+        ${row("data-restore", "Restore a backup")}
         ${row("data-intro", "How it works")}
       </div>`
 	});
@@ -4437,7 +4453,9 @@ async function openOptions(onChange, autoHandler) {
 		} else if (b.matches("[data-intro]")) {
 			s.close();
 			openIntro();
-		} else if (b.dataset.list) {
+		} else if (b.matches("[data-backup]")) backUp();
+		else if (b.matches("[data-restore]")) restoreBackup(() => s.close());
+		else if (b.dataset.list) {
 			const which = b.dataset.list;
 			if (!count(which)) {
 				toast(`No one is on the ${which} list yet. Edit a person to add them.`);

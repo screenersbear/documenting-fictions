@@ -1,280 +1,29 @@
-// suite-backup.js: "Back up all four" on the shelf. makeBackup hands the
-// right databases and localStorage keys to df-data.js's zipBackup; restoreZip
-// puts a zip's cover colours and The Eye's shoots back; restoreJson puts a
-// one-file (.json) backup of all four back into IndexedDB and localStorage.
+// shared/data/backup-json.js: backups made the first way, one .json file,
+// going back in: one of all four (all of it, or just one notebook's part,
+// an Overthoughts part skipped), a notebook's own, and The Eye's.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
-import { open, rows } from './fake-idb.mjs';
-
-const DBS = ['ref-notebook', 'contact-sheet', 'overthoughts', 'rounds', 'df-links', 'df-stickers', 'df-people'];
-const EYE_DB = 'starky-moodboards';
-const BOOKS = ['ref-notebook-book', 'contact-sheet-book', 'overthoughts-book', 'rounds-book'];
-const EYE = 'dailies_state_v1';
-const EYE_BAD = "The Eye's part of that file isn't right. Nothing was changed.";
-const NOT_SUITE = "That file isn't a backup of all four. A single notebook's backup goes back in from that notebook's options.";
+import { open } from './fake-idb.mjs';
+import {
+  DBS, EYE_DB, EYE, EYE_BAD, NOT_A_BACKUP, OTHER, load, fakeDFData, rejectsWith, lsKeys, exists, makeDb, readDb,
+  fileOf, suite, part, eyePart, cutWritesTo as cutWrites,
+} from './_backups.mjs';
 
 let D;
 let B;
-async function load(dfData) {
-  vi.resetModules(); // the script runs once per import: a fresh copy each time
-  delete window.DFSuiteBackup;
-  if (dfData === undefined) delete window.DFData;
-  else window.DFData = dfData;
-  await import('../../../data/suite-backup.js');
-  return window.DFSuiteBackup;
-}
 beforeEach(async () => {
   globalThis.indexedDB = new IDBFactory();
   localStorage.clear();
-  D = {
-    zipBackup: vi.fn(async () => ({ parts: ['zip'], size: 3 })),
-    restoreZip: vi.fn(async () => ({ local: async () => null })),
-    open: vi.fn(open), // df-data.js's opener, on fake-indexeddb
-    todayStr: vi.fn(() => '2026-11-12'),
-  };
+  D = fakeDFData();
   B = await load(D);
 });
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   delete window.DFData;
-  delete window.DFSuiteBackup;
+  delete window.DFBackups;
 });
-
-// ---------- helpers ----------
-// vitest's rejects.toThrow also passes when a promise rejects with no error at all
-// (null, false), so rejections are checked here for a real error (an Error, or
-// IndexedDB's DOMException) and its message.
-async function rejectsWith(promise, message) {
-  let err;
-  try { await promise; } catch (e) { err = e; }
-  expect(typeof err?.name).toBe('string');
-  expect(typeof err?.message).toBe('string');
-  if (message !== undefined) expect(() => { throw err; }).toThrow(message);
-  return err;
-}
-const lsKeys = () => Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)).sort();
-const exists = async (name) => (await indexedDB.databases()).some((d) => d.name === name);
-// A database already on the device: `stores` is { name: { keyPath, autoIncrement, rows: [[key, value]] } }.
-async function makeDb(name, version, stores) {
-  const db = await open(name, version, (made) => {
-    for (const [s, m] of Object.entries(stores)) made.createObjectStore(s, m.keyPath ? { keyPath: m.keyPath } : {});
-  });
-  for (const [s, m] of Object.entries(stores)) {
-    if (!(m.rows || []).length) continue;
-    const tx = db.transaction(s, 'readwrite');
-    m.rows.forEach(([k, v]) => (m.keyPath ? tx.objectStore(s).put(v) : tx.objectStore(s).put(v, k)));
-    await new Promise((ok, no) => { tx.oncomplete = ok; tx.onerror = () => no(tx.error); });
-  }
-  db.close();
-}
-// Everything in a database: its version, and each store's shape and rows.
-async function readDb(name) {
-  const db = await open(name);
-  const out = { version: db.version, stores: {} };
-  for (const s of [...db.objectStoreNames]) {
-    const os = db.transaction(s).objectStore(s);
-    const indexes = [...os.indexNames].map((n) => { const ix = os.index(n); return { name: n, keyPath: ix.keyPath, unique: ix.unique, multiEntry: ix.multiEntry }; });
-    out.stores[s] = { keyPath: os.keyPath, autoIncrement: os.autoIncrement, indexes, rows: await rows(db, s) };
-  }
-  db.close();
-  return out;
-}
-const fileOf = (data) => new File([typeof data === 'string' ? data : JSON.stringify(data)], 'backup.json', { type: 'application/json' });
-const suite = (notebooks) => ({ app: 'documenting-fictions', kind: 'suite-backup', version: 1, exportedAt: '2026-11-01T00:00:00.000Z', notebooks });
-const part = (database, stores, more = {}) => ({ app: database, database, version: 1, exportedAt: 'x', extra: {}, stores, ...more });
-const eyePart = (state, images) => ({ state, ...(images === undefined ? {} : { images }) });
-// Every readwrite transaction on that database is cut short (an abort has no error object).
-function cutWritesTo(name) {
-  D.open.mockImplementation(async (n, ...rest) => {
-    const db = await open(n, ...rest);
-    if (n === name) {
-      const tx0 = db.transaction.bind(db);
-      db.transaction = (stores, mode) => {
-        const tx = tx0(stores, mode);
-        if (mode === 'readwrite') queueMicrotask(() => tx.abort());
-        return tx;
-      };
-    }
-    return db;
-  });
-}
-// A zip for restoreZip: what it holds for localStorage keys. Its check runs the way df-data.js runs it.
-function zipHolding(local) {
-  const read = async (k) => (k in local ? local[k] : null);
-  const checkLocal = vi.fn(read);
-  const rLocal = vi.fn(read);
-  D.restoreZip.mockImplementation(async (files, opts) => {
-    if (opts.check) await opts.check(checkLocal);
-    return { manifest: {}, extra: {}, counts: {}, local: rLocal };
-  });
-  return { checkLocal, rLocal };
-}
-
-// ---------- loading ----------
-describe('loading the script', () => {
-  it('does nothing without df-data.js', async () => {
-    expect(await load(undefined)).toBeUndefined();
-  });
-  it('sets window.DFSuiteBackup with its three jobs and The Eye\'s last-backup key', () => {
-    expect(Object.keys(B).sort()).toEqual(['EYE_LAST_BACKUP', 'makeBackup', 'restoreJson', 'restoreZip']);
-    expect(typeof B.makeBackup).toBe('function');
-    expect(typeof B.restoreZip).toBe('function');
-    expect(typeof B.restoreJson).toBe('function');
-    expect(B.EYE_LAST_BACKUP).toBe('dailies_last_backup_v1');
-  });
-  it('reads df-data.js once, when it loads', async () => {
-    const later = { ...D, zipBackup: vi.fn() };
-    window.DFData = later;
-    localStorage.setItem(EYE, '{"shoots":[]}');
-    await B.makeBackup();
-    expect(D.zipBackup).toHaveBeenCalledTimes(1);
-    expect(later.zipBackup).not.toHaveBeenCalled();
-  });
-});
-
-// ---------- makeBackup ----------
-describe('makeBackup', () => {
-  it('is null with nothing to back up, and makes no zip', async () => {
-    await makeDb('someone-else', 1, { s: {} });
-    expect(await B.makeBackup()).toBeNull();
-    expect(D.zipBackup).not.toHaveBeenCalled();
-  });
-  it('zips only the databases that are there, with every cover colour', async () => {
-    await makeDb('df-stickers', 1, { s: {} });
-    await makeDb('ref-notebook', 1, { s: {} });
-    await makeDb('someone-else', 1, { s: {} });
-    const onProgress = () => {};
-    const out = await B.makeBackup(onProgress);
-    expect(out).toBe(await D.zipBackup.mock.results[0].value);
-    expect(D.zipBackup).toHaveBeenCalledTimes(1);
-    expect(D.zipBackup).toHaveBeenCalledWith({
-      app: 'documenting-fictions',
-      kind: 'suite',
-      databases: ['ref-notebook', 'df-stickers'],
-      local: BOOKS,
-      filename: 'documenting-fictions-backup-2026-11-12.zip',
-      onProgress,
-    });
-  });
-  it("adds The Eye's photos and shoots when The Eye has been used", async () => {
-    for (const n of DBS) await makeDb(n, 1, { s: {} });
-    localStorage.setItem(EYE, '{"shoots":[]}');
-    await B.makeBackup();
-    const opts = D.zipBackup.mock.calls[0][0];
-    expect(opts.databases).toEqual([...DBS, EYE_DB]);
-    expect(opts.local).toEqual([EYE, ...BOOKS]);
-    expect(opts.onProgress).toBeUndefined();
-  });
-  it('backs up The Eye on its own', async () => {
-    localStorage.setItem(EYE, '{"shoots":[]}');
-    await B.makeBackup();
-    expect(D.zipBackup.mock.calls[0][0].databases).toEqual([EYE_DB]);
-    expect(D.zipBackup.mock.calls[0][0].local).toEqual([EYE, ...BOOKS]);
-  });
-  it("counts an empty Eye state as no Eye", async () => {
-    localStorage.setItem(EYE, '');
-    expect(await B.makeBackup()).toBeNull();
-  });
-  it("tries every notebook's database when the browser can't list them", async () => {
-    indexedDB.databases = undefined;
-    await B.makeBackup();
-    expect(D.zipBackup.mock.calls[0][0].databases).toEqual(DBS);
-    expect(D.zipBackup.mock.calls[0][0].local).toEqual(BOOKS);
-  });
-  it("leaves The Eye out when localStorage can't be read", async () => {
-    await makeDb('overthoughts', 1, { s: {} });
-    localStorage.setItem(EYE, '{"shoots":[]}');
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });
-    await B.makeBackup();
-    expect(D.zipBackup.mock.calls[0][0].databases).toEqual(['overthoughts']);
-    expect(D.zipBackup.mock.calls[0][0].local).toEqual(BOOKS);
-  });
-  it("passes on zipBackup's failure", async () => {
-    await makeDb('ref-notebook', 1, { s: {} });
-    D.zipBackup.mockRejectedValue(new Error('disk full'));
-    await rejectsWith(B.makeBackup(), 'disk full');
-  });
-});
-
-// ---------- restoreZip ----------
-describe('restoreZip', () => {
-  it("asks df-data.js for the suite's databases, with a check of The Eye's part", async () => {
-    zipHolding({});
-    const files = [new File(['a'], 'a.zip'), new File(['b'], 'b.zip')];
-    const onProgress = () => {};
-    await expect(B.restoreZip(files, onProgress)).resolves.toBeUndefined();
-    expect(D.restoreZip).toHaveBeenCalledTimes(1);
-    expect(D.restoreZip.mock.calls[0][0]).toBe(files);
-    expect(D.restoreZip.mock.calls[0][1]).toEqual({ kind: 'suite', databases: [...DBS, EYE_DB], onProgress, check: expect.any(Function) });
-  });
-  it('puts the cover colours back, keeping a cover the file has nothing for', async () => {
-    localStorage.setItem('contact-sheet-book', 'keep');
-    const { rLocal } = zipHolding({ 'ref-notebook-book': '{"c":1}', 'overthoughts-book': '{"c":3}', 'rounds-book': '{"c":4}' });
-    await B.restoreZip([]);
-    expect(localStorage.getItem('ref-notebook-book')).toBe('{"c":1}');
-    expect(localStorage.getItem('contact-sheet-book')).toBe('keep');
-    expect(localStorage.getItem('overthoughts-book')).toBe('{"c":3}');
-    expect(localStorage.getItem('rounds-book')).toBe('{"c":4}');
-    expect(rLocal.mock.calls.map(([k]) => k)).toEqual([...BOOKS, EYE]);
-    expect(lsKeys()).toEqual([...BOOKS].sort());
-  });
-  it("puts The Eye's shoots back as they are, with its colour", async () => {
-    const st = JSON.stringify({ shoots: [{ id: 's1' }], presentation: { color: '#123456' } });
-    const { checkLocal } = zipHolding({ [EYE]: st });
-    await B.restoreZip([]);
-    expect(localStorage.getItem(EYE)).toBe(st);
-    expect(localStorage.getItem('df-app-color')).toBe('#123456');
-    expect(checkLocal.mock.calls.map(([k]) => k)).toEqual([EYE]);
-  });
-  it("keeps the app colour when The Eye's part has none", async () => {
-    localStorage.setItem('df-app-color', 'blue');
-    zipHolding({ [EYE]: '{"shoots":[]}' });
-    await B.restoreZip([]);
-    expect(localStorage.getItem('df-app-color')).toBe('blue');
-    zipHolding({ [EYE]: '{"shoots":[],"presentation":{"color":""}}' });
-    await B.restoreZip([]);
-    expect(localStorage.getItem('df-app-color')).toBe('blue');
-    expect(localStorage.getItem(EYE)).toBe('{"shoots":[],"presentation":{"color":""}}');
-  });
-  it('leaves The Eye alone when the file has no Eye part (null or missing)', async () => {
-    localStorage.setItem(EYE, 'mine');
-    zipHolding({ [EYE]: null });
-    await B.restoreZip([]);
-    zipHolding({ [EYE]: undefined });
-    await B.restoreZip([]);
-    expect(localStorage.getItem(EYE)).toBe('mine');
-    expect(lsKeys()).toEqual([EYE]);
-  });
-  it("refuses an Eye part that isn't JSON, before anything is changed", async () => {
-    const { rLocal } = zipHolding({ [EYE]: 'not json', 'ref-notebook-book': 'x' });
-    await rejectsWith(B.restoreZip([]), EYE_BAD);
-    expect(rLocal).not.toHaveBeenCalled();
-    expect(lsKeys()).toEqual([]);
-  });
-  it('refuses an Eye part with no list of shoots', async () => {
-    for (const st of ['{}', '{"shoots":{}}', '{"shoots":"a"}', 'null', '[]']) {
-      zipHolding({ [EYE]: st });
-      await rejectsWith(B.restoreZip([]), EYE_BAD);
-    }
-    expect(lsKeys()).toEqual([]);
-  });
-  it("throws when The Eye's shoots don't fit in localStorage, after the covers were tried", async () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
-    const { rLocal } = zipHolding({ 'ref-notebook-book': 'x', [EYE]: '{"shoots":[]}' });
-    await rejectsWith(B.restoreZip([]), 'QuotaExceededError');
-    expect(rLocal.mock.calls.map(([k]) => k)).toEqual([...BOOKS, EYE]);
-  });
-  it("is fine when a cover can't be saved (private mode)", async () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('private'); });
-    zipHolding({ 'overthoughts-book': 'x' });
-    await expect(B.restoreZip([])).resolves.toBeUndefined();
-  });
-  it("passes on df-data.js's failure", async () => {
-    D.restoreZip.mockRejectedValue(new Error("That file isn't a backup of all four."));
-    await rejectsWith(B.restoreZip([]), "That file isn't a backup of all four.");
-  });
-});
+const cutWritesTo = (name) => cutWrites(D, name);
 
 // ---------- restoreJson: refusing a file ----------
 describe('restoreJson refuses', () => {
@@ -284,10 +33,11 @@ describe('restoreJson refuses', () => {
   it("a file that can't be read", async () => {
     await rejectsWith(B.restoreJson({ text: () => Promise.reject(new Error('gone')) }), "That file isn't a Documenting Fictions backup.");
   });
-  it('JSON that is not a backup of all four', async () => {
-    for (const data of [null, 0, '"text"', {}, { kind: 'notebook', notebooks: {} }, part('ref-notebook', {}), { kind: 'suite-backup' }, { kind: 'suite-backup', notebooks: null }]) {
-      await rejectsWith(B.restoreJson(fileOf(data)), NOT_SUITE);
-    }
+  it('JSON that is no kind of backup', async () => {
+    const notOne = [null, 0, '"text"', {}, { kind: 'notebook', notebooks: {} }, { kind: 'suite-backup' }, { kind: 'suite-backup', notebooks: null },
+      { kind: 'suite-backup', notebooks: 'x' }, part('df-links', {}), part('overthoughts', {}), { database: 'ref-notebook' }, { state: { shoots: {} } }, { state: null }];
+    for (const data of notOne) await rejectsWith(B.restoreJson(fileOf(data)), NOT_A_BACKUP);
+    expect(D.open).not.toHaveBeenCalled();
   });
   it('a notebook part with no stores, naming it, before anything is written', async () => {
     const data = suite({ ref: part('ref-notebook', { s: { rows: [['k', 'v']] } }), 'contact-sheet': { database: 'contact-sheet' } });
@@ -298,8 +48,8 @@ describe('restoreJson refuses', () => {
   it('a notebook part for a different database', async () => {
     const data = suite({ links: part('df-stickers', {}) });
     await rejectsWith(B.restoreJson(fileOf(data)), "The links part of that file isn't right. Nothing was changed.");
-    const data2 = suite({ stickers: part('df-stickers', {}), overthoughts: part('ref-notebook', {}) });
-    await rejectsWith(B.restoreJson(fileOf(data2)), "The overthoughts part of that file isn't right. Nothing was changed.");
+    const data2 = suite({ stickers: part('df-stickers', {}), rounds: part('ref-notebook', {}) });
+    await rejectsWith(B.restoreJson(fileOf(data2)), "The rounds part of that file isn't right. Nothing was changed.");
     expect(D.open).not.toHaveBeenCalled();
   });
   it("an Eye part with no state or no list of shoots, before anything is written", async () => {
@@ -376,9 +126,9 @@ describe('restoreJson puts a notebook back', () => {
     expect(after.stores.keep.rows).toEqual([['k', 'kept']]);
   });
   it('clears a store the backup has empty', async () => {
-    await makeDb('overthoughts', 1, { entries: { keyPath: 'id', rows: [['a', { id: 'a' }]] } });
-    await B.restoreJson(fileOf(suite({ overthoughts: part('overthoughts', { entries: { meta: { keyPath: 'id' } } }) })));
-    expect((await readDb('overthoughts')).stores.entries.rows).toEqual([]);
+    await makeDb('rounds', 1, { people: { keyPath: 'id', rows: [['a', { id: 'a' }]] } });
+    await B.restoreJson(fileOf(suite({ rounds: part('rounds', { people: { meta: { keyPath: 'id' } } }) })));
+    expect((await readDb('rounds')).stores.people.rows).toEqual([]);
   });
   it('writes nothing when none of its stores are in the database', async () => {
     await makeDb('df-links', 1, { links: { keyPath: 'id', rows: [['l', { id: 'l' }]] } });
@@ -414,10 +164,10 @@ describe('restoreJson puts a notebook back', () => {
   });
   it('with no list of databases, a notebook never opened here is still made from the backup, at its version, with its rows', async () => {
     indexedDB.databases = undefined;
-    await B.restoreJson(fileOf(suite({ overthoughts: part('overthoughts', { entries: { meta: { keyPath: 'id', indexes: [{ name: 'byDay', keyPath: 'day' }] }, rows: [['a', { id: 'a', day: 1 }]] } }, { version: 4 }) })));
-    expect(D.open.mock.calls.map(([n, v]) => [n, v])).toEqual([['overthoughts', undefined], ['overthoughts', 4]]);
+    await B.restoreJson(fileOf(suite({ rounds: part('rounds', { entries: { meta: { keyPath: 'id', indexes: [{ name: 'byDay', keyPath: 'day' }] }, rows: [['a', { id: 'a', day: 1 }]] } }, { version: 4 }) })));
+    expect(D.open.mock.calls.map(([n, v]) => [n, v])).toEqual([['rounds', undefined], ['rounds', 4]]);
     delete indexedDB.databases; // back to the real list, to read it
-    const after = await readDb('overthoughts');
+    const after = await readDb('rounds');
     expect(after.version).toBe(4);
     expect(after.stores.entries).toEqual({ keyPath: 'id', autoIncrement: false, indexes: [{ name: 'byDay', keyPath: 'day', unique: false, multiEntry: false }], rows: [['a', { id: 'a', day: 1 }]] });
   });
@@ -425,15 +175,15 @@ describe('restoreJson puts a notebook back', () => {
     indexedDB.databases = undefined;
     let made = 0;
     D.open.mockImplementationOnce(async (...a) => { try { return await open(...a); } catch (e) { made = e.name; throw e; } });
-    await B.restoreJson(fileOf(suite({ overthoughts: part('overthoughts', { entries: { meta: { keyPath: 'id' }, rows: [] } }, { version: 2 }) })));
+    await B.restoreJson(fileOf(suite({ rounds: part('rounds', { entries: { meta: { keyPath: 'id' }, rows: [] } }, { version: 2 }) })));
     expect(made).toBe('AbortError');
     delete indexedDB.databases;
-    expect((await readDb('overthoughts')).version).toBe(2);
+    expect((await readDb('rounds')).version).toBe(2);
   });
   it('with no list of databases, a failure other than the database being new is passed on', async () => {
     indexedDB.databases = undefined;
     D.open.mockImplementationOnce(async () => { throw new Error('Blocked by another tab.'); });
-    await rejectsWith(B.restoreJson(fileOf(suite({ overthoughts: part('overthoughts', {}) }))), 'Blocked by another tab.');
+    await rejectsWith(B.restoreJson(fileOf(suite({ rounds: part('rounds', {}) }))), 'Blocked by another tab.');
   });
   it('puts every part back in the same order, Eye last', async () => {
     const data = suite({
@@ -448,6 +198,7 @@ describe('restoreJson puts a notebook back', () => {
     });
     await B.restoreJson(fileOf(data));
     expect(D.open.mock.calls.map(([n]) => n)).toEqual([...DBS, EYE_DB]);
+    expect(await exists('overthoughts')).toBe(false); // retired on 15 Nov: its part is skipped
   });
   it("rejects, writing nothing, when the rows break one of the store's rules", async () => {
     await makeDb('ref-notebook', 1, { boards: { keyPath: 'id', rows: [['keep', { id: 'keep', name: 'K' }]] } });
@@ -549,7 +300,7 @@ describe('restoreJson and the cover colours', () => {
   });
   it("is fine when a cover can't be saved (private mode)", async () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('private'); });
-    await expect(B.restoreJson(fileOf(suite({ overthoughts: part('overthoughts', {}, { extra: { book: 'b' } }) })))).resolves.toBeUndefined();
+    await expect(B.restoreJson(fileOf(suite({ rounds: part('rounds', {}, { extra: { book: 'b' } }) })))).resolves.toBeUndefined();
   });
 });
 
@@ -684,5 +435,141 @@ describe("restoreJson puts The Eye back", () => {
     }
     expect(D.open).not.toHaveBeenCalled();
     expect(lsKeys()).toEqual([]);
+  });
+});
+
+// ---------- Overthoughts, taken out on 15 Nov ----------
+describe('restoreJson skips an Overthoughts part', () => {
+  it('in a backup of all four: the rest goes back, nothing of it does', async () => {
+    const ot = part('overthoughts', { entries: { meta: { keyPath: 'id' }, rows: [['a', { id: 'a' }]] } }, { extra: { book: 'leaf' } });
+    await B.restoreJson(fileOf(suite({ ref: part('ref-notebook', { s: { rows: [['k', 'v']] } }), overthoughts: ot })));
+    expect((await readDb('ref-notebook')).stores.s.rows).toEqual([['k', 'v']]);
+    expect(await exists('overthoughts')).toBe(false);
+    expect(localStorage.getItem('overthoughts-book')).toBeNull();
+    expect(D.open.mock.calls.map(([n]) => n)).toEqual(['ref-notebook']);
+  });
+  it('even one that is broken, or all there is', async () => {
+    await expect(B.restoreJson(fileOf(suite({ overthoughts: { nope: true } })))).resolves.toBeUndefined();
+    await expect(B.restoreJson(fileOf(suite({ overthoughts: part('ref-notebook', {}) })))).resolves.toBeUndefined();
+    expect(D.open).not.toHaveBeenCalled();
+  });
+});
+
+// ---------- one notebook's own .json ----------
+describe("restoreJson puts back a notebook's own .json", () => {
+  it('Ref, Layouts and Rounds, each with its cover colour', async () => {
+    for (const [db, book] of [['ref-notebook', 'ref-notebook-book'], ['contact-sheet', 'contact-sheet-book'], ['rounds', 'rounds-book']]) {
+      await B.restoreJson(fileOf(part(db, { s: { rows: [['k', db]] } }, { extra: { book: `${db}-colour` } })));
+      expect((await readDb(db)).stores.s.rows).toEqual([['k', db]]);
+      expect(localStorage.getItem(book)).toBe(`${db}-colour`);
+    }
+    expect(lsKeys()).toEqual(['contact-sheet-book', 'ref-notebook-book', 'rounds-book']);
+  });
+  it('swaps what was there, as a backup of all four does', async () => {
+    await makeDb('ref-notebook', 3, { s: { rows: [['old', 'x']] } });
+    await B.restoreJson(fileOf(part('ref-notebook', { s: { rows: [['new', 'y']] } })), 'ref');
+    expect(await readDb('ref-notebook')).toMatchObject({ version: 3, stores: { s: { rows: [['new', 'y']] } } });
+  });
+  it("The Eye's: its photos and shoots", async () => {
+    const state = { shoots: [{ id: 's1' }] };
+    await B.restoreJson(fileOf({ version: 1, exportedAt: 'x', ...eyePart(state, { p: 'data:p' }) }), 'the-eye');
+    expect((await readDb(EYE_DB)).stores.images.rows).toEqual([['p', 'data:p']]);
+    expect(localStorage.getItem(EYE)).toBe(JSON.stringify(state));
+  });
+  it("refuses another notebook's, from inside one, writing nothing", async () => {
+    await rejectsWith(B.restoreJson(fileOf(part('contact-sheet', { s: {} })), 'ref'), OTHER);
+    await rejectsWith(B.restoreJson(fileOf(eyePart({ shoots: [] })), 'rounds'), OTHER);
+    expect(D.open).not.toHaveBeenCalled();
+    expect(lsKeys()).toEqual([]);
+  });
+});
+
+// ---------- just one notebook from a backup of all four ----------
+describe('restoreJson puts back just one notebook from a backup of all four', () => {
+  const all = () => suite({
+    ref: part('ref-notebook', { s: { rows: [['k', 'ref']] } }, { extra: { book: 'r' } }),
+    'contact-sheet': part('contact-sheet', { s: { rows: [['k', 'cs']] } }, { extra: { book: 'c' } }),
+    rounds: part('rounds', { s: { rows: [['k', 'rounds']] } }),
+    links: part('df-links', { links: { rows: [['l', 'board']] } }),
+    stickers: part('df-stickers', { s: { rows: [['k', 'sticker']] } }),
+    'the-eye': eyePart({ shoots: [{ id: 'e' }] }, { p: 'photo' }),
+  });
+  it('Ref: its part and cover, the others left as they are', async () => {
+    await makeDb('contact-sheet', 1, { s: { rows: [['mine', 'kept']] } });
+    localStorage.setItem(EYE, 'mine');
+    await B.restoreJson(fileOf(all()), 'ref');
+    expect(D.open.mock.calls.map(([n]) => n)).toEqual(['ref-notebook']);
+    expect((await readDb('ref-notebook')).stores.s.rows).toEqual([['k', 'ref']]);
+    expect((await readDb('contact-sheet')).stores.s.rows).toEqual([['mine', 'kept']]);
+    expect(lsKeys()).toEqual([EYE, 'ref-notebook-book']);
+    expect(localStorage.getItem(EYE)).toBe('mine');
+  });
+  it('Layouts, and Rounds', async () => {
+    await B.restoreJson(fileOf(all()), 'contact-sheet');
+    await B.restoreJson(fileOf(all()), 'rounds');
+    expect(D.open.mock.calls.map(([n]) => n)).toEqual(['contact-sheet', 'rounds']);
+    expect(localStorage.getItem('contact-sheet-book')).toBe('c');
+  });
+  it("The Eye: its shoots, photos and the boards sent to them, as its own backup has them", async () => {
+    await B.restoreJson(fileOf(all()), 'the-eye');
+    expect(D.open.mock.calls.map(([n]) => n)).toEqual(['df-links', EYE_DB]);
+    expect((await readDb('df-links')).stores.links.rows).toEqual([['l', 'board']]);
+    expect(localStorage.getItem(EYE)).toBe('{"shoots":[{"id":"e"}]}');
+    expect(await exists('ref-notebook')).toBe(false);
+  });
+  it("checks only that notebook's part: another's broken one doesn't stop it", async () => {
+    const data = all();
+    data.notebooks.ref = { broken: true };
+    data.notebooks['the-eye'] = { state: null };
+    await B.restoreJson(fileOf(data), 'rounds');
+    expect(D.open.mock.calls.map(([n]) => n)).toEqual(['rounds']);
+    await rejectsWith(B.restoreJson(fileOf(data), 'ref'), "The ref part of that file isn't right. Nothing was changed.");
+    await rejectsWith(B.restoreJson(fileOf(data), 'the-eye'), EYE_BAD);
+  });
+  it('says so when the backup has nothing from it', async () => {
+    await rejectsWith(B.restoreJson(fileOf(suite({ ref: part('ref-notebook', {}) })), 'rounds'), 'That backup has nothing from Rounds.');
+    await rejectsWith(B.restoreJson(fileOf(suite({ ref: null })), 'ref'), 'That backup has nothing from Ref.');
+    // The Eye's boards alone aren't The Eye.
+    await rejectsWith(B.restoreJson(fileOf(suite({ links: part('df-links', {}) })), 'the-eye'), 'That backup has nothing from The Eye.');
+    expect(D.open).not.toHaveBeenCalled();
+  });
+});
+
+// ---------- reading a .json ----------
+describe('readJson', () => {
+  it('tells a backup of all four from a notebook\'s own', async () => {
+    const s = suite({});
+    expect(await B.readJson(fileOf(s))).toEqual({ data: s, all: true });
+    for (const [db, app] of [['ref-notebook', 'ref'], ['contact-sheet', 'contact-sheet'], ['rounds', 'rounds']]) {
+      expect(await B.readJson(fileOf(part(db, {})))).toEqual({ data: part(db, {}), app });
+    }
+    expect(await B.readJson(fileOf(eyePart({ shoots: [] })))).toEqual({ data: eyePart({ shoots: [] }), app: 'the-eye' });
+  });
+  it("throws for anything else, or a file that can't be read", async () => {
+    await rejectsWith(B.readJson(fileOf('nope')), NOT_A_BACKUP);
+    await rejectsWith(B.readJson(fileOf(part('df-stickers', {}))), NOT_A_BACKUP);
+    await rejectsWith(B.readJson(undefined), NOT_A_BACKUP);
+  });
+});
+
+describe('partFile', () => {
+  it("is one notebook's part of a backup of all four, as a .json of its own", async () => {
+    const ref = part('ref-notebook', { s: { rows: [['k', 'v']] } });
+    const f = await B.partFile(fileOf(suite({ ref, rounds: null })), 'ref');
+    expect(f).toBeInstanceOf(File);
+    expect([f.name, f.type]).toEqual(['ref-backup.json', 'application/json']);
+    expect(JSON.parse(await f.text())).toEqual(ref);
+    const eye = await B.partFile(fileOf(suite({ 'the-eye': eyePart({ shoots: [] }) })), 'the-eye');
+    expect(eye.name).toBe('the-eye-backup.json');
+    expect(JSON.parse(await eye.text())).toEqual(eyePart({ shoots: [] }));
+  });
+  it("is the file itself when it's a notebook's own, or has nothing from that one", async () => {
+    const own = fileOf(part('ref-notebook', {}));
+    expect(await B.partFile(own, 'ref')).toBe(own);
+    const none = fileOf(suite({ ref: part('ref-notebook', {}) }));
+    expect(await B.partFile(none, 'rounds')).toBe(none);
+  });
+  it("throws for a file that isn't a backup", async () => {
+    await rejectsWith(B.partFile(fileOf('{'), 'ref'), NOT_A_BACKUP);
   });
 });

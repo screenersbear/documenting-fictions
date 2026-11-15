@@ -11,7 +11,7 @@
 //               so sync deletes it on the other devices: { id, store, deletedAt }
 // What sync carries (everything but photos and the day's pick) is stamped
 // createdAt/updatedAt when it changes, and sync (data/sync.js) hears of it.
-// The suite's backup (data/suite-backup.js) copies the whole database; the
+// Back up (shared/data/backups.js) copies the whole database; the
 // sync key and its bookkeeping are kept apart, in data/device.js.
 import { sameContent } from './merge.js';
 import { nowISO } from '../components/util.js';

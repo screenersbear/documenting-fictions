@@ -63,7 +63,8 @@ test("in December, Options has YOUR YEAR: the year's numbers, what led to work, 
   // SHARE: the share sheet on a phone; here, where there's none, a download.
   await page.evaluate(() => Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true }));
   const [download] = await Promise.all([page.waitForEvent('download'), year.locator('[data-share]').click()]);
-  expect(download.suggestedFilename()).toBe('Your year 2026.png');
+  // WebKit on Linux (the iPhone tests on GitHub) puts _ for each space in the name.
+  expect(download.suggestedFilename().replace(/_/g, ' ')).toBe('Your year 2026.png');
   await expect(page.locator('.toast')).toContainText('Your year is in your downloads');
   // The picture: three times the page's width, on paper.
   const size = await page.evaluate(async (url) => {

@@ -122,9 +122,17 @@ window.EyeParts.addAppMenuBackup = function addAppMenuBackup(ed) {
   }
   document.getElementById('backupCancelBtn').addEventListener('click', () => { if (closeBackupCard) closeBackupCard(); });
 
+  // Back up in App options: the sheet every notebook shares
+  // (components/shared/backup-sheet.js), just The Eye or all four. What's on
+  // screen is saved first, and no update lands while it's open. (The
+  // reminder and Restore's "Back up first" save just The Eye, above.)
   document.getElementById('exportDataBtn').addEventListener('click', () => {
     ed.closeAppMenu();
-    exportAllData();
+    window.DFBackupSheet.open({
+      here: 'the-eye',
+      before: () => ed.saveState(),
+      hold: (on) => { ed.busyTasks += on ? 1 : -1; },
+    });
   });
 
   // The Daily report's backup reminder — not part of the day's cached

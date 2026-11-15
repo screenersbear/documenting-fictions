@@ -291,7 +291,7 @@ describe('inSuite and notebookUrl', () => {
 describe('the loaded script', () => {
   it('sets window.DFData with every helper and nothing else', () => {
     expect(Object.keys(window.DFData).sort()).toEqual([
-      'boardFile', 'backupSteps', 'deleteOne', 'dropLinks', 'exportDb', 'eyeShootName', 'eyeState',
+      'backupManifest', 'boardFile', 'backupSteps', 'deleteOne', 'dropLinks', 'exportDb', 'eyeShootName', 'eyeState',
       'getLink', 'getOne', 'hasText', 'importDb', 'inSuite', 'isZipFile', 'linkPictures', 'linksWhere',
       'notebookUrl', 'nowIso', 'open', 'pickFile', 'pickFiles', 'pictureUrl', 'putMany', 'readBoardFile',
       'restoreZip', 'rows', 'saveFile', 'saveLink', 'sizeText', 'todayStr', 'uid', 'zipBackup',

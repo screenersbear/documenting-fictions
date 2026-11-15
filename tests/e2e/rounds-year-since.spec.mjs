@@ -51,7 +51,8 @@ test("a year after a delivered shoot: A YEAR SINCE for its Regular, with one of 
   // SHARE THE PHOTO: the share sheet on a phone; here, where there's none, a download.
   await page.evaluate(() => Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true }));
   const [download] = await Promise.all([page.waitForEvent('download'), move.locator('[data-share]').click()]);
-  expect(download.suggestedFilename()).toBe('Rooftop portraits.jpg');
+  // WebKit on Linux (the iPhone tests on GitHub) puts _ for each space in the name.
+  expect(download.suggestedFilename().replace(/_/g, ' ')).toBe('Rooftop portraits.jpg');
   await expect(page.locator('#toast')).toContainText('The photo is in your downloads.');
   await move.locator('.move-more [data-done]').click();
   await expect(page.locator('#toast')).toContainText('Done.');

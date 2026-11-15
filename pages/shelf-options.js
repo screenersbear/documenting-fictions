@@ -1,14 +1,15 @@
 // The notebook in front up close, with its options under it: its colour,
 // stickers for its cover, How they connect, Your year (from December:
-// pages/shelf-year.js) and Back up all four. (Loaded before app.js.)
+// pages/shelf-year.js), Restore a backup and Back up (the sheets in
+// shared/components/). (Loaded before app.js.)
 window.ShelfParts = window.ShelfParts || {};
 window.ShelfParts.addOptions = function addOptions(ed) {
   'use strict';
   Object.assign(ed, { paintStickers });
   // Options (the ring button under the shelf): the notebook in front comes up
   // close, on its own, with its options under it: its colour (the book
-  // changes as you pick) and stickers for its cover. Back up all four is
-  // there too.
+  // changes as you pick) and stickers for its cover. Back up (just it, or
+  // all four) and Restore a backup are there too.
   const NEAR_MS = 560;
   const glyph = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const CLOSE = glyph('<path d="M6 6l12 12M18 6L6 18"/>');
@@ -81,7 +82,8 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         <p class="opt-note">Pick a photo, then its shape and edge as you place it.</p>` : ''}
         <button type="button" class="opt-row" data-connect><span>How they connect</span>${CHEV}</button>
         ${ed.yearShownNow() ? `<button type="button" class="opt-row" data-year><span>Your year</span>${CHEV}</button>` : ''}
-        <div class="opt-foot"><button type="button" class="sheet-btn" data-backup>Back up all four</button><button type="button" class="sheet-btn primary" data-close>Done</button></div>`;
+        ${window.DFRestore ? `<button type="button" class="opt-row" data-restore><span>Restore a backup</span>${CHEV}</button>` : ''}
+        <div class="opt-foot"><button type="button" class="sheet-btn" data-backup>Back up</button><button type="button" class="sheet-btn primary" data-close>Done</button></div>`;
     };
     const drawRemove = () => {
       shown = 'remove';
@@ -118,7 +120,13 @@ window.ShelfParts.addOptions = function addOptions(ed) {
       if (e.target.closest('[data-backup]')) {
         await hide();
         leaveNear();
-        if (window.DFBackup) window.DFBackup.open();
+        if (window.DFBackupSheet) window.DFBackupSheet.open({ front: b.id });
+        return;
+      }
+      if (e.target.closest('[data-restore]')) {
+        window.DFRestore.fromShelf(); // straight from the tap, or iOS won't open the picker
+        await hide();
+        leaveNear();
         return;
       }
       const c = e.target.closest('[data-color]');

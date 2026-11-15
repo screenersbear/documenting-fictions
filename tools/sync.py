@@ -3,11 +3,12 @@
 
     python3 tools/sync.py shared
         Copies the shared data files (shared/data/*.js) into each notebook's
-        data/shared/ folder, and the shared looks (styles/shared/*.css, kept
-        with the shelf's own styles) into its styles/shared/, so a notebook
-        copied out on its own still has them; a file taken out of either is
-        taken out there too. Run it after any change in shared/data/ or
-        styles/shared/. Then it joins every app's files
+        data/shared/ folder, the shared pieces (shared/components/*.js, like
+        the Back up sheet) into its components/shared/, and the shared looks
+        (styles/shared/*.css, kept with the shelf's own styles) into its
+        styles/shared/, so a notebook copied out on its own still has them;
+        a file taken out of any of them is taken out there too. Run it after
+        any change in shared/ or styles/shared/. Then it joins every app's files
         again (node tools/join.mjs), since each app's built/ holds a joined
         copy of the shared data.
 
@@ -170,7 +171,7 @@ def join(apps, dry):
 
 
 def shared(dry):
-    """Copies shared/data/ and styles/shared/ into each notebook; gives the notebooks whose copies changed."""
+    """Copies shared/data/, shared/components/ and styles/shared/ into each notebook; gives the notebooks whose copies changed."""
     changed = set()
     for nb in SHARED_IN:
         # Until 2026-11-12 the shared data was one file, df-data.js, beside index.html.
@@ -180,7 +181,7 @@ def shared(dry):
             changed.add(nb)
             if not dry:
                 os.remove(old)
-    for kind, ext, home in (('data', '.js', ('shared', 'data')), ('styles', '.css', ('styles', 'shared'))):
+    for kind, ext, home in (('data', '.js', ('shared', 'data')), ('components', '.js', ('shared', 'components')), ('styles', '.css', ('styles', 'shared'))):
         src_dir = os.path.join(ROOT, *home)
         names = sorted(f for f in os.listdir(src_dir) if f.endswith(ext)) if os.path.isdir(src_dir) else []
         for nb in SHARED_IN:

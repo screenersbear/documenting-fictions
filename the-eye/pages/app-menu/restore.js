@@ -3,14 +3,18 @@
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addAppMenuRestore = function addAppMenuRestore(ed) {
   // Restore a backup: the zip (or all the files it was saved as, picked
-  // together), a backup of all four from the shelf (The Eye's part of it),
-  // or an old .json.
+  // together), a backup of all four (which asks first: just The Eye's part,
+  // or all four; components/shared/restore-sheet.js), or an old .json.
   const NOT_A_BACKUP = "That file isn't a backup from this app. Nothing was changed.";
   document.getElementById('importDataBtn').addEventListener('click', () => {
     ed.closeAppMenu();
     // Straight from the tap, or iOS won't open the picker.
-    window.DFData.pickFiles('.zip,application/zip,.json,application/json').then(async (files) => {
-      if (!files.length) return;
+    window.DFData.pickFiles(window.DFRestore.PICK).then(async (picked) => {
+      if (!picked.length) return;
+      const pick = await window.DFRestore.which(picked, 'the-eye');
+      if (!pick) return;
+      if (pick.all) { restoreAllFour(picked); return; }
+      const files = pick.files;
       if (await window.DFData.isZipFile(files[0])) {
         pendingImportFiles = files;
         importConfirmOverlay.hidden = false;
@@ -111,6 +115,22 @@ window.EyeParts.addAppMenuRestore = function addAppMenuRestore(ed) {
       else ed.showToast("Couldn't restore that backup");
     }).finally(() => { ed.busyTasks--; });
   });
+
+  // All four notebooks from a backup of all four (restore-sheet.js asks
+  // and does it), then The Eye takes its shoots from what was put back,
+  // as it does from its own backup. Busy throughout, as for its own.
+  function restoreAllFour(files) {
+    ed.busyTasks++;
+    window.DFRestore.confirm(files, {
+      done: () => {
+        let saved = null;
+        try { saved = JSON.parse(localStorage.getItem(ed.STORAGE_KEY)); } catch (e) { saved = null; }
+        Promise.resolve(ed.refApi ? ed.loadRefBoardShoots().catch(() => {}) : null)
+          .then(() => { if (saved && Array.isArray(saved.shoots)) adoptBackupState(saved); })
+          .finally(() => { ed.busyTasks--; });
+      },
+    }).then((done) => { if (!done) ed.busyTasks--; });
+  }
 
   // A zip backup: checked before anything changes (the shoots have to be in
   // it), then the photos and boards go in, then the shoots.

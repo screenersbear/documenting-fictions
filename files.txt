@@ -18,6 +18,7 @@ built/app.css smaller
   styles/toast.css
   styles/sheet-words.css
   styles/shared/connect.css
+  styles/shared/backup.css
   styles/shelf-connect.css
   styles/shelf-year.css
   styles/shelf-waiting.css
@@ -67,5 +68,9 @@ built/app.js smaller
   shared/data/people.js
   shared/data/people-things.js
   shared/data/df-data.js
-  data/suite-backup.js
-  components/backup-sheet.js
+  data/retire-overthoughts.js
+  shared/data/backup-books.js
+  shared/data/backup-json.js
+  shared/data/backups.js
+  shared/components/backup-sheet.js
+  shared/components/restore-sheet.js
