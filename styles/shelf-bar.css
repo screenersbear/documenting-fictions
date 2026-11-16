@@ -20,6 +20,7 @@
 .opts-disc i + i { width: 5.5px; height: 5.5px; }
 .opts-disc i + i + i { width: 4px; height: 4px; }
 .shelf.away .shelf-bar { opacity: 0; pointer-events: none; }
+.shelf.close .shelf-bar { opacity: 0; pointer-events: none; } /* pinched close (pages/shelf-pinch.js): only the books */
 /* Coming back from a notebook: hidden from the first paint (index.html, app.js). */
 html.arriving .shelf-bar { opacity: 0; transition: none; }
 /* The iPhone home-screen app (components/screen-fit.js): for a moment the page is

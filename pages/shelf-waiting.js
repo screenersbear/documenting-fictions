@@ -53,7 +53,7 @@ window.ShelfParts.addWaiting = function addWaiting(ed) {
   // to a new arrangement (each comes back where its book lands).
   const gliding = () => ed.slots.some((s) => s.classList.contains('reshaping') || s.classList.contains('turning'));
   function placeWaiting() {
-    const away = ed.facing !== null || ed.near !== null || ed.shelf.classList.contains('away') || gliding();
+    const away = ed.facing !== null || ed.near !== null || ed.closeT > 0 || ed.shelf.classList.contains('away') || gliding();
     layer.classList.toggle('off', away);
     if (away) return;
     marks.forEach((m, i) => {

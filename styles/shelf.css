@@ -26,6 +26,13 @@ button { font: inherit; color: inherit; }
 .stage.waiting { opacity: 0; } /* until the covers are in (app.js whenArtIn) */
 .stage.measuring, .stage.measuring * { transition: none !important; }
 .stage.zooming { transition: transform var(--zoom-ms, 760ms) cubic-bezier(.5, 0, .2, 1); }
+/* Pinched close or back (pages/shelf-pinch.js): eased, no bounce; with Reduce Motion a crossfade. */
+.stage.settling { transition: transform 320ms cubic-bezier(.2, .7, .2, 1), opacity .25s; }
+.stage.fading { opacity: 0; }
+/* Close, the books behind are cut off under the title (09-pinch-close-up): paper over them, the title and search on it. */
+.shelf::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: calc(max(16px, calc(var(--safe-t) + 7px)) + 96px); z-index: 4; background: var(--paper); opacity: 0; pointer-events: none; transition: opacity .3s; }
+.shelf.close::before { opacity: 1; }
+.shelf.close .shelf-title { z-index: 5; }
 .slot { position: absolute; left: 50%; top: var(--y); width: 0; height: 0; transform-style: preserve-3d; }
 .slot.turning { transition: transform 420ms cubic-bezier(.4, 0, .2, 1); }
 .slot.reshaping { transition: transform 620ms cubic-bezier(.4, 0, .2, 1); } /* ring, dominoes, row */

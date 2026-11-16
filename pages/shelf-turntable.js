@@ -111,7 +111,6 @@ window.ShelfParts.addTurntable = function addTurntable(ed) {
     ed.pos = mod(Math.round(ed.pos));
     ed.slots.forEach((sl) => sl.classList.add('reshaping'));
     render();
-    if (ed.shapeMarks) ed.shapeMarks(true); // the marks at the right edge, and the name for a moment (pages/shelf-marks.js)
     clearTimeout(reshape.t);
     reshape.t = setTimeout(() => {
       ed.slots.forEach((sl) => sl.classList.remove('reshaping'));

@@ -1,0 +1,9 @@
+/* SAVE AS IMAGE (round 7, 08-save-as-image; pages/shelf-save-image.js): the
+   preview on its paper with a soft lift, WHAT and SIZE as pills (the one
+   picked in ink), and SAVE AND SHARE across the foot. */
+.save-preview { display: flex; justify-content: center; margin-top: 12px; }
+.save-preview img { display: block; height: min(295px, 34vh); width: auto; max-width: 100%; aspect-ratio: 4 / 5; border-radius: 6px; background: var(--paper); box-shadow: 0 1px 0 #E1E1DC, 0 10px 24px rgba(49, 61, 69, .12); }
+.save-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.save-chip { height: 36px; padding: 0 14px; border: 0; border-radius: 18px; background: #EFEFEA; color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
+.save-chip[aria-pressed="true"] { background: var(--text); color: #FFFFFF; }
+.sheet-btn.save-go { height: 50px; margin-top: 24px; }

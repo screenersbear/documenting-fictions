@@ -40,5 +40,5 @@
   window.StickerParts.addCutting(ed);
   window.StickerParts.addPlacing(ed);
 
-  window.DFStickers = { ready: ed.ready, list: ed.listOf, paint: ed.paint, pick: ed.pick, photo: ed.photo, place: ed.stick, remove: ed.remove, putBack: ed.putBack, thumb: ed.urlOf, ratioOf };
+  window.DFStickers = { ready: ed.ready, list: ed.listOf, paint: ed.paint, pick: ed.pick, photo: ed.photo, place: ed.stick, remove: ed.remove, putBack: ed.putBack, thumb: ed.urlOf, ratioOf, vinyl: ed.vinylOf, mask: ed.maskOf };
 })();

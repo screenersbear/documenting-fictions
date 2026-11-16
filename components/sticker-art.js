@@ -3,7 +3,7 @@
 window.StickerParts = window.StickerParts || {};
 window.StickerParts.addStickerArt = function addStickerArt(ed) {
   'use strict';
-  Object.assign(ed, { make, seat, placeOnFlap, paint });
+  Object.assign(ed, { make, seat, placeOnFlap, paint, vinylOf: (s) => vinylArt(seedOf(s), 1 / ed.ratioOf(s)) });
   // ---------- Drawing them ----------
   function randomFrom(seed) { // seeded, so a sticker keeps its own creases from one launch to the next
     let a = seed >>> 0;
@@ -56,7 +56,7 @@ window.StickerParts.addStickerArt = function addStickerArt(ed) {
     if (!s.mask) return '';
     if (!masks.has(s.id)) masks.set(s.id, URL.createObjectURL(new Blob([s.mask], { type: 'image/png' })));
     return masks.get(s.id);
-  };
+  }; ed.maskOf = maskOf;
   // s: the sticker; src: its picture; onFlap: the bit round the fore-edge;
   // mask: a cut-out's shape (while it's placed; a saved one has its own).
   function make(s, src, onFlap, mask = maskOf(s)) {

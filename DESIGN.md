@@ -323,13 +323,22 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
   Rounds: Today, People, Messages (14 Nov; Overthoughts' Entries and Reviews went with it).
 - **Top left:** DOCUMENTING FICTIONS, 13px 700 capitals.
 - **Arrangements:** Ring, Dominoes, Row and Spread (the books big, overlapping, lying back), changed by swiping up or down.
-  Marks at the right edge, one for each, the one in use long; its name shows in a small ink pill for a moment after a swipe.
+  Nothing shows which one is in use (the marks at the right edge went on 16 Nov, shelf round 7).
+- **Pinch to zoom (Live, 16 Nov, shelf/09):** two fingers apart bring the books close, the front one about 85% of the
+  screen's width, the others cut by the edges and cut off under the title (paper over them); the bar under the books hides.
+  Two fingers together, or a tap on the paper, ease them back. Follows the fingers, then settles (320ms), no bounce; Reduce
+  Motion crossfades. Close up, a tap on the front book opens it and a swipe turns the shelf.
 - **Under the front book:** its name and one line about it, page dots, and the Options button: a 52px disc in the front
   notebook's colour with three dots in its partner colour shrinking left to right (7, 5.5 and 4px, 4px apart), no ring. It
   changes colour as the books turn; the same button in every arrangement.
 - **Options sheet:** the front book comes up close; colour (the seven pairs), STICKERS with REMOVE ONE and one ADD A STICKER
-  button, the rows How they connect, (from December) Your year and Restore a backup, BACK UP (outline) and DONE (berry blade
-  black).
+  button, the rows How they connect, (from December) Your year, Save as image and Restore a backup, BACK UP (outline) and DONE
+  (berry blade black).
+- **Save as image (Live, 16 Nov, shelf/08):** a white sheet: SAVE AS IMAGE, a preview (236 wide, 6px corners, a soft lift),
+  WHAT (the front notebook's name, or The whole shelf) and SIZE (Post 4:5, Story 9:16, Square) as 36px pills, the picked one
+  berry blade black, the rest `#EFEFEA`; SAVE AND SHARE (50px, berry blade black) opens the share sheet. The picture, 1080
+  wide on paper: the notebook flat with its stickers as on the shelf (Barely), a soft floor shadow, DOCUMENTING FICTIONS
+  small at the foot (700, spaced to half the width); the whole shelf is each cover where it stands, in its perspective.
 - **Back up (Live, 15 Nov, backup/01):** one Back up, in the shelf's Options and in each notebook's, opens a white sheet from
   the foot titled BACK UP (13px caps, the 40px ring close) with two rows under a navy rule, each with a chevron: **Just <the
   notebook in front>** (a 30px tile in its colour with its mark; one dim line, "The notebook in front." then what's in it;

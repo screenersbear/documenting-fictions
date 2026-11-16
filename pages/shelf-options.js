@@ -1,7 +1,7 @@
 // The notebook in front up close, with its options under it: its colour,
 // stickers for its cover, How they connect, Your year (from December:
-// pages/shelf-year.js), Restore a backup and Back up (the sheets in
-// shared/components/). (Loaded before app.js.)
+// pages/shelf-year.js), Save as image (pages/shelf-save-image.js), Restore a
+// backup and Back up (the sheets in shared/components/). (Loaded before app.js.)
 window.ShelfParts = window.ShelfParts || {};
 window.ShelfParts.addOptions = function addOptions(ed) {
   'use strict';
@@ -36,6 +36,7 @@ window.ShelfParts.addOptions = function addOptions(ed) {
   }
   function openNear() {
     if (ed.busy || ed.near !== null || document.querySelector('.sheet-dim')) return;
+    if (ed.closeT) ed.unpinch(true); // close up (pages/shelf-pinch.js): back first
     cancelAnimationFrame(ed.anim);
     clearTimeout(ed.go.t);
     ed.pos = ed.mod(Math.round(ed.pos));
@@ -82,6 +83,7 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         <p class="opt-note">Pick a photo, then its shape and edge as you place it.</p>` : ''}
         <button type="button" class="opt-row" data-connect><span>How they connect</span>${CHEV}</button>
         ${ed.yearShownNow() ? `<button type="button" class="opt-row" data-year><span>Your year</span>${CHEV}</button>` : ''}
+        <button type="button" class="opt-row" data-image><span>Save as image</span>${CHEV}</button>
         ${window.DFRestore ? `<button type="button" class="opt-row" data-restore><span>Restore a backup</span>${CHEV}</button>` : ''}
         <div class="opt-foot"><button type="button" class="sheet-btn" data-backup>Back up</button><button type="button" class="sheet-btn primary" data-close>Done</button></div>`;
     };
@@ -111,10 +113,11 @@ window.ShelfParts.addOptions = function addOptions(ed) {
         ed.openConnect();
         return;
       }
-      if (e.target.closest('[data-year]')) {
+      if (e.target.closest('[data-year]') || e.target.closest('[data-image]')) {
+        const year = !!e.target.closest('[data-year]');
         await hide();
         leaveNear();
-        ed.openYear();
+        if (year) ed.openYear(); else ed.openSaveImage(); // pages/shelf-save-image.js
         return;
       }
       if (e.target.closest('[data-backup]')) {

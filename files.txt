@@ -21,6 +21,7 @@ built/app.css smaller
   styles/shared/backup.css
   styles/shelf-connect.css
   styles/shelf-year.css
+  styles/shelf-save-image.css
   styles/shelf-waiting.css
   styles/shelf-person.css
   styles/shelf-search.css
@@ -39,12 +40,16 @@ built/app.js smaller
   components/stickers.js
   pages/shelf-turntable.js
   pages/shelf-hands.js
+  pages/shelf-pinch.js
   pages/shelf-caption.js
-  pages/shelf-marks.js
   pages/shelf-options.js
   pages/shelf-connect.js
   pages/shelf-year.js
   components/year-image.js
+  components/sticker-image.js
+  components/cover-image.js
+  components/shelf-image.js
+  pages/shelf-save-image.js
   pages/shelf-waiting.js
   components/thing-rows.js
   pages/shelf-person-done.js

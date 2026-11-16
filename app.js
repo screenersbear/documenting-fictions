@@ -125,12 +125,16 @@
   }
   window.ShelfParts.addTurntable(ed);
   window.ShelfParts.addHands(ed);
+  window.ShelfParts.addPinch(ed);
   window.ShelfParts.addCaption(ed);
-  window.ShelfParts.addShapeMarks(ed);
   window.ShelfParts.addOptions(ed);
   window.ShelfParts.addConnect(ed);
   window.ShelfParts.addYear(ed);
   window.ShelfParts.addYearImage(ed);
+  window.ShelfParts.addStickerImage(ed);
+  window.ShelfParts.addCoverImage(ed);
+  window.ShelfParts.addShelfImage(ed);
+  window.ShelfParts.addSaveImage(ed);
   window.ShelfParts.addWaiting(ed);
   window.ShelfParts.addPersonDone(ed);
   window.ShelfParts.addPerson(ed);

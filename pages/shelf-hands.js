@@ -1,12 +1,21 @@
 // Hands on the shelf: a finger or the mouse turns it, a tap brings a notebook
 // round or opens the one in front (in Spread, any one); up or down changes
-// how they stand; the arrow keys too. (Loaded before app.js.)
+// how they stand; the arrow keys too. Two fingers pinch instead
+// (pages/shelf-pinch.js): close up, a finger goes further (ed.closeK) and a
+// tap on the paper eases them back. (Loaded before app.js.)
 window.ShelfParts = window.ShelfParts || {};
 window.ShelfParts.addHands = function addHands(ed) {
   'use strict';
   // ---------- Hands ----------
   let drag = null;
   ed.busy = false;
+  // A second finger: a pinch, so this isn't a turn or a tap after all.
+  ed.dropDrag = () => {
+    if (!drag) return;
+    drag = null;
+    ed.go(Math.round(ed.pos));
+  };
+  const far = () => ed.W * ed.DRAG[ed.layout] * (ed.closeK || 1); // how far a finger goes to turn it one book
   ed.stage.addEventListener('pointerdown', (e) => {
     if (ed.busy || e.button) return;
     cancelAnimationFrame(ed.anim);
@@ -27,7 +36,7 @@ window.ShelfParts.addHands = function addHands(ed) {
     const dt = Math.max(1, e.timeStamp - d.lastT);
     d.v = 0.7 * d.v + 0.3 * ((e.clientX - d.lastX) / dt);
     d.lastX = e.clientX; d.lastT = e.timeStamp;
-    ed.pos = d.pos - dx / (ed.W * ed.DRAG[ed.layout]);
+    ed.pos = d.pos - dx / far();
     ed.renderSoon();
   });
   function letGo(e) {
@@ -44,16 +53,20 @@ window.ShelfParts.addHands = function addHands(ed) {
         return;
       }
       if (d.slot === front) { ed.openBook(front, d.at); return; }
+      if (ed.closeT) { ed.unpinch(); return; } // close up: the paper eases them back
       ed.go(Math.round(ed.pos));
       return;
     }
     if (d.upDown) {
       const dy = e.clientY - d.y;
-      if (e.type === 'pointerup' && Math.abs(dy) > 36) ed.reshape(dy < 0 ? 1 : -1);
+      if (e.type === 'pointerup' && Math.abs(dy) > 36) {
+        if (ed.closeT) ed.unpinch();
+        ed.reshape(dy < 0 ? 1 : -1);
+      }
       return;
     }
     if (ed.layout === 'spread') return;
-    const fling = -d.v * 260 / (ed.W * ed.DRAG[ed.layout]);
+    const fling = -d.v * 260 / far();
     const base = Math.round(d.pos);
     ed.go(Math.max(base - 1, Math.min(base + 1, Math.round(ed.pos + fling))));
   }

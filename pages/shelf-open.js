@@ -40,6 +40,7 @@ window.ShelfParts.addOpening = function addOpening(ed) {
     const query = at && typeof at === 'object' ? new URLSearchParams(at).toString() : at ? `at=${encodeURIComponent(at)}` : '';
     const url = `${b.id}/${query ? `?${query}` : ''}`;
     ed.store.set(ed.FRONT_KEY, String(i));
+    if (ed.pinchOff) ed.pinchOff(); // close up (pages/shelf-pinch.js): the zoom below takes over
     if (still()) { leave(url); return; }
     ed.shelf.classList.add('away');
     const s = ed.slots[i];
