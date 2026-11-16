@@ -43,6 +43,8 @@ describe('askResult', () => {
   });
   it('edit: a note takes a note\'s hows; nothing for a line that\'s gone', () => {
     expect(askResult({ do: 'edit', lineId: 'n1', how: 'email', note: 'Wrote.' }, [], [note], T, ids(), 1).put).toEqual({ ...note, how: 'email', note: 'Wrote.' });
+    // The Eye's selects reminder on Instagram keeps its how when the note's changed.
+    expect(askResult({ do: 'edit', lineId: 'n1', how: 'instagram', note: 'Sent.' }, [], [note], T, ids(), 1).put).toEqual({ ...note, how: 'instagram', note: 'Sent.' });
     expect(askResult({ do: 'edit', lineId: 'zz', how: 'email' }, [], [note], T, ids(), 1).put).toBeNull();
   });
   it('drop: only a note on its own', () => {

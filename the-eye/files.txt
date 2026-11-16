@@ -112,6 +112,7 @@ built/app.css smaller
   styles/shoot-mode-dark-popups.css
   styles/options-sheet.css
   styles/finals-ref.css
+  styles/remind-sheet.css
 
 # The screens and popups, in the order they sit in the page. Each piece starts
 # with a line saying what it is, which isn't joined.
@@ -138,6 +139,8 @@ built/markup.js
   pages/sun-menu/sun-menu.html
   pages/app-menu/app-menu.html
   pages/app-menu/saved-lists.html
+  pages/app-menu/selects-reminder.html
+  pages/selects/remind-sheet.html
   pages/app-menu/delete-all.html
   pages/concept-helper/helper.html
   pages/reflection-helper/helper.html
@@ -188,6 +191,7 @@ built/app.js smaller
   components/row-words.js
   components/shoot-stage.js
   components/today-items.js
+  components/selects-wait.js
   components/shelf-items.js
   components/people-out.js
   components/talent-since.js
@@ -300,6 +304,8 @@ built/app.js smaller
   pages/shoot/status-sheet.js
   pages/shoot/finals-ref.js
   pages/shoot/status-card.js
+  pages/selects/selects-acts.js
+  pages/selects/remind-sheet.js
   components/toast.js
   components/confirm.js
   components/load-lib.js
@@ -325,6 +331,7 @@ built/app.js smaller
   pages/app-menu/look-choices.js
   pages/app-menu/app-menu.js
   pages/app-menu/saved-lists.js
+  pages/app-menu/selects-reminder.js
   components/tour.js
   pages/app-menu/options.js
   pages/app-menu/delete-all.js

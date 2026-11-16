@@ -8,6 +8,7 @@
   window.EyeParts.addRowWords(ed);
   window.EyeParts.addShootStage(ed);
   window.EyeParts.addTodayItems(ed);
+  window.EyeParts.addSelectsWait(ed);
   window.EyeParts.addShelfItems(ed);
   window.EyeParts.addPeopleOut(ed);
   window.EyeParts.addTalentSince(ed);
@@ -44,6 +45,9 @@
   ed.refreshStickers = () => {}; // set up with the sun menu
   ed.relayStickers = () => {}; // the same: the folds are worked out in pixels
   ed.state = ed.loadState();
+  // Shoots already waiting on selects when this came in count from now
+  // (saved once everything's set up, below).
+  const selectsStamped = ed.stampWaiting(ed.state.shoots, new Date().toISOString());
   ed.applyAppColor(ed.state.presentation.color);
   window.EyeParts.addShootRow(ed);
   window.EyeParts.addProjectGroups(ed);
@@ -141,6 +145,8 @@
   window.EyeParts.addShootStatusSheet(ed);
   window.EyeParts.addFinalsToRef(ed);
   window.EyeParts.addShootStatusCard(ed);
+  window.EyeParts.addSelectsActs(ed);
+  window.EyeParts.addRemindSheet(ed);
   window.EyeParts.addToast(ed);
   window.EyeParts.addConfirm(ed);
   window.EyeParts.addLoadLib(ed);
@@ -162,6 +168,7 @@
   window.EyeParts.addAppMenuLookChoices(ed);
   window.EyeParts.addAppMenu(ed);
   window.EyeParts.addAppMenuSavedLists(ed);
+  window.EyeParts.addAppMenuSelectsReminder(ed);
   window.EyeParts.addTour(ed);
   window.EyeParts.addAppMenuOptions(ed);
   window.EyeParts.addAppMenuDeleteAll(ed);
@@ -196,6 +203,7 @@
   window.EyeParts.addSwipeTabs(ed);
   window.EyeParts.addNavigator(ed);
   window.EyeParts.addBand(ed);
+  if (selectsStamped) ed.saveState();
   // The one list of people: a name changed on its page comes in first, then
   // The Eye tells the list its shoots (components/people-out.js).
   ed.takePeopleEdits().catch(() => 0).then(() => ed.tellPeople(3000));

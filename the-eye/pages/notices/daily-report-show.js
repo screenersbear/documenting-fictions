@@ -213,13 +213,14 @@ window.EyeParts.addNoticesDailyReportShow = function addNoticesDailyReportShow(e
     document.getElementById('dailyReportOverlay').hidden = true;
   });
 
-  // A Today line, answered or tapped in the report: an answer keeps the
-  // report open, without that line; a line to tap closes it and opens what
-  // it's about.
+  // A Today line, answered or tapped in the report: an answer (Yes, it
+  // happened; Still waiting) keeps the report open, without that line; the
+  // rest close it and open what they're about (Got them may ask for a
+  // deadline, Remind opens its sheet).
   document.getElementById('dailyReportList').addEventListener('click', (e) => {
     const el = e.target.closest('.report-today [data-act]');
     if (!el) return;
-    const answer = el.dataset.act === 'happened';
+    const answer = el.dataset.act === 'happened' || el.dataset.act === 'still-waiting';
     if (!answer) document.getElementById('dailyReportOverlay').hidden = true;
     ed.runTodayAct(el.dataset.act, el.dataset.id);
     if (answer) openNotificationsBell();

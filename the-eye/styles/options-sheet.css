@@ -5,28 +5,29 @@
    as a segmented switch, the picked part in the notebook colour; the rest
    as rows with a chevron, in groups under small quiet names, and Delete
    all shoot data apart at the end, in crimson. The standalone sun menu
-   (#sunMenuOverlay) and Saved lists use the same sheet. The last layer for
+   (#sunMenuOverlay), Saved lists, the selects reminder and Remind <name>
+   (selects, 16 Nov) use the same sheet. The last layer for
    these sheets, after every older one. */
-:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay) { align-items: flex-end; justify-content: center; padding: 0; background: rgba(49, 61, 69, .5); }
-:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay) > .modal.opt-sheet {
+:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay, #remindSelectsOverlay, #selectsReminderOverlay) { align-items: flex-end; justify-content: center; padding: 0; background: rgba(49, 61, 69, .5); }
+:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay, #remindSelectsOverlay, #selectsReminderOverlay) > .modal.opt-sheet {
   display: flex; flex-direction: column; width: 100%; max-width: 620px; max-height: calc(100 * var(--svh) - 64px); padding: 0; overflow: hidden;
   border: 0; border-radius: 20px 20px 0 0; background: #FFFFFF; box-shadow: none; color: var(--text); font-family: var(--ui);
 }
-:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay) .opt-sheet-head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 25px 8px 0 16px; border: 0; } /* where the mockup's grab bar ends: there's no dragging the sheet */
-:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay) .opt-sheet-head .app-menu-header {
+:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay, #remindSelectsOverlay, #selectsReminderOverlay) .opt-sheet-head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 25px 8px 0 16px; border: 0; } /* where the mockup's grab bar ends: there's no dragging the sheet */
+:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay, #remindSelectsOverlay, #selectsReminderOverlay) .opt-sheet-head .app-menu-header {
   margin: 0; padding: 0; background: none; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; text-align: left; color: var(--text); text-shadow: none;
 }
 /* Close (or Back): a 40px ring in a 44px target. */
-:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay) .opt-close {
+:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay, #remindSelectsOverlay, #selectsReminderOverlay) .opt-close {
   position: relative; flex: none; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; min-height: 0; padding: 0;
   border: 0; border-radius: 50%; background: none; box-shadow: none; color: var(--text);
 }
-:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay) .opt-close::before { content: ""; position: absolute; inset: 2px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
-:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay) .opt-close .x-icon { width: 18px; height: 18px; }
-:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay) .opt-close .x-icon path { stroke-width: 2; }
-:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay) .opt-sheet-body { padding: 8px 16px calc(40px + var(--sa-bottom)); }
-:root.nb-short :is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay) .opt-sheet-body { padding-bottom: 40px; }
-:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay) button { font-family: var(--ui); letter-spacing: 0; text-transform: none; }
+:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay, #remindSelectsOverlay, #selectsReminderOverlay) .opt-close::before { content: ""; position: absolute; inset: 2px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
+:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay, #remindSelectsOverlay, #selectsReminderOverlay) .opt-close .x-icon { width: 18px; height: 18px; }
+:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay, #remindSelectsOverlay, #selectsReminderOverlay) .opt-close .x-icon path { stroke-width: 2; }
+:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay, #remindSelectsOverlay, #selectsReminderOverlay) .opt-sheet-body { padding: 8px 16px calc(40px + var(--sa-bottom)); }
+:root.nb-short :is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay, #remindSelectsOverlay, #selectsReminderOverlay) .opt-sheet-body { padding-bottom: 40px; }
+:is(#appMenuOverlay, #sunMenuOverlay, #savedListsOverlay, #remindSelectsOverlay, #selectsReminderOverlay) button { font-family: var(--ui); letter-spacing: 0; text-transform: none; }
 
 /* Group names: small, quiet capitals. */
 :is(#appMenuOverlay, #sunMenuOverlay) .opt-label { display: block; margin: 0 0 10px; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }

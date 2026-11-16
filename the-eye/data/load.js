@@ -41,6 +41,7 @@ window.EyeParts.addLoad = function addLoad(ed) {
         dismissedTalentKeys: Array.isArray(parsed.dismissedTalentKeys) ? parsed.dismissedTalentKeys : [],
         dismissedLightingSetupKeys: Array.isArray(parsed.dismissedLightingSetupKeys) ? parsed.dismissedLightingSetupKeys : [],
         photographer: ed.normalizePhotographer(parsed.photographer),
+        selectsReminder: typeof parsed.selectsReminder === 'string' ? parsed.selectsReminder : '',
       };
     } catch (e) {
       console.error('Failed to load state, starting fresh', e);

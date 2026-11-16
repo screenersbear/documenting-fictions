@@ -369,6 +369,15 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
   the count reads "3 TODAY", "2 TO GO", "LAST ONE"; a finished day keeps the whole arc and every stop ink beside "That's
   today" until tomorrow. The shoot's status card: "2 to go", then "1 to go: delivery"; delivered stays "7 of 7", all
   marks full. Loading bars (backups, exports, the sticker cut-out) are not these.
+- **Waiting on selects (Live, 16 Nov, selects/NOTES.md):** a photo shoot at Waiting for selects counts its days from
+  when it was marked Proofs sent (a shoot already waiting counts from 16 Nov). From day 3 The Eye's Today card (and the
+  report) asks "Still waiting on June's selects for Rooftop portraits. 4 days so far." with GOT THEM (to Editing, then
+  the deadline question), REMIND JUNE (names, no pronouns) and a quiet STILL WAITING (asks again in 3 days); a project's
+  days waiting are asked once. The shoot's status card goes on under itself: "Proofs sent to June 4 days ago." and the
+  last reminder, with GOT THEM and REMIND JUNE. REMIND opens a Rounds-move sheet: WHAT DID YOU SAY?, USE THE SELECTS
+  REMINDER (its words in Options, Selects reminder; [name] and [shoot] fill in), COPY AND OPEN INSTAGRAM (COPY THE
+  MESSAGE with no handle), Done. Done logs it on the shoot and, in the suite, as a note with them in Rounds (a text, or
+  on Instagram, with what was said). There's no In the edit tile: the tiles went on 13 Nov.
 - **Placing a sticker:** pick a photo, then the placing screen: the book big with the sticker on it (drag to move, pinch to
   size, twist to turn) and a sheet under it with SHAPE (Circle, Square, Card, Cut out) and EDGE (White border, Black outline)
   as segmented controls, the sticker changing as you pick; BACK and STICK IT ON. Shape and edge are chosen there, never after.

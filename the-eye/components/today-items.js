@@ -1,8 +1,9 @@
 // What needs you today: one list for the Today card on Overview and the top
 // of the daily report, so the two never disagree (round 5: the report said
 // "Nothing to report today" while the card had things on it). A shoot ready
-// to shoot today, a shoot whose day went by without an answer, deadlines
-// gone by, and Monday's look back, most urgent first. The shoots in, plain
+// to shoot today, a shoot whose day went by without an answer, selects
+// waited on 3 days or more (selects-wait.js), deadlines gone by, and
+// Monday's look back, most urgent first. The shoots in, plain
 // items and their markup out (no page, no saved data), so it's unit tested
 // (tests/unit/the-eye/today-items.test.mjs).
 // (Loaded before app.js, which runs it in its turn.)
@@ -38,6 +39,15 @@ window.EyeParts.addTodayItems = function addTodayItems(ed) {
         list.push({ kind: 'happened', id: s.id, name: ed.shootDisplayName(s), day: info ? info.day : 0, setFor: ed.setForWords(s.date, day) });
       });
 
+    // Selects waited on 3 days or more: once per project, whose days wait
+    // together, counting from the first day's proofs.
+    ed.collapseProjects(shoots.filter(s => ed.selectsDue(s, today))).forEach((item) => {
+      const members = item.kind === 'project' ? item.members : [item.shoot];
+      const person = ed.selectsPerson(members[0]);
+      list.push({ kind: 'selects', id: members[0].id, name: ed.selectsShootName(members[0], item.kind === 'project' ? item.project.name : ''),
+        who: person ? person.first : '', days: Math.max(...members.map(m => ed.selectsDays(m, today))) });
+    });
+
     // Deadlines gone by: once per project, whose days share one.
     ed.collapseProjects(shoots.filter(s => ed.isUpcomingDeadline(s) && s.deadline < today)).forEach((item) => {
       if (item.kind === 'project') {
@@ -54,19 +64,25 @@ window.EyeParts.addTodayItems = function addTodayItems(ed) {
   }
 
   const b = text => `<b>${ed.escapeHtml(text)}</b>`;
-  // A question with its answers.
+  // A question with its answers: the main one in the notebook's colour, the
+  // next outlined, a quiet one in plain words.
   const ask = (html, answers) => `<div class="today-item"><p>${html}</p><div class="today-btns">${answers}</div></div>`;
-  const answer = (act, id, label, primary) => `<button type="button" class="${primary ? 'primary' : 'secondary'}" data-act="${act}" data-id="${ed.escapeHtml(id)}">${label}</button>`;
+  const answer = (act, id, label, look) => `<button type="button" class="${look}" data-act="${act}" data-id="${ed.escapeHtml(id)}">${label}</button>`;
   // A line you tap to go somewhere.
   const link = (act, id, html) => `<button type="button" class="today-item today-link" data-act="${act}" data-id="${ed.escapeHtml(id)}"><span>${html}</span>${CHEVRON}</button>`;
 
   function todayItemHtml(item) {
     switch (item.kind) {
       case 'shoot-day':
-        return ask(`You're shooting ${b(item.name)} today.`, answer('shoot-mode', item.id, 'Shoot mode', true));
+        return ask(`You're shooting ${b(item.name)} today.`, answer('shoot-mode', item.id, 'Shoot mode', 'primary'));
       case 'happened':
         return ask(`Did ${b(item.name)}${item.day ? ` (day ${item.day})` : ''} happen? It was set for ${ed.escapeHtml(item.setFor)}.`,
-          answer('happened', item.id, 'Yes, it happened', true) + answer('move', item.id, 'Move the date', false));
+          answer('happened', item.id, 'Yes, it happened', 'primary') + answer('move', item.id, 'Move the date', 'secondary'));
+      case 'selects':
+        return ask(`Still waiting on ${b(item.who ? `${item.who}'s selects` : 'the selects')} for ${ed.escapeHtml(item.name)}. ${item.days} days so far.`,
+          answer('got-selects', item.id, 'Got them', 'primary')
+          + (item.who ? answer('remind-selects', item.id, `Remind ${ed.escapeHtml(item.who)}`, 'secondary') : '')
+          + answer('still-waiting', item.id, 'Still waiting', 'quiet'));
       case 'late':
         return link(item.act, item.id, `${b(item.name)} is <span class="today-late">${ed.escapeHtml(item.late)}</span> its deadline.`);
       default:
@@ -96,6 +112,11 @@ window.EyeParts.addTodayItems = function addTodayItems(ed) {
       case 'move':
         if (ed.applyStatusChange(id, 'rescheduled', { followUps: false }) !== null) ed.openShootModal(id);
         break;
+      // The selects: in (Editing, with what a status change asks next), a
+      // reminder to send, or asked again in 3 days.
+      case 'got-selects': ed.gotSelects(id); break;
+      case 'remind-selects': ed.openRemindSelects(id); break;
+      case 'still-waiting': ed.putOffSelects(id); break;
       case 'shoot': ed.openShootModal(id); break;
       case 'project': ed.openProjectPopup(id); break;
       case 'brief': ed.maybeShowMondayBrief(); break;

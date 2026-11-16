@@ -57,6 +57,7 @@ window.EyeParts.addDefaultState = function addDefaultState(ed) {
       dismissedTalentKeys: [],
       dismissedLightingSetupKeys: [],
       photographer: emptyPhotographer(),
+      selectsReminder: '', // the selects reminder's words, '' for the starter (selects-wait.js)
     };
   }
 

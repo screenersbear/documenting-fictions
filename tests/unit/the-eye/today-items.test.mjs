@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 // Loaded first, as the page does (some describes below make their app as they're read).
 delete window.EyeParts;
 await import('../../../the-eye/components/today-items.js');
+await import('../../../the-eye/components/selects-wait.js'); // the selects, as the page has them
 
 const NAMES = ['todayItems', 'todayItemHtml', 'todayCountWords', 'todayMoreWords', 'runTodayAct'];
 
@@ -37,12 +38,16 @@ function app(shoots = [], over = {}) {
     mondayBriefDue: () => false,
     UNTITLED_PROJECT_NAME: 'Untitled project',
     escapeHtml: t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
+    dayWords: d => `day ${d}`,
     ...over,
   };
+  window.EyeParts.addSelectsWait(ed); // the selects, as the page has them
   window.EyeParts.addTodayItems(ed);
   return ed;
 }
 const shoot = o => ({ id: o.title, status: 'planning', archived: false, ...o });
+// Proofs sent n days before Fri 13 Nov, at noon here.
+const sent = n => new Date(2026, 10, 13 - n, 12).toISOString();
 
 describe('addTodayItems', () => {
   it('adds the Today helpers and nothing else', () => {
@@ -151,13 +156,30 @@ describe('todayItems', () => {
     expect(app([], { mondayBriefDue: () => true }).todayItems()).toEqual([{ kind: 'brief', id: '' }]);
   });
 
-  it('puts them in order: today\'s shoot, the questions, deadlines, the look back', () => {
+  it('puts them in order: today\'s shoot, the questions, the selects, deadlines, the look back', () => {
     const ed = app([
       shoot({ title: 'Late', status: 'editing', date: '2026-11-01', deadline: '2026-11-05' }),
+      shoot({ title: 'Selects', status: 'waiting_for_selects', date: '2026-11-01', proofsSentAt: sent(5) }),
       shoot({ title: 'Asked', date: '2026-11-12' }),
       shoot({ title: 'Ready', status: 'waiting_to_shoot', date: '2026-11-13' }),
     ], { mondayBriefDue: () => true });
-    expect(ed.todayItems().map(i => i.kind)).toEqual(['shoot-day', 'happened', 'late', 'brief']);
+    expect(ed.todayItems().map(i => i.kind)).toEqual(['shoot-day', 'happened', 'selects', 'late', 'brief']);
+  });
+
+  it('asks after selects waited on 3 days or more, a project once, by who booked you', () => {
+    const june = { name: 'June Park', bookedMe: true, socialHandles: [] };
+    const ed = app([
+      shoot({ title: 'Two days', status: 'waiting_for_selects', proofsSentAt: sent(2), talents: [june] }),
+      shoot({ title: 'Rooftop', status: 'waiting_for_selects', proofsSentAt: sent(4), talents: [{ name: 'Ana Ruiz' }, june] }),
+      shoot({ title: 'Put off', status: 'waiting_for_selects', proofsSentAt: sent(9), selectsAskAfter: '2026-11-14' }),
+      shoot({ title: '', id: 'd1', projectId: 'p1', projectName: 'Holiday', status: 'waiting_for_selects', proofsSentAt: sent(3) }),
+      shoot({ title: '', id: 'd2', projectId: 'p1', projectName: 'Holiday', status: 'waiting_for_selects', proofsSentAt: sent(6) }),
+      shoot({ title: 'Archived', status: 'waiting_for_selects', proofsSentAt: sent(9), archived: true }),
+    ]);
+    expect(ed.todayItems()).toEqual([
+      { kind: 'selects', id: 'Rooftop', name: 'Rooftop', who: 'June', days: 4 },
+      { kind: 'selects', id: 'd1', name: 'Holiday', who: '', days: 6 },
+    ]);
   });
 
   it('starts the day at 5am for shoots, but goes by the clock for deadlines', () => {
@@ -189,6 +211,20 @@ describe('todayItemHtml', () => {
 
   it('names the day of a project', () => {
     expect(ed.todayItemHtml({ kind: 'happened', id: 's3', name: 'Lookbook', day: 2, setFor: 'Tuesday' })).toContain('Did <b>Lookbook</b> (day 2) happen? It was set for Tuesday.');
+  });
+
+  it('asks about the selects with GOT THEM, REMIND <NAME> and a quiet STILL WAITING', () => {
+    const html = ed.todayItemHtml({ kind: 'selects', id: 's1', name: 'Rooftop', who: 'June', days: 4 });
+    expect(html).toContain("<p>Still waiting on <b>June's selects</b> for Rooftop. 4 days so far.</p>");
+    expect(html).toContain('<button type="button" class="primary" data-act="got-selects" data-id="s1">Got them</button>');
+    expect(html).toContain('<button type="button" class="secondary" data-act="remind-selects" data-id="s1">Remind June</button>');
+    expect(html).toContain('<button type="button" class="quiet" data-act="still-waiting" data-id="s1">Still waiting</button>');
+  });
+  it('has no one to remind when the shoot has no one named', () => {
+    const html = ed.todayItemHtml({ kind: 'selects', id: 's1', name: 'the day 2026-11-01 shoot', who: '', days: 3 });
+    expect(html).toContain('Still waiting on <b>the selects</b> for the day 2026-11-01 shoot. 3 days so far.');
+    expect(html).not.toContain('remind-selects');
+    expect(html.match(/<button/g)).toHaveLength(2);
   });
 
   it('makes a deadline gone by a line to tap, crimson', () => {
@@ -235,8 +271,12 @@ describe('runTodayAct', () => {
     openShootModal: vi.fn(),
     openProjectPopup: vi.fn(),
     maybeShowMondayBrief: vi.fn(),
+    gotSelects: vi.fn(),
+    openRemindSelects: vi.fn(),
+    putOffSelects: vi.fn(),
   });
-  const called = ed => ['openShootMode', 'applyStatusChange', 'openShootModal', 'openProjectPopup', 'maybeShowMondayBrief'].filter(k => ed[k].mock.calls.length);
+  const called = ed => ['openShootMode', 'applyStatusChange', 'openShootModal', 'openProjectPopup', 'maybeShowMondayBrief', 'gotSelects', 'openRemindSelects', 'putOffSelects']
+    .filter(k => ed[k].mock.calls.length);
 
   it('opens Shoot mode', () => {
     const ed = spies();
@@ -270,6 +310,16 @@ describe('runTodayAct', () => {
     expect(ed.openProjectPopup).toHaveBeenCalledWith('p1');
     expect(ed.maybeShowMondayBrief).toHaveBeenCalledTimes(1);
     expect(called(ed)).toEqual(['openShootModal', 'openProjectPopup', 'maybeShowMondayBrief']);
+  });
+  it('takes the selects in, opens a reminder, or asks again later', () => {
+    const ed = spies();
+    ed.runTodayAct('got-selects', 's5');
+    ed.runTodayAct('remind-selects', 's6');
+    ed.runTodayAct('still-waiting', 's7');
+    expect(ed.gotSelects).toHaveBeenCalledWith('s5');
+    expect(ed.openRemindSelects).toHaveBeenCalledWith('s6');
+    expect(ed.putOffSelects).toHaveBeenCalledWith('s7');
+    expect(called(ed)).toEqual(['gotSelects', 'openRemindSelects', 'putOffSelects']);
   });
   it('does nothing for anything else', () => {
     const ed = spies();

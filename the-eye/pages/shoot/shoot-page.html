@@ -45,6 +45,11 @@
         <span class="status-card-ends" id="shootStatusEnds" aria-hidden="true"></span>
         <span class="status-card-off" id="shootStatusOff" hidden></span>
       </button>
+      <!-- Waiting on selects (pages/shoot/status-card.js): the card goes on under its button, with how long and GOT THEM / REMIND <NAME>. -->
+      <div class="status-card-more" id="shootStatusMore" hidden>
+        <p class="status-card-wait" id="shootStatusWait"></p>
+        <div class="status-card-btns"><button type="button" class="primary" id="shootGotSelectsBtn">Got them</button><button type="button" class="secondary" id="shootRemindSelectsBtn">Remind</button></div>
+      </div>
       <div class="shoot-front-cards" id="shootFrontCards"></div>
       <h2 class="front-title">The details</h2>
       <div class="detail-rows" id="shootDetailRows"></div>

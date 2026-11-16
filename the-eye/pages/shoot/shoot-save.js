@@ -101,6 +101,7 @@ window.EyeParts.addShootSave = function addShootSave(ed) {
   // Delivered is the exception: deliveredAt is when it was last marked
   // Delivered, for the Monday brief's count of last week's deliveries — one
   // sent back for revisions and delivered again went out that second time.
+  // proofsSentAt is the same: the last time it went to Waiting for selects.
   function applyStatusTimestamps(shoot, oldStatus, newStatus) {
     if (oldStatus === newStatus) return;
     if (ed.isPostCaptureStatus(newStatus) && !shoot.capturedAt) {
@@ -111,6 +112,12 @@ window.EyeParts.addShootSave = function addShootSave(ed) {
     }
     if (newStatus === 'delivered') {
       shoot.deliveredAt = new Date().toISOString();
+    }
+    // Proofs sent: the days waiting on the selects count from the latest
+    // time, and a new wait is asked about afresh (components/selects-wait.js).
+    if (newStatus === 'waiting_for_selects') {
+      shoot.proofsSentAt = new Date().toISOString();
+      delete shoot.selectsAskAfter;
     }
   }
 

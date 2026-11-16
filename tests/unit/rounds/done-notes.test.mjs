@@ -29,11 +29,13 @@ describe('howWords', () => {
   it('a note says what it was', () => {
     expect(howWords({ kind: 'note', how: 'call' })).toBe('a call');
     expect(howWords({ kind: 'note', how: 'email' })).toBe('an email');
+    // The Eye's selects reminder, sent on Instagram (16 Nov).
+    expect(howWords({ kind: 'note', how: 'instagram' })).toBe('on Instagram');
   });
   it('nothing for no how, or one from the other list', () => {
     expect(howWords(line())).toBe('');
     expect(howWords(line({ how: 'call' }))).toBe('');
-    expect(howWords({ kind: 'note', how: 'instagram' })).toBe('');
+    expect(howWords({ kind: 'note', how: 'nope' })).toBe('');
   });
 });
 
@@ -114,8 +116,10 @@ describe('noteLine', () => {
     expect(noteLine('p', '2026-11-02', { how: '', note: 'Hi' }, 'n', 1)).not.toHaveProperty('how');
     expect(noteLine('p', '2026-11-02', { how: 'text', note: '' }, 'n', 1)).not.toHaveProperty('note');
   });
-  it('a move\'s how is not a note\'s', () => {
-    expect(noteLine('p', '2026-11-02', { how: 'instagram', note: 'x' }, 'n', 1)).not.toHaveProperty('how');
+  it('keeps Instagram, which only another notebook sends (no chip for it), and nothing else unknown', () => {
+    expect(noteLine('p', '2026-11-02', { how: 'instagram', note: 'x' }, 'n', 1).how).toBe('instagram');
+    expect(HOW_CHOICES.note.map(c => c[0])).toEqual(['call', 'text', 'person', 'email']);
+    expect(noteLine('p', '2026-11-02', { how: 'nope', note: 'x' }, 'n', 1)).not.toHaveProperty('how');
   });
 });
 

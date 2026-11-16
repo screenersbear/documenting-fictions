@@ -2,7 +2,7 @@
    and how many things (N THINGS), or with two or fewer FULL REPORT and a
    chevron, which opens the report (14 Nov: the band's bell went), then the two most urgent, between
    hairlines: a line in 17px light (the shoot's name in 500) with its two
-   answers, or a line to tap with a chevron. A deadline gone by is crimson,
+   answers (the selects have a third, quiet one), or a line to tap with a chevron. A deadline gone by is crimson,
    and written out. Under them N MORE IN TODAY'S REPORT with a dot for each
    (round 5). The same lines head the daily report (.report-today). */
 .today-card { background: #FFFFFF; border-radius: 12px; padding: 16px; color: var(--text); }
@@ -35,6 +35,7 @@
 }
 .today-btns .primary { background: var(--band); color: var(--band-small); }
 .today-btns .secondary { background: none; color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text); }
+.today-btns .quiet { padding: 0 8px; background: none; color: var(--dim); } /* STILL WAITING (selects, 16 Nov) */
 .today-link {
   display: flex; align-items: center; gap: 10px; width: 100%; min-height: 0; height: auto; margin: 0;
   background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; color: var(--text); text-transform: none; letter-spacing: 0; cursor: pointer;

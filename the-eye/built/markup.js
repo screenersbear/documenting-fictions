@@ -256,6 +256,11 @@
         <span class="status-card-ends" id="shootStatusEnds" aria-hidden="true"></span>
         <span class="status-card-off" id="shootStatusOff" hidden></span>
       </button>
+      <!-- Waiting on selects (pages/shoot/status-card.js): the card goes on under its button, with how long and GOT THEM / REMIND <NAME>. -->
+      <div class="status-card-more" id="shootStatusMore" hidden>
+        <p class="status-card-wait" id="shootStatusWait"></p>
+        <div class="status-card-btns"><button type="button" class="primary" id="shootGotSelectsBtn">Got them</button><button type="button" class="secondary" id="shootRemindSelectsBtn">Remind</button></div>
+      </div>
       <div class="shoot-front-cards" id="shootFrontCards"></div>
       <h2 class="front-title">The details</h2>
       <div class="detail-rows" id="shootDetailRows"></div>
@@ -1307,6 +1312,7 @@
       <div class="opt-rows">
         <button type="button" class="opt-row" id="photographerInfoBtn"><span class="opt-row-words"><span class="opt-row-name">Photographer information</span><span class="opt-row-sub">Prints first on every PDF</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
         <button type="button" class="opt-row" id="savedListsBtn"><span class="opt-row-words"><span class="opt-row-name">Saved lists</span><span class="opt-row-sub">Talent, team, locations, lighting, categories, frameworks</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
+        <button type="button" class="opt-row" id="selectsReminderBtn"><span class="opt-row-words"><span class="opt-row-name">Selects reminder</span><span class="opt-row-sub">Offered when you're waiting on selects</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
       </div>
       <span class="opt-label opt-gap">Backups</span>
       <!-- "Last backup: ..." is kept current by renderLastBackupHint (backup.js);
@@ -1343,6 +1349,35 @@
         <button type="button" class="opt-row" data-list="categories"><span class="opt-row-words"><span class="opt-row-name">Categories</span><span class="opt-row-sub">Which kinds of shoot show as filters</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
         <button type="button" class="opt-row" data-list="frameworks"><span class="opt-row-words"><span class="opt-row-name">Frameworks</span><span class="opt-row-sub">Your own sets of tags</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
       </div>
+    </div>
+  </div>
+</div>
+<div id="selectsReminderOverlay" class="modal-overlay options-overlay app-menu-overlay" hidden>
+  <div class="modal app-menu-modal opt-sheet" role="dialog" aria-modal="true" aria-labelledby="selectsReminderTitle">
+    <header class="opt-sheet-head">
+      <h2 class="app-menu-header" id="selectsReminderTitle">Selects reminder</h2>
+      <button type="button" class="icon-btn close-btn opt-close" id="selectsReminderCloseBtn" aria-label="Back"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </header>
+    <div class="opt-sheet-body">
+      <label class="remind-label" for="selectsReminderText">What it says</label>
+      <textarea class="remind-text" id="selectsReminderText" rows="4"></textarea>
+      <p class="selects-reminder-hint">[name] is their first name, [shoot] the shoot. Left empty, it goes back to the starter.</p>
+      <button type="button" class="selects-reminder-save" id="selectsReminderSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+<div id="remindSelectsOverlay" class="modal-overlay options-overlay app-menu-overlay" hidden>
+  <div class="modal app-menu-modal opt-sheet" role="dialog" aria-modal="true" aria-labelledby="remindSelectsTitle">
+    <header class="opt-sheet-head">
+      <h2 class="app-menu-header" id="remindSelectsTitle">Remind them</h2>
+      <button type="button" class="icon-btn close-btn opt-close" id="remindSelectsCloseBtn" aria-label="Close"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    </header>
+    <div class="opt-sheet-body">
+      <label class="remind-label" for="remindSelectsText">What did you say?</label>
+      <textarea class="remind-text" id="remindSelectsText" rows="4" placeholder="Type it here, or use the reminder below."></textarea>
+      <button type="button" class="remind-offer" id="remindSelectsOffer"><svg class="remind-offer-plus" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span><span class="remind-offer-head">Use the selects reminder</span><span class="remind-offer-text" id="remindSelectsOfferText"></span></span></button>
+      <p class="remind-note" id="remindSelectsNote"></p>
+      <div class="remind-actions" id="remindSelectsActions"></div>
     </div>
   </div>
 </div>

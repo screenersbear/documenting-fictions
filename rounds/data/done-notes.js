@@ -11,10 +11,13 @@ import { firstName } from './fill.js';
 export const HOWS = { text: 'Text', instagram: 'Instagram', email: 'Email', person: 'In person' };
 // What a note on its own was: the chips, in order ('' is nothing).
 export const NOTE_HOWS = { call: 'A call', text: 'A text', person: 'In person', email: 'An email' };
+// What a note can be kept as: those, and Instagram, which only The Eye's
+// selects reminder sends (16 Nov), so it has no chip.
+export const NOTE_HOWS_KEPT = { ...NOTE_HOWS, instagram: 'Instagram' };
 export const NOTE_KIND = 'note';
 // How, as DONE SO FAR says it after what was done: "Said thanks · by text", "Note · a call".
 const HOW_WORDS = { text: 'by text', instagram: 'on Instagram', email: 'by email', person: 'in person' };
-const NOTE_WORDS = { call: 'a call', text: 'a text', person: 'in person', email: 'an email' };
+const NOTE_WORDS = { call: 'a call', text: 'a text', person: 'in person', email: 'an email', instagram: 'on Instagram' };
 export const howWords = (line) => ((line.kind === NOTE_KIND ? NOTE_WORDS : HOW_WORDS)[line.how] || '');
 const MOST = 500; // letters in a note
 // The chips as other notebooks show them (the person page, shared/data/asks.js): [key, label, words].
@@ -68,7 +71,7 @@ export function withHowNote(line, { how, note, said } = {}, hows = HOWS) {
 }
 
 // A note on its own, for the log.
-export const noteLine = (personId, day, { how, note }, id, at) => withHowNote({ id, at, personId, kind: NOTE_KIND, day }, { how, note }, NOTE_HOWS);
+export const noteLine = (personId, day, { how, note }, id, at) => withHowNote({ id, at, personId, kind: NOTE_KIND, day }, { how, note }, NOTE_HOWS_KEPT);
 
 // DONE SO FAR: each move done with them (and each note), newest first,
 // as { id, day, look (the move's kind for its mark, or 'note'), what, how

@@ -22,3 +22,21 @@
 .status-card-ends { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; font: 400 11px/14px var(--ui); color: var(--dim); }
 .status-card-bars[hidden], .status-card-ends[hidden], .status-card-off[hidden] { display: none; }
 .status-card-off { display: block; margin-top: 10px; font: 500 15px/20px var(--ui); color: var(--crimson); }
+/* Waiting on selects (selects/02, 16 Nov): the card goes on under its
+   button, one card to look at: how long since the proofs went out in 15px,
+   then GOT THEM in the notebook's colour and REMIND JUNE outlined. */
+#shootFront .status-card.has-more {
+  padding-bottom: 0; border-radius: 12px 12px 0 0;
+  box-shadow: inset 1px 0 0 var(--line), inset -1px 0 0 var(--line), inset 0 1px 0 var(--line);
+}
+.status-card-more { padding: 12px 14px; border-radius: 0 0 12px 12px; background: #FFFFFF; box-shadow: inset 1px 0 0 var(--line), inset -1px 0 0 var(--line), inset 0 -1px 0 var(--line); }
+.status-card-more[hidden] { display: none; }
+.status-card-wait { margin: 0; font: 400 15px/21px var(--ui); color: var(--text); }
+.status-card-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+#shootFront .status-card-btns button {
+  height: 40px; min-height: 0; margin: 0; padding: 0 14px; border: 0; border-radius: 8px;
+  font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+}
+#shootFront .status-card-btns button[hidden] { display: none; }
+#shootFront .status-card-btns .primary { background: var(--band); color: var(--band-small); box-shadow: none; }
+#shootFront .status-card-btns .secondary { background: none; color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text); }

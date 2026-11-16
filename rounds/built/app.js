@@ -1713,6 +1713,10 @@ const NOTE_HOWS = {
 	person: "In person",
 	email: "An email"
 };
+const NOTE_HOWS_KEPT = {
+	...NOTE_HOWS,
+	instagram: "Instagram"
+};
 const NOTE_KIND = "note";
 const HOW_WORDS = {
 	text: "by text",
@@ -1724,7 +1728,8 @@ const NOTE_WORDS = {
 	call: "a call",
 	text: "a text",
 	person: "in person",
-	email: "an email"
+	email: "an email",
+	instagram: "on Instagram"
 };
 const howWords = (line) => (line.kind === "note" ? NOTE_WORDS : HOW_WORDS)[line.how] || "";
 const MOST$1 = 500;
@@ -1797,7 +1802,7 @@ const noteLine = (personId, day, { how, note }, id, at) => withHowNote({
 }, {
 	how,
 	note
-}, NOTE_HOWS);
+}, NOTE_HOWS_KEPT);
 function doneSoFar(person, lines = []) {
 	const fill = (s) => s.replace("[who]", firstName(person.name) || "them");
 	const rows = lines.filter((l) => l.personId === person.id && l.day && (WHAT[l.kind] || l.kind === "note")).map((l) => ({
@@ -4854,7 +4859,7 @@ function askResult(ask, people, lines, today, makeId, now) {
 			how: a.how,
 			note: a.note,
 			said: line.said
-		}, line.kind === "note" ? NOTE_HOWS : HOWS)
+		}, line.kind === "note" ? NOTE_HOWS_KEPT : HOWS)
 	};
 	if (a.do === "drop" && line && line.kind === "note") return {
 		...none,
