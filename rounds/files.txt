@@ -44,6 +44,7 @@ built/app.css
   styles/done-note.css
   styles/people.css
   styles/person.css
+  styles/so-far.css
   styles/messages.css
   styles/options.css
   styles/sync.css

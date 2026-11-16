@@ -84,10 +84,13 @@ function onSynced(r) {
 }
 
 window.addEventListener('hashchange', route);
-// Opened at a person from their page on the shelf (?person=<id>), or at
-// their move from The Eye's Say thanks (&move=1: the move opens there).
+// Opened at a person from their page on the shelf (?person=<id>; with
+// &moment=1 ADD A MOMENT opens there), or at their move from The Eye's Say
+// thanks (&move=1: the move opens there).
 if (suite && suite.get && suite.get('person')) {
-  if (suite.get('move')) { try { sessionStorage.setItem('rounds-open-move', suite.get('person')); } catch (e) { /* the person page, then */ } }
+  for (const [param, key] of [['move', 'rounds-open-move'], ['moment', 'rounds-open-moment']]) {
+    if (suite.get(param)) { try { sessionStorage.setItem(key, suite.get('person')); } catch (e) { /* the person page, then */ } }
+  }
   history.replaceState(null, '', `#/person/${encodeURIComponent(suite.get('person'))}`);
 }
 else if ((location.hash || '#/') === '#/') history.replaceState(null, '', suite && suite.at ? `#/${suite.at}` : '#/today');

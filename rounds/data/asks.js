@@ -2,12 +2,14 @@
 // write Rounds' data, so they leave an ask in df-links (a 'rounds-ask' link,
 // shared/data/asks.js) and Rounds does it here, with its own functions, the
 // next time it opens. The Eye's SHE WROTE FIRST: the Say thanks done, with
-// its note; its selects reminder sent: a note (a text, or on Instagram, and
-// what was said). The person page's ADD A NOTE, a row's how and note
-// changed, and a note on its own deleted. Each ask is taken once.
+// its note; its selects reminder sent: a moment (Texted, or Messaged on
+// Instagram, with what was said: data/moments.js). From before 16 Nov, the
+// shelf's ADD A NOTE, a row's how and note changed, and a note on its own
+// deleted (a reminder was a note then too). Each ask is taken once.
 import { listPeople, savePerson, listMoves, logMove, dropMove } from './db.js';
 import { markDone } from './person.js';
 import { withHowNote, noteLine, NOTE_HOWS_KEPT, HOWS, NOTE_KIND } from './done-notes.js';
+import { momentLine, afterMoment } from './moments.js';
 import { dayOf } from './dates.js';
 import { uuid } from '../components/util.js';
 
@@ -26,6 +28,11 @@ export function askResult(ask, people, lines, today, makeId, now) {
   if (a.do === 'note') {
     if (!person || (!a.note && !a.how)) return none;
     return { ...none, put: noteLine(person.id, a.day || today, a, makeId(), now) };
+  }
+  if (a.do === 'moment') {
+    if (!person) return none;
+    const r = afterMoment(person, momentLine(person.id, { ...a, day: a.day || today }, makeId(), now));
+    return { person: r.person === person ? null : r.person, put: r.line, drop: '' };
   }
   if (a.do === 'edit' && line) return { ...none, put: withHowNote(line, { how: a.how, note: a.note, said: line.said }, line.kind === NOTE_KIND ? NOTE_HOWS_KEPT : HOWS) };
   if (a.do === 'drop' && line && line.kind === NOTE_KIND) return { ...none, drop: line.id };

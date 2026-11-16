@@ -1,9 +1,10 @@
 // Thank-yous (round 2, thanks/01-04, 15 Nov): a move opened offers your
 // message instead of typing it in; once it's done, HOW and an optional note
-// go with it, in Done today and in DONE SO FAR on their page on the shelf
-// (with ADD A NOTE for one on its own). The Eye shows Say thanks FROM
-// ROUNDS on a captured shoot, and <NAME> WROTE FIRST marks it done there.
-// (Timing, how and notes are unit tested: tests/unit/rounds/plan, done-notes.)
+// go with it, in Done today and on their page on the shelf (the latest two,
+// since 16 Nov: thanks/06), whose ADD A MOMENT opens Rounds' sheet for it.
+// The Eye shows Say thanks FROM ROUNDS on a captured shoot, and <NAME> WROTE
+// FIRST marks it done there. (Timing, how, notes and moments are unit
+// tested: tests/unit/rounds/plan, done-notes, moments, so-far.)
 import { test, expect } from '@playwright/test';
 import { openRounds, eyeShoot, opened, useMessage } from './_rounds.mjs';
 
@@ -13,7 +14,7 @@ const doneToday = async (page) => {
   return opened(page, 'Done today');
 };
 
-test('done with how and a note: in Done today, and in DONE SO FAR on their page, with ADD A NOTE', async ({ browser }, testInfo) => {
+test('done with how and a note: in Done today, and the latest on their page on the shelf, whose ADD A MOMENT opens Rounds', async ({ browser }, testInfo) => {
   const { ctx, page, problems } = await openRounds(browser, testInfo, '/rounds/', eyeShoot);
   await expect(page.locator('#view .card.top')).toContainText('Jules M.');
   await page.click('#view [data-write]');
@@ -41,21 +42,29 @@ test('done with how and a note: in Done today, and in DONE SO FAR on their page,
   await expect(list.locator('.done-row-note')).toHaveText('Loved the light. Wants to shoot again.');
 
   // Their page on the shelf (Rounds' EVERYTHING WITH JULES), once the one list
-  // of people has them (Rounds tells it a moment after it opens): DONE SO FAR.
+  // of people has them (Rounds tells it a moment after it opens): the latest
+  // two, the thanks and the shoot (The Eye's).
   const jules = () => page.evaluate(async () => ((await window.DFData.peopleAll()).find((x) => x.name === 'Jules M.') || {}).id || '');
   await expect.poll(jules, { timeout: 8000 }).not.toBe('');
   await page.goto(`/?person=${await jules()}`);
   const done = page.locator('.person-page .done-list');
-  await expect(done.locator('.done-what')).toHaveText(['Said thanks · by text']);
-  await expect(done.locator('.done-note')).toHaveText('Loved the light. Wants to shoot again.');
-  await page.locator('.person-page [data-add-note]').click();
-  const add = page.locator('.done-sheet');
-  await expect(add.locator('h2')).toHaveText('Add a note');
-  await add.locator('[data-how]', { hasText: 'A call' }).click();
-  await add.locator('.done-text').fill('Booked a portrait session.');
-  await add.locator('button[type="submit"]').click();
-  await expect(done.locator('.done-what')).toHaveText(['Note · a call', 'Said thanks · by text']);
-  await expect(done.locator('.done-note').first()).toHaveText('Booked a portrait session.');
+  await expect(done.locator('.done-what')).toHaveText(['Said thanks · by text', 'Rooftop portraits']);
+  await expect(done.locator('.done-note')).toHaveText(['Loved the light. Wants to shoot again.', 'Shot in The Eye.']);
+  // ADD A MOMENT: Rounds opens at Jules with its sheet.
+  await page.locator('.person-page [data-add-moment]').click();
+  const moment = page.locator('.sheet.moment-sheet');
+  await expect(moment.locator('.sheet-header h2')).toHaveText('A moment with Jules');
+  await expect(moment.locator('.moment-when-words')).toHaveText(/^Today, /);
+  await expect(moment.locator('.moment-keeps-sub')).toHaveText("Jules's next check-in moves out from today.");
+  await expect(moment.locator('[data-save]')).toBeDisabled(); // nothing picked yet
+  await page.waitForTimeout(500); // taps count once it's been up 450ms (components/sheet.js)
+  await moment.locator('[data-what="call"]').click();
+  await moment.locator('.moment-note').fill('Booked a portrait session.');
+  await moment.locator('[data-save]').click();
+  await expect(moment).toHaveCount(0);
+  const soFar = page.locator('#view .so-far-list');
+  await expect(soFar.locator('.so-far-what')).toHaveText(['Called', 'Said thanks · by text', 'Rooftop portraits']);
+  await expect(soFar.locator('.so-far-note').first()).toHaveText('Booked a portrait session.');
   expect(problems).toEqual([]);
   await ctx.close();
 });

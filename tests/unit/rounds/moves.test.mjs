@@ -233,3 +233,20 @@ describe('getMe', () => {
     expect(await M.getMe()).toEqual({ offer: '', city: 'Lisbon' });
   });
 });
+
+describe('a note on its own, from SO FAR: saveNote, dropNote, putNoteBack', () => {
+  const note = { id: 'n1', at: 1, personId: 'a', kind: 'note', day: TODAY, how: 'call', note: 'Booked.' };
+  it('changed: a note\'s hows (Instagram kept), the words cleaned; an empty one left off', async () => {
+    await db.logMove(note);
+    expect(await M.saveNote(note, { how: 'text', note: ' Texted back. ' })).toEqual({ ...note, how: 'text', note: 'Texted back.' });
+    expect(await M.saveNote(note, { how: 'instagram', note: '' })).toEqual({ id: 'n1', at: 1, personId: 'a', kind: 'note', day: TODAY, how: 'instagram' });
+    expect((await db.listMoves()).map(strip)).toEqual([{ id: 'n1', at: 1, personId: 'a', kind: 'note', day: TODAY, how: 'instagram' }]);
+  });
+  it('deleted, and put back by Undo', async () => {
+    await db.logMove(note);
+    await M.dropNote(note);
+    expect(await db.listMoves()).toEqual([]);
+    await M.putNoteBack(note);
+    expect((await db.listMoves()).map(strip)).toEqual([note]);
+  });
+});

@@ -8,7 +8,7 @@ import { dayOf } from './dates.js';
 import { weekOf } from './work-days.js';
 import { shelfItems } from './shelf-items.js';
 import { uuid } from '../components/util.js';
-import { withHowNote, HOWS } from './done-notes.js';
+import { withHowNote, HOWS, NOTE_HOWS_KEPT } from './done-notes.js';
 
 // The work days and days off (Options): Monday to Friday, Sunday off, unless changed.
 export const getWeek = async () => weekOf(...(await Promise.all([getSetting('workDays', null), getSetting('daysOff', null)])));
@@ -17,8 +17,9 @@ const loadAll = () => Promise.all([listPeople(), getSetting('pick', null), getSe
 // The cards coming up, for the floating ! over Rounds on the shelf
 // (data/shelf-items.js). The suite's shared files give DFWaiting.
 const tellShelf = (people, pick, perDay, week) => window.DFWaiting?.publishWaiting('rounds', shelfItems(people, pick, dayOf(), perDay, week));
-// After a move done, put off or undone (the pick already marked).
-const shelfAgain = () => loadAll().then(([people, pick, perDay, week]) => tellShelf(people, pick, perDay, week)).catch(() => {});
+// After a move done, put off or undone (the pick already marked), or a
+// moment that moved one (data/moment-store.js).
+export const shelfAgain = () => loadAll().then(([people, pick, perDay, week]) => tellShelf(people, pick, perDay, week)).catch(() => {});
 
 export async function loadToday() {
   const [people, saved, perDay, week] = await loadAll();
@@ -51,6 +52,15 @@ export async function saveHowNote(line, { how, note }) {
   await logMove(next);
   return next;
 }
+// From SO FAR on their page: a note on its own changed, deleted, or put
+// back (Undo).
+export async function saveNote(line, { how, note }) {
+  const next = withHowNote(line, { how, note }, NOTE_HOWS_KEPT);
+  await logMove(next);
+  return next;
+}
+export const dropNote = (line) => dropMove(line.id);
+export const putNoteBack = (line) => logMove(line);
 export async function undoMove({ before, line }) {
   await savePerson(before);
   await dropMove(line.id);

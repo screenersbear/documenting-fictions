@@ -1,5 +1,5 @@
 // shared/data/asks.js: asks for Rounds, left in df-links by The Eye and the
-// person page, and DONE SO FAR as it will be once Rounds takes them.
+// person page, and SO FAR as it will be once Rounds takes them.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { loadDFData } from './_env.mjs';
 
@@ -35,6 +35,14 @@ describe('doneWithAsks', () => {
     const out = D.doneWithAsks(rows, [ask('k', { do: 'note', day: '2026-11-15', how: 'call', note: 'Rang her.' })], HOWS);
     expect(out[0]).toEqual({ id: 'ask:k', day: '2026-11-15', look: 'note', what: 'Note', how: 'call', howWords: 'a call', note: 'Rang her.', noteOnly: true, pending: true });
     expect(out.slice(1)).toEqual(rows);
+  });
+  it('a moment waiting goes first, as Rounds says it (The Eye\'s selects reminder)', () => {
+    const chips = { ...HOWS, moment: [['instagram', 'Messaged on Instagram', 'Messaged on Instagram'], ['other', 'Other', 'A moment']] };
+    const out = D.doneWithAsks(rows, [ask('k', { do: 'moment', day: '2026-11-16', what: 'instagram', note: 'Any picks yet?', keeps: true })], chips);
+    expect(out[0]).toEqual({ id: 'ask:k', day: '2026-11-16', look: 'moment', mark: 'rounds', what: 'Messaged on Instagram', how: 'instagram', howWords: '', note: 'Any picks yet?', noteOnly: false, pending: true });
+    expect(out.slice(1)).toEqual(rows);
+    expect(D.doneWithAsks([], [ask('k', { do: 'moment', what: 'other' })], chips)[0]).toMatchObject({ day: '', what: 'A moment', how: 'other', note: '' });
+    expect(D.doneWithAsks([], [ask('k', { do: 'moment' })], null)[0]).toMatchObject({ what: 'A moment', how: '' });
   });
   it('a row changed: the how in its own list\'s words, and the note', () => {
     const out = D.doneWithAsks(rows, [ask('k', { do: 'edit', lineId: 'a', how: 'email', note: 'Long one.' }), ask('j', { do: 'edit', lineId: 'n', how: 'email', note: '' })], HOWS);

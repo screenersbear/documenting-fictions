@@ -804,7 +804,7 @@ const MONTHS = [
 	"Nov",
 	"Dec"
 ];
-const WEEKDAYS = [
+const WEEKDAYS$1 = [
 	"Sunday",
 	"Monday",
 	"Tuesday",
@@ -833,14 +833,14 @@ function whenWords(day, today) {
 	if (n === 0) return "today";
 	if (n === 1) return "yesterday";
 	const d = dateOf(day);
-	return n > 1 && n < 7 ? WEEKDAYS[d.getDay()] : short(d);
+	return n > 1 && n < 7 ? WEEKDAYS$1[d.getDay()] : short(d);
 }
 function dueWords(day, today) {
 	const n = daysBetween(today, day);
 	if (n <= 0) return "Today";
 	if (n === 1) return "Tomorrow";
 	const d = dateOf(day);
-	return n < 7 ? WEEKDAYS[d.getDay()] : short(d);
+	return n < 7 ? WEEKDAYS$1[d.getDay()] : short(d);
 }
 function sinceWords(day, today) {
 	const n = daysBetween(day, today);
@@ -1584,7 +1584,7 @@ const comesUp = (next, today, week) => !!next && whenDue(next, week, today) <= t
 
 // data/today.js
 const PER_DAY = 3;
-const MOST$2 = 5;
+const MOST$3 = 5;
 const rank = (k) => KIND_KEYS.indexOf(k);
 const perDayOf = (n) => Math.min(5, Math.max(1, Math.floor(Number(n)) || 3));
 const isDue = (p, today, week) => !p.letGo && comesUp(p.next, today, week);
@@ -1732,7 +1732,7 @@ const NOTE_WORDS = {
 	instagram: "on Instagram"
 };
 const howWords = (line) => (line.kind === "note" ? NOTE_WORDS : HOW_WORDS)[line.how] || "";
-const MOST$1 = 500;
+const MOST$2 = 500;
 const HOW_CHOICES = {
 	move: Object.keys(HOWS).map((k) => [
 		k,
@@ -1745,29 +1745,13 @@ const HOW_CHOICES = {
 		NOTE_WORDS[k]
 	])
 };
-const WHAT = {
-	thanks: "Said thanks",
-	yes: "Said thanks for the yes",
-	photos: "Told [who] the photos were up",
-	hello: "Said hello",
-	checkin: "Checked in",
-	intros: "Asked [who] for intros",
-	refresh: "Offered [who] a refresh",
-	followup: "Followed up",
-	pitch: "Pitched [who]"
-};
-const YEAR = "Sent a final, a year on";
-const ANSWERED$1 = {
-	yes: "[who] said yes",
-	no: "[who] said not now"
-};
 function howFromGo(went) {
 	const w = String(went ?? "").toLowerCase();
 	if (w === "instagram") return "instagram";
 	if (w === "email" || w === "gmail") return "email";
 	return "";
 }
-const cleanNote = (v) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, MOST$1);
+const cleanNote = (v) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, MOST$2);
 const quickTaps = (name) => [
 	`${firstName(name) || "They"} reached out first`,
 	"Wants to shoot again",
@@ -1803,33 +1787,6 @@ const noteLine = (personId, day, { how, note }, id, at) => withHowNote({
 	how,
 	note
 }, NOTE_HOWS_KEPT);
-function doneSoFar(person, lines = []) {
-	const fill = (s) => s.replace("[who]", firstName(person.name) || "them");
-	const rows = lines.filter((l) => l.personId === person.id && l.day && (WHAT[l.kind] || l.kind === "note")).map((l) => ({
-		id: l.id,
-		day: l.day,
-		at: l.at || 0,
-		look: l.kind === "note" ? "note" : l.year ? "photos" : l.kind,
-		what: l.kind === "note" ? "Note" : l.year ? YEAR : fill(WHAT[l.kind]),
-		how: l.how || "",
-		howWords: howWords(l),
-		note: l.note || "",
-		noteOnly: l.kind === NOTE_KIND
-	}));
-	const pitch = person.pitch || {};
-	if (ANSWERED$1[pitch.answer] && pitch.on) rows.push({
-		id: "",
-		day: pitch.on,
-		at: Infinity,
-		look: "pitch",
-		what: fill(ANSWERED$1[pitch.answer]).replace(/^them/, "They"),
-		how: "",
-		howWords: "",
-		note: "",
-		noteOnly: false
-	});
-	return rows.sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at).map(({ at, ...r }) => r);
-}
 
 // data/moves.js
 const getWeek = async () => weekOf(...await Promise.all([getSetting("workDays", null), getSetting("daysOff", null)]));
@@ -1883,6 +1840,16 @@ async function saveHowNote(line, { how, note }) {
 	await logMove(next);
 	return next;
 }
+async function saveNote(line, { how, note }) {
+	const next = withHowNote(line, {
+		how,
+		note
+	}, NOTE_HOWS_KEPT);
+	await logMove(next);
+	return next;
+}
+const dropNote = (line) => dropMove(line.id);
+const putNoteBack = (line) => logMove(line);
 async function undoMove({ before, line }) {
 	await savePerson(before);
 	await dropMove(line.id);
@@ -1925,7 +1892,7 @@ const flairHtml = (kind) => `<span class="flair" style="background:${KINDS[kind]
 const miniHtml = (kind) => kind ? `<span class="mini" style="background:${KINDS[kind].bg}" aria-hidden="true">${markSvg(kind, 10)}</span>` : "";
 
 // pages/done-note.js
-const chipsHtml$1 = /* @__PURE__ */ __name((list, attr, on = "") => list.map(([k, label]) => `<button type="button" class="pick-chip${k === on ? " on" : ""}" ${attr}="${esc(k)}" aria-pressed="${k === on}">${esc(label)}</button>`).join(""), "chipsHtml");
+const chipsHtml$2 = /* @__PURE__ */ __name((list, attr, on = "") => list.map(([k, label]) => `<button type="button" class="pick-chip${k === on ? " on" : ""}" ${attr}="${esc(k)}" aria-pressed="${k === on}">${esc(label)}</button>`).join(""), "chipsHtml");
 function openHowNote(person, line, how = "") {
 	const s = openSheet({
 		title: moveName(line),
@@ -1933,10 +1900,10 @@ function openHowNote(person, line, how = "") {
 		body: `
       <div class="move-who">${photoHtml(person, "small")}<span class="move-who-words"><span class="move-name">${esc(person.name)}</span><span class="move-handle">Done today</span></span></div>
       <p class="label done-note-label">How</p>
-      <div class="pick-chips" data-hows>${chipsHtml$1(Object.entries(HOWS), "data-how", how)}</div>
+      <div class="pick-chips" data-hows>${chipsHtml$2(Object.entries(HOWS), "data-how", how)}</div>
       <label class="label done-note-label" for="doneNote">A note (optional)</label>
       <textarea class="move-text done-note-text" id="doneNote" rows="3" maxlength="500"></textarea>
-      <div class="pick-chips" data-taps>${chipsHtml$1(quickTaps(person.name).map((t) => [t, t]), "data-tap")}</div>
+      <div class="pick-chips" data-taps>${chipsHtml$2(quickTaps(person.name).map((t) => [t, t]), "data-tap")}</div>
       <div class="done-note-btns"><button type="button" class="text-btn" data-skip>Skip</button><button type="button" class="btn primary" data-save>Save</button></div>`
 	});
 	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(moveLook(line), moveName(line));
@@ -2328,22 +2295,288 @@ function openAddPerson(onAdded) {
 	return s;
 }
 
+// data/moments.js
+const MOMENT_KIND = "moment";
+const MOMENTS = {
+	photos: "Sent photos",
+	text: "Texted",
+	call: "Called",
+	instagram: "Messaged on Instagram",
+	ran: "Ran into [who]",
+	met: "Met up",
+	comment: "Commented on a post",
+	other: "Other"
+};
+const MOVES_OUT = {
+	checkin: GAP.checkin,
+	refresh: GAP.client,
+	intros: GAP.client
+};
+const NEXT_WORDS = {
+	checkin: "next check-in",
+	refresh: "next refresh offer",
+	intros: "next ask for intros"
+};
+const who = (s, name) => s.replace("[who]", firstName(name) || "them");
+const momentChoices = (name) => Object.keys(MOMENTS).map((k) => [
+	k,
+	who(MOMENTS[k], name),
+	k === "other" ? "A moment" : who(MOMENTS[k], name)
+]);
+const momentWhat = (what, name) => MOMENTS[what] && what !== "other" ? who(MOMENTS[what], name) : "A moment";
+function momentLine(personId, { what, day, note, keeps = true }, id, at) {
+	const line = {
+		id,
+		at,
+		personId,
+		kind: MOMENT_KIND,
+		day,
+		what: MOMENTS[what] ? what : "other",
+		keeps: keeps !== false
+	};
+	const n = cleanNote(note);
+	if (n) line.note = n;
+	return line;
+}
+function afterMoment(person, line) {
+	if (!line.keeps) return {
+		person,
+		line
+	};
+	const out = {
+		...person,
+		lastMove: later(person.lastMove || "", line.day)
+	};
+	const kept = {
+		...line,
+		wasLast: person.lastMove || ""
+	};
+	const next = person.next;
+	if (next && !person.letGo && MOVES_OUT[next.kind]) {
+		const due = later(next.due, addDays(line.day, MOVES_OUT[next.kind]));
+		if (due !== next.due) {
+			out.next = {
+				...next,
+				due
+			};
+			kept.moved = {
+				from: next.due,
+				to: due
+			};
+		}
+	}
+	return {
+		person: out,
+		line: kept
+	};
+}
+function withoutMoment(person, line, lines = []) {
+	const out = { ...person };
+	const m = line.moved;
+	if (m && person.next && person.next.due === m.to) out.next = {
+		...person.next,
+		due: m.from
+	};
+	if (line.keeps && person.lastMove === line.day) {
+		const counts = (l) => l.personId === person.id && l.id !== line.id && l.day && (l.kind !== "moment" || l.keeps);
+		out.lastMove = [line.wasLast || "", ...lines.filter(counts).map((l) => l.day)].sort().pop();
+	}
+	return out;
+}
+function keepWords(person, day, today) {
+	const whose = firstName(person.name) ? `${firstName(person.name)}'s` : "Their";
+	const when = day === today ? "today" : "that day";
+	const next = person.next && !person.letGo ? person.next : null;
+	if (next && NEXT_WORDS[next.kind]) return `${whose} ${NEXT_WORDS[next.kind]} moves out from ${when}.`;
+	return next ? `${whose} next move stays as it is.` : "Counts as the last time you were in touch.";
+}
+
+// data/moment-store.js
+async function keep(before, after) {
+	if (JSON.stringify(after) === JSON.stringify(before)) return;
+	await savePerson(after);
+	shelfAgain();
+}
+async function addMoment(person, fields) {
+	const { person: after, line } = afterMoment(person, momentLine(person.id, fields, uuid(), Date.now()));
+	await logMove(line);
+	await keep(person, after);
+	return {
+		before: person,
+		line
+	};
+}
+async function changeMoment(person, old, fields) {
+	const rest = (await listMoves()).filter((l) => l.id !== old.id);
+	const { person: after, line } = afterMoment(withoutMoment(person, old, rest), momentLine(person.id, fields, old.id, old.at));
+	await logMove(line);
+	await keep(person, after);
+	return line;
+}
+async function dropMoment(person, line) {
+	const rest = (await listMoves()).filter((l) => l.id !== line.id);
+	await dropMove(line.id);
+	await keep(person, withoutMoment(person, line, rest));
+	return {
+		before: person,
+		line
+	};
+}
+async function undoMomentDrop({ before, line }) {
+	await logMove(line);
+	await keep(await getPerson(before.id), before);
+}
+async function undoMomentAdd({ before, line }) {
+	await dropMove(line.id);
+	await keep(await getPerson(before.id), before);
+}
+
+// pages/moment-sheet.js
+const WEEKDAYS = [
+	"Sun",
+	"Mon",
+	"Tue",
+	"Wed",
+	"Thu",
+	"Fri",
+	"Sat"
+];
+function whenBox(day, today) {
+	const words = `${WEEKDAYS[dateOf(day).getDay()]} ${shortDay(day)}`;
+	if (day === today) return `Today, ${words}`;
+	return day === addDays(today, -1) ? `Yesterday, ${words}` : words;
+}
+function openMoment(person, { line = null, after = async () => {} } = {}) {
+	const today = dayOf();
+	let what = line ? line.what : "";
+	let day = line ? line.day : today;
+	const s = openSheet({
+		title: `A moment with ${firstName(person.name) || "them"}`,
+		className: "sheet-small moment-sheet",
+		body: `
+      <p class="label moment-label">What happened</p>
+      <div class="pick-chips">${momentChoices(person.name).map(([k, label]) => `<button type="button" class="pick-chip${k === what ? " on" : ""}" data-what="${esc(k)}" aria-pressed="${k === what}">${esc(label)}</button>`).join("")}</div>
+      <label class="label moment-label" for="momentDay">When</label>
+      <span class="moment-when"><span class="moment-when-words"></span><input type="date" id="momentDay" max="${today}" value="${esc(day)}" /></span>
+      <label class="label moment-label" for="momentNote">A note (optional)</label>
+      <textarea class="move-text moment-note" id="momentNote" rows="3" maxlength="500">${esc(line ? line.note || "" : "")}</textarea>
+      <label class="moment-keeps"><span class="moment-keeps-words">Counts as keeping in touch<span class="moment-keeps-sub"></span></span><input type="checkbox" class="switch" id="momentKeeps" ${!line || line.keeps ? "checked" : ""} /></label>
+      <div class="moment-btns"><button type="button" class="btn primary" data-save ${what ? "" : "disabled"}>${line ? "Save" : "Add the moment"}</button>
+      ${line ? "<button type=\"button\" class=\"text-btn\" data-delete>Delete the moment</button>" : ""}</div>`
+	});
+	const $ = (sel) => s.body.querySelector(sel);
+	const draw = () => {
+		$(".moment-when-words").textContent = whenBox(day, today);
+		$(".moment-keeps-sub").textContent = $("#momentKeeps").checked ? keepWords(person, day, today) : "Nothing in Rounds moves.";
+	};
+	draw();
+	$("#momentKeeps").addEventListener("change", draw);
+	$("#momentDay").addEventListener("change", (e) => {
+		const v = e.target.value;
+		day = v && v <= today ? v : today;
+		e.target.value = day;
+		draw();
+	});
+	s.body.addEventListener("click", async (e) => {
+		const b = e.target.closest("button");
+		if (!b) return;
+		if (b.dataset.what !== undefined) {
+			what = b.dataset.what;
+			s.body.querySelectorAll("[data-what]").forEach((c) => {
+				c.classList.toggle("on", c.dataset.what === what);
+				c.setAttribute("aria-pressed", c.dataset.what === what);
+			});
+			$("[data-save]").disabled = false;
+		} else if (b.matches("[data-save]") && what) {
+			const fields = {
+				what,
+				day,
+				note: $("#momentNote").value,
+				keeps: $("#momentKeeps").checked
+			};
+			s.close();
+			if (line) {
+				await changeMoment(person, line, fields);
+				await after();
+				return;
+			}
+			const undo = await addMoment(person, fields);
+			await after();
+			toast("Moment added.", { action: {
+				label: "Undo",
+				run: () => undoMomentAdd(undo).then(after)
+			} });
+		} else if (b.matches("[data-delete]")) {
+			s.close();
+			const undo = await dropMoment(person, line);
+			await after();
+			toast("Moment deleted.", { action: {
+				label: "Undo",
+				run: () => undoMomentDrop(undo).then(after)
+			} });
+		}
+	});
+	return s;
+}
+
+// pages/moment-who.js
+const MOST$1 = 30;
+function whoList(people, typed, firstIds = []) {
+	const t = String(typed ?? "").trim().toLowerCase().replace(/^@/, "");
+	const hit = (p) => !t || [
+		p.name,
+		p.instagram,
+		p.tiktok
+	].some((v) => String(v || "").toLowerCase().includes(t));
+	const rank = (p) => firstIds.includes(p.id) ? 0 : 1;
+	return people.filter((p) => !p.letGo && hit(p)).sort((a, b) => rank(a) - rank(b) || String(a.name).localeCompare(String(b.name))).slice(0, MOST$1);
+}
+async function openMomentWho(firstIds, after) {
+	const people = await listPeople();
+	const s = openSheet({
+		title: "A moment with",
+		className: "sheet-small moment-who",
+		body: `<div class="field"><input type="search" id="momentWho" placeholder="Name or handle" autocomplete="off" aria-label="Who with" /></div>
+      <div class="choice-list"></div>`
+	});
+	const list = s.body.querySelector(".choice-list");
+	let shown = [];
+	const draw = () => {
+		shown = whoList(people, s.body.querySelector("input").value, firstIds);
+		list.innerHTML = shown.map((p, i) => `<button type="button" class="choice" data-who="${i}">${photoHtml(p, "small")}<span class="choice-text"><span class="choice-label">${esc(p.name)}</span>${handleText(p) ? `<span class="choice-detail">${esc(handleText(p))}</span>` : ""}</span></button>`).join("");
+		fillPhotos(list, shown);
+	};
+	draw();
+	s.body.querySelector("input").addEventListener("input", draw);
+	list.addEventListener("click", (e) => {
+		const b = e.target.closest("[data-who]");
+		if (!b) return;
+		const p = shown[Number(b.dataset.who)];
+		s.close();
+		openMoment(p, { after });
+	});
+}
+
 // pages/done-today.js
-const rowHtml = ({ line, person }, i) => `
+const rowHtml$1 = /* @__PURE__ */ __name(({ line, person }, i) => `
   <div class="done-row">${miniHtml(moveLook(line))}
     <span class="choice-text"><span class="choice-label">${esc(person.name)}</span><span class="choice-detail">${esc([moveName(line), howWords(line)].filter(Boolean).join(" · "))}</span>${line.note ? `<span class="done-row-note">${esc(line.note)}</span>` : ""}</span>
     <button type="button" class="text-btn" data-undo="${i}">Undo</button>
-  </div>`;
+  </div>`, "rowHtml");
 async function openDoneToday(onChange) {
 	let { lines, done } = await loadDone();
 	const s = openSheet({
 		title: "Done today",
 		className: "sheet-small",
-		body: "<div class=\"done-list\"></div>"
+		body: "<div class=\"done-list\"></div><button type=\"button\" class=\"btn secondary done-moment\" data-moment>Add a moment</button>"
 	});
 	const list = s.body.querySelector(".done-list");
+	s.body.querySelector("[data-moment]").addEventListener("click", () => {
+		s.close();
+		openMomentWho(done.map((d) => d.person.id), onChange);
+	});
 	const draw = () => {
-		list.innerHTML = done.map(rowHtml).join("");
+		list.innerHTML = done.map(rowHtml$1).join("");
 	};
 	draw();
 	list.addEventListener("click", async (e) => {
@@ -3103,18 +3336,18 @@ function slipLine(names) {
 const writeWho = (names) => names.length === 1 ? `Write to ${firstName(names[0])}` : "Write to them";
 
 // pages/post-slip.js
-const C$2 = /* @__PURE__ */ __name(() => window.DFConnect, "C");
+const C$3 = /* @__PURE__ */ __name(() => window.DFConnect, "C");
 const personHtml = (p) => `<span class="rd-slip-person">${photoHtml(p, "small")}<span class="rd-slip-name">${esc(firstName(p.name))}</span></span>`;
 async function postSlipsHtml(people) {
-	if (!C$2() || !window.DFData) return "";
+	if (!C$3() || !window.DFData) return "";
 	const byId = new Map(people.map((p) => [p.id, p]));
 	const out = [];
-	for (const link of await C$2().slipsFor("rounds")) {
+	for (const link of await C$3().slipsFor("rounds")) {
 		if (link.type !== "post-people" || !link.takenAt) continue;
 		const who = (link.people || []).map((id) => byId.get(id)).filter((p) => p && !p.letGo);
 		if (!who.length) continue;
 		const names = who.map((p) => p.name);
-		out.push(C$2().slipHtml({
+		out.push(C$3().slipHtml({
 			link,
 			title: link.title || "A new post",
 			line: slipLine(names),
@@ -3130,7 +3363,7 @@ function wirePostSlips(root, open) {
 		if (!go && !e.target.closest("[data-slip-later]")) return;
 		const link = await window.DFData.getLink(slip.dataset.slip);
 		if (!link) return;
-		await (go ? C$2().openSlip(link) : C$2().tuckSlip(link));
+		await (go ? C$3().openSlip(link) : C$3().tuckSlip(link));
 		const first = slip.querySelector("[data-first]")?.dataset.first;
 		slip.remove();
 		if (go && first) open(first);
@@ -3376,7 +3609,7 @@ const MINE = [{
 	ask: "Where are you based?",
 	hint: "Hoboken"
 }];
-const row$1 = /* @__PURE__ */ __name((attr, mark, name, text) => `<button type="button" class="msg-row" ${attr}>${mark}<span class="msg-words"><span class="msg-kind">${esc(name)}</span><span class="msg-text">${esc(text)}</span></span>${CHEV}</button>`, "row");
+const row$2 = /* @__PURE__ */ __name((attr, mark, name, text) => `<button type="button" class="msg-row" ${attr}>${mark}<span class="msg-words"><span class="msg-kind">${esc(name)}</span><span class="msg-text">${esc(text)}</span></span>${CHEV}</button>`, "row");
 async function messagesScreen(view, { beside = false } = {}) {
 	const [messages, me] = await Promise.all([getMessages(), getMe()]);
 	view.innerHTML = `<div class="screen"><div class="scroll">
@@ -3385,10 +3618,10 @@ async function messagesScreen(view, { beside = false } = {}) {
 		place: "Rounds"
 	})}
     <p class="note">Write each one once, in your words. [name] and the others fill in for each person.</p>
-    <div class="msg-list">${MESSAGE_ORDER.map((k) => row$1(`data-kind="${k}"`, miniHtml(k), KINDS[k].name, messages[k] ?? KINDS[k].starter)).join("")}</div>
+    <div class="msg-list">${MESSAGE_ORDER.map((k) => row$2(`data-kind="${k}"`, miniHtml(k), KINDS[k].name, messages[k] ?? KINDS[k].starter)).join("")}</div>
     <div class="msg-fills">
       <div class="list-head"><h2>Your fill-ins</h2></div>
-      <div class="msg-list">${MINE.map((m) => row$1(`data-mine="${m.key}"`, "", `${m.name} ${m.fill}`, me[m.key] || "Not set yet")).join("")}</div>
+      <div class="msg-list">${MINE.map((m) => row$2(`data-mine="${m.key}"`, "", `${m.name} ${m.fill}`, me[m.key] || "Not set yet")).join("")}</div>
     </div>
   </div></div>`;
 	if (beside) return;
@@ -3882,7 +4115,7 @@ const DONE = {
 	followup: "you followed up",
 	pitch: "you pitched [whom]"
 };
-const ANSWERED = {
+const ANSWERED$1 = {
 	yes: "[who] said yes",
 	no: "[who] said not now"
 };
@@ -3896,15 +4129,107 @@ function happened(person, lines = []) {
 		words: fill(DONE[l.kind])
 	}));
 	const pitch = person.pitch || {};
-	const answer = ANSWERED[pitch.answer] && pitch.on ? [{
+	const answer = ANSWERED$1[pitch.answer] && pitch.on ? [{
 		day: pitch.on,
 		at: Infinity,
-		words: fill(ANSWERED[pitch.answer])
+		words: fill(ANSWERED$1[pitch.answer])
 	}] : [];
 	return [...done, ...answer].sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at).slice(0, MOST).map(({ day, words }) => ({
 		day,
 		words
 	}));
+}
+
+// data/so-far.js
+const WHAT = {
+	thanks: "Said thanks",
+	yes: "Said thanks for the yes",
+	photos: "Told [who] the photos were up",
+	hello: "Said hello",
+	checkin: "Checked in",
+	intros: "Asked [who] for intros",
+	refresh: "Offered [who] a refresh",
+	followup: "Followed up",
+	pitch: "Pitched [who]"
+};
+const YEAR = "Sent a final, a year on";
+const ANSWERED = {
+	yes: "[who] said yes",
+	no: "[who] said not now"
+};
+const SHOT = "Shot in The Eye.";
+const row$1 = /* @__PURE__ */ __name((o) => ({
+	id: "",
+	at: 0,
+	look: "",
+	mark: "",
+	how: "",
+	howWords: "",
+	note: "",
+	noteOnly: false,
+	...o
+}), "row");
+function lineRow(l, fill, name) {
+	if (l.kind === "note") return row$1({
+		id: l.id,
+		day: l.day,
+		at: l.at || 0,
+		kind: "note",
+		look: "note",
+		mark: "rounds",
+		what: "Note",
+		how: l.how || "",
+		howWords: howWords(l),
+		note: l.note || "",
+		noteOnly: true
+	});
+	if (l.kind === "moment") return row$1({
+		id: l.id,
+		day: l.day,
+		at: l.at || 0,
+		kind: "moment",
+		look: "moment",
+		mark: "rounds",
+		what: momentWhat(l.what, name),
+		how: l.what || "other",
+		note: l.note || ""
+	});
+	return row$1({
+		id: l.id,
+		day: l.day,
+		at: l.at || 0,
+		kind: "move",
+		look: l.year ? "photos" : l.kind,
+		what: l.year ? YEAR : fill(WHAT[l.kind]),
+		how: l.how || "",
+		howWords: howWords(l),
+		note: l.note || ""
+	});
+}
+function doneSoFar(person, lines = [], shoots = []) {
+	const fill = (s) => s.replace("[who]", firstName(person.name) || "them");
+	const rows = lines.filter((l) => l.personId === person.id && l.day && (WHAT[l.kind] || l.kind === "note" || l.kind === "moment")).map((l) => lineRow(l, fill, person.name));
+	const pitch = person.pitch || {};
+	if (ANSWERED[pitch.answer] && pitch.on) rows.push(row$1({
+		day: pitch.on,
+		at: Infinity,
+		kind: "answer",
+		look: "pitch",
+		what: fill(ANSWERED[pitch.answer]).replace(/^them/, "They")
+	}));
+	const theirs = new Set(person.shoots || []);
+	for (const s of shoots || []) {
+		if (s && theirs.has(s.id) && isDay(s.date)) rows.push(row$1({
+			day: s.date,
+			at: -1,
+			kind: "shoot",
+			look: "shoot",
+			mark: "the-eye",
+			what: s.title || "A shoot",
+			note: SHOT
+		}));
+	}
+	return rows.sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at).map(({ at, ...r }) => r);
 }
 
 // data/year-tally.js
@@ -4010,7 +4335,7 @@ async function shelfPageOf(p) {
 	const r = await D$1().personFor(listedAs(p)).catch(() => null);
 	return r ? D$1().personUrl(r.id) : null;
 }
-function personThing(p, today, week, ownPhoto, lines = []) {
+function personThing(p, today, week, ownPhoto, lines = [], shoots = []) {
 	const next = p.next && !p.letGo ? p.next : null;
 	const what = next ? phrase(next.kind, p.name, next.year) : p.letGo ? "Let go" : "Nothing planned";
 	const when = next ? dueLine(next, week, today) : "";
@@ -4031,12 +4356,15 @@ function personThing(p, today, week, ownPhoto, lines = []) {
 			},
 			group: GROUPS[p.group] ? groupWords(p) : "",
 			happened: happened(p, lines),
-			done: doneSoFar(p, lines).map((r) => ({
+			done: doneSoFar(p, lines, shoots).map((r) => ({
 				...r,
-				bg: r.noteOnly ? "" : KINDS[r.look].bg,
-				icon: r.noteOnly ? "" : markSvg(r.look, 10)
+				bg: r.mark ? "" : KINDS[r.look].bg,
+				icon: r.mark ? "" : markSvg(r.look, 10)
 			})),
-			hows: HOW_CHOICES,
+			hows: {
+				...HOW_CHOICES,
+				moment: momentChoices(p.name)
+			},
 			thanks: next && next.kind === "thanks" ? {
 				due: whenDue(next, week, today),
 				shoots: p.shoots || []
@@ -4071,8 +4399,9 @@ function tellPeople(wait = 1500) {
 				listMoves()
 			]);
 			const own = new Set(ids);
-			window.DFYear?.publishYear("rounds", yearTally(people, lines, eyeShoots()));
-			await D$1().publishThings("rounds", people.map((p) => personThing(p, dayOf(), week, own.has(p.id), lines)));
+			const shoots = eyeShoots();
+			window.DFYear?.publishYear("rounds", yearTally(people, lines, shoots));
+			await D$1().publishThings("rounds", people.map((p) => personThing(p, dayOf(), week, own.has(p.id), lines, shoots)));
 		} catch (e) {}
 	}, wait);
 }
@@ -4115,9 +4444,9 @@ const GROUP_WORDS = {
 	prospect: "Brands and agencies. A pitch and two follow ups.",
 	guest: "People from an event. One friendly note, then the newsletter."
 };
-const chipsHtml = (on) => GROUP_KEYS.map((k) => `<button type="button" class="pick-chip${on.includes(k) ? " on" : ""}" data-group="${k}" aria-pressed="${on.includes(k)}">${GROUPS[k]}</button>`).join("");
+const chipsHtml$1 = /* @__PURE__ */ __name((on) => GROUP_KEYS.map((k) => `<button type="button" class="pick-chip${on.includes(k) ? " on" : ""}" data-group="${k}" aria-pressed="${on.includes(k)}">${GROUPS[k]}</button>`).join(""), "chipsHtml");
 const wordsOf = (on) => on.map((k) => GROUP_WORDS[k]).join(" ");
-function openEdit(p, onSaved) {
+function openEdit$1(p, onSaved) {
 	let groups = groupsOf(p);
 	const s = openSheet({
 		title: "Edit",
@@ -4125,7 +4454,7 @@ function openEdit(p, onSaved) {
       <form class="form" data-form>
         ${field("Name", "name", p.name, "required")}
         <div class="field"><span class="field-label" id="groupsLabel">Groups</span>
-          <div class="pick-chips edit-groups" role="group" aria-labelledby="groupsLabel">${chipsHtml(groups)}</div>
+          <div class="pick-chips edit-groups" role="group" aria-labelledby="groupsLabel">${chipsHtml$1(groups)}</div>
           <p class="edit-groups-words" data-group-words>${esc(wordsOf(groups))}</p></div>
         ${field("Instagram", "instagram", p.instagram, HANDLE)}
         ${field("TikTok", "tiktok", p.tiktok, HANDLE)}
@@ -4154,7 +4483,7 @@ function openEdit(p, onSaved) {
 		const b = e.target.closest("[data-group]");
 		if (!b) return;
 		groups = toggleGroup(groups, b.dataset.group);
-		chips.innerHTML = chipsHtml(groups);
+		chips.innerHTML = chipsHtml$1(groups);
 		s.body.querySelector("[data-group-words]").textContent = wordsOf(groups);
 	});
 	form.addEventListener("submit", async (e) => {
@@ -4174,11 +4503,12 @@ function openEdit(p, onSaved) {
 	});
 	return s;
 }
+__name(openEdit$1, "openEdit");
 
 // data/to-ref.js
 const D = () => window.DFData;
-const C$1 = /* @__PURE__ */ __name(() => window.DFConnect, "C");
-const ready = () => !!(D() && C$1() && D().saveLink);
+const C$2 = /* @__PURE__ */ __name(() => window.DFConnect, "C");
+const ready = () => !!(D() && C$2() && D().saveLink);
 async function refLinkFor(person) {
 	if (!ready()) return null;
 	const [l] = await D().linksWhere({
@@ -4203,7 +4533,7 @@ async function photoOf(person) {
 	};
 }
 async function passToRef(person, pitched) {
-	if (!ready() || !C$1().connectOn("clients")) return null;
+	if (!ready() || !C$2().connectOn("clients")) return null;
 	const had = await refLinkFor(person);
 	const photo = await photoOf(person).catch(() => null);
 	const link = {
@@ -4223,11 +4553,11 @@ async function takeBackFromRef(person) {
 }
 
 // pages/person-pitch.js
-const C = () => window.DFConnect;
+const C$1 = /* @__PURE__ */ __name(() => window.DFConnect, "C");
 function passedHtml(person, link) {
-	if (!link || !C()) return "";
+	if (!link || !C$1()) return "";
 	const href = window.DFData.notebookUrl("ref", { client: link.id });
-	return `<div class="passed-ref">${C().pairHtml("rounds", "ref")}
+	return `<div class="passed-ref">${C$1().pairHtml("rounds", "ref")}
     <span class="passed-ref-words"><span class="passed-ref-title">Passed to Ref</span><span class="passed-ref-line">${esc(`${firstName(person.name)}'s mood board is waiting there.`)}</span></span>
     ${href ? `<a class="passed-ref-open" href="${esc(href)}">Open</a>` : ""}</div>`;
 }
@@ -4284,7 +4614,7 @@ async function openPersonMenu(p, redraw, { asks = false, pitched = "" } = {}) {
 			}
 		]
 	});
-	if (pick === "edit") openEdit(p, redraw);
+	if (pick === "edit") openEdit$1(p, redraw);
 	else if (pick === "photo") {
 		const file = await pickFile("image/*");
 		if (!file) return;
@@ -4317,6 +4647,83 @@ async function openPersonMenu(p, redraw, { asks = false, pitched = "" } = {}) {
 	}
 }
 
+// pages/so-far.js
+const C = () => window.DFConnect;
+const TAPPABLE = [
+	"move",
+	"note",
+	"moment"
+];
+function markHtml(r) {
+	if (!r.mark) return miniHtml(r.look);
+	const nb = C() && C().NOTEBOOKS[r.mark];
+	return `<span class="mini nb" style="background:${nb ? nb.bg : "var(--ink)"}" aria-hidden="true">${nb ? C().markSvg(r.mark, 16) : ""}</span>`;
+}
+const rowHtml = (r, i) => {
+	const tag = r.id && TAPPABLE.includes(r.kind) ? `button type="button" data-so-far="${i}"` : "div";
+	return `<${tag} class="so-far-row"><span class="so-far-day">${esc(shortDay(r.day))}</span>${markHtml(r)}
+    <span class="so-far-words"><span class="so-far-what">${esc(r.what)}${r.howWords ? ` <span>· ${esc(r.howWords)}</span>` : ""}</span>${r.note ? `<span class="so-far-note">${esc(r.note)}</span>` : ""}</span></${tag.split(" ")[0]}>`;
+};
+const soFarHtml = (rows) => rows.length ? `<h2 class="so-far-head">So far</h2><div class="so-far-list">${rows.map(rowHtml).join("")}</div>` : "";
+const chipsHtml = (list, on) => Object.entries(list).map(([k, label]) => `<button type="button" class="pick-chip${k === on ? " on" : ""}" data-how="${esc(k)}" aria-pressed="${k === on}">${esc(label)}</button>`).join("");
+function openEdit(row, line, after) {
+	const noteOnly = row.kind === "note";
+	let how = line.how || "";
+	const s = openSheet({
+		title: row.what,
+		className: "sheet-small done-note so-far-edit",
+		body: `
+      <p class="label done-note-label">${noteOnly ? "What it was" : "How"}</p>
+      <div class="pick-chips">${chipsHtml(noteOnly ? NOTE_HOWS : HOWS, how)}</div>
+      <label class="label done-note-label" for="soFarNote">${noteOnly ? "The note" : "A note (optional)"}</label>
+      <textarea class="move-text done-note-text" id="soFarNote" rows="3" maxlength="500">${esc(line.note || "")}</textarea>
+      <div class="done-note-btns">${noteOnly ? "<button type=\"button\" class=\"text-btn\" data-delete>Delete the note</button>" : ""}<button type="button" class="btn primary" data-save>Save</button></div>`
+	});
+	const note = s.body.querySelector("textarea");
+	s.body.addEventListener("click", async (e) => {
+		const b = e.target.closest("button");
+		if (!b) return;
+		if (b.dataset.how !== undefined) {
+			how = how === b.dataset.how ? "" : b.dataset.how;
+			s.body.querySelectorAll("[data-how]").forEach((c) => {
+				c.classList.toggle("on", c.dataset.how === how);
+				c.setAttribute("aria-pressed", c.dataset.how === how);
+			});
+		} else if (b.matches("[data-save]")) {
+			if (noteOnly && !how && !note.value.trim()) {
+				note.focus();
+				return;
+			}
+			s.close();
+			await (noteOnly ? saveNote : saveHowNote)(line, {
+				how,
+				note: note.value
+			});
+			await after();
+		} else if (b.matches("[data-delete]")) {
+			s.close();
+			await dropNote(line);
+			await after();
+			toast("Note deleted.", { action: {
+				label: "Undo",
+				run: () => putNoteBack(line).then(after)
+			} });
+		}
+	});
+}
+function wireSoFar(view, person, rows, lines, after) {
+	view.querySelectorAll("[data-so-far]").forEach((b) => b.addEventListener("click", () => {
+		const row = rows[Number(b.dataset.soFar)];
+		const line = lines.find((l) => l.id === row.id);
+		if (!line) return;
+		if (row.kind === "moment") openMoment(person, {
+			line,
+			after
+		});
+		else openEdit(row, line, after);
+	}));
+}
+
 // pages/person.js
 function restHtml(p) {
 	if (p.letGo) return "Let go. Everything about them is kept, and the menu can bring them back.";
@@ -4324,14 +4731,19 @@ function restHtml(p) {
 	return "Nothing planned. Rounds let this one rest.";
 }
 async function personScreen(view, id) {
-	const [p, week] = await Promise.all([getPerson(id), getWeek()]);
+	const [p, week, lines] = await Promise.all([
+		getPerson(id),
+		getWeek(),
+		listMoves()
+	]);
 	if (!p) {
 		location.replace("#/people");
 		return;
 	}
+	const rows = doneSoFar(p, lines, eyeShoots());
 	const handle = handleText(p);
 	const url = profileUrl(p);
-	const pitched = pitchedOn(p, !p.pitched && (p.group === "prospect" || p.pitch) ? await listMoves() : []);
+	const pitched = pitchedOn(p, !p.pitched && (p.group === "prospect" || p.pitch) ? lines : []);
 	const asks = asksAboutPitch(p, pitched);
 	const line = saidYes(p) ? yesLine(pitched) : [GROUPS[p.group] && groupWords(p), p.note || p.where].filter(Boolean).join(". ");
 	const next = p.next && !p.letGo;
@@ -4350,12 +4762,14 @@ async function personScreen(view, id) {
     </div>
     ${asks ? await pitchHtml(p, pitched) : ""}
     ${next ? `<button type="button" class="person-next" data-move>${miniHtml(moveLook(p.next))}<span class="person-next-what">${esc(phrase(p.next.kind, p.name, p.next.year))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>` : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
+    <button type="button" class="btn secondary person-moment" data-moment>Add a moment</button>
+    ${soFarHtml(rows)}
   </div></div>`;
 	fillPhotos(view, [p]);
 	const screen = view.querySelector(".screen");
 	shelfPageOf(p).then((page) => {
 		if (!page || !screen.isConnected) return;
-		screen.querySelector(".person-next, .person-rest").insertAdjacentHTML("afterend", `<a class="person-everything" href="${esc(page)}">Everything with ${esc(firstName(p.name) || "them")} ${CHEV_SMALL}</a>`);
+		screen.querySelector(".scroll").insertAdjacentHTML("beforeend", `<a class="person-everything" href="${esc(page)}">Everything with ${esc(firstName(p.name) || "them")}, in all four ${CHEV_SMALL}</a>`);
 	});
 	const redraw = () => personScreen(view, id).then(() => view.querySelector(".screen")?.classList.add("still"));
 	view.querySelector("[data-band-more]").addEventListener("click", () => openPersonMenu(p, redraw, {
@@ -4363,16 +4777,23 @@ async function personScreen(view, id) {
 		pitched
 	}));
 	wirePitch(view, p, pitched, redraw);
+	view.querySelector("[data-moment]").addEventListener("click", () => openMoment(p, { after: redraw }));
+	wireSoFar(view, p, rows, lines, redraw);
 	view.querySelector("[data-move]")?.addEventListener("click", () => openMove(p, {
 		onDone: (said) => moveDone(p, said, redraw),
 		onLater: () => laterMove(p).then(redraw)
 	}));
-	let openNow = "";
-	try {
-		openNow = sessionStorage.getItem("rounds-open-move") || "";
-		sessionStorage.removeItem("rounds-open-move");
-	} catch (e) {}
-	if (openNow === id) view.querySelector("[data-move]")?.click();
+	const once = (key) => {
+		try {
+			const v = sessionStorage.getItem(key) || "";
+			sessionStorage.removeItem(key);
+			return v;
+		} catch (e) {
+			return "";
+		}
+	};
+	if (once("rounds-open-move") === id) view.querySelector("[data-move]")?.click();
+	if (once("rounds-open-moment") === id) view.querySelector("[data-moment]").click();
 }
 
 // data/lists.js
@@ -4853,6 +5274,18 @@ function askResult(ask, people, lines, today, makeId, now) {
 			put: noteLine(person.id, a.day || today, a, makeId(), now)
 		};
 	}
+	if (a.do === "moment") {
+		if (!person) return none;
+		const r = afterMoment(person, momentLine(person.id, {
+			...a,
+			day: a.day || today
+		}, makeId(), now));
+		return {
+			person: r.person === person ? null : r.person,
+			put: r.line,
+			drop: ""
+		};
+	}
 	if (a.do === "edit" && line) return {
 		...none,
 		put: withHowNote(line, {
@@ -4963,10 +5396,12 @@ function onSynced(r) {
 }
 window.addEventListener("hashchange", route);
 if (suite && suite.get && suite.get("person")) {
-	if (suite.get("move")) {
-		try {
-			sessionStorage.setItem("rounds-open-move", suite.get("person"));
-		} catch (e) {}
+	for (const [param, key] of [["move", "rounds-open-move"], ["moment", "rounds-open-moment"]]) {
+		if (suite.get(param)) {
+			try {
+				sessionStorage.setItem(key, suite.get("person"));
+			} catch (e) {}
+		}
 	}
 	history.replaceState(null, "", `#/person/${encodeURIComponent(suite.get("person"))}`);
 } else if ((location.hash || "#/") === "#/") history.replaceState(null, "", suite && suite.at ? `#/${suite.at}` : "#/today");

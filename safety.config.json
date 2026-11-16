@@ -51,7 +51,7 @@
     "rounds/data/clash.js",
     "rounds/data/pitch.js",
     "rounds/data/photos-up.js", "rounds/data/shelf-items.js", "rounds/data/people-out.js", "rounds/data/happened.js", "rounds/data/year-since.js", "rounds/data/year-tally.js",
-    "rounds/data/moves.js", "rounds/data/eye.js", "rounds/data/from-layouts.js", "rounds/data/done-notes.js", "rounds/data/asks.js", "rounds/data/to-ref.js"
+    "rounds/data/moves.js", "rounds/data/eye.js", "rounds/data/from-layouts.js", "rounds/data/done-notes.js", "rounds/data/moments.js", "rounds/data/so-far.js", "rounds/data/moment-store.js", "rounds/data/asks.js", "rounds/data/to-ref.js"
   ],
   "ignore": [
     "**/vendor/**",

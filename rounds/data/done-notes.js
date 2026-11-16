@@ -3,8 +3,8 @@
 // person) and for A NOTE (OPTIONAL); both are kept on the move's line in
 // the log, which syncs in rounds.json. A note can also stand on its own
 // (ADD A NOTE on the person page: a call, a text, in person, an email, or
-// nothing), as a line of kind 'note'. DONE SO FAR lists them all, newest
-// first: what was done and how ("Said thanks", "by text"), and the note.
+// nothing), as a line of kind 'note'. SO FAR on their page lists them
+// (data/so-far.js).
 import { firstName } from './fill.js';
 
 // HOW, after a move: the chips, in order.
@@ -25,15 +25,6 @@ export const HOW_CHOICES = {
   move: Object.keys(HOWS).map((k) => [k, HOWS[k], HOW_WORDS[k]]),
   note: Object.keys(NOTE_HOWS).map((k) => [k, NOTE_HOWS[k], NOTE_WORDS[k]]),
 };
-
-// What was done, by the move's kind. [who] is their first name.
-const WHAT = {
-  thanks: 'Said thanks', yes: 'Said thanks for the yes', photos: 'Told [who] the photos were up',
-  hello: 'Said hello', checkin: 'Checked in', intros: 'Asked [who] for intros',
-  refresh: 'Offered [who] a refresh', followup: 'Followed up', pitch: 'Pitched [who]',
-};
-const YEAR = 'Sent a final, a year on';
-const ANSWERED = { yes: '[who] said yes', no: '[who] said not now' };
 
 // The how picked already when you came back from the move's button: where
 // COPY AND OPEN went (data/contact.js contactFor's how), or Gmail.
@@ -72,19 +63,3 @@ export function withHowNote(line, { how, note, said } = {}, hows = HOWS) {
 
 // A note on its own, for the log.
 export const noteLine = (personId, day, { how, note }, id, at) => withHowNote({ id, at, personId, kind: NOTE_KIND, day }, { how, note }, NOTE_HOWS_KEPT);
-
-// DONE SO FAR: each move done with them (and each note), newest first,
-// as { id, day, look (the move's kind for its mark, or 'note'), what, how
-// (its key), howWords, note, noteOnly }, and their answer to a pitch (no id).
-export function doneSoFar(person, lines = []) {
-  const fill = (s) => s.replace('[who]', firstName(person.name) || 'them');
-  const rows = lines.filter((l) => l.personId === person.id && l.day && (WHAT[l.kind] || l.kind === NOTE_KIND)).map((l) => ({
-    id: l.id, day: l.day, at: l.at || 0,
-    look: l.kind === NOTE_KIND ? 'note' : l.year ? 'photos' : l.kind,
-    what: l.kind === NOTE_KIND ? 'Note' : l.year ? YEAR : fill(WHAT[l.kind]),
-    how: l.how || '', howWords: howWords(l), note: l.note || '', noteOnly: l.kind === NOTE_KIND,
-  }));
-  const pitch = person.pitch || {};
-  if (ANSWERED[pitch.answer] && pitch.on) rows.push({ id: '', day: pitch.on, at: Infinity, look: 'pitch', what: fill(ANSWERED[pitch.answer]).replace(/^them/, 'They'), how: '', howWords: '', note: '', noteOnly: false });
-  return rows.sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at).map(({ at, ...r }) => r);
-}

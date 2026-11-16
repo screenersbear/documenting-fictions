@@ -1,6 +1,7 @@
 // rounds/data/asks.js: what the other notebooks ask Rounds to do (round 2,
-// thanks): The Eye's SHE WROTE FIRST, and the person page's ADD A NOTE, a
-// row changed and a note deleted. Rounds does each once, with its own functions.
+// thanks): The Eye's SHE WROTE FIRST and its selects reminder (a moment),
+// and, from before 16 Nov, the person page's ADD A NOTE, a row changed and a
+// note deleted. Rounds does each once, with its own functions.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { loadDFData } from '../shared/_env.mjs';
 import { askResult } from '../../../rounds/data/asks.js';
@@ -35,6 +36,19 @@ describe('askResult', () => {
   it('note: nothing with no words and no what, or no such person', () => {
     expect(askResult({ do: 'note', personId: 'p', note: '' }, [person('p')], [], T, ids(), 3).put).toBeNull();
     expect(askResult({ do: 'note', personId: 'x', note: 'Hi' }, [person('p')], [], T, ids(), 3).put).toBeNull();
+  });
+  it('moment: a line of its own (The Eye\'s selects reminder), moving their Check in out from that day', () => {
+    const p = person('p', { group: 'regular', lastMove: '2026-10-01', next: { kind: 'checkin', due: '2026-11-20', step: 0 } });
+    const r = askResult({ do: 'moment', personId: 'p', day: T, what: 'instagram', keeps: true, note: 'Any picks yet?' }, [p], [], T, ids(), 4);
+    expect(r.put).toEqual({ id: 'id1', at: 4, personId: 'p', kind: 'moment', day: T, what: 'instagram', keeps: true, note: 'Any picks yet?', wasLast: '2026-10-01', moved: { from: '2026-11-20', to: '2026-12-27' } });
+    expect(r.person).toEqual({ ...p, lastMove: T, next: { kind: 'checkin', due: '2026-12-27', step: 0 } });
+    expect(r.drop).toBe('');
+  });
+  it('moment: on today with no day; one that doesn\'t count changes no one; nothing for no such person', () => {
+    const p = person('p');
+    const r = askResult({ do: 'moment', personId: 'p', what: 'text', keeps: false }, [p], [], T, ids(), 4);
+    expect(r).toEqual({ person: null, put: { id: 'id1', at: 4, personId: 'p', kind: 'moment', day: T, what: 'text', keeps: false }, drop: '' });
+    expect(askResult({ do: 'moment', personId: 'x', what: 'text' }, [p], [], T, ids(), 4)).toEqual({ person: null, put: null, drop: '' });
   });
   it('edit: a move keeps what you said, takes the new how and note', () => {
     expect(askResult({ do: 'edit', lineId: 'm1', how: 'person', note: 'Over coffee' }, [], [moveLine], T, ids(), 1).put)

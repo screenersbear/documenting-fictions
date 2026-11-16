@@ -1,10 +1,9 @@
 // rounds/data/done-notes.js: how a move was done and a note with it
-// (round 2, thanks/02), notes on their own, and DONE SO FAR (thanks/03).
+// (round 2, thanks/02), and notes on their own. (SO FAR: so-far.test.mjs.)
 import { describe, it, expect } from 'vitest';
-import { HOWS, NOTE_HOWS, NOTE_KIND, HOW_CHOICES, howWords, howFromGo, cleanNote, quickTaps, addTap, withHowNote, noteLine, doneSoFar } from '../../../rounds/data/done-notes.js';
+import { HOWS, NOTE_HOWS, NOTE_KIND, HOW_CHOICES, howWords, howFromGo, cleanNote, quickTaps, addTap, withHowNote, noteLine } from '../../../rounds/data/done-notes.js';
 
 const line = (o) => ({ id: 'l1', at: 1, personId: 'p', kind: 'thanks', day: '2026-11-15', due: '2026-11-15', step: 0, ...o });
-const lindsey = { id: 'p', name: 'Lindsey Tran' };
 
 describe('the chips', () => {
   it('HOW is Text, Instagram, Email, In person; a note on its own has its own', () => {
@@ -120,37 +119,5 @@ describe('noteLine', () => {
     expect(noteLine('p', '2026-11-02', { how: 'instagram', note: 'x' }, 'n', 1).how).toBe('instagram');
     expect(HOW_CHOICES.note.map(c => c[0])).toEqual(['call', 'text', 'person', 'email']);
     expect(noteLine('p', '2026-11-02', { how: 'nope', note: 'x' }, 'n', 1)).not.toHaveProperty('how');
-  });
-});
-
-describe('doneSoFar', () => {
-  it('each move and note, newest first, with what and how and the note', () => {
-    const lines = [
-      line({ id: 'a', day: '2026-11-15', how: 'text', note: 'She reached out first.' }),
-      { id: 'b', at: 2, personId: 'p', kind: 'note', day: '2026-11-02', how: 'call', note: 'Booked.' },
-      line({ id: 'c', kind: 'pitch', day: '2026-10-01', how: 'email' }),
-      line({ id: 'x', personId: 'someone else' }),
-    ];
-    expect(doneSoFar(lindsey, lines)).toEqual([
-      { id: 'a', day: '2026-11-15', look: 'thanks', what: 'Said thanks', how: 'text', howWords: 'by text', note: 'She reached out first.', noteOnly: false },
-      { id: 'b', day: '2026-11-02', look: 'note', what: 'Note', how: 'call', howWords: 'a call', note: 'Booked.', noteOnly: true },
-      { id: 'c', day: '2026-10-01', look: 'pitch', what: 'Pitched Lindsey', how: 'email', howWords: 'by email', note: '', noteOnly: false },
-    ]);
-  });
-  it('the same day: the latest first; A year since as itself; unknown kinds and lines with no day left out', () => {
-    const lines = [line({ id: 'a', at: 1, kind: 'checkin' }), line({ id: 'b', at: 9, kind: 'checkin', year: { shoot: 'R' } }), line({ id: 'c', kind: 'mystery' }), line({ id: 'd', day: '' })];
-    expect(doneSoFar(lindsey, lines).map((r) => [r.id, r.look, r.what])).toEqual([['b', 'photos', 'Sent a final, a year on'], ['a', 'checkin', 'Checked in']]);
-  });
-  it('their answer to a pitch, as a row with no id', () => {
-    const p = { ...lindsey, pitch: { answer: 'yes', on: '2026-11-20' } };
-    expect(doneSoFar(p, [])).toEqual([{ id: '', day: '2026-11-20', look: 'pitch', what: 'Lindsey said yes', how: '', howWords: '', note: '', noteOnly: false }]);
-    expect(doneSoFar({ id: 'p', name: '', pitch: { answer: 'no', on: '2026-11-20' } })[0].what).toBe('They said not now');
-    expect(doneSoFar({ ...lindsey, pitch: { answer: 'maybe', on: '2026-11-20' } })).toEqual([]);
-    expect(doneSoFar({ ...lindsey, pitch: { answer: 'yes' } })).toEqual([]);
-  });
-  it('names them in the words that need it', () => {
-    const lines = ['photos', 'intros', 'refresh', 'yes', 'hello', 'followup'].map((kind, i) => line({ id: kind, at: i, kind }));
-    expect(doneSoFar(lindsey, lines).map((r) => r.what)).toEqual(['Followed up', 'Said hello', 'Said thanks for the yes', 'Offered Lindsey a refresh', 'Asked Lindsey for intros', 'Told Lindsey the photos were up']);
-    expect(doneSoFar({ id: 'p' }, [line({ kind: 'pitch' })])[0].what).toBe('Pitched them');
   });
 });

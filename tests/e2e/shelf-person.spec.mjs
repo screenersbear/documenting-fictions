@@ -103,8 +103,10 @@ test("Rounds' EVERYTHING WITH <NAME> opens their page on the shelf, and back com
   await goTo(p, 'people');
   await p.locator('#view .person-card', { hasText: 'Maya R.' }).click();
   const link = p.locator('#view .person-everything');
-  await expect(link).toHaveText('Everything with Maya');
+  await expect(link).toHaveText('Everything with Maya, in all four');
   await expect(link).toHaveCount(1);
+  // At the bottom of her page, under SO FAR (thanks/06).
+  await expect(p.locator('#view .scroll > :last-child')).toHaveClass(/person-everything/);
   const next = await p.locator('#view .person-next-what').textContent();
   await link.click();
   await expect(page(p)).toBeVisible();

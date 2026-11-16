@@ -4,9 +4,10 @@
 // has none); STILL WAITING asks again in 3 days. A reminder sent (the sheet,
 // remind-sheet.js) is logged on the shoot ("Reminded June, 16 Nov.") and
 // asks again in 3 days too. In the suite it's also a moment with that person
-// in Rounds: a note, how it went (a text, or on Instagram) and what was
-// said. The Eye asks Rounds through df-links (shared/data/asks.js) and never
-// writes Rounds' data; without Rounds, it's on the shoot only.
+// in Rounds (rounds/data/moments.js): Messaged on Instagram, or Texted, with
+// what was said, counting as keeping in touch. The Eye asks Rounds through
+// df-links (shared/data/asks.js) and never writes Rounds' data; without
+// Rounds, it's on the shoot only.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addSelectsActs = function addSelectsActs(ed) {
@@ -56,7 +57,7 @@ window.EyeParts.addSelectsActs = function addSelectsActs(ed) {
     const roundsId = await selectsRoundsId(person);
     if (roundsId) {
       const shoot = group.find(s => s.id === id);
-      await D().askRounds('the-eye', { do: 'note', personId: roundsId, day, how, note: words || `Reminded ${person.first} about the selects from ${ed.selectsShootName(shoot)}.` }).catch(() => {});
+      await D().askRounds('the-eye', { do: 'moment', personId: roundsId, day, what: how, keeps: true, note: words || `Reminded ${person.first} about the selects from ${ed.selectsShootName(shoot)}.` }).catch(() => {});
     }
   }
 

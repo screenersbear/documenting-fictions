@@ -1,9 +1,10 @@
 // A person (04-person): photo, name, handle (opens their profile), one line
 // (their group, and where you met or why they're a fit), then their next
 // move, which opens it. After a pitch, HOW DID THE PITCH GO? comes between
-// (pages/person-pitch.js). In the suite, EVERYTHING WITH <NAME> under it
-// opens their page on the shelf (connect/08): everything with them in all
-// four. The ... menu: Edit, a photo, Yes, and Let go.
+// (pages/person-pitch.js). Under it ADD A MOMENT (pages/moment-sheet.js)
+// and SO FAR, everything done with them (pages/so-far.js, thanks/06). In
+// the suite, EVERYTHING WITH <NAME>, IN ALL FOUR at the bottom opens their
+// page on the shelf (connect/08). The ... menu: Edit, a photo, Yes, and Let go.
 import { shortBandHtml } from '../components/band.js';
 import { photoHtml, fillPhotos } from '../components/photo.js';
 import { miniHtml } from '../components/marks.js';
@@ -24,6 +25,10 @@ import { firstName } from '../data/fill.js';
 import { openMove } from './move.js';
 import { openPersonMenu } from './person-menu.js';
 import { pitchHtml, wirePitch } from './person-pitch.js';
+import { openMoment } from './moment-sheet.js';
+import { soFarHtml, wireSoFar } from './so-far.js';
+import { doneSoFar } from '../data/so-far.js';
+import { eyeShoots } from '../data/eye.js';
 
 function restHtml(p) {
   if (p.letGo) return 'Let go. Everything about them is kept, and the menu can bring them back.';
@@ -32,12 +37,13 @@ function restHtml(p) {
 }
 
 export async function personScreen(view, id) {
-  const [p, week] = await Promise.all([getPerson(id), getWeek()]);
+  const [p, week, lines] = await Promise.all([getPerson(id), getWeek(), listMoves()]);
   if (!p) { location.replace('#/people'); return; }
+  const rows = doneSoFar(p, lines, eyeShoots());
   const handle = handleText(p);
   const url = profileUrl(p);
   // The day of their pitch, from the log for a pitch from before Rounds kept it.
-  const pitched = pitchedOn(p, !p.pitched && (p.group === 'prospect' || p.pitch) ? await listMoves() : []);
+  const pitched = pitchedOn(p, !p.pitched && (p.group === 'prospect' || p.pitch) ? lines : []);
   const asks = asksAboutPitch(p, pitched);
   const line = saidYes(p) ? yesLine(pitched) : [GROUPS[p.group] && groupWords(p), p.note || p.where].filter(Boolean).join('. ');
   const next = p.next && !p.letGo;
@@ -53,22 +59,29 @@ export async function personScreen(view, id) {
     ${asks ? await pitchHtml(p, pitched) : ''}
     ${next ? `<button type="button" class="person-next" data-move>${miniHtml(moveLook(p.next))}<span class="person-next-what">${esc(phrase(p.next.kind, p.name, p.next.year))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>`
       : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
+    <button type="button" class="btn secondary person-moment" data-moment>Add a moment</button>
+    ${soFarHtml(rows)}
   </div></div>`;
   fillPhotos(view, [p]);
   const screen = view.querySelector('.screen');
   shelfPageOf(p).then((page) => {
     if (!page || !screen.isConnected) return; // drawn again meanwhile: that one adds its own
-    screen.querySelector('.person-next, .person-rest').insertAdjacentHTML('afterend', `<a class="person-everything" href="${esc(page)}">Everything with ${esc(firstName(p.name) || 'them')} ${CHEV_SMALL}</a>`);
+    screen.querySelector('.scroll').insertAdjacentHTML('beforeend', `<a class="person-everything" href="${esc(page)}">Everything with ${esc(firstName(p.name) || 'them')}, in all four ${CHEV_SMALL}</a>`);
   });
   const redraw = () => personScreen(view, id).then(() => view.querySelector('.screen')?.classList.add('still'));
   view.querySelector('[data-band-more]').addEventListener('click', () => openPersonMenu(p, redraw, { asks, pitched }));
   wirePitch(view, p, pitched, redraw);
+  view.querySelector('[data-moment]').addEventListener('click', () => openMoment(p, { after: redraw }));
+  wireSoFar(view, p, rows, lines, redraw);
   view.querySelector('[data-move]')?.addEventListener('click', () => openMove(p, {
     onDone: (said) => moveDone(p, said, redraw),
     onLater: () => laterMove(p).then(redraw),
   }));
-  // Sent here to do the move (The Eye's OPEN ROUNDS): it opens once.
-  let openNow = '';
-  try { openNow = sessionStorage.getItem('rounds-open-move') || ''; sessionStorage.removeItem('rounds-open-move'); } catch (e) { /* private mode */ }
-  if (openNow === id) view.querySelector('[data-move]')?.click();
+  // Sent here to do the move (The Eye's OPEN ROUNDS), or to add a moment
+  // (the person page on the shelf): it opens once.
+  const once = (key) => {
+    try { const v = sessionStorage.getItem(key) || ''; sessionStorage.removeItem(key); return v; } catch (e) { return ''; } // private mode
+  };
+  if (once('rounds-open-move') === id) view.querySelector('[data-move]')?.click();
+  if (once('rounds-open-moment') === id) view.querySelector('[data-moment]').click();
 }

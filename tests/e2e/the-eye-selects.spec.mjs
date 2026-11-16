@@ -140,7 +140,7 @@ test('REMIND: the reminder offered, copied, Instagram opened; back, Done logs it
   await ctx.close();
 });
 
-test('in the suite, the reminder is a moment with June in Rounds, on Instagram, with what was said', async ({ browser }, testInfo) => {
+test('in the suite, the reminder is a moment with June in Rounds, Messaged on Instagram, with what was said', async ({ browser }, testInfo) => {
   // Rounds first, so June comes in from The Eye's shoot.
   const { ctx, page, problems } = await openRounds(browser, testInfo, '/rounds/', seed);
   await ctx.addInitScript(standIns);
@@ -156,9 +156,9 @@ test('in the suite, the reminder is a moment with June in Rounds, on Instagram, 
   await sheet.locator('.remind-ask-btns [data-done]').click();
   await expect(sheet).toBeHidden();
   const asked = () => page.evaluate(async () => (await window.DFData.roundsAsks()).map((l) => l.ask));
-  await expect.poll(asked).toEqual([expect.objectContaining({ do: 'note', how: 'instagram', note: STARTER, day: today() })]);
+  await expect.poll(asked).toEqual([expect.objectContaining({ do: 'moment', what: 'instagram', keeps: true, note: STARTER, day: today() })]);
 
-  // Rounds takes it as it opens; June's page on the shelf has it in DONE SO FAR.
+  // Rounds takes it as it opens; June's page on the shelf has it, the latest.
   await page.goto('/rounds/');
   await expect(page.locator('#view .band')).toBeVisible();
   await expect.poll(async () => (await page.evaluate(async () => window.DFData.roundsAsks())).length).toBe(0);
@@ -168,7 +168,7 @@ test('in the suite, the reminder is a moment with June in Rounds, on Instagram, 
   await expect.poll(hows, { timeout: 8000 }).toContain('instagram');
   await page.goto(`/?person=${juneId}`);
   const done = page.locator('.person-page .done-list');
-  await expect(done.locator('.done-what').first()).toHaveText('Note · on Instagram');
+  await expect(done.locator('.done-what').first()).toHaveText('Messaged on Instagram');
   await expect(done.locator('.done-note').first()).toHaveText(STARTER);
   expect(problems).toEqual([]);
   await ctx.close();

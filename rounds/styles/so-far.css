@@ -1,0 +1,38 @@
+/* ADD A MOMENT and SO FAR on a person (round 2, thanks/06): the outline
+   button full width under the next move, then SO FAR (button type) over
+   its rows: the date in small capitals (50px), the mark, what (17px, its
+   how dim after a dot) and the note under it (15px light), a 1px line under
+   each. */
+.person-moment { display: flex; width: 100%; margin-top: 14px; }
+.so-far-head { margin: 26px 0 0; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.so-far-list { margin-top: 6px; border-top: 1px solid var(--line); }
+.so-far-row { display: flex; gap: 12px; width: 100%; padding: 12px 0; border-bottom: 1px solid var(--line); text-align: left; color: var(--text); }
+.so-far-day { flex: none; width: 50px; padding-top: 3px; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.so-far-row .mini { margin-top: 3px; }
+.so-far-words { flex: 1; min-width: 0; }
+.so-far-what { display: block; font: 400 17px/22px var(--ui); overflow-wrap: anywhere; }
+.so-far-what span { color: var(--dim); }
+.so-far-note { display: block; margin-top: 3px; font: 300 15px/21px var(--ui); overflow-wrap: anywhere; }
+
+/* The ADD A MOMENT sheet (thanks/05): A MOMENT WITH <NAME>, WHAT HAPPENED
+   as pill chips (ink with mango when picked), WHEN in a pale box (the date
+   picker over it, unseen), A NOTE in a box with an ink ring, the switch with
+   what it moves under it, and ADD THE MOMENT in mango on ink. */
+.moment-sheet .sheet-header h2 { font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.moment-sheet .moment-label { display: block; margin: 20px 0 6px; }
+.moment-sheet .moment-label:first-child { margin: 8px 0 8px; }
+.moment-sheet .pick-chip { height: 36px; padding: 0 14px; border-radius: 18px; }
+.moment-when { position: relative; display: flex; align-items: center; min-height: 48px; padding: 0 14px; border-radius: 12px; background: var(--paper); box-shadow: inset 0 0 0 1px var(--line); font: 400 17px/22px var(--ui); color: var(--text); }
+.moment-when input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+.moment-sheet .moment-note { min-height: 72px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--text); }
+.moment-keeps { display: flex; align-items: center; gap: 12px; margin-top: 16px; font: 400 15px/21px var(--ui); }
+.moment-keeps-words { flex: 1; min-width: 0; }
+.moment-keeps-sub { display: block; font: 400 13px/18px var(--ui); color: var(--dim); }
+.moment-btns { display: flex; flex-direction: column; align-items: stretch; gap: 4px; margin-top: 24px; }
+.moment-btns .btn { height: 50px; color: var(--partner); }
+.moment-btns .btn:disabled { opacity: .4; }
+.moment-btns .text-btn { align-self: center; }
+
+/* ADD A MOMENT under Done today, and who it was with. */
+.done-moment { display: flex; width: 100%; margin-top: 16px; }
+.moment-who .choice-list { margin-top: 8px; }

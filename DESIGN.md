@@ -351,9 +351,18 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
 - **Thank-yous (Live, 15 Nov, thanks/01-04):** Say thanks after a shoot is due the day after it, Sundays too. A move opened
   says WHAT DID YOU SAY? over an empty box, with USE YOUR <KIND> MESSAGE under it (a plus, on #EFEFEA, the starter in dim 15px)
   that fills it. After DONE, a small sheet: HOW (Text, Instagram, Email, In person) and A NOTE (OPTIONAL) with quick taps,
-  pill chips in ink with mango text when picked; SKIP and SAVE (mango on ink). The person page shows DONE SO FAR in Rounds'
-  part under NEXT, with + ADD A NOTE. The Eye shows Say thanks FROM ROUNDS on a captured shoot, OPEN ROUNDS and <NAME>
-  WROTE FIRST (names, since Rounds keeps no pronouns).
+  pill chips in ink with mango text when picked; SKIP and SAVE (mango on ink). The Eye shows Say thanks FROM ROUNDS on a
+  captured shoot, OPEN ROUNDS and <NAME> WROTE FIRST (names, since Rounds keeps no pronouns).
+- **Moments and SO FAR (Live, 16 Nov, thanks/05-06):** a person in Rounds: photo, name, handle, one line; the next move;
+  ADD A MOMENT (outline button, full width); SO FAR (button type) over every row, newest first: the date in 11px small
+  capitals (50px wide), the mark (a move's own mini; Rounds' ink + mango mark for moments and notes; The Eye's for shoots),
+  what in 17px (" · how" dim), the note under it in 15px light, a 1px `line` under each. Moments and notes open to change or
+  delete (with Undo), moves to change how and the note. EVERYTHING WITH <NAME>, IN ALL FOUR at the bottom. The ADD A MOMENT
+  sheet: A MOMENT WITH <NAME> (button type); WHAT HAPPENED, 36px pill chips (ink with mango when picked); WHEN, a 48px pale
+  box with a 1px `line` ring ("Today, Mon 16 Nov", the date picker over it); A NOTE (OPTIONAL) with an ink ring; COUNTS AS
+  KEEPING IN TOUCH, a switch with what it moves under it in 13px dim; ADD THE MOMENT, 50px, mango on ink. Done today has
+  ADD A MOMENT under its list (who with, then the same sheet). On the shelf's person page Rounds' part shows NEXT, the
+  latest two rows, then ALL IN ROUNDS › and ADD A MOMENT (button type), both opening Rounds.
 - **Someone you know (Live, 15 Nov, people/NOTES.md):** The Eye's talent picker is SOMEONE YOU KNOW: everyone, talent
   and team, from its shoots and the one list of people, newest first, labelled "Iryna V. · team, 3 shoots". Typing a name
   (first, last or a handle) lists up to five under it, in the talent and team member popups; picking fills name, handles
@@ -376,8 +385,8 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
   days waiting are asked once. The shoot's status card goes on under itself: "Proofs sent to June 4 days ago." and the
   last reminder, with GOT THEM and REMIND JUNE. REMIND opens a Rounds-move sheet: WHAT DID YOU SAY?, USE THE SELECTS
   REMINDER (its words in Options, Selects reminder; [name] and [shoot] fill in), COPY AND OPEN INSTAGRAM (COPY THE
-  MESSAGE with no handle), Done. Done logs it on the shoot and, in the suite, as a note with them in Rounds (a text, or
-  on Instagram, with what was said). There's no In the edit tile: the tiles went on 13 Nov.
+  MESSAGE with no handle), Done. Done logs it on the shoot and, in the suite, as a moment with them in Rounds (Texted, or
+  Messaged on Instagram, with what was said, counting as keeping in touch). There's no In the edit tile: the tiles went on 13 Nov.
 - **Placing a sticker:** pick a photo, then the placing screen: the book big with the sticker on it (drag to move, pinch to
   size, twist to turn) and a sheet under it with SHAPE (Circle, Square, Card, Cut out) and EDGE (White border, Black outline)
   as segmented controls, the sticker changing as you pick; BACK and STICK IT ON. Shape and edge are chosen there, never after.
