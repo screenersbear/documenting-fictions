@@ -24,6 +24,12 @@ function seed() {
     shoot({ id: 't4', title: 'Winter coats', talents: [{ name: 'Ivy Chen', socialHandles: [] }], status: 'editing', date: day(-14), deadline: day(-2) }),
   ];
   localStorage.setItem('dailies_state_v1', JSON.stringify({ shoots, projects: [], journalEntries: [] }));
+  // This Monday's look back already read (pages/notices/monday-brief.js): on a
+  // Monday from 5am, a shoot answered "it happened" is one shot last week,
+  // and LAST WEEK would join the list (GitHub, Monday 16 Nov).
+  const d = new Date();
+  if (d.getHours() < 5) d.setDate(d.getDate() - 1);
+  localStorage.setItem('dailies_monday_brief_shown_v1', `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
 }
 
 async function openEye(browser, testInfo) {
