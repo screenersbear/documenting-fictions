@@ -91,6 +91,17 @@ export async function doneNoSheet(page) {
   await expect(page.locator('.sheet')).toHaveCount(0);
 }
 
+// Rounds tells the shelf a moment after the last change (1.5s,
+// data/people-out.js tellPeople), and a reload before then loses it: wait
+// until the shelf has their moves (n of them) before leaving Rounds for it.
+export async function toldShelf(page, name, n = 1) {
+  const moves = () => page.evaluate(async (who) => {
+    const t = (await window.DFData.thingsAll()).find((x) => x.kind === 'person' && x.title === who && x.more?.done);
+    return t ? t.more.done.filter((r) => r.kind === 'move').length : 0;
+  }, name);
+  await expect.poll(moves, { timeout: 8000 }).toBe(n);
+}
+
 // Options, from the band's menu.
 export async function options(page) {
   await page.click('#view [data-app-menu]');

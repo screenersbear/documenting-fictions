@@ -6,7 +6,7 @@
 // FIRST marks it done there. (Timing, how, notes and moments are unit
 // tested: tests/unit/rounds/plan, done-notes, moments, so-far.)
 import { test, expect } from '@playwright/test';
-import { openRounds, eyeShoot, opened, useMessage, doneNoSheet } from './_rounds.mjs';
+import { openRounds, eyeShoot, opened, useMessage, doneNoSheet, toldShelf } from './_rounds.mjs';
 
 const THANKS = (name) => `Thank you for today, ${name}! It was so good working with you.`;
 const doneToday = async (page) => {
@@ -39,6 +39,7 @@ test('done with how and a note: in Done today, and the latest on their page on t
   // two, the thanks and the shoot (The Eye's).
   const jules = () => page.evaluate(async () => ((await window.DFData.peopleAll()).find((x) => x.name === 'Jules M.') || {}).id || '');
   await expect.poll(jules, { timeout: 8000 }).not.toBe('');
+  await toldShelf(page, 'Jules M.');
   await page.goto(`/?person=${await jules()}`);
   const done = page.locator('.person-page .done-list');
   await expect(done.locator('.done-what')).toHaveText(['Said thanks · by text', 'Rooftop portraits']);

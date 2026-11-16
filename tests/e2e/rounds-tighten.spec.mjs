@@ -8,7 +8,7 @@
 // tests/unit/rounds/one-move, one-move-store, people-find, look-alike,
 // merge-people, people-store.)
 import { test, expect } from '@playwright/test';
-import { openRounds, eyeShoot, goTo, opened, doneNoSheet } from './_rounds.mjs';
+import { openRounds, eyeShoot, goTo, opened, doneNoSheet, toldShelf } from './_rounds.mjs';
 
 // People (and what was done with them) put straight into Rounds' database,
 // then Rounds opened again. due: days from today for their next move.
@@ -275,6 +275,7 @@ test.describe('Rounds: tightened', () => {
     await doneNoSheet(page);
     const jules = () => page.evaluate(async () => ((await window.DFData.peopleAll()).find((x) => x.name === 'Jules M.') || {}).id || '');
     await expect.poll(jules, { timeout: 8000 }).not.toBe('');
+    await toldShelf(page, 'Jules M.');
     await page.goto(`/?person=${await jules()}`);
     const row = page.locator('.person-page .done-list [data-said]');
     await expect(row.locator('.done-what')).toHaveText('Said thanks · by text');
