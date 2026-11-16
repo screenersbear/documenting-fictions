@@ -1633,6 +1633,10 @@ function unmarkPick(pick, id) {
 		marks
 	};
 }
+function countWords(n, left) {
+	if (left >= n) return `${n} today`;
+	return left === 1 ? "Last one" : `${left} to go`;
+}
 function stops$1(n) {
 	return Array.from({ length: n }, (_, i) => {
 		const a = (n === 1 ? 90 : 135 - 90 * i / (n - 1)) * Math.PI / 180;
@@ -2015,15 +2019,23 @@ function cardHtml$1(p, today) {
 __name(cardHtml$1, "cardHtml");
 const behindHtml = (p, n) => `<div class="card behind-${n}" aria-hidden="true">${flairHtml(moveLook(p.next))}</div>`;
 const writeLabel = (p) => p.group === "prospect" ? "Write to them" : `Write to ${firstName(p.name)}`;
+const ARC = "M6 40 A34 34 0 0 1 ";
+const halfStop = (x, y) => `<circle cx="${x}" cy="${y}" r="7" fill="#FAFAF7"/>` + `<path d="M${x - 6} ${y} A6 6 0 0 0 ${x + 6} ${y} Z" fill="#14BFA0"/>` + `<circle cx="${x}" cy="${y}" r="7" fill="none" stroke="#313D45" stroke-width="2"/>`;
 function arcHtml(pick, current, label) {
 	const pts = stops$1(pick.ids.length);
+	const at = pick.ids.indexOf(current);
+	const to = current ? pts[at] : {
+		x: 74,
+		y: 40
+	};
+	const ink = to ? `<path class="arc-ink" d="${ARC}${to.x} ${to.y}" fill="none" stroke="#313D45" stroke-width="2"/>` : "";
 	const dots = pick.ids.map((id, i) => {
 		const { x, y } = pts[i];
-		if (id === current) return `<circle cx="${x}" cy="${y}" r="7" fill="#14BFA0" stroke="#313D45" stroke-width="2"/>`;
-		if (pick.marks[id] === "done") return `<circle cx="${x}" cy="${y}" r="5" fill="#313D45"/>`;
+		if (id === current) return halfStop(x, y);
+		if (!current || pick.marks[id] === "done") return `<circle cx="${x}" cy="${y}" r="5" fill="#313D45"/>`;
 		return `<circle cx="${x}" cy="${y}" r="5" fill="#FAFAF7" stroke="#9AA3A8" stroke-width="1.5"/>`;
 	}).join("");
-	return `<svg class="today-arc" role="img" aria-label="${esc(label)}" viewBox="0 0 80 44" width="80" height="44"><path d="M6 40 A34 34 0 0 1 74 40" fill="none" stroke="#D6DADD" stroke-width="2"/>${dots}</svg>`;
+	return `<svg class="today-arc" role="img" aria-label="${esc(label)}" viewBox="0 0 80 44" width="80" height="44"><path d="${ARC}74 40" fill="none" stroke="#D6DADD" stroke-width="2"/>${ink}${dots}</svg>`;
 }
 
 // pages/card-swipe.js
@@ -3128,7 +3140,7 @@ function stackHtml(pick, left, today) {
 	const at = n - left.length + 1;
 	const [top, next, after] = left;
 	return `
-    ${head(`${at} of ${n} today`, arcHtml(pick, top.id, `Move ${at} of ${n}`))}
+    ${head(countWords(n, left.length), arcHtml(pick, top.id, `Move ${at} of ${n}`))}
     <div class="stack">${after ? behindHtml(after, 2) : ""}${next ? behindHtml(next, 1) : ""}${cardHtml$1(top, today)}</div>
     <div class="today-btns">
       <button type="button" class="btn secondary" data-later>Later</button>

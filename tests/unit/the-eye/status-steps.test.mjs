@@ -41,13 +41,23 @@ describe('statusSteps', () => {
     expect(ed.statusSteps(PHOTO, 'delivered').count).toBe('7 of 7');
   });
 
+  it("near the end says what's left (progress/NOTES.md), and a delivered shoot stays full", () => {
+    expect(ed.statusSteps(PHOTO, 'captured').count).toBe('4 of 7');
+    expect(ed.statusSteps(PHOTO, 'waiting_for_selects').count).toBe('2 to go');
+    expect(ed.statusSteps(PHOTO, 'editing').count).toBe('1 to go: delivery');
+    expect(ed.statusSteps(VIDEO, 'revisions').count).toBe('1 to go: delivery');
+    expect(ed.statusSteps(['prospect', 'planning', 'wrapped'], 'planning').count).toBe('1 to go: wrapped');
+    const done = ed.statusSteps(PHOTO, 'delivered');
+    expect(states(done).filter(st => st === 'later')).toEqual([]);
+  });
+
   it('grows each bar from 10 to 28px', () => {
     expect(ed.statusSteps(PHOTO, 'prospect').bars.map(b => b.height)).toEqual([10, 13, 16, 19, 22, 25, 28]);
   });
 
   it('gives a video shoot its eight stages, to a tenth of a pixel', () => {
     const r = ed.statusSteps(VIDEO, 'client_review');
-    expect(r.count).toBe('6 of 8');
+    expect(r.count).toBe('2 to go');
     expect(r.bars.map(b => b.height)).toEqual([10, 12.6, 15.1, 17.7, 20.3, 22.9, 25.4, 28]);
     expect(states(r)).toEqual(['done', 'done', 'done', 'done', 'done', 'now', 'later', 'later']);
   });
@@ -72,6 +82,7 @@ describe('statusSteps', () => {
   it('copes with one stage, or none', () => {
     expect(ed.statusSteps(['prospect'], 'prospect')).toEqual({ off: false, count: '1 of 1', bars: [{ key: 'prospect', state: 'now', height: 10 }] });
     expect(ed.statusSteps(['prospect', 'delivered'], 'delivered').bars.map(b => b.height)).toEqual([10, 28]);
+    expect(ed.statusSteps(['prospect', 'delivered'], 'prospect').count).toBe('1 to go: delivery');
     expect(ed.statusSteps([], 'prospect')).toEqual({ off: false, count: '', bars: [] });
     expect(ed.statusSteps(['rescheduled', 'canceled'], 'canceled')).toEqual({ off: true, count: '', bars: [] });
   });

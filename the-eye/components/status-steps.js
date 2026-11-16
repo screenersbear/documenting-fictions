@@ -12,9 +12,23 @@ window.EyeParts.addStatusSteps = function addStatusSteps(ed) {
   const LOW = 10;
   const HIGH = 28;
 
+  // The last stage in words, for "1 to go: delivery".
+  const lastWord = key => (key === 'delivered' ? 'delivery' : key.replace(/_/g, ' '));
+
+  // Where the shoot is: "3 of 7", and near the end what's left
+  // (progress/NOTES.md, 15 Nov): "2 to go", then "1 to go: delivery".
+  // Delivered stays "7 of 7", every mark full.
+  function countWords(stages, at) {
+    if (at < 0) return '';
+    const left = stages.length - 1 - at;
+    if (left === 2) return '2 to go';
+    if (left === 1) return `1 to go: ${lastWord(stages[stages.length - 1])}`;
+    return `${at + 1} of ${stages.length}`;
+  }
+
   // keys: the statuses the shoot's status field offers, in order
   // (statusOptionKeys); current: the shoot's. Gives each stage's bar (its
-  // state and height in px), where the shoot is ("3 of 7"; empty off the
+  // state and height in px), where the shoot is (countWords; empty off the
   // line), and whether it's off the line.
   function statusSteps(keys, current) {
     const stages = keys.filter(k => !OFF.includes(k));
@@ -23,7 +37,7 @@ window.EyeParts.addStatusSteps = function addStatusSteps(ed) {
     const state = i => (i < at ? 'done' : (i === at ? 'now' : 'later'));
     return {
       off: OFF.includes(current),
-      count: at < 0 ? '' : `${at + 1} of ${stages.length}`,
+      count: countWords(stages, at),
       bars: stages.map((key, i) => ({ key, state: state(i), height: Math.round((LOW + rise * i) * 10) / 10 })),
     };
   }

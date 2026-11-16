@@ -64,7 +64,7 @@ window.EyeParts.addNewShootWizard = function addNewShootWizard(ed) {
     const next = adjacentShootWizardStep(1);
     const done = ed.setupChapters(ed.frontShoot(), ed.lastFrontCounts() || {}).filter(ch => ch.done).map(ch => ch.key);
     ed.drawGuideMarks(at, done);
-    document.getElementById('shootWizardStep').textContent = `Chapter ${at + 1} of ${ed.GUIDE_CHAPTERS.length}`;
+    document.getElementById('shootWizardStep').textContent = ed.guideCountWords(chapter.key, !!ed.shootWizardOnly);
     document.getElementById('shootWizardTitle').textContent = chapter.title;
     document.getElementById('shootWizardHint').textContent = chapter.question;
     document.getElementById('shootWizardPlace').textContent = ed.shootWizardAgain ? ed.shootDisplayName(ed.frontShoot()) : 'New shoot';

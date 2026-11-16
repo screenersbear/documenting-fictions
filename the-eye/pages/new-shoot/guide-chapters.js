@@ -4,7 +4,7 @@
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addNewShootGuideChapters = function addNewShootGuideChapters(ed) {
-  Object.assign(ed, { guideChapter, guideChapterParts, drawGuideMarks, addGuidePartHead, clearGuidePartHeads, guidePartIsChapter });
+  Object.assign(ed, { guideChapter, guideChapterParts, drawGuideMarks, guideCountWords, addGuidePartHead, clearGuidePartHeads, guidePartIsChapter });
 
   // title comes from the shoot's parts; question is the line under it.
   const GUIDE_CHAPTERS = [
@@ -30,13 +30,29 @@ window.EyeParts.addNewShootGuideChapters = function addNewShootGuideChapters(ed)
   }
 
   // Seven marks on a hairline: done ones solid, this one larger with a mango
-  // dot, the rest open rings. The line is ink up to this chapter.
+  // dot, the rest open rings. The line is ink up to this chapter. It never
+  // starts empty (progress/NOTES.md, 15 Nov): making the shoot counts, so a
+  // short inked line leads into the first mark.
   function drawGuideMarks(at, doneKeys) {
-    document.getElementById('shootWizardMarks').innerHTML = GUIDE_CHAPTERS.map((ch, i) => {
+    document.getElementById('shootWizardMarks').innerHTML = '<span class="guide-line guide-lead inked"></span>' + GUIDE_CHAPTERS.map((ch, i) => {
       const cls = i === at ? 'now' : doneKeys.includes(ch.key) ? 'done' : '';
       const line = i ? `<span class="guide-line${i <= at ? ' inked' : ''}"></span>` : '';
       return `${line}<span class="guide-mark ${cls}"></span>`;
     }).join('');
+  }
+
+  // Over the chapter's title: "Chapter 1 of 7", then near the end what's
+  // left, "2 to go" and "Last one" (progress/NOTES.md), counting only the
+  // chapters that apply to this shoot. Opened for one chapter: just where
+  // it is.
+  function guideCountWords(key, only = false) {
+    const applies = GUIDE_CHAPTERS.filter(ch => guideChapterParts(ch).length);
+    const at = applies.findIndex(ch => ch.key === key);
+    if (at < 0) return '';
+    const left = applies.length - at;
+    if (!only && applies.length > 1 && left === 1) return 'Last one';
+    if (!only && left === 2) return '2 to go';
+    return `Chapter ${at + 1} of ${applies.length}`;
   }
 
   // A step named the same as its chapter ("The basics" in Basics) doesn't

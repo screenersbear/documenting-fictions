@@ -1,6 +1,6 @@
 // rounds/data/today.js: the day's moves, three a day (at most five), the pick fixed for the day.
 import { describe, it, expect } from 'vitest';
-import { PER_DAY, MOST, perDayOf, dueOn, pickFor, waiting, markPick, unmarkPick, doneOn, stops } from '../../../rounds/data/today.js';
+import { PER_DAY, MOST, perDayOf, dueOn, pickFor, waiting, markPick, unmarkPick, doneOn, stops, countWords } from '../../../rounds/data/today.js';
 
 const T = '2026-11-14';
 const p = (id, kind, due, more = {}) => ({ id, name: id, added: '2026-11-01', letGo: false, next: kind ? { kind, due, step: 0 } : null, ...more });
@@ -84,6 +84,16 @@ describe('stops', () => {
   });
   it('has none for none', () => {
     expect(stops(0)).toEqual([]);
+  });
+});
+
+describe('countWords', () => {
+  it("says how many on the first card, then what's left (progress/NOTES.md)", () => {
+    expect([3, 2, 1].map((left) => countWords(3, left))).toEqual(['3 today', '2 to go', 'Last one']);
+    expect([5, 4, 3, 2, 1].map((left) => countWords(5, left))).toEqual(['5 today', '4 to go', '3 to go', '2 to go', 'Last one']);
+  });
+  it('one a day is just that one', () => {
+    expect(countWords(1, 1)).toBe('1 today');
   });
 });
 

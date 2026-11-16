@@ -1,7 +1,9 @@
 // The Eye, round 5 (13 Nov): the status card on a shoot's page (a bar for
 // each stage, the whole card opens Change status; Postponed and Canceled say
 // so instead), and Shoot progress in the new-shoot guide's Basics (a shoot
-// already done can start as Captured, with no pop-up in the way).
+// already done can start as Captured, with no pop-up in the way). Since
+// 15 Nov (progress/NOTES.md) neither starts empty, and near the end both
+// say what's left: "2 to go", "Last one", "1 to go: delivery".
 import { test, expect } from '@playwright/test';
 import { freshPage } from './_helpers.mjs';
 
@@ -17,6 +19,7 @@ function seed() {
   const shoots = [
     shoot({ id: 'r1', title: 'Rooftop portraits', status: 'waiting_to_shoot', date: day(7) }),
     shoot({ id: 'r2', title: 'Pier at dawn', status: 'rescheduled', date: day(9) }),
+    shoot({ id: 'r3', title: 'Beach edit', status: 'editing', date: day(-9) }),
   ];
   localStorage.setItem('dailies_state_v1', JSON.stringify({ shoots, projects: [], journalEntries: [] }));
 }
@@ -92,6 +95,38 @@ test.describe('The Eye: the status card and Shoot progress', () => {
     expect(await page.$eval('#shootStatus', (s) => s.value)).toBe('captured');
     await expect(page.locator('#postShootPromptOverlay')).toBeHidden();
     await expect(page.locator('#shootWizard')).toBeVisible();
+    await ctx.close();
+  });
+
+  test("near the end the status card says what's left", async ({ browser }, testInfo) => {
+    const { ctx, page } = await openEye(browser, testInfo);
+    await openShoot(page, 'Beach edit');
+    await expect(page.locator('#shootStatusCount')).toHaveText('1 to go: delivery');
+    await expect(page.locator('#shootStatusTag')).toHaveAttribute('aria-label', 'Status: Editing, 1 to go: delivery. Change it');
+    // On one line, inside the card.
+    const fits = await page.$eval('#shootStatusCount', (el) => {
+      const r = el.getBoundingClientRect(); const c = el.closest('.status-card').getBoundingClientRect();
+      return r.right <= c.right && r.height < 24;
+    });
+    expect(fits).toBe(true);
+    await ctx.close();
+  });
+
+  test("the guide never starts empty, and near the end says what's left", async ({ browser }, testInfo) => {
+    const { ctx, page } = await openEye(browser, testInfo);
+    await page.click('.tabbar .tab[data-view="shoots"]');
+    await page.waitForFunction(() => !document.querySelector('.nb-turn, .nb-slide'), null, { timeout: 3000 });
+    await page.click('#addShootBtn');
+    const step = page.locator('#shootWizardStep');
+    await expect(step).toHaveText('Chapter 1 of 7');
+    // Making the shoot counts: an inked line leads into the first mark.
+    await expect(page.locator('#shootWizardMarks .guide-line').first()).toHaveClass(/guide-lead inked/);
+    await expect(page.locator('#shootWizardMarks .guide-mark').first()).toHaveClass(/now/);
+    for (const words of ['Chapter 2 of 7', 'Chapter 3 of 7', 'Chapter 4 of 7', 'Chapter 5 of 7', '2 to go', 'Last one']) {
+      await page.click('#shootWizardNextBtn');
+      await expect(step).toHaveText(words);
+    }
+    await expect(page.locator('#shootWizardNextBtn')).toHaveText('Done');
     await ctx.close();
   });
 

@@ -28,7 +28,8 @@
 }
 
 /* Chapter marks: done = solid 14px, this one = 22px with a mango dot, still
-   to come = open 13px ring. The line is ink up to this chapter. */
+   to come = open 13px ring. The line is ink up to this chapter, from a short
+   inked lead-in (never an empty bar). */
 .guide-marks { display: flex; align-items: center; margin: 0 0 22px; }
 .guide-mark { flex: none; box-sizing: border-box; width: 13px; height: 13px; border: 1.5px solid #9AA3A8; border-radius: 50%; }
 .guide-mark.done { width: 14px; height: 14px; border: 0; background: #313D45; }
@@ -36,6 +37,7 @@
 .guide-mark.now::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: var(--accent); }
 .guide-line { flex: 1 1 auto; height: 1px; background: var(--line); }
 .guide-line.inked { height: 1.5px; background: #313D45; }
+.guide-line.guide-lead { flex: 0 0 16px; }
 
 /* The chapter's own words. */
 #shootWizardCard .shoot-wizard-head { text-align: left; }

@@ -55,6 +55,14 @@ export function unmarkPick(pick, id) {
   return { ...pick, marks };
 }
 
+// Today's count (progress/NOTES.md, 15 Nov): how many on the first card
+// ("3 today"), then what's left ("2 to go", "Last one"). n: the day's
+// cards; left: the ones not done yet, this one too.
+export function countWords(n, left) {
+  if (left >= n) return `${n} today`;
+  return left === 1 ? 'Last one' : `${left} to go`;
+}
+
 // Where the stops sit on Today's arc (centre 40, 40, radius 34, in an 80 x 44
 // box): spread evenly from 135 to 45 degrees, one at the top.
 export function stops(n) {

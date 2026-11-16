@@ -10,7 +10,7 @@ import { esc } from '../components/util.js';
 import { PLUS } from '../components/icons.js';
 import { loadToday, loadDone, laterMove } from '../data/moves.js';
 import { moveDone } from './done-note.js';
-import { waiting } from '../data/today.js';
+import { waiting, countWords } from '../data/today.js';
 import { whenDue } from '../data/work-days.js';
 import { dayOf, dueWords } from '../data/dates.js';
 import { cardHtml, behindHtml, writeLabel, arcHtml } from './today-card.js';
@@ -29,7 +29,7 @@ function stackHtml(pick, left, today) {
   const at = n - left.length + 1;
   const [top, next, after] = left;
   return `
-    ${head(`${at} of ${n} today`, arcHtml(pick, top.id, `Move ${at} of ${n}`))}
+    ${head(countWords(n, left.length), arcHtml(pick, top.id, `Move ${at} of ${n}`))}
     <div class="stack">${after ? behindHtml(after, 2) : ''}${next ? behindHtml(next, 1) : ''}${cardHtml(top, today)}</div>
     <div class="today-btns">
       <button type="button" class="btn secondary" data-later>Later</button>

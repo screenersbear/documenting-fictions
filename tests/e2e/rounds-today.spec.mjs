@@ -8,6 +8,11 @@ import { test, expect } from '@playwright/test';
 import { openRounds, eyeShoot, sheet, opened, skipNote } from './_rounds.mjs';
 
 const count = (page) => page.locator('#view .today-count');
+// The arc's stops, as drawn: 'half' (this one, started), 'ink' (done) or 'open'.
+const arcStops = (page) => page.locator('#view .today-arc').evaluate((svg) => [...svg.querySelectorAll(':scope > circle[r="5"], :scope > path[fill="#14BFA0"]')]
+  .map((el) => (el.tagName === 'path' ? 'half' : el.getAttribute('fill') === '#313D45' ? 'ink' : 'open')));
+// The ink along the arc: where it ends, or '' for none.
+const arcInk = (page) => page.locator('#view .today-arc').evaluate((svg) => (svg.querySelector('.arc-ink')?.getAttribute('d') || '').split(' ').slice(-2).join(' '));
 // Instagram and the clipboard, stood in for: what was opened and copied.
 const standIns = (page) => page.evaluate(() => {
   window.__opened = [];
@@ -29,13 +34,18 @@ async function swipe(page) {
 test.describe('Rounds: Today', () => {
   test('people from The Eye come in, one card at a time; LATER, then WRITE TO and Done', async ({ browser }, testInfo) => {
     const { ctx, page, problems } = await openRounds(browser, testInfo, '/rounds/', eyeShoot);
-    await expect(count(page)).toHaveText('1 of 2 today');
+    // Never an empty arc (progress/NOTES.md): the first stop is started, the line inked to it.
+    await expect(count(page)).toHaveText('2 today');
+    expect(await arcStops(page)).toEqual(['half', 'open']);
+    expect(await arcInk(page)).toBe('16 16');
     await expect(top(page)).toContainText('Jules M.');
     await expect(top(page)).toContainText('Say thanks');
     await expect(page.locator('#view [data-write]')).toHaveText('Write to Jules');
     // LATER: tomorrow, and the next card comes up.
     await page.click('#view [data-later]');
-    await expect(count(page)).toHaveText('2 of 2 today');
+    await expect(count(page)).toHaveText('Last one');
+    expect(await arcStops(page)).toEqual(['open', 'half']);
+    expect(await arcInk(page)).toBe('64 16');
     await expect(top(page)).toContainText('Maya R.');
     // WRITE TO: the move, filled in for Maya.
     await standIns(page);
@@ -59,6 +69,9 @@ test.describe('Rounds: Today', () => {
     await expect(move).toHaveCount(0);
     await expect(page.locator('#view .today-calm h2')).toHaveText("That's today.");
     await expect(count(page)).toHaveText('2 of 2 today');
+    // The day's done: the whole arc and every stop in ink (Jules' LATER too), until tomorrow.
+    expect(await arcStops(page)).toEqual(['ink', 'ink']);
+    expect(await arcInk(page)).toBe('74 40');
     // UNDO brings the card back.
     await expect(page.locator('#toast')).toContainText('Done.');
     await page.click('#toast .toast-action');
@@ -115,16 +128,16 @@ test.describe('Rounds: Today', () => {
     await expect(page.locator('#toast')).toHaveText('Undone.');
     await expect(s.locator('.choice-label')).toHaveText(['Maya R.']);
     // Behind the sheet, Jules is back on Today.
-    await expect(count(page)).toHaveText('2 of 2 today');
+    await expect(count(page)).toHaveText('Last one');
     await expect(top(page)).toContainText('Jules M.');
     await expect(doneToday).toHaveText('Done today 1');
     // The last one: the sheet closes, and the day is as it was.
     await s.locator('[data-undo]').click();
     await expect(s).toHaveCount(0);
-    await expect(count(page)).toHaveText('1 of 2 today');
+    await expect(count(page)).toHaveText('2 today');
     await expect(doneToday).toHaveCount(0);
     await page.reload();
-    await expect(count(page)).toHaveText('1 of 2 today');
+    await expect(count(page)).toHaveText('2 today');
     await expect(top(page)).toContainText('Jules M.');
     await expect(top(page)).toContainText('Say thanks');
     expect(problems).toEqual([]);
@@ -142,7 +155,7 @@ test.describe('Rounds: Today', () => {
     await page.waitForTimeout(150);
     await page.mouse.up();
     await expect(top(page)).toContainText('Jules M.');
-    await expect(count(page)).toHaveText('1 of 2 today');
+    await expect(count(page)).toHaveText('2 today');
     await ctx.close();
   });
 

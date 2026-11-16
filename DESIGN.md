@@ -362,6 +362,13 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
   person can be in more than one group (Edit shows them as chips; Prospect drops once Client is in); a captured shoot makes
   whoever booked you a Client too, and a Regular who's a Client gets the client moves with check-ins between, one card
   at a time. People pages read "Regular. Client."
+- **Progress bars (Live, 15 Nov, progress/NOTES.md):** never start empty, say what's left near the end, never drop back
+  to empty. The Eye's new-shoot guide: a short inked line leads into the first mark (making the shoot counts), and the
+  label goes "Chapter 1 of 7" ... "Chapter 5 of 7", then "2 to go" and "Last one" (just "Chapter N of 7" when opened for
+  one chapter). Rounds' Today: the arc is inked up to this card's stop, which is half teal in an ink ring ("started");
+  the count reads "3 TODAY", "2 TO GO", "LAST ONE"; a finished day keeps the whole arc and every stop ink beside "That's
+  today" until tomorrow. The shoot's status card: "2 to go", then "1 to go: delivery"; delivered stays "7 of 7", all
+  marks full. Loading bars (backups, exports, the sticker cut-out) are not these.
 - **Placing a sticker:** pick a photo, then the placing screen: the book big with the sticker on it (drag to move, pinch to
   size, twist to turn) and a sheet under it with SHAPE (Circle, Square, Card, Cut out) and EDGE (White border, Black outline)
   as segmented controls, the sticker changing as you pick; BACK and STICK IT ON. Shape and edge are chosen there, never after.

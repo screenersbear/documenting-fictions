@@ -5646,6 +5646,7 @@ padding: 14px var(--shoot-side) 32px;
 .guide-mark.now::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: var(--accent); }
 .guide-line { flex: 1 1 auto; height: 1px; background: var(--line); }
 .guide-line.inked { height: 1.5px; background: #313D45; }
+.guide-line.guide-lead { flex: 0 0 16px; }
 #shootWizardCard .shoot-wizard-head { text-align: left; }
 #shootWizardCard .guide-chapter { margin: 0 0 6px; font: 700 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
 #shootWizardCard .shoot-wizard-head h2 {

@@ -1,6 +1,6 @@
 // What Today draws (01-today): the top card, the cards peeking out behind
-// it, and the arc's stops (done in berry blade black, this one teal with a
-// ring, the rest open).
+// it, and the arc's stops (done in berry blade black, this one half teal in
+// a ring, the rest open).
 import { moveName, moveLook } from '../data/kinds.js';
 import { reasonFor } from '../data/reasons.js';
 import { handleText } from '../data/contact.js';
@@ -35,13 +35,23 @@ export const behindHtml = (p, n) => `<div class="card behind-${n}" aria-hidden="
 export const writeLabel = (p) => (p.group === 'prospect' ? 'Write to them' : `Write to ${firstName(p.name)}`);
 
 // The arc and its stops. current: the card on top ('' when the day's done).
+// Never empty (progress/NOTES.md, 15 Nov): the line is ink up to this card's
+// stop, which is half filled, "started", until it's done. When the day's
+// done, the whole arc and every stop are ink, until tomorrow.
+const ARC = 'M6 40 A34 34 0 0 1 ';
+const halfStop = (x, y) => `<circle cx="${x}" cy="${y}" r="7" fill="#FAFAF7"/>`
+  + `<path d="M${x - 6} ${y} A6 6 0 0 0 ${x + 6} ${y} Z" fill="#14BFA0"/>`
+  + `<circle cx="${x}" cy="${y}" r="7" fill="none" stroke="#313D45" stroke-width="2"/>`;
 export function arcHtml(pick, current, label) {
   const pts = stops(pick.ids.length);
+  const at = pick.ids.indexOf(current);
+  const to = current ? pts[at] : { x: 74, y: 40 };
+  const ink = to ? `<path class="arc-ink" d="${ARC}${to.x} ${to.y}" fill="none" stroke="#313D45" stroke-width="2"/>` : '';
   const dots = pick.ids.map((id, i) => {
     const { x, y } = pts[i];
-    if (id === current) return `<circle cx="${x}" cy="${y}" r="7" fill="#14BFA0" stroke="#313D45" stroke-width="2"/>`;
-    if (pick.marks[id] === 'done') return `<circle cx="${x}" cy="${y}" r="5" fill="#313D45"/>`;
+    if (id === current) return halfStop(x, y);
+    if (!current || pick.marks[id] === 'done') return `<circle cx="${x}" cy="${y}" r="5" fill="#313D45"/>`;
     return `<circle cx="${x}" cy="${y}" r="5" fill="#FAFAF7" stroke="#9AA3A8" stroke-width="1.5"/>`;
   }).join('');
-  return `<svg class="today-arc" role="img" aria-label="${esc(label)}" viewBox="0 0 80 44" width="80" height="44"><path d="M6 40 A34 34 0 0 1 74 40" fill="none" stroke="#D6DADD" stroke-width="2"/>${dots}</svg>`;
+  return `<svg class="today-arc" role="img" aria-label="${esc(label)}" viewBox="0 0 80 44" width="80" height="44"><path d="${ARC}74 40" fill="none" stroke="#D6DADD" stroke-width="2"/>${ink}${dots}</svg>`;
 }
