@@ -1,6 +1,7 @@
 // Today (01-today): three moves a day (at most five), one card at a time.
 // Swipe the card away when it's done, or LATER for tomorrow; WRITE TO (or a
-// tap on the card) opens the move. No overdue counts, no streaks: when the
+// tap on the card) opens the one sheet (pages/one-sheet.js). + REACH OUT
+// beside the count starts one with anyone (pages/reach-out.js). No overdue counts, no streaks: when the
 // day's done, a calm "That's today". DONE TODAY, under it all once a move's
 // done, lists them to undo any (a card swiped away by mistake). A post from
 // Layouts that tags people here shows as a slip at the top, once.
@@ -9,20 +10,21 @@ import { fillPhotos } from '../components/photo.js';
 import { esc } from '../components/util.js';
 import { PLUS } from '../components/icons.js';
 import { loadToday, loadDone, laterMove } from '../data/moves.js';
-import { moveDone } from './done-note.js';
 import { waiting, countWords } from '../data/today.js';
 import { whenDue } from '../data/work-days.js';
 import { dayOf, dueWords } from '../data/dates.js';
 import { cardHtml, behindHtml, writeLabel, arcHtml } from './today-card.js';
 import { wireCard, cardAway } from './card-swipe.js';
-import { openMove } from './move.js';
+import { swipeDone, writeTo } from './move-done.js';
+import { openReachOut } from './reach-out.js';
 import { openAddPerson } from './add-person.js';
 import { openDoneToday } from './done-today.js';
 import { leadsHtml, openLeads } from './leads.js';
 import { postSlipsHtml, wirePostSlips } from './post-slip.js';
 
 const doneHtml = (n) => (n ? `<button type="button" class="text-btn today-done" data-done-today>Done today <span>${n}</span></button>` : '');
-const head = (count, arc) => `<div class="today-head"><span class="today-count">${count}</span>${arc}</div>`;
+// The count, + REACH OUT beside it (rounds/06), and the arc.
+const head = (count, arc) => `<div class="today-head"><span class="today-count-row">${count ? `<span class="today-count">${count}</span>` : ''}<button type="button" class="list-act today-reach" data-reach>${PLUS}Reach out</button></span>${arc}</div>`;
 
 function stackHtml(pick, left, today) {
   const n = pick.ids.length;
@@ -49,7 +51,7 @@ function calmHtml(people, pick, today, week) {
   }
   const next = here.filter((p) => p.next).map((p) => whenDue(p.next, week, today)).sort()[0];
   const when = next ? `The next move is due ${dueWords(next, today).replace('Tomorrow', 'tomorrow')}.` : 'Nothing is planned.';
-  return `<div class="today-calm"><h2>Nothing today.</h2><p>${when}</p></div>`;
+  return `${head('', '')}<div class="today-calm"><h2>Nothing today.</h2><p>${when}</p></div>`;
 }
 
 export async function todayScreen(view, { beside = false } = {}) {
@@ -65,24 +67,23 @@ export async function todayScreen(view, { beside = false } = {}) {
   view.querySelector('[data-add]')?.addEventListener('click', () => openAddPerson(() => todayScreen(view)));
   view.querySelector('[data-done-today]')?.addEventListener('click', () => openDoneToday(redraw));
   view.querySelector('[data-leads]')?.addEventListener('click', () => openLeads(redraw));
+  view.querySelector('[data-reach]')?.addEventListener('click', () => openReachOut(redraw));
   // Someone's move, from a slip: as from their card.
   wirePostSlips(view, (id) => {
     const p = byId.get(id);
     if (!p || !p.next) { redraw(); return; }
-    openMove(p, {
-      onDone: (said) => moveDone(p, said, redraw),
-      onLater: () => laterMove(p).then(redraw),
-    });
+    writeTo(p, redraw);
   });
   if (!left.length) return;
   const top = left[0];
   const card = view.querySelector('.card.top');
-  const done = (dir = 1, dx = 0, said = {}) => moveDone(top, said, redraw, cardAway(card, dir, dx));
+  const done = (dir = 1, dx = 0) => swipeDone(top, redraw, cardAway(card, dir, dx));
   const later = async () => {
     await Promise.all([laterMove(top), cardAway(card, 0)]);
     await redraw();
   };
-  const open = () => openMove(top, { onDone: (said) => done(1, 0, said), onLater: later });
+  // Their due move done on the sheet: the card goes as a swipe sends it.
+  const open = () => writeTo(top, redraw, { gone: (d) => (d.line.extra ? null : cardAway(card, 1, 0)) });
   wireCard(card, { onOpen: open, onSwipe: done });
   view.querySelector('[data-write]').addEventListener('click', open);
   view.querySelector('[data-later]').addEventListener('click', later);

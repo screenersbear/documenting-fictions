@@ -4,7 +4,8 @@
 // move's own; Rounds' for moments and notes, The Eye's for shoots), what
 // and how ("Said thanks · by text") and the note under it. Then ALL IN
 // ROUNDS, which opens their page there, and ADD A MOMENT, which opens
-// Rounds' own sheet for it. The shelf never writes Rounds' data; asks
+// Rounds' own sheet for it. A move tapped opens Rounds at What you said for
+// it (Tightening Rounds, rounds/09). The shelf never writes Rounds' data; asks
 // Rounds hasn't taken yet (shared/data/asks.js) show as they will be.
 // (Loaded before app.js.)
 window.ShelfParts = window.ShelfParts || {};
@@ -31,9 +32,13 @@ window.ShelfParts.addPersonDone = function addPersonDone(ed) {
       ? `<span class="person-kind nb" style="background:${C().NOTEBOOKS[nb].bg}">${C().markSvg(nb, 16)}</span>`
       : `<span class="person-kind" style="background:${esc(r.bg || '#FFD100')}">${r.icon || ''}</span>`;
   };
-  const rowHtml = (r) => `<div class="done-row">
+  const opens = (r) => r.kind === 'move' && !!r.id;
+  const rowHtml = (r) => {
+    const tag = opens(r) ? `button type="button" data-said="${esc(r.id)}"` : 'div';
+    return `<${tag} class="done-row">
     <span class="done-day">${esc(dayShort(r.day))}</span>${markHtml(r)}
-    <span class="done-words"><span class="done-what">${esc(r.what)}${r.howWords ? ` <span>· ${esc(r.howWords)}</span>` : ''}</span>${r.note ? `<span class="done-note">${esc(r.note)}</span>` : ''}</span></div>`;
+    <span class="done-words"><span class="done-what">${esc(r.what)}${r.howWords ? ` <span>· ${esc(r.howWords)}</span>` : ''}</span>${r.note ? `<span class="done-note">${esc(r.note)}</span>` : ''}</span></${tag.split(' ')[0]}>`;
+  };
 
   // Rounds' part under NEXT: the latest, ALL IN ROUNDS and ADD A MOMENT.
   async function doneHtml(page, rounds) {
@@ -48,5 +53,6 @@ window.ShelfParts.addPersonDone = function addPersonDone(ed) {
   function wireDone(page, rounds) {
     page.querySelector('[data-all-rounds]')?.addEventListener('click', () => openThing(ed, rounds));
     page.querySelector('[data-add-moment]')?.addEventListener('click', () => openThing(ed, { ...rounds, params: { ...rounds.params, moment: 1 } }));
+    page.querySelectorAll('[data-said]').forEach((b) => b.addEventListener('click', () => openThing(ed, { ...rounds, params: { ...rounds.params, said: b.dataset.said } })));
   }
 };

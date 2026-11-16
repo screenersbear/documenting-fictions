@@ -359,9 +359,22 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
   6px corners); a move's kind under its 16px mini. YOUR YEAR's numbers are 44px light.
 - **Thank-yous (Live, 15 Nov, thanks/01-04):** Say thanks after a shoot is due the day after it, Sundays too. A move opened
   says WHAT DID YOU SAY? over an empty box, with USE YOUR <KIND> MESSAGE under it (a plus, on #EFEFEA, the starter in dim 15px)
-  that fills it. After DONE, a small sheet: HOW (Text, Instagram, Email, In person) and A NOTE (OPTIONAL) with quick taps,
-  pill chips in ink with mango text when picked; SKIP and SAVE (mango on ink). The Eye shows Say thanks FROM ROUNDS on a
-  captured shoot, OPEN ROUNDS and <NAME> WROTE FIRST (names, since Rounds keeps no pronouns).
+  that fills it. HOW and the note are on the same sheet since 16 Nov (Rounds, tightened, below). The Eye shows Say thanks
+  FROM ROUNDS on a captured shoot, OPEN ROUNDS and <NAME> WROTE FIRST (names, since Rounds keeps no pronouns).
+- **Rounds, tightened (Live, 16 Nov, rounds/06-11, rounds/NOTES.md):** ONE sheet per move, never a second one after DONE:
+  the header is their photo, name and "Today, Mon 16 Nov"; WHAT KIND (Check in, Say thanks, Say hello, Ask, Pitch, Other,
+  pill chips, preset from the card or their next move); WHAT DID YOU SAY? with USE YOUR <KIND> MESSAGE under it; HOW
+  (picked for you once COPY AND OPEN has gone out); A NOTE FOR YOU (OPTIONAL), "Only you see this"; COPY AND OPEN (outline)
+  and DONE (mango on ink). Another kind than the due one is a move of its own that still counts as keeping in touch; the
+  card stays. A swiped card's toast offers ADD WHAT YOU SAID. Today has REACH OUT (button type) beside the count: a search
+  sheet (rows: photo, name, "Client · last: sent photos, 2 Nov", the last in touch first) and OR SOMEONE NEW, ADD "<TYPED>"
+  AS A NEW PERSON. A done move tapped (Done today, SO FAR, the shelf's person page) shows WHAT YOU SAID: the kind's tag in
+  the header, "Said thanks to Jules", "Mon 16 Nov · by text", WHAT YOU SAID and YOUR NOTE, then DELETE (text, with Undo),
+  EDIT and COPY AGAIN. People: a search box (name, handle, note), one filter chip at a time (All, Due, Regulars, Clients,
+  New, Prospects), "Sort: A to Z ▾" (Next move, Recently in touch; kept on the device), one dim line per card (the last
+  thing this past week, else when they're due). Two people who look alike get one quiet line, "<A> and <B> might be the
+  same person.", with MERGE and an ×; the merge sheet shows both as cards (KEEP THIS NAME ✓) and MERGE, mango on ink, with
+  Undo after. The person menu adds MERGE WITH... and DELETE (asks first, can't be undone).
 - **Moments and SO FAR (Live, 16 Nov, thanks/05-06):** a person in Rounds: photo, name, handle, one line; the next move;
   ADD A MOMENT (outline button, full width); SO FAR (button type) over every row, newest first: the date in 11px small
   capitals (50px wide), the mark (a move's own mini; Rounds' ink + mango mark for moments and notes; The Eye's for shoots),

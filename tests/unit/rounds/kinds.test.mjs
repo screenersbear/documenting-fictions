@@ -108,6 +108,18 @@ describe('moveName and moveLook', () => {
   });
 });
 
+describe('Other (the one sheet, 16 Nov)', () => {
+  it('is no kind Rounds plans, but has a quiet look of its own', () => {
+    expect(isKind('other')).toBe(false);
+    expect(K.OTHER).toBe('other');
+    expect(K.lookOf('other')).toBe(K.OTHER_LOOK);
+    expect(K.lookOf('nonsense')).toBe(K.OTHER_LOOK);
+    expect(K.lookOf('hello')).toBe(KINDS.hello);
+    expect(moveName({ kind: 'other' })).toBe('Other');
+    expect(markSvg('other', 10)).toBe(`<svg viewBox="0 0 24 24" width="10" height="10" fill="#313D45" aria-hidden="true">${MARKS.tag}</svg>`);
+  });
+});
+
 describe('messageWord', () => {
   it('names a kind\'s message for USE YOUR ... MESSAGE', () => {
     expect(K.messageWord('thanks')).toBe('thank-you');

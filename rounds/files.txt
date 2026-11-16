@@ -40,9 +40,11 @@ built/app.css
   styles/toast.css
   styles/marks.css
   styles/today.css
-  styles/move.css
+  styles/one-sheet.css
   styles/done-note.css
   styles/people.css
+  styles/reach-out.css
+  styles/people-find.css
   styles/person.css
   styles/so-far.css
   styles/messages.css

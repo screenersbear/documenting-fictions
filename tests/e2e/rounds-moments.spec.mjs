@@ -5,7 +5,7 @@
 // changed or deleted with Undo, and ADD A MOMENT from Done today too. (What
 // moves and when is unit tested: tests/unit/rounds/moments, moment-store.)
 import { test, expect } from '@playwright/test';
-import { openRounds, goTo, opened, importCsv, weekdayNow, skipNote } from './_rounds.mjs';
+import { openRounds, goTo, opened, importCsv, weekdayNow, doneNoSheet } from './_rounds.mjs';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const dayN = (n) => { const d = weekdayNow(); d.setDate(d.getDate() + n); return d; };
@@ -132,9 +132,9 @@ test('Done today: ADD A MOMENT, with whoever it was', async ({ browser }, testIn
   const { ctx, page, problems } = await june(browser, testInfo);
   // The Check in done, from her page.
   await page.click('#view [data-move]');
-  const move = await opened(page, 'Check in');
-  await move.locator('.move-more [data-done]').click();
-  await skipNote(page, 'June Park');
+  const move = await opened(page, 'June Park');
+  await move.locator('[data-done]').click();
+  await doneNoSheet(page);
   await goTo(page, 'today');
   await page.click('#view [data-done-today]');
   const done = await opened(page, 'Done today');

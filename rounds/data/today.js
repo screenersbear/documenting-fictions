@@ -4,7 +4,7 @@
 // (a shoot just captured in The Eye) joins only while there's room. A Pitch
 // or Follow up waits for a work day, and nothing comes up on a day off
 // (data/work-days.js): week, the work days and days off.
-import { KIND_KEYS } from './kinds.js';
+import { KIND_KEYS, OTHER } from './kinds.js';
 import { comesUp, ANY_DAY } from './work-days.js';
 
 export const PER_DAY = 3;
@@ -35,12 +35,13 @@ export const waiting = (pick) => pick.ids.filter((id) => !pick.marks[id]);
 
 // Done today (to undo a card swiped away by mistake): from the log, each
 // person's latest move that day (an earlier one shows once that's undone),
-// the newest first. Anyone let go or no longer here is left out.
+// the newest first (a move logged that wasn't the due one too: Other
+// and the rest). Anyone let go or no longer here is left out.
 export function doneOn(lines, people, day) {
   const byId = new Map(people.filter((p) => !p.letGo).map((p) => [p.id, p]));
   const latest = new Map();
   for (const l of lines) {
-    if (l.day !== day || !byId.has(l.personId) || !KIND_KEYS.includes(l.kind)) continue;
+    if (l.day !== day || !byId.has(l.personId) || !(KIND_KEYS.includes(l.kind) || l.kind === OTHER)) continue;
     const had = latest.get(l.personId);
     if (!had || (l.at || 0) > (had.at || 0)) latest.set(l.personId, l);
   }

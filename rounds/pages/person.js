@@ -1,10 +1,11 @@
 // A person (04-person): photo, name, handle (opens their profile), one line
 // (their group, and where you met or why they're a fit), then their next
-// move, which opens it. After a pitch, HOW DID THE PITCH GO? comes between
+// move, which opens the one sheet (pages/one-sheet.js). After a pitch, HOW DID THE PITCH GO? comes between
 // (pages/person-pitch.js). Under it ADD A MOMENT (pages/moment-sheet.js)
 // and SO FAR, everything done with them (pages/so-far.js, thanks/06). In
 // the suite, EVERYTHING WITH <NAME>, IN ALL FOUR at the bottom opens their
-// page on the shelf (connect/08). The ... menu: Edit, a photo, Yes, and Let go.
+// page on the shelf (connect/08). The ... menu: Edit, a photo, Yes, Merge
+// with..., Let go and Delete.
 import { shortBandHtml } from '../components/band.js';
 import { photoHtml, fillPhotos } from '../components/photo.js';
 import { miniHtml } from '../components/marks.js';
@@ -17,16 +18,16 @@ import { GROUPS, groupWords } from '../data/plan.js';
 import { phrase } from '../data/reasons.js';
 import { handleText, profileUrl } from '../data/contact.js';
 import { dayOf, dueWords } from '../data/dates.js';
-import { laterMove, getWeek } from '../data/moves.js';
-import { moveDone } from './done-note.js';
+import { getWeek } from '../data/moves.js';
+import { writeTo } from './move-done.js';
 import { whenDue } from '../data/work-days.js';
 import { shelfPageOf } from '../data/people-out.js';
 import { firstName } from '../data/fill.js';
-import { openMove } from './move.js';
 import { openPersonMenu } from './person-menu.js';
 import { pitchHtml, wirePitch } from './person-pitch.js';
 import { openMoment } from './moment-sheet.js';
 import { soFarHtml, wireSoFar } from './so-far.js';
+import { openSaid } from './what-you-said.js';
 import { doneSoFar } from '../data/so-far.js';
 import { eyeShoots } from '../data/eye.js';
 
@@ -73,10 +74,7 @@ export async function personScreen(view, id) {
   wirePitch(view, p, pitched, redraw);
   view.querySelector('[data-moment]').addEventListener('click', () => openMoment(p, { after: redraw }));
   wireSoFar(view, p, rows, lines, redraw);
-  view.querySelector('[data-move]')?.addEventListener('click', () => openMove(p, {
-    onDone: (said) => moveDone(p, said, redraw),
-    onLater: () => laterMove(p).then(redraw),
-  }));
+  view.querySelector('[data-move]')?.addEventListener('click', () => writeTo(p, redraw));
   // Sent here to do the move (The Eye's OPEN ROUNDS), or to add a moment
   // (the person page on the shelf): it opens once.
   const once = (key) => {
@@ -84,4 +82,8 @@ export async function personScreen(view, id) {
   };
   if (once('rounds-open-move') === id) view.querySelector('[data-move]')?.click();
   if (once('rounds-open-moment') === id) view.querySelector('[data-moment]').click();
+  // A move tapped on their page on the shelf: What you said, for it.
+  const said = once('rounds-open-said');
+  const saidLine = said && lines.find((l) => l.id === said && l.personId === id);
+  if (saidLine) openSaid(p, saidLine, redraw);
 }

@@ -2,7 +2,7 @@
 // the moves done, their answer to a pitch, notes, moments and their shoots
 // in The Eye, newest first.
 import { describe, it, expect } from 'vitest';
-import { doneSoFar } from '../../../rounds/data/so-far.js';
+import { doneSoFar, whatDone } from '../../../rounds/data/so-far.js';
 
 const line = (o) => ({ id: 'l1', at: 1, personId: 'p', kind: 'thanks', day: '2026-11-15', due: '2026-11-15', step: 0, ...o });
 const lindsey = { id: 'p', name: 'Lindsey Tran' };
@@ -23,6 +23,16 @@ describe('doneSoFar', () => {
       row({ id: 'b', day: '2026-11-02', kind: 'note', look: 'note', mark: 'rounds', what: 'Note', how: 'call', howWords: 'a call', note: 'Booked.', noteOnly: true }),
       row({ id: 'c', day: '2026-10-01', kind: 'move', look: 'pitch', what: 'Pitched Lindsey', how: 'email', howWords: 'by email' }),
     ]);
+  });
+  it('a move logged as Other (the one sheet) says Reached out', () => {
+    expect(doneSoFar(lindsey, [line({ id: 'o', kind: 'other', extra: true, keeps: true })])).toEqual([
+      row({ id: 'o', day: '2026-11-15', kind: 'move', look: 'other', what: 'Reached out' }),
+    ]);
+  });
+  it('whatDone: what one line says was done', () => {
+    expect(whatDone(line({ kind: 'intros' }), 'Lindsey Tran')).toBe('Asked Lindsey for intros');
+    expect(whatDone({ kind: 'moment', what: 'ran' }, '')).toBe('Ran into them');
+    expect(whatDone(line({ kind: 'pitch' }), '')).toBe('Pitched them'); // no name: no pronoun either
   });
   it('a note with only its words, or only how, and no time kept', () => {
     const lines = [

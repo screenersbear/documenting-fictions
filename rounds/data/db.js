@@ -87,12 +87,14 @@ async function putStamped(store, list) {
   });
   if (changed) { heard(); tellOthers(); }
 }
-// Deletes a record, and keeps that it was deleted.
-async function dropStamped(store, key) {
+// Deletes a record (or a list of them), and keeps that it was deleted.
+async function dropStamped(store, keys) {
   const now = nowISO();
   await tx([store, 'tombstones'], 'readwrite', (s, tombs) => {
-    s.delete(key);
-    tombs.put({ id: key, store, deletedAt: now, createdAt: now, updatedAt: now });
+    for (const key of [].concat(keys)) {
+      s.delete(key);
+      tombs.put({ id: key, store, deletedAt: now, createdAt: now, updatedAt: now });
+    }
   });
   heard();
   tellOthers();
@@ -102,10 +104,13 @@ export const listPeople = () => all('people');
 export const getPerson = (id) => one('people', id);
 export const savePeople = (list) => putStamped('people', list);
 export const savePerson = (p) => putStamped('people', [p]);
+export const dropPerson = (id) => dropStamped('people', id);
 
 export const logMove = (m) => putStamped('moves', [m]);
+export const logMoves = (list) => putStamped('moves', list);
 export const listMoves = () => all('moves');
 export const dropMove = (id) => dropStamped('moves', id);
+export const dropMoves = (ids) => dropStamped('moves', ids);
 
 // A photo as a Blob, fresh each time (null if there's none).
 export async function getPhoto(id) {

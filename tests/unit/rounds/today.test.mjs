@@ -120,6 +120,10 @@ describe('doneOn', () => {
     const lines = [line('1', 'gone', T, 1), line('2', 'nobody', T, 2), line('3', 'a', T, 3, 'wave'), line('4', 'b', T, 4, null)];
     expect(doneOn(lines, people, T)).toEqual([]);
   });
+  it('keeps a move logged as Other, and one that was not the due one', () => {
+    const lines = [line('1', 'a', T, 1, 'other'), { ...line('2', 'b', T, 2, 'hello'), extra: true }];
+    expect(doneOn(lines, people, T).map((d) => d.line.id)).toEqual(['2', '1']);
+  });
   it('is empty with no lines or no people', () => {
     expect(doneOn([], people, T)).toEqual([]);
     expect(doneOn([line('1', 'a', T, 1)], [], T)).toEqual([]);

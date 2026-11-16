@@ -26,6 +26,12 @@ export const KINDS = {
   pitch: kind('Pitch', '#FF8A3D', '#313D45', 'tag', "Hi [name], I'm a portrait photographer in [city]. I'd love to make some pictures with you. Could I send a few ideas?"),
 };
 export const KIND_KEYS = Object.keys(KINDS);
+// A move logged as Other on the one sheet (Tightening Rounds, 16 Nov:
+// data/one-move.js). Rounds never plans one, so it isn't in KINDS, but it's
+// drawn like the rest: a quiet grey, the tag mark. lookOf: any kind's look.
+export const OTHER = 'other';
+export const OTHER_LOOK = kind('Other', '#C8CBCA', '#313D45', 'tag', '');
+export const lookOf = (key) => KINDS[key] || OTHER_LOOK;
 // The order Messages lists them in (as 05-messages).
 export const MESSAGE_ORDER = ['thanks', 'yes', 'photos', 'hello', 'checkin', 'refresh', 'intros', 'pitch', 'followup'];
 
@@ -40,7 +46,7 @@ export const messageWord = (key) => MESSAGE_WORDS[key] || 'own';
 // drawn in the thank-yous' mango and sun, as its mockup has it. Every place
 // that names or draws a move (or a done move's line) asks these.
 export const YEAR_NAME = 'A year since';
-export const moveName = (m) => (m.year ? YEAR_NAME : KINDS[m.kind].name);
+export const moveName = (m) => (m.year ? YEAR_NAME : lookOf(m.kind).name);
 export const moveLook = (m) => (m.year ? 'photos' : m.kind);
 
 // A kind from how a person (or a file) writes it: "Say hello", "ask for intros", "checkin".
@@ -51,6 +57,6 @@ export function kindFromName(text) {
 
 // A kind's mark as an svg, size px square, in its mark colour.
 export function markSvg(key, size) {
-  const k = KINDS[key];
+  const k = lookOf(key);
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="${k.fg}" aria-hidden="true">${MARKS[k.mark]}</svg>`;
 }

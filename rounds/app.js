@@ -85,12 +85,15 @@ function onSynced(r) {
 
 window.addEventListener('hashchange', route);
 // Opened at a person from their page on the shelf (?person=<id>; with
-// &moment=1 ADD A MOMENT opens there), or at their move from The Eye's Say
+// &moment=1 ADD A MOMENT opens there, with &said=<line> What you said for
+// one of their moves), or at their move from The Eye's Say
 // thanks (&move=1: the move opens there).
 if (suite && suite.get && suite.get('person')) {
   for (const [param, key] of [['move', 'rounds-open-move'], ['moment', 'rounds-open-moment']]) {
     if (suite.get(param)) { try { sessionStorage.setItem(key, suite.get('person')); } catch (e) { /* the person page, then */ } }
   }
+  // A move tapped there (&said=<its line>): What you said opens for it.
+  if (suite.get('said')) { try { sessionStorage.setItem('rounds-open-said', suite.get('said')); } catch (e) { /* the person page, then */ } }
   history.replaceState(null, '', `#/person/${encodeURIComponent(suite.get('person'))}`);
 }
 else if ((location.hash || '#/') === '#/') history.replaceState(null, '', suite && suite.at ? `#/${suite.at}` : '#/today');

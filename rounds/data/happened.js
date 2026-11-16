@@ -9,7 +9,7 @@ import { firstName } from './fill.js';
 const DONE = {
   thanks: 'you said thanks', yes: 'you said thanks for the yes', photos: 'you let [whom] know the photos were up',
   hello: 'you said hello', checkin: 'you checked in', intros: 'you asked [whom] for intros',
-  refresh: 'you offered [whom] a refresh', followup: 'you followed up', pitch: 'you pitched [whom]',
+  refresh: 'you offered [whom] a refresh', followup: 'you followed up', pitch: 'you pitched [whom]', other: 'you reached out',
 };
 const ANSWERED = { yes: '[who] said yes', no: '[who] said not now' };
 const MOST = 5;

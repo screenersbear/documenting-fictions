@@ -17,7 +17,7 @@ import { isDay } from './dates.js';
 const WHAT = {
   thanks: 'Said thanks', yes: 'Said thanks for the yes', photos: 'Told [who] the photos were up',
   hello: 'Said hello', checkin: 'Checked in', intros: 'Asked [who] for intros',
-  refresh: 'Offered [who] a refresh', followup: 'Followed up', pitch: 'Pitched [who]',
+  refresh: 'Offered [who] a refresh', followup: 'Followed up', pitch: 'Pitched [who]', other: 'Reached out',
 };
 const YEAR = 'Sent a final, a year on';
 const ANSWERED = { yes: '[who] said yes', no: '[who] said not now' };
@@ -30,6 +30,10 @@ function lineRow(l, fill, name) {
   if (l.kind === MOMENT_KIND) return row({ id: l.id, day: l.day, at: l.at || 0, kind: 'moment', look: 'moment', mark: 'rounds', what: momentWhat(l.what, name), how: l.what || 'other', note: l.note || '' });
   return row({ id: l.id, day: l.day, at: l.at || 0, kind: 'move', look: l.year ? 'photos' : l.kind, what: l.year ? YEAR : fill(WHAT[l.kind]), how: l.how || '', howWords: howWords(l), note: l.note || '' });
 }
+
+// What a line of the log says was done ("Checked in", "Sent photos"), for
+// People's last thing and Reach out to (data/people-find.js).
+export const whatDone = (l, name) => lineRow(l, (s) => s.replace('[who]', firstName(name) || 'them'), name).what;
 
 // person: as Rounds keeps them; lines: the moves log; shoots: The Eye's
 // (data/eye.js eyeShoots), for theirs.

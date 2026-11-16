@@ -4,7 +4,7 @@
 // the shoot's finals with SHARE THE PHOTO; once it's done, the move they had
 // comes back. Once per shoot: opened again, it doesn't come back.
 import { test, expect } from '@playwright/test';
-import { openRounds, goTo, opened, useMessage, skipNote } from './_rounds.mjs';
+import { openRounds, goTo, opened, useMessage, doneNoSheet } from './_rounds.mjs';
 
 // June on three delivered shoots in The Eye (so a Regular), the last of them
 // a year ago today; Leo on that one only (New: his card is a plain Check in).
@@ -44,7 +44,7 @@ test("a year after a delivered shoot: A YEAR SINCE for its Regular, with one of 
 
   await finals(page);
   await card.click();
-  const move = await opened(page, 'A year since');
+  const move = await opened(page, 'June Park');
   await expect(move.locator('.move-final img')).toBeVisible();
   expect(await move.locator('.move-final img').getAttribute('src')).toMatch(/^data:image\/jpeg/);
   await useMessage(move, 'check-in', "Hey June, it's been a minute. Want to plan the next one?");
@@ -54,9 +54,8 @@ test("a year after a delivered shoot: A YEAR SINCE for its Regular, with one of 
   // WebKit on Linux (the iPhone tests on GitHub) puts _ for each space in the name.
   expect(download.suggestedFilename().replace(/_/g, ' ')).toBe('Rooftop portraits.jpg');
   await expect(page.locator('#toast')).toContainText('The photo is in your downloads.');
-  await move.locator('.move-more [data-done]').click();
-  await expect(page.locator('#toast')).toContainText('Done.');
-  await skipNote(page, 'June Park');
+  await move.locator('[data-done]').click();
+  await doneNoSheet(page);
   // Leo, New, has his Check in from the shoot, not A year since.
   await expect(card.locator('.card-name')).toHaveText('Leo Grant');
   await expect(card.locator('.tag')).toHaveText('Check in');
@@ -80,7 +79,7 @@ test("a year since with no finals kept: the card and its message, no photo", asy
   await page.locator('#view .person-card', { hasText: 'June Park' }).click();
   await expect(page.locator('#view .person-next-what')).toHaveText('A year since');
   await page.locator('#view [data-move]').click();
-  const move = await opened(page, 'A year since');
+  const move = await opened(page, 'June Park');
   await useMessage(move, 'check-in', "Hey June, it's been a minute. Want to plan the next one?");
   await page.waitForTimeout(400);
   await expect(move.locator('.move-final')).toBeHidden();

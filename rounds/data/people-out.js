@@ -12,21 +12,18 @@ import { doneSoFar } from './so-far.js';
 import { momentChoices } from './moments.js';
 import { eyePhoto, eyeShoots } from './eye.js';
 import { yearTally } from './year-tally.js';
-import { KINDS, markSvg, moveLook } from './kinds.js';
+import { lookOf, markSvg, moveLook } from './kinds.js';
 import { phrase } from './reasons.js';
 import { GROUPS, groupWords } from './plan.js';
-import { dueWords, dayOf } from './dates.js';
+import { dayOf } from './dates.js';
 import { whenDue } from './work-days.js';
 import { getWeek } from './moves.js';
+import { dueLine } from './people-find.js';
 
 const D = () => window.DFData;
 
-// When the move's due, as the person page says it: Due today, Due tomorrow,
-// Due Thursday, Due 2 Dec.
-export function dueLine(next, week, today) {
-  const w = dueWords(whenDue(next, week, today), today);
-  return `Due ${w === 'Today' || w === 'Tomorrow' ? w.toLowerCase() : w}`;
-}
+// When the move's due, as the person page says it (data/people-find.js).
+export { dueLine };
 
 // A Rounds person as the list knows them: found again by their id.
 export const listedAs = (p) => ({ name: p.name, instagram: p.instagram, tiktok: p.tiktok, roundsId: p.id, at: p.updatedAt || '' });
@@ -57,12 +54,12 @@ export function personThing(p, today, week, ownPhoto, lines = [], shoots = []) {
     people: [listedAs(p)],
     params: { person: p.id },
     more: {
-      next: { title: what, line: when, bg: next ? KINDS[moveLook(next)].bg : '#E1E1DC', icon: next ? markSvg(moveLook(next), 10) : '' },
+      next: { title: what, line: when, bg: next ? lookOf(moveLook(next)).bg : '#E1E1DC', icon: next ? markSvg(moveLook(next), 10) : '' },
       group: GROUPS[p.group] ? groupWords(p) : '',
       happened: happened(p, lines),
       // SO FAR (thanks/06), each with its mark: a move's own, or a
       // notebook's (mark), which the shelf draws.
-      done: doneSoFar(p, lines, shoots).map((r) => ({ ...r, bg: r.mark ? '' : KINDS[r.look].bg, icon: r.mark ? '' : markSvg(r.look, 10) })),
+      done: doneSoFar(p, lines, shoots).map((r) => ({ ...r, bg: r.mark ? '' : lookOf(r.look).bg, icon: r.mark ? '' : markSvg(r.look, 10) })),
       hows: { ...HOW_CHOICES, moment: momentChoices(p.name) },
       // A Say thanks waiting, for The Eye's nudge on a captured shoot (thanks/01).
       thanks: next && next.kind === 'thanks' ? { due: whenDue(next, week, today), shoots: p.shoots || [] } : null,

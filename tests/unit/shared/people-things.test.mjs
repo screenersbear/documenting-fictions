@@ -208,3 +208,25 @@ describe('search', () => {
     expect([p.person.name, p.role, p.rounds.key, p.rounds.more.group]).toEqual(['June Park', 'Talent', 'rounds:r1', 'Regular']);
   });
 });
+
+describe('forgetPerson (a notebook deleted someone, 16 Nov)', () => {
+  const maya = { name: 'Maya Rios', instagram: 'maya.rr', roundsId: 'r9' };
+  const roundsThing = { id: 'r9', kind: 'person', title: 'Maya Rios', people: [maya] };
+  it('their record goes, and the notebook\'s things with them, when no other notebook has them', async () => {
+    await D.publishThings('rounds', [roundsThing, { id: 'r1', kind: 'person', title: 'June Park', people: [{ ...june, roundsId: 'r1' }] }]);
+    expect(await D.forgetPerson('rounds', maya)).toBe('gone');
+    expect((await D.peopleAll()).map((r) => r.name)).toEqual(['June Park']);
+    expect((await D.thingsAll()).map((t) => t.key)).toEqual(['rounds:r1']);
+  });
+  it('another notebook still has them: only this notebook\'s find of them goes', async () => {
+    await D.publishThings('rounds', [roundsThing]);
+    await D.publishThings('the-eye', [{ id: 's1', title: 'Rooftop', day: '2026-11-07', people: [{ name: 'Maya Rios', instagram: 'maya.rr', role: 'Talent' }] }]);
+    expect(await D.forgetPerson('rounds', maya)).toBe('kept');
+    const [r] = await D.peopleAll();
+    expect(r.sigs).not.toContain('rounds:r9');
+    expect((await D.thingsAll()).map((t) => t.key)).toEqual(['the-eye:s1']);
+  });
+  it('null when the list never had them', async () => {
+    expect(await D.forgetPerson('rounds', maya)).toBeNull();
+  });
+});

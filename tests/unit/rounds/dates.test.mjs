@@ -1,6 +1,6 @@
 // rounds/data/dates.js: days as 'YYYY-MM-DD' in the phone's own time, and how they read.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { dayOf, dateOf, isDay, addDays, daysBetween, later, shortDay, whenWords, dueWords, sinceWords, agoWords } from '../../../rounds/data/dates.js';
+import { dayOf, dateOf, isDay, addDays, daysBetween, later, shortDay, longDay, whenWords, dueWords, sinceWords, agoWords } from '../../../rounds/data/dates.js';
 
 afterEach(() => vi.useRealTimers());
 const SAT = '2026-11-14'; // a Saturday
@@ -141,5 +141,13 @@ describe('agoWords', () => {
   });
   it('now, unless given', () => {
     expect(agoWords(new Date().toISOString())).toBe('just now');
+  });
+});
+
+describe('longDay', () => {
+  it('is a day with its weekday, short (blank for none)', () => {
+    expect(longDay('2026-11-16')).toBe('Mon 16 Nov');
+    expect(longDay('2026-11-22')).toBe('Sun 22 Nov');
+    expect(longDay('soon')).toBe('');
   });
 });

@@ -459,7 +459,7 @@ function resolvedRecord(c, side) {
 		createdAt: c.mine.createdAt || c.theirs.createdAt
 	};
 }
-function both(s, l, r, b, ltomb, rtomb, now) {
+function both$1(s, l, r, b, ltomb, rtomb, now) {
 	if (same(l, r)) return {};
 	if (!b) {
 		const tomb = rtomb || ltomb;
@@ -492,6 +492,7 @@ function both(s, l, r, b, ltomb, rtomb, now) {
 		updatedAt: now
 	} };
 }
+__name(both$1, "both");
 function planMerge(local, remote, base, { now = new Date().toISOString() } = {}) {
 	const puts = Object.fromEntries(STORES.map((s) => [s, []]));
 	const dels = Object.fromEntries(STORES.map((s) => [s, []]));
@@ -512,7 +513,7 @@ function planMerge(local, remote, base, { now = new Date().toISOString() } = {})
 			const b = base && base[s] && base[s][id] || null;
 			const [ltomb, rtomb] = [lt.get(id), rt.get(id)];
 			if (l && r) {
-				const out = both(s, l, r, b, ltomb, rtomb, now);
+				const out = both$1(s, l, r, b, ltomb, rtomb, now);
 				if (out.conflict) hold(out.conflict);
 				else if (out.put) puts[s].push(out.put);
 				else if (out.del) dels[s].push(id);
@@ -686,17 +687,19 @@ async function putStamped(store, list) {
 		tellOthers();
 	}
 }
-async function dropStamped(store, key) {
+async function dropStamped(store, keys) {
 	const now = nowISO();
 	await tx([store, "tombstones"], "readwrite", (s, tombs) => {
-		s.delete(key);
-		tombs.put({
-			id: key,
-			store,
-			deletedAt: now,
-			createdAt: now,
-			updatedAt: now
-		});
+		for (const key of [].concat(keys)) {
+			s.delete(key);
+			tombs.put({
+				id: key,
+				store,
+				deletedAt: now,
+				createdAt: now,
+				updatedAt: now
+			});
+		}
 	});
 	heard();
 	tellOthers();
@@ -705,9 +708,12 @@ const listPeople = () => all("people");
 const getPerson = (id) => one("people", id);
 const savePeople = (list) => putStamped("people", list);
 const savePerson = (p) => putStamped("people", [p]);
+const dropPerson = (id) => dropStamped("people", id);
 const logMove = (m) => putStamped("moves", [m]);
+const logMoves = (list) => putStamped("moves", list);
 const listMoves = () => all("moves");
 const dropMove = (id) => dropStamped("moves", id);
+const dropMoves = (ids) => dropStamped("moves", ids);
 async function getPhoto(id) {
 	const r = await one("photos", id);
 	return r ? new Blob([r.bytes], { type: r.type }) : null;
@@ -828,6 +834,7 @@ const daysBetween = (a, b) => Math.round((dateOf(b) - dateOf(a)) / 864e5);
 const later = (a, b) => a > b ? a : b;
 const short = (d) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 const shortDay = (day) => isDay(day) ? short(dateOf(day)) : "";
+const longDay = (day) => isDay(day) ? `${WEEKDAYS$1[dateOf(day).getDay()].slice(0, 3)} ${short(dateOf(day))}` : "";
 function whenWords(day, today) {
 	const n = daysBetween(day, today);
 	if (n === 0) return "today";
@@ -1055,6 +1062,9 @@ const KINDS = {
 	pitch: kind("Pitch", "#FF8A3D", "#313D45", "tag", "Hi [name], I'm a portrait photographer in [city]. I'd love to make some pictures with you. Could I send a few ideas?")
 };
 const KIND_KEYS = Object.keys(KINDS);
+const OTHER = "other";
+const OTHER_LOOK = kind("Other", "#C8CBCA", "#313D45", "tag", "");
+const lookOf = (key) => KINDS[key] || OTHER_LOOK;
 const MESSAGE_ORDER = [
 	"thanks",
 	"yes",
@@ -1080,14 +1090,14 @@ const MESSAGE_WORDS = {
 };
 const messageWord = (key) => MESSAGE_WORDS[key] || "own";
 const YEAR_NAME = "A year since";
-const moveName = (m) => m.year ? YEAR_NAME : KINDS[m.kind].name;
+const moveName = (m) => m.year ? YEAR_NAME : lookOf(m.kind).name;
 const moveLook = (m) => m.year ? "photos" : m.kind;
 function kindFromName(text) {
 	const t = String(text ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 	return KIND_KEYS.find((k) => KINDS[k].name.toLowerCase() === t || k === t.replace(/ /g, "")) || null;
 }
 function markSvg(key, size) {
-	const k = KINDS[key];
+	const k = lookOf(key);
 	return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="${k.fg}" aria-hidden="true">${MARKS$1[k.mark]}</svg>`;
 }
 
@@ -1496,13 +1506,13 @@ async function keepPhoto(person, file) {
 	} finally {
 		URL.revokeObjectURL(url);
 	}
-	forget(person.id);
+	forgetPhoto(person.id);
 }
 async function removePhoto(person) {
 	await dropPhoto(person.id);
-	forget(person.id);
+	forgetPhoto(person.id);
 }
-function forget(id) {
+function forgetPhoto(id) {
 	const old = srcs.get(id);
 	srcs.delete(id);
 	old?.then((src) => {
@@ -1584,7 +1594,7 @@ const comesUp = (next, today, week) => !!next && whenDue(next, week, today) <= t
 
 // data/today.js
 const PER_DAY = 3;
-const MOST$3 = 5;
+const MOST$4 = 5;
 const rank = (k) => KIND_KEYS.indexOf(k);
 const perDayOf = (n) => Math.min(5, Math.max(1, Math.floor(Number(n)) || 3));
 const isDue = (p, today, week) => !p.letGo && comesUp(p.next, today, week);
@@ -1609,7 +1619,7 @@ function doneOn(lines, people, day) {
 	const byId = new Map(people.filter((p) => !p.letGo).map((p) => [p.id, p]));
 	const latest = new Map();
 	for (const l of lines) {
-		if (l.day !== day || !byId.has(l.personId) || !KIND_KEYS.includes(l.kind)) continue;
+		if (l.day !== day || !byId.has(l.personId) || !(KIND_KEYS.includes(l.kind) || l.kind === "other")) continue;
 		const had = latest.get(l.personId);
 		if (!had || (l.at || 0) > (had.at || 0)) latest.set(l.personId, l);
 	}
@@ -1647,28 +1657,6 @@ function stops$1(n) {
 	});
 }
 __name(stops$1, "stops");
-
-// data/shelf-items.js
-const DAYS_AHEAD = 14;
-function shelfItems(people, saved, today, perDay, week, days = 14) {
-	const byId = new Map(people.map((p) => [p.id, p]));
-	const items = [];
-	for (let n = 0; n < days; n++) {
-		const day = addDays(today, n);
-		const pick = pickFor(people, n === 0 ? saved : null, day, perDay, week);
-		for (const id of waiting$1(pick)) {
-			const p = byId.get(id);
-			items.push({
-				title: p.name,
-				line: moveName(p.next),
-				from: day,
-				until: day,
-				params: { at: "today" }
-			});
-		}
-	}
-	return items;
-}
 
 // data/fill.js
 const FILLS = [
@@ -1732,7 +1720,7 @@ const NOTE_WORDS = {
 	instagram: "on Instagram"
 };
 const howWords = (line) => (line.kind === "note" ? NOTE_WORDS : HOW_WORDS)[line.how] || "";
-const MOST$2 = 500;
+const MOST$3 = 500;
 const HOW_CHOICES = {
 	move: Object.keys(HOWS).map((k) => [
 		k,
@@ -1751,7 +1739,7 @@ function howFromGo(went) {
 	if (w === "email" || w === "gmail") return "email";
 	return "";
 }
-const cleanNote = (v) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, MOST$2);
+const cleanNote = (v) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, MOST$3);
 const quickTaps = (name) => [
 	`${firstName(name) || "They"} reached out first`,
 	"Wants to shoot again",
@@ -1788,6 +1776,191 @@ const noteLine = (personId, day, { how, note }, id, at) => withHowNote({
 	note
 }, NOTE_HOWS_KEPT);
 
+// data/moments.js
+const MOMENT_KIND = "moment";
+const MOMENTS = {
+	photos: "Sent photos",
+	text: "Texted",
+	call: "Called",
+	instagram: "Messaged on Instagram",
+	ran: "Ran into [who]",
+	met: "Met up",
+	comment: "Commented on a post",
+	other: "Other"
+};
+const MOVES_OUT = {
+	checkin: GAP.checkin,
+	refresh: GAP.client,
+	intros: GAP.client
+};
+const NEXT_WORDS = {
+	checkin: "next check-in",
+	refresh: "next refresh offer",
+	intros: "next ask for intros"
+};
+const who = (s, name) => s.replace("[who]", firstName(name) || "them");
+const momentChoices = (name) => Object.keys(MOMENTS).map((k) => [
+	k,
+	who(MOMENTS[k], name),
+	k === "other" ? "A moment" : who(MOMENTS[k], name)
+]);
+const momentWhat = (what, name) => MOMENTS[what] && what !== "other" ? who(MOMENTS[what], name) : "A moment";
+function momentLine(personId, { what, day, note, keeps = true }, id, at) {
+	const line = {
+		id,
+		at,
+		personId,
+		kind: MOMENT_KIND,
+		day,
+		what: MOMENTS[what] ? what : "other",
+		keeps: keeps !== false
+	};
+	const n = cleanNote(note);
+	if (n) line.note = n;
+	return line;
+}
+function afterMoment(person, line) {
+	if (!line.keeps) return {
+		person,
+		line
+	};
+	const out = {
+		...person,
+		lastMove: later(person.lastMove || "", line.day)
+	};
+	const kept = {
+		...line,
+		wasLast: person.lastMove || ""
+	};
+	const next = person.next;
+	if (next && !person.letGo && MOVES_OUT[next.kind]) {
+		const due = later(next.due, addDays(line.day, MOVES_OUT[next.kind]));
+		if (due !== next.due) {
+			out.next = {
+				...next,
+				due
+			};
+			kept.moved = {
+				from: next.due,
+				to: due
+			};
+		}
+	}
+	return {
+		person: out,
+		line: kept
+	};
+}
+function withoutMoment(person, line, lines = []) {
+	const out = { ...person };
+	const m = line.moved;
+	if (m && person.next && person.next.due === m.to) out.next = {
+		...person.next,
+		due: m.from
+	};
+	if (line.keeps && person.lastMove === line.day) {
+		const counts = (l) => l.personId === person.id && l.id !== line.id && l.day && (l.kind !== "moment" || l.keeps);
+		out.lastMove = [line.wasLast || "", ...lines.filter(counts).map((l) => l.day)].sort().pop();
+	}
+	return out;
+}
+function keepWords(person, day, today) {
+	const whose = firstName(person.name) ? `${firstName(person.name)}'s` : "Their";
+	const when = day === today ? "today" : "that day";
+	const next = person.next && !person.letGo ? person.next : null;
+	if (next && NEXT_WORDS[next.kind]) return `${whose} ${NEXT_WORDS[next.kind]} moves out from ${when}.`;
+	return next ? `${whose} next move stays as it is.` : "Counts as the last time you were in touch.";
+}
+
+// data/one-move.js
+const KIND_CHIPS = [
+	["checkin", "Check in"],
+	["thanks", "Say thanks"],
+	["hello", "Say hello"],
+	["ask", "Ask"],
+	["pitch", "Pitch"],
+	[OTHER, "Other"]
+];
+const CHIP_KINDS = {
+	checkin: ["checkin"],
+	thanks: [
+		"thanks",
+		"yes",
+		"photos"
+	],
+	hello: ["hello"],
+	ask: ["intros", "refresh"],
+	pitch: ["pitch", "followup"],
+	other: [OTHER]
+};
+const chipOf = (kind) => Object.keys(CHIP_KINDS).find((c) => CHIP_KINDS[c].includes(kind)) || "other";
+const startChip = (person) => person.next && !person.letGo ? chipOf(person.next.kind) : "checkin";
+const doesDue = (person, chip) => !!(person.next && !person.letGo && (CHIP_KINDS[chip] || []).includes(person.next.kind));
+const kindFor = (person, chip) => doesDue(person, chip) ? person.next.kind : (CHIP_KINDS[chip] || ["other"])[0];
+function extraMove(person, kind, day, fields, id, at) {
+	const line = withHowNote({
+		id,
+		at,
+		personId: person.id,
+		kind,
+		day,
+		extra: true,
+		keeps: true
+	}, fields);
+	return afterMoment(person, line);
+}
+const WITH = {
+	thanks: "Said thanks to [who]",
+	yes: "Said thanks to [who] for the yes",
+	photos: "Told [who] the photos were up",
+	hello: "Said hello to [who]",
+	checkin: "Checked in with [who]",
+	intros: "Asked [who] for intros",
+	refresh: "Offered [who] a refresh",
+	followup: "Followed up with [who]",
+	pitch: "Pitched [who]",
+	other: "Reached out to [who]"
+};
+function withWords(line, name) {
+	const who = firstName(name) || "them";
+	if (line.year) return `Sent ${who} a final, a year on`;
+	return (WITH[line.kind] || WITH.other).replace("[who]", who);
+}
+function afterDelete(person, line, lines, today) {
+	if (line.extra) return withoutMoment(person, line, lines);
+	const mine = lines.filter((l) => l.personId === person.id && !l.extra && l.kind !== "moment" && l.kind !== "note");
+	const last = mine.reduce((a, b) => (b.at || 0) > (a.at || 0) ? b : a, mine[0] || line);
+	if (line.day === today && last.id === line.id) return undoDone$1(person, line, lines);
+	const rest = lines.filter((l) => l.personId === person.id && l.id !== line.id && l.day && (l.kind !== "moment" || l.keeps)).map((l) => l.day);
+	return {
+		...person,
+		lastMove: rest.sort().pop() || ""
+	};
+}
+const undoesDue = (person, line, lines, today) => !line.extra && afterDelete(person, line, lines, today).next !== person.next;
+
+// data/shelf-items.js
+const DAYS_AHEAD = 14;
+function shelfItems(people, saved, today, perDay, week, days = 14) {
+	const byId = new Map(people.map((p) => [p.id, p]));
+	const items = [];
+	for (let n = 0; n < days; n++) {
+		const day = addDays(today, n);
+		const pick = pickFor(people, n === 0 ? saved : null, day, perDay, week);
+		for (const id of waiting$1(pick)) {
+			const p = byId.get(id);
+			items.push({
+				title: p.name,
+				line: moveName(p.next),
+				from: day,
+				until: day,
+				params: { at: "today" }
+			});
+		}
+	}
+	return items;
+}
+
 // data/moves.js
 const getWeek = async () => weekOf(...await Promise.all([getSetting("workDays", null), getSetting("daysOff", null)]));
 const loadAll = () => Promise.all([
@@ -1814,13 +1987,17 @@ async function markInPick(id, how) {
 	if (!pick || pick.date !== dayOf() || !pick.ids.includes(id)) return;
 	await setSetting("pick", how ? markPick(pick, id, how) : unmarkPick(pick, id));
 }
-async function doMove(person, said = "") {
+async function doMove(person, said = "", { how, note } = {}) {
 	const { person: after, log } = markDone(person, dayOf());
 	const line = withHowNote({
 		id: uuid(),
 		at: Date.now(),
 		...log
-	}, { said });
+	}, {
+		said,
+		how,
+		note
+	});
 	await savePerson(after);
 	await logMove(line);
 	await markInPick(person.id, "done");
@@ -1831,11 +2008,11 @@ async function doMove(person, said = "") {
 		line
 	};
 }
-async function saveHowNote(line, { how, note }) {
+async function saveHowNote(line, { how, note, said = line.said }) {
 	const next = withHowNote(line, {
 		how,
 		note,
-		said: line.said
+		said
 	}, HOWS);
 	await logMove(next);
 	return next;
@@ -1864,9 +2041,10 @@ async function loadDone() {
 	};
 }
 async function undoDone({ line, person }, lines) {
-	await savePerson(undoDone$1(person, line, lines));
+	const today = dayOf();
+	await savePerson(afterDelete(person, line, lines, today));
 	await dropMove(line.id);
-	await markInPick(person.id, null);
+	if (undoesDue(person, line, lines, today)) await markInPick(person.id, null);
 }
 async function laterMove(person) {
 	const after = markLater(person, dayOf());
@@ -1881,65 +2059,6 @@ async function getMe() {
 		offer,
 		city
 	};
-}
-
-// components/marks.js
-function tagHtml(kind, name = KINDS[kind].name) {
-	const k = KINDS[kind];
-	return `<span class="tag" style="background:${k.bg};color:${k.fg}">${esc(name)}</span>`;
-}
-const flairHtml = (kind) => `<span class="flair" style="background:${KINDS[kind].bg}" aria-hidden="true">${markSvg(kind, 132)}</span>`;
-const miniHtml = (kind) => kind ? `<span class="mini" style="background:${KINDS[kind].bg}" aria-hidden="true">${markSvg(kind, 10)}</span>` : "";
-
-// pages/done-note.js
-const chipsHtml$2 = /* @__PURE__ */ __name((list, attr, on = "") => list.map(([k, label]) => `<button type="button" class="pick-chip${k === on ? " on" : ""}" ${attr}="${esc(k)}" aria-pressed="${k === on}">${esc(label)}</button>`).join(""), "chipsHtml");
-function openHowNote(person, line, how = "") {
-	const s = openSheet({
-		title: moveName(line),
-		className: "sheet-small done-note",
-		body: `
-      <div class="move-who">${photoHtml(person, "small")}<span class="move-who-words"><span class="move-name">${esc(person.name)}</span><span class="move-handle">Done today</span></span></div>
-      <p class="label done-note-label">How</p>
-      <div class="pick-chips" data-hows>${chipsHtml$2(Object.entries(HOWS), "data-how", how)}</div>
-      <label class="label done-note-label" for="doneNote">A note (optional)</label>
-      <textarea class="move-text done-note-text" id="doneNote" rows="3" maxlength="500"></textarea>
-      <div class="pick-chips" data-taps>${chipsHtml$2(quickTaps(person.name).map((t) => [t, t]), "data-tap")}</div>
-      <div class="done-note-btns"><button type="button" class="text-btn" data-skip>Skip</button><button type="button" class="btn primary" data-save>Save</button></div>`
-	});
-	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(moveLook(line), moveName(line));
-	fillPhotos(s.el, [person]);
-	const note = s.body.querySelector(".done-note-text");
-	s.body.addEventListener("click", async (e) => {
-		const b = e.target.closest("button");
-		if (!b) return;
-		if (b.dataset.how !== undefined) {
-			how = how === b.dataset.how ? "" : b.dataset.how;
-			s.body.querySelectorAll("[data-how]").forEach((c) => {
-				c.classList.toggle("on", c.dataset.how === how);
-				c.setAttribute("aria-pressed", c.dataset.how === how);
-			});
-		} else if (b.dataset.tap !== undefined) {
-			note.value = addTap(note.value, b.dataset.tap);
-			b.classList.add("on");
-		} else if (b.matches("[data-skip]")) s.close();
-		else if (b.matches("[data-save]")) {
-			if (how || note.value.trim()) await saveHowNote(line, {
-				how,
-				note: note.value
-			});
-			s.close();
-		}
-	});
-	return s;
-}
-async function moveDone(person, { said = "", how = "" } = {}, redraw, away = null) {
-	const [undo] = await Promise.all([doMove(person, said), away]);
-	await redraw();
-	toast("Done.", { action: {
-		label: "Undo",
-		run: () => undoMove(undo).then(redraw)
-	} });
-	return openHowNote(person, undo.line, how);
 }
 
 // data/reasons.js
@@ -1971,8 +2090,16 @@ function phrase(kind, name, year) {
 	return KINDS[kind].name;
 }
 
+// components/marks.js
+function tagHtml(kind, name = lookOf(kind).name) {
+	const k = lookOf(kind);
+	return `<span class="tag" style="background:${k.bg};color:${k.fg}">${esc(name)}</span>`;
+}
+const flairHtml = (kind) => `<span class="flair" style="background:${lookOf(kind).bg}" aria-hidden="true">${markSvg(kind, 132)}</span>`;
+const miniHtml = (kind) => kind ? `<span class="mini" style="background:${lookOf(kind).bg}" aria-hidden="true">${markSvg(kind, 10)}</span>` : "";
+
 // pages/today-card.js
-function cardHtml$1(p, today) {
+function cardHtml$2(p, today) {
 	const look = moveLook(p.next);
 	const handle = handleText(p);
 	const draft = draftWaiting(p);
@@ -1988,7 +2115,7 @@ function cardHtml$1(p, today) {
       </div>
     </div>`;
 }
-__name(cardHtml$1, "cardHtml");
+__name(cardHtml$2, "cardHtml");
 const behindHtml = (p, n) => `<div class="card behind-${n}" aria-hidden="true">${flairHtml(moveLook(p.next))}</div>`;
 const writeLabel = (p) => p.group === "prospect" ? "Write to them" : `Write to ${firstName(p.name)}`;
 const ARC = "M6 40 A34 34 0 0 1 ";
@@ -2104,6 +2231,69 @@ function cardAway(card, dir, dx = 0) {
 	});
 }
 
+// data/one-move-store.js
+async function keep$1(before, after) {
+	if (JSON.stringify(after) === JSON.stringify(before)) return;
+	await savePerson(after);
+	shelfAgain();
+}
+__name(keep$1, "keep");
+async function saveOneMove(person, chip, fields) {
+	if (doesDue(person, chip)) return doMove(person, fields.said, fields);
+	const { person: after, line } = extraMove(person, kindFor(person, chip), dayOf(), fields, uuid(), Date.now());
+	await logMove(line);
+	await keep$1(person, after);
+	return {
+		before: person,
+		after,
+		line
+	};
+}
+async function undoOneMove(done) {
+	if (!done.line.extra) {
+		await undoMove(done);
+		return;
+	}
+	await dropMove(done.line.id);
+	await keep$1(await getPerson(done.before.id), done.before);
+}
+async function deleteLine(person, line) {
+	const today = dayOf();
+	const lines = await listMoves();
+	const undone = undoesDue(person, line, lines, today);
+	await dropMove(line.id);
+	await keep$1(person, afterDelete(person, line, lines, today));
+	if (undone) await markInPick(person.id, null);
+	return {
+		before: person,
+		line,
+		undone
+	};
+}
+async function undoDelete({ before, line, undone }) {
+	await logMove(line);
+	await keep$1(await getPerson(before.id), before);
+	if (undone) await markInPick(before.id, "done");
+}
+
+// components/copy.js
+async function copy(text) {
+	try {
+		await navigator.clipboard.writeText(text);
+		return true;
+	} catch {
+		const t = document.createElement("textarea");
+		t.value = text;
+		t.setAttribute("readonly", "");
+		t.style.cssText = "position: fixed; opacity: 0;";
+		document.body.append(t);
+		t.select();
+		const ok = document.execCommand?.("copy");
+		t.remove();
+		return !!ok;
+	}
+}
+
 // components/files.js
 async function saveFile(file) {
 	if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -2142,23 +2332,9 @@ function pickFile(accept) {
 	});
 }
 
-// pages/move.js
-async function copy(text) {
-	try {
-		await navigator.clipboard.writeText(text);
-		return true;
-	} catch {
-		const t = document.createElement("textarea");
-		t.value = text;
-		t.setAttribute("readonly", "");
-		t.style.cssText = "position: fixed; opacity: 0;";
-		document.body.append(t);
-		t.select();
-		const ok = document.execCommand?.("copy");
-		t.remove();
-		return !!ok;
-	}
-}
+// pages/move-final.js
+const finalHtml = (year) => `<div class="move-final" hidden><img alt="${esc(`A final from ${year.shoot || "the shoot"}`)}" />
+  <button type="button" class="text-btn move-share" data-share data-test-skip>Share the photo</button></div>`;
 async function showFinal(box, year) {
 	const src = await eyePhoto(`${year.shootId}__final`);
 	if (!src || !box.isConnected) return;
@@ -2171,102 +2347,320 @@ async function showFinal(box, year) {
 		if (await saveFile(new File([blob], name, { type: blob.type || "image/jpeg" })) === "downloaded") toast("The photo is in your downloads.");
 	});
 }
-async function openMove(person, { onDone, onLater }) {
-	const kind = person.next.kind;
+
+// pages/one-sheet.js
+const chipHtml$1 = /* @__PURE__ */ __name((attr, k, label, on) => `<button type="button" class="pick-chip${on ? " on" : ""}" ${attr}="${esc(k)}" aria-pressed="${on}">${esc(label)}</button>`, "chipHtml");
+const setOn = (root, attr, k) => root.querySelectorAll(`[${attr}]`).forEach((c) => {
+	const on = c.getAttribute(attr) === k;
+	c.classList.toggle("on", on);
+	c.setAttribute("aria-pressed", String(on));
+});
+async function openOneMove(person, { chip, line = null, after = () => {} } = {}) {
+	const today = dayOf();
 	const [messages, me] = await Promise.all([getMessages(), getMe()]);
-	const text = fill(messages[kind] ?? KINDS[kind].starter, fillValues(person, me, dayOf()));
-	const where = contactFor(person);
-	const handle = handleText(person);
-	const draft = draftWaiting(person);
-	const year = person.next.year;
-	let away = false;
-	let went = "";
+	let pick = line ? chipOf(line.kind) : chip || startChip(person);
+	let how = line ? line.how || "" : "";
+	const day = line ? line.day : today;
+	const kinds = line ? KIND_CHIPS.filter(([k]) => k === pick) : KIND_CHIPS;
 	const s = openSheet({
-		title: moveName(person.next),
-		className: "move-sheet",
-		onClose: () => document.removeEventListener("visibilitychange", back),
+		title: person.name,
+		className: "one-sheet",
 		body: `
-      <div class="move-who">${photoHtml(person, "small")}<span class="move-who-words"><span class="move-name">${esc(person.name)}</span>${handle ? `<span class="move-handle">${esc(handle)}</span>` : ""}</span></div>
-      ${year ? `<div class="move-final" hidden><img alt="${esc(`A final from ${year.shoot || "the shoot"}`)}" />
-        <!-- SHARE THE PHOTO hands it to the phone's share sheet (a download on a computer): the button clicker leaves it alone. -->
-        <button type="button" class="text-btn move-share" data-share data-test-skip>Share the photo</button></div>` : ""}
-      ${draft ? "<p class=\"move-draft\">Draft waiting in Gmail, written by Claude.</p>" : `<label class="label" for="moveText">What did you say?</label>
-      <textarea class="move-text" id="moveText" rows="4" placeholder="Type it here, or use your message below."></textarea>
-      <button type="button" class="move-offer" data-offer><span class="move-offer-plus">${PLUS}</span><span><span class="move-offer-head">Use your ${esc(messageWord(person.next.kind))} message</span><span class="move-offer-text">${esc(text)}</span></span></button>`}
-      <div class="move-actions"></div>`
+      ${!line && person.next?.year ? finalHtml(person.next.year) : ""}
+      <p class="label one-label">What kind</p>
+      <div class="pick-chips">${kinds.map(([k, n]) => chipHtml$1("data-kind", k, n, k === pick)).join("")}</div>
+      <p class="move-draft" hidden>Draft waiting in Gmail, written by Claude.</p>
+      <label class="label one-label" for="oneSaid">What did you say?</label>
+      <textarea class="move-text one-said" id="oneSaid" rows="3">${esc(line?.said || "")}</textarea>
+      <button type="button" class="one-offer" data-offer>${PLUS}<span></span></button>
+      <p class="label one-label">How</p>
+      <div class="pick-chips">${Object.entries(HOWS).map(([k, n]) => chipHtml$1("data-how", k, n, k === how)).join("")}</div>
+      <label class="label one-label" for="oneNote">A note for you (optional)</label>
+      <textarea class="move-text one-note" id="oneNote" rows="1" maxlength="500" placeholder="Only you see this">${esc(line?.note || "")}</textarea>
+      <div class="one-btns"></div>`
 	});
-	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(moveLook(person.next), moveName(person.next));
+	s.el.querySelector(".sheet-header h2").innerHTML = `<span class="move-who">${photoHtml(person, "small")}<span class="move-who-words"><span class="move-name">${esc(person.name)}</span><span class="move-handle">${esc(day === today ? `Today, ${longDay(day)}` : longDay(day))}</span></span></span>`;
 	fillPhotos(s.el, [person]);
-	if (year) showFinal(s.body.querySelector(".move-final"), year);
-	const actions = s.body.querySelector(".move-actions");
-	const box = s.body.querySelector(".move-text");
+	if (!line && person.next?.year) showFinal(s.body.querySelector(".move-final"), person.next.year);
+	const box = s.body.querySelector(".one-said");
+	const note = s.body.querySelector(".one-note");
 	const offer = s.body.querySelector("[data-offer]");
-	const useMessage = () => {
-		if (!offer || offer.hidden) return;
-		box.value = text;
-		offer.hidden = true;
-	};
-	offer?.addEventListener("click", () => {
-		useMessage();
-		box.focus();
-	});
-	const said = () => ({
-		said: box ? box.value : "",
-		how: howFromGo(went)
-	});
-	const buttons = () => {
-		actions.innerHTML = `
-      ${draft ? `<button type="button" class="btn primary move-go" data-gmail data-test-skip>Open Gmail ${ARROW}</button>` : `<button type="button" class="btn primary move-go" data-go ${where ? "data-test-skip" : ""}>${where ? `Copy and open ${esc(where.how)}` : "Copy the message"} ${ARROW}</button>`}
-      <div class="move-more"><button type="button" class="text-btn" data-done>Done</button><button type="button" class="text-btn" data-later>Later</button></div>`;
-	};
-	buttons();
-	function back() {
-		if (document.hidden || !away) return;
-		away = false;
-		actions.innerHTML = `<p class="move-ask">Done?</p>
-      <div class="move-ask-btns"><button type="button" class="btn secondary" data-not-yet>Not yet</button><button type="button" class="btn primary" data-done>Done</button></div>`;
+	const btns = s.body.querySelector(".one-btns");
+	const kind = () => line ? line.kind : kindFor(person, pick);
+	const starter = () => KINDS[kind()] ? fill(messages[kind()] ?? KINDS[kind()].starter, fillValues(person, me, today)) : "";
+	const drafted = () => !line && draftWaiting(person) && doesDue(person, pick);
+	const where = contactFor(person);
+	function draw() {
+		offer.hidden = !starter();
+		offer.querySelector("span").textContent = `Use your ${messageWord(kind())} message`;
+		s.body.querySelector(".move-draft").hidden = !drafted();
+		const go = drafted() ? "<button type=\"button\" class=\"btn secondary\" data-gmail data-test-skip>Open Gmail</button>" : `<button type="button" class="btn secondary" data-go ${where ? "data-test-skip" : ""}>${where ? "Copy and open" : "Copy"}</button>`;
+		btns.innerHTML = `${go}<button type="button" class="btn primary" data-done>Done</button>`;
 	}
-	document.addEventListener("visibilitychange", back);
-	actions.addEventListener("click", async (e) => {
+	draw();
+	const pickHow = (k) => {
+		how = k;
+		setOn(s.body, "data-how", how);
+	};
+	s.body.addEventListener("click", async (e) => {
 		const b = e.target.closest("button");
 		if (!b) return;
-		if (b.matches("[data-done]")) {
-			const r = said();
-			s.close();
-			onDone(r);
-		} else if (b.matches("[data-later]")) {
-			s.close();
-			onLater();
-		} else if (b.matches("[data-not-yet]")) buttons();
-		else if (b.matches("[data-gmail]")) {
-			away = true;
-			went = "gmail";
+		if (b.dataset.kind !== undefined && !line) {
+			pick = b.dataset.kind;
+			setOn(s.body, "data-kind", pick);
+			draw();
+		} else if (b.dataset.how !== undefined) pickHow(how === b.dataset.how ? "" : b.dataset.how);
+		else if (b.matches("[data-offer]")) {
+			box.value = starter();
+			box.focus();
+		} else if (b.matches("[data-gmail]")) {
+			pickHow("email");
 			window.open(GMAIL_DRAFTS, "_blank", "noopener");
 		} else if (b.matches("[data-go]")) {
-			if (!box.value.trim()) useMessage();
-			const words = box.value;
-			const copied = await copy(words);
-			const to = contactFor(person, words);
+			if (!box.value.trim()) box.value = starter();
+			const copied = box.value ? await copy(box.value) : false;
+			const to = contactFor(person, box.value);
 			if (!to) {
-				toast(copied ? "Copied." : "Select the message and copy it.");
+				toast(copied ? "Copied." : "Nothing to copy yet.");
 				return;
 			}
-			away = true;
-			went = to.how;
+			pickHow(howFromGo(to.how) || how);
 			window.open(to.url, "_blank", "noopener");
-			if (!copied) toast("Select the message and copy it.");
+			if (!copied && box.value) toast("Select the message and copy it.");
+		} else if (b.matches("[data-done]")) {
+			b.disabled = true;
+			const fields = {
+				said: box.value,
+				how,
+				note: note.value
+			};
+			const result = line ? await saveHowNote(line, fields) : await saveOneMove(person, pick, fields);
+			s.close();
+			after(result);
 		}
 	});
 	return s;
 }
 
+// pages/move-done.js
+async function swipeDone(person, redraw, away = null) {
+	const [done] = await Promise.all([doMove(person), away]);
+	await redraw();
+	toast("Done.", { action: {
+		label: "Add what you said",
+		run: () => openOneMove(done.after, {
+			line: done.line,
+			after: redraw
+		})
+	} });
+	return done;
+}
+function writeTo(person, redraw, { chip, gone = () => null } = {}) {
+	return openOneMove(person, {
+		chip,
+		after: async (done) => {
+			await gone(done);
+			await redraw();
+			toast("Done.", { action: {
+				label: "Undo",
+				run: () => undoOneMove(done).then(redraw)
+			} });
+		}
+	});
+}
+
+// data/so-far.js
+const WHAT = {
+	thanks: "Said thanks",
+	yes: "Said thanks for the yes",
+	photos: "Told [who] the photos were up",
+	hello: "Said hello",
+	checkin: "Checked in",
+	intros: "Asked [who] for intros",
+	refresh: "Offered [who] a refresh",
+	followup: "Followed up",
+	pitch: "Pitched [who]",
+	other: "Reached out"
+};
+const YEAR = "Sent a final, a year on";
+const ANSWERED$1 = {
+	yes: "[who] said yes",
+	no: "[who] said not now"
+};
+const SHOT = "Shot in The Eye.";
+const row$2 = /* @__PURE__ */ __name((o) => ({
+	id: "",
+	at: 0,
+	look: "",
+	mark: "",
+	how: "",
+	howWords: "",
+	note: "",
+	noteOnly: false,
+	...o
+}), "row");
+function lineRow(l, fill, name) {
+	if (l.kind === "note") return row$2({
+		id: l.id,
+		day: l.day,
+		at: l.at || 0,
+		kind: "note",
+		look: "note",
+		mark: "rounds",
+		what: "Note",
+		how: l.how || "",
+		howWords: howWords(l),
+		note: l.note || "",
+		noteOnly: true
+	});
+	if (l.kind === "moment") return row$2({
+		id: l.id,
+		day: l.day,
+		at: l.at || 0,
+		kind: "moment",
+		look: "moment",
+		mark: "rounds",
+		what: momentWhat(l.what, name),
+		how: l.what || "other",
+		note: l.note || ""
+	});
+	return row$2({
+		id: l.id,
+		day: l.day,
+		at: l.at || 0,
+		kind: "move",
+		look: l.year ? "photos" : l.kind,
+		what: l.year ? YEAR : fill(WHAT[l.kind]),
+		how: l.how || "",
+		howWords: howWords(l),
+		note: l.note || ""
+	});
+}
+const whatDone = (l, name) => lineRow(l, (s) => s.replace("[who]", firstName(name) || "them"), name).what;
+function doneSoFar(person, lines = [], shoots = []) {
+	const fill = (s) => s.replace("[who]", firstName(person.name) || "them");
+	const rows = lines.filter((l) => l.personId === person.id && l.day && (WHAT[l.kind] || l.kind === "note" || l.kind === "moment")).map((l) => lineRow(l, fill, person.name));
+	const pitch = person.pitch || {};
+	if (ANSWERED$1[pitch.answer] && pitch.on) rows.push(row$2({
+		day: pitch.on,
+		at: Infinity,
+		kind: "answer",
+		look: "pitch",
+		what: fill(ANSWERED$1[pitch.answer]).replace(/^them/, "They")
+	}));
+	const theirs = new Set(person.shoots || []);
+	for (const s of shoots || []) {
+		if (s && theirs.has(s.id) && isDay(s.date)) rows.push(row$2({
+			day: s.date,
+			at: -1,
+			kind: "shoot",
+			look: "shoot",
+			mark: "the-eye",
+			what: s.title || "A shoot",
+			note: SHOT
+		}));
+	}
+	return rows.sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at).map(({ at, ...r }) => r);
+}
+
+// data/people-find.js
+function dueLine(next, week, today) {
+	const w = dueWords(whenDue(next, week, today), today);
+	return `Due ${w === "Today" || w === "Tomorrow" ? w.toLowerCase() : w}`;
+}
+const fold$1 = /* @__PURE__ */ __name((v) => String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim().replace(/^@/, ""), "fold");
+function matches(p, q) {
+	const t = fold$1(q);
+	return !t || [
+		p.name,
+		p.instagram,
+		p.tiktok,
+		p.email,
+		p.note,
+		p.where
+	].some((v) => fold$1(v).includes(t));
+}
+const FILTERS = [
+	["all", "All"],
+	["due", "Due"],
+	["regular", "Regulars"],
+	["client", "Clients"],
+	["new", "New"],
+	["prospect", "Prospects"]
+];
+const dueNow = (p, week, today) => !!(p.next && !p.letGo && whenDue(p.next, week, today) <= today);
+function inFilter(p, f, week, today) {
+	if (f === "due") return dueNow(p, week, today);
+	return !GROUPS[f] || groupsOf(p).includes(f);
+}
+function lastLines(lines) {
+	const out = new Map();
+	for (const l of lines) {
+		if (!l.day || l.kind === "note") continue;
+		const had = out.get(l.personId);
+		if (!had || l.day > had.day || l.day === had.day && (l.at || 0) > (had.at || 0)) out.set(l.personId, l);
+	}
+	return out;
+}
+function lastWords(p, line, today) {
+	const what = whatDone(line, p.name);
+	return `${what[0].toLowerCase()}${what.slice(1)}, ${whenWords(line.day, today)}`;
+}
+const SORTS = [
+	["az", "A to Z"],
+	["next", "Next move"],
+	["recent", "Recently in touch"]
+];
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+const byDay = (x, y) => x < y ? -1 : x > y ? 1 : 0;
+function sortPeople(list, sort, last, week, today) {
+	const due = (p) => p.next && !p.letGo ? whenDue(p.next, week, today) : "~";
+	const when = (p) => last.get(p.id)?.day || "";
+	const order = {
+		next: (a, b) => byDay(due(a), due(b)) || byName(a, b),
+		recent: (a, b) => byDay(when(b), when(a)) || byName(a, b)
+	}[sort] || byName;
+	return [...list].sort(order);
+}
+function cardLine(p, line, week, today) {
+	const lastly = line ? `Last: ${lastWords(p, line, today)}` : "";
+	if (line && daysBetween(line.day, today) <= 7) return lastly;
+	return p.next && !p.letGo ? dueLine(p.next, week, today) : lastly;
+}
+const pickLine = (p, line, today) => [GROUPS[p.group] || GROUPS.new, line ? `last: ${lastWords(p, line, today)}` : ""].filter(Boolean).join(" · ");
+
+// components/person-search.js
+const MOST$2 = 40;
+const SEARCH = "<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"6.5\"/><path d=\"M16 16l4.5 4.5\"/></svg>";
+const searchBoxHtml = (placeholder, cls = "") => `<label class="find-box ${cls}">${SEARCH}<input type="search" data-find placeholder="${esc(placeholder)}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="${esc(placeholder)}" /></label>`;
+function wireSearch(root, people, lines, { onPick, onType = () => {} }) {
+	const today = dayOf();
+	const last = lastLines(lines);
+	const ordered = sortPeople(people, "recent", last, null, today);
+	const input = root.querySelector("[data-find]");
+	const found = root.querySelector("[data-found]");
+	const draw = () => {
+		const hits = ordered.filter((p) => matches(p, input.value)).slice(0, MOST$2);
+		found.innerHTML = hits.map((p) => `<button type="button" class="pick-row" data-pick="${esc(p.id)}">${photoHtml(p, "small")}
+      <span class="pick-row-words"><span class="pick-row-name">${esc(p.name)}</span><span class="pick-row-line">${esc(pickLine(p, last.get(p.id), today))}</span></span></button>`).join("");
+		fillPhotos(found, hits);
+		onType(input.value.trim());
+	};
+	input.addEventListener("input", draw);
+	found.addEventListener("click", (e) => {
+		const b = e.target.closest("[data-pick]");
+		if (b) onPick(people.find((p) => p.id === b.dataset.pick));
+	});
+	draw();
+}
+
 // pages/add-person.js
-function openAddPerson(onAdded) {
+function openAddPerson(onAdded, { name = "" } = {}) {
 	const s = openSheet({
 		title: "Add someone",
 		body: `
       <form class="form" data-form>
-        <label class="field"><span class="field-label">Name</span><input type="text" name="name" autocomplete="off" required /></label>
+        <label class="field"><span class="field-label">Name</span><input type="text" name="name" value="${esc(name)}" autocomplete="off" required /></label>
         <label class="field"><span class="field-label">Instagram</span><input type="text" name="instagram" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="@handle" /></label>
         <label class="field"><span class="field-label">Where you met</span><input type="text" name="where" autocomplete="off" placeholder="The Brooklyn portrait meetup" /></label>
         <div class="sheet-actions">
@@ -2295,100 +2689,32 @@ function openAddPerson(onAdded) {
 	return s;
 }
 
-// data/moments.js
-const MOMENT_KIND = "moment";
-const MOMENTS = {
-	photos: "Sent photos",
-	text: "Texted",
-	call: "Called",
-	instagram: "Messaged on Instagram",
-	ran: "Ran into [who]",
-	met: "Met up",
-	comment: "Commented on a post",
-	other: "Other"
-};
-const MOVES_OUT = {
-	checkin: GAP.checkin,
-	refresh: GAP.client,
-	intros: GAP.client
-};
-const NEXT_WORDS = {
-	checkin: "next check-in",
-	refresh: "next refresh offer",
-	intros: "next ask for intros"
-};
-const who = (s, name) => s.replace("[who]", firstName(name) || "them");
-const momentChoices = (name) => Object.keys(MOMENTS).map((k) => [
-	k,
-	who(MOMENTS[k], name),
-	k === "other" ? "A moment" : who(MOMENTS[k], name)
-]);
-const momentWhat = (what, name) => MOMENTS[what] && what !== "other" ? who(MOMENTS[what], name) : "A moment";
-function momentLine(personId, { what, day, note, keeps = true }, id, at) {
-	const line = {
-		id,
-		at,
-		personId,
-		kind: MOMENT_KIND,
-		day,
-		what: MOMENTS[what] ? what : "other",
-		keeps: keeps !== false
-	};
-	const n = cleanNote(note);
-	if (n) line.note = n;
-	return line;
-}
-function afterMoment(person, line) {
-	if (!line.keeps) return {
-		person,
-		line
-	};
-	const out = {
-		...person,
-		lastMove: later(person.lastMove || "", line.day)
-	};
-	const kept = {
-		...line,
-		wasLast: person.lastMove || ""
-	};
-	const next = person.next;
-	if (next && !person.letGo && MOVES_OUT[next.kind]) {
-		const due = later(next.due, addDays(line.day, MOVES_OUT[next.kind]));
-		if (due !== next.due) {
-			out.next = {
-				...next,
-				due
-			};
-			kept.moved = {
-				from: next.due,
-				to: due
-			};
+// pages/reach-out.js
+async function openReachOut(redraw) {
+	const [people, lines] = await Promise.all([listPeople(), listMoves()]);
+	const s = openSheet({
+		title: "Reach out to",
+		className: "reach-sheet",
+		body: `${searchBoxHtml("Search by name or handle")}<div class="pick-list" data-found></div>
+      <p class="label reach-label">Or someone new</p>
+      <button type="button" class="reach-new" data-new>${PLUS}<span>Add someone</span></button>`
+	});
+	let typed = "";
+	wireSearch(s.body, people, lines, {
+		onPick: (p) => {
+			s.close();
+			writeTo(p, redraw);
+		},
+		onType: (t) => {
+			typed = t;
+			s.body.querySelector("[data-new] span").textContent = t ? `Add "${t}" as a new person` : "Add someone";
 		}
-	}
-	return {
-		person: out,
-		line: kept
-	};
-}
-function withoutMoment(person, line, lines = []) {
-	const out = { ...person };
-	const m = line.moved;
-	if (m && person.next && person.next.due === m.to) out.next = {
-		...person.next,
-		due: m.from
-	};
-	if (line.keeps && person.lastMove === line.day) {
-		const counts = (l) => l.personId === person.id && l.id !== line.id && l.day && (l.kind !== "moment" || l.keeps);
-		out.lastMove = [line.wasLast || "", ...lines.filter(counts).map((l) => l.day)].sort().pop();
-	}
-	return out;
-}
-function keepWords(person, day, today) {
-	const whose = firstName(person.name) ? `${firstName(person.name)}'s` : "Their";
-	const when = day === today ? "today" : "that day";
-	const next = person.next && !person.letGo ? person.next : null;
-	if (next && NEXT_WORDS[next.kind]) return `${whose} ${NEXT_WORDS[next.kind]} moves out from ${when}.`;
-	return next ? `${whose} next move stays as it is.` : "Counts as the last time you were in touch.";
+	});
+	s.body.querySelector("[data-new]").addEventListener("click", () => {
+		s.close();
+		openAddPerson((p) => writeTo(p, redraw), { name: typed });
+	});
+	return s;
 }
 
 // data/moment-store.js
@@ -2557,10 +2883,50 @@ async function openMomentWho(firstIds, after) {
 	});
 }
 
+// pages/what-you-said.js
+function openSaid(person, line, after) {
+	const s = openSheet({
+		title: withWords(line, person.name),
+		className: "sheet-small said-sheet",
+		body: `
+      <p class="said-title">${esc(withWords(line, person.name))}</p>
+      <p class="said-when">${esc([longDay(line.day), howWords(line)].filter(Boolean).join(" · "))}</p>
+      ${line.said ? `<p class="label said-label">What you said</p><p class="said-words">${esc(line.said)}</p>` : ""}
+      ${line.note ? `<p class="label said-label">Your note</p><p class="said-note">${esc(line.note)}</p>` : ""}
+      <div class="said-btns">
+        <button type="button" class="text-btn" data-delete>Delete</button>
+        <button type="button" class="btn secondary" data-edit>Edit</button>
+        ${line.said ? "<button type=\"button\" class=\"btn secondary\" data-copy>Copy again</button>" : ""}
+      </div>`
+	});
+	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(moveLook(line), moveName(line));
+	s.body.addEventListener("click", async (e) => {
+		const b = e.target.closest("button");
+		if (!b) return;
+		if (b.matches("[data-copy]")) toast(await copy(line.said) ? "Copied." : "Select the message and copy it.");
+		else if (b.matches("[data-edit]")) {
+			s.close();
+			openOneMove(person, {
+				line,
+				after
+			});
+		} else if (b.matches("[data-delete]")) {
+			s.close();
+			const gone = await deleteLine(person, line);
+			await after();
+			toast("Deleted.", { action: {
+				label: "Undo",
+				run: () => undoDelete(gone).then(after)
+			} });
+		}
+	});
+	return s;
+}
+
 // pages/done-today.js
 const rowHtml$1 = /* @__PURE__ */ __name(({ line, person }, i) => `
-  <div class="done-row">${miniHtml(moveLook(line))}
-    <span class="choice-text"><span class="choice-label">${esc(person.name)}</span><span class="choice-detail">${esc([moveName(line), howWords(line)].filter(Boolean).join(" · "))}</span>${line.note ? `<span class="done-row-note">${esc(line.note)}</span>` : ""}</span>
+  <div class="done-row"><button type="button" class="done-row-open" data-said="${i}">${miniHtml(moveLook(line))}
+    <span class="choice-text"><span class="choice-label">${esc(person.name)}</span><span class="choice-detail">${esc([moveName(line), howWords(line)].filter(Boolean).join(" · "))}</span>${line.note ? `<span class="done-row-note">${esc(line.note)}</span>` : ""}</span></button>
     <button type="button" class="text-btn" data-undo="${i}">Undo</button>
   </div>`, "rowHtml");
 async function openDoneToday(onChange) {
@@ -2579,7 +2945,19 @@ async function openDoneToday(onChange) {
 		list.innerHTML = done.map(rowHtml$1).join("");
 	};
 	draw();
+	const again = async () => {
+		({lines, done} = await loadDone());
+		await onChange();
+		if (done.length) draw();
+		else s.close();
+	};
 	list.addEventListener("click", async (e) => {
+		const open = e.target.closest("[data-said]");
+		if (open) {
+			const d = done[Number(open.dataset.said)];
+			openSaid(d.person, d.line, again);
+			return;
+		}
 		const b = e.target.closest("[data-undo]");
 		if (!b || b.disabled) return;
 		b.disabled = true;
@@ -3372,14 +3750,14 @@ function wirePostSlips(root, open) {
 
 // pages/today.js
 const doneHtml = (n) => n ? `<button type="button" class="text-btn today-done" data-done-today>Done today <span>${n}</span></button>` : "";
-const head = (count, arc) => `<div class="today-head"><span class="today-count">${count}</span>${arc}</div>`;
+const head = (count, arc) => `<div class="today-head"><span class="today-count-row">${count ? `<span class="today-count">${count}</span>` : ""}<button type="button" class="list-act today-reach" data-reach>${PLUS}Reach out</button></span>${arc}</div>`;
 function stackHtml(pick, left, today) {
 	const n = pick.ids.length;
 	const at = n - left.length + 1;
 	const [top, next, after] = left;
 	return `
     ${head(countWords(n, left.length), arcHtml(pick, top.id, `Move ${at} of ${n}`))}
-    <div class="stack">${after ? behindHtml(after, 2) : ""}${next ? behindHtml(next, 1) : ""}${cardHtml$1(top, today)}</div>
+    <div class="stack">${after ? behindHtml(after, 2) : ""}${next ? behindHtml(next, 1) : ""}${cardHtml$2(top, today)}</div>
     <div class="today-btns">
       <button type="button" class="btn secondary" data-later>Later</button>
       <button type="button" class="btn primary" data-write><span>${esc(writeLabel(top))}</span></button>
@@ -3396,7 +3774,7 @@ function calmHtml(people, pick, today, week) {
 	}
 	const next = here.filter((p) => p.next).map((p) => whenDue(p.next, week, today)).sort()[0];
 	const when = next ? `The next move is due ${dueWords(next, today).replace("Tomorrow", "tomorrow")}.` : "Nothing is planned.";
-	return `<div class="today-calm"><h2>Nothing today.</h2><p>${when}</p></div>`;
+	return `${head("", "")}<div class="today-calm"><h2>Nothing today.</h2><p>${when}</p></div>`;
 }
 async function todayScreen(view, { beside = false } = {}) {
 	const today = dayOf();
@@ -3414,29 +3792,24 @@ async function todayScreen(view, { beside = false } = {}) {
 	view.querySelector("[data-add]")?.addEventListener("click", () => openAddPerson(() => todayScreen(view)));
 	view.querySelector("[data-done-today]")?.addEventListener("click", () => openDoneToday(redraw));
 	view.querySelector("[data-leads]")?.addEventListener("click", () => openLeads(redraw));
+	view.querySelector("[data-reach]")?.addEventListener("click", () => openReachOut(redraw));
 	wirePostSlips(view, (id) => {
 		const p = byId.get(id);
 		if (!p || !p.next) {
 			redraw();
 			return;
 		}
-		openMove(p, {
-			onDone: (said) => moveDone(p, said, redraw),
-			onLater: () => laterMove(p).then(redraw)
-		});
+		writeTo(p, redraw);
 	});
 	if (!left.length) return;
 	const top = left[0];
 	const card = view.querySelector(".card.top");
-	const done = (dir = 1, dx = 0, said = {}) => moveDone(top, said, redraw, cardAway(card, dir, dx));
+	const done = (dir = 1, dx = 0) => swipeDone(top, redraw, cardAway(card, dir, dx));
 	const later = async () => {
 		await Promise.all([laterMove(top), cardAway(card, 0)]);
 		await redraw();
 	};
-	const open = () => openMove(top, {
-		onDone: (said) => done(1, 0, said),
-		onLater: later
-	});
+	const open = () => writeTo(top, redraw, { gone: (d) => d.line.extra ? null : cardAway(card, 1, 0) });
 	wireCard(card, {
 		onOpen: open,
 		onSwipe: done
@@ -3445,30 +3818,561 @@ async function todayScreen(view, { beside = false } = {}) {
 	view.querySelector("[data-later]").addEventListener("click", later);
 }
 
+// data/look-alike.js
+const fold = (v) => String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const words = (name) => fold(name).replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean);
+function oneApart(a, b) {
+	if (Math.abs(a.length - b.length) > 1) return false;
+	let i = 0;
+	while (i < a.length && a[i] === b[i]) i++;
+	return a.slice(i + 1) === b.slice(i + 1) || a.slice(i) === b.slice(i + 1) || a.slice(i + 1) === b.slice(i);
+}
+const lastAgrees = (x, y) => x === y || x.length === 1 && y[0] === x || y.length === 1 && x[0] === y;
+function namesAlike(a, b) {
+	const [fa, ...ra] = words(a);
+	const [fb, ...rb] = words(b);
+	if (!fa || !fb) return false;
+	const same = fa === fb;
+	if (!same && !(Math.min(fa.length, fb.length) >= 4 && oneApart(fa, fb))) return false;
+	const la = ra.pop() || "";
+	const lb = rb.pop() || "";
+	if (la && lb) return lastAgrees(la, lb);
+	return same;
+}
+const handles = (p) => [
+	["ig", p.instagram],
+	["tt", p.tiktok],
+	["em", p.email]
+].map(([k, v]) => [k, fold(v).trim().replace(/^@/, "")]).filter(([, v]) => v).map(([k, v]) => `${k}:${v}`);
+const sameHandle = (a, b) => handles(a).some((h) => handles(b).includes(h));
+const pairKey = (a, b) => [a.id, b.id].sort().join("|");
+function lookAlike(people, waved = []) {
+	const skip = new Set(waved);
+	const list = [...people].sort((a, b) => a.name.localeCompare(b.name));
+	for (let i = 0; i < list.length; i++) {
+		for (let j = i + 1; j < list.length; j++) {
+			const [a, b] = [list[i], list[j]];
+			if (!skip.has(pairKey(a, b)) && (sameHandle(a, b) || namesAlike(a.name, b.name))) return [a, b];
+		}
+	}
+	return null;
+}
+
+// data/merge-people.js
+const FILL = [
+	"instagram",
+	"tiktok",
+	"website",
+	"email",
+	"address",
+	"photoKey",
+	"pitched",
+	"pitch",
+	"draft"
+];
+const both = (a, b) => [...new Set([a, b].map((v) => String(v ?? "").trim()).filter(Boolean))].join(". ");
+const earlier = (a, b) => [a, b].filter(Boolean).sort()[0] || "";
+function nextOf(a, b) {
+	const na = !a.letGo && a.next;
+	const nb = !b.letGo && b.next;
+	if (na && nb) return nb.due < na.due ? nb : na;
+	return na || nb || a.next || b.next || null;
+}
+function mergePeople(keep, other) {
+	const out = { ...keep };
+	for (const k of FILL) if (!keep[k] && other[k]) out[k] = other[k];
+	const groups = cleanGroups([...groupsOf(keep), ...groupsOf(other)]);
+	Object.assign(out, {
+		groups,
+		group: leadGroup(groups),
+		groupPicked: !!(keep.groupPicked || other.groupPicked),
+		where: both(keep.where, other.where),
+		note: both(keep.note, other.note),
+		lists: {
+			email: !!(keep.lists?.email || other.lists?.email),
+			mail: !!(keep.lists?.mail || other.lists?.mail)
+		},
+		shoots: [...new Set([...keep.shoots || [], ...other.shoots || []])],
+		lastShot: later(keep.lastShot || "", other.lastShot || ""),
+		lastMove: later(keep.lastMove || "", other.lastMove || ""),
+		added: earlier(keep.added, other.added),
+		letGo: !!(keep.letGo && other.letGo),
+		next: nextOf(keep, other)
+	});
+	return out;
+}
+const movedLines = (lines, from, to) => lines.filter((l) => l.personId === from).map((l) => ({
+	...l,
+	personId: to
+}));
+function loggedWords(lines, id) {
+	const n = lines.filter((l) => l.personId === id && l.day).length;
+	return `${n} ${n === 1 ? "thing" : "things"} logged`;
+}
+
+// data/happened.js
+const DONE = {
+	thanks: "you said thanks",
+	yes: "you said thanks for the yes",
+	photos: "you let [whom] know the photos were up",
+	hello: "you said hello",
+	checkin: "you checked in",
+	intros: "you asked [whom] for intros",
+	refresh: "you offered [whom] a refresh",
+	followup: "you followed up",
+	pitch: "you pitched [whom]",
+	other: "you reached out"
+};
+const ANSWERED = {
+	yes: "[who] said yes",
+	no: "[who] said not now"
+};
+const MOST = 5;
+function happened(person, lines = []) {
+	const first = firstName(person.name);
+	const fill = (s) => s.replace("[who]", first || "they").replace("[whom]", first || "them");
+	const done = lines.filter((l) => l.personId === person.id && DONE[l.kind] && l.day).map((l) => ({
+		day: l.day,
+		at: l.at || 0,
+		words: fill(DONE[l.kind])
+	}));
+	const pitch = person.pitch || {};
+	const answer = ANSWERED[pitch.answer] && pitch.on ? [{
+		day: pitch.on,
+		at: Infinity,
+		words: fill(ANSWERED[pitch.answer])
+	}] : [];
+	return [...done, ...answer].sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at).slice(0, MOST).map(({ day, words }) => ({
+		day,
+		words
+	}));
+}
+
+// data/year-tally.js
+const WITHIN = 90;
+const THANKS = ["thanks", "yes"];
+const LED_WORDS = {
+	pitch: "Pitches",
+	followup: "Follow ups",
+	intros: "Asking past clients for intros",
+	refresh: "Refresh offers",
+	checkin: "Check ins",
+	photos: "Your photos are up",
+	hello: "Saying hello"
+};
+const yearOf = (day) => day.slice(0, 4);
+const add = (o, y, k, n = 1) => {
+	const t = o[y] = o[y] || {};
+	t[k] = (t[k] || 0) + n;
+};
+const yesesOf = (people) => people.filter((p) => p.pitch && p.pitch.answer === "yes" && isDay(p.pitch.on)).map((p) => ({
+	id: p.id,
+	day: p.pitch.on
+}));
+function bookingsOf(people, shoots) {
+	const on = new Map((shoots || []).filter((s) => s && AFTER_SHOOT.includes(s.status) && isDay(s.date)).map((s) => [s.id, s.date]));
+	const out = [];
+	for (const p of people) {
+		const days = (p.shoots || []).map((id) => on.get(id)).filter(Boolean).sort();
+		for (const day of days.slice(1)) out.push({
+			id: p.id,
+			day
+		});
+	}
+	return out;
+}
+function ledBy(lines, ev) {
+	const before = lines.filter((l) => l.personId === ev.id && !THANKS.includes(l.kind) && LED_WORDS[l.kind] && isDay(l.day) && l.day <= ev.day && daysBetween(l.day, ev.day) <= 90);
+	return before.sort((a, b) => a.day.localeCompare(b.day) || (a.at || 0) - (b.at || 0)).pop() || null;
+}
+const yesWords = (y, all) => y === all ? y === 1 ? "1 yes" : `all ${y} yeses` : `${y} of the ${all} yeses`;
+function ledLine({ sent = 0, yes = 0, booked = 0 }, allYes) {
+	return [
+		sent ? `${sent} sent` : "",
+		yes ? yesWords(yes, allYes) : "",
+		booked ? `${booked} booked again` : ""
+	].filter(Boolean).join(", ");
+}
+function yearTally(people, lines, shoots) {
+	const log = (lines || []).filter((l) => l && isDay(l.day));
+	const pitched = new Set([...log.filter((l) => l.kind === "pitch").map((l) => `${yearOf(l.day)} ${l.personId}`), ...people.filter((p) => isDay(p.pitched)).map((p) => `${yearOf(p.pitched)} ${p.id}`)]);
+	const counts = {};
+	const kinds = {};
+	for (const key of pitched) add(counts, key.slice(0, 4), "pitched");
+	for (const l of log) if (LED_WORDS[l.kind]) add(kinds, yearOf(l.day), `sent ${l.kind}`);
+	const credit = (ev, what) => {
+		const l = ledBy(log, ev);
+		if (l) add(kinds, yearOf(ev.day), `${what} ${l.kind}`);
+	};
+	for (const ev of yesesOf(people)) {
+		add(counts, yearOf(ev.day), "yes");
+		credit(ev, "yes");
+	}
+	for (const ev of bookingsOf(people, shoots)) credit(ev, "booked");
+	const out = {};
+	for (const y of new Set([...Object.keys(counts), ...Object.keys(kinds)])) {
+		const c = counts[y] || {};
+		const k = kinds[y] || {};
+		const led = KIND_KEYS.filter((kind) => (k[`yes ${kind}`] || 0) + (k[`booked ${kind}`] || 0) > 0).map((kind) => ({
+			kind,
+			sent: k[`sent ${kind}`] || 0,
+			yes: k[`yes ${kind}`] || 0,
+			booked: k[`booked ${kind}`] || 0
+		})).sort((a, b) => b.yes + b.booked - (a.yes + a.booked)).map((r) => ({
+			title: LED_WORDS[r.kind],
+			line: ledLine(r, c.yes || 0),
+			bg: KINDS[r.kind].bg,
+			icon: markSvg(r.kind, 10)
+		}));
+		out[y] = {
+			...c.pitched ? { pitched: c.pitched } : {},
+			...c.yes ? { yes: c.yes } : {},
+			led
+		};
+	}
+	return out;
+}
+
+// data/people-out.js
+const D$2 = /* @__PURE__ */ __name(() => window.DFData, "D");
+const listedAs = (p) => ({
+	name: p.name,
+	instagram: p.instagram,
+	tiktok: p.tiktok,
+	roundsId: p.id,
+	at: p.updatedAt || ""
+});
+async function shelfPageOf(p) {
+	if (!D$2() || !D$2().personFor) return null;
+	const r = await D$2().personFor(listedAs(p)).catch(() => null);
+	return r ? D$2().personUrl(r.id) : null;
+}
+function personThing(p, today, week, ownPhoto, lines = [], shoots = []) {
+	const next = p.next && !p.letGo ? p.next : null;
+	const what = next ? phrase(next.kind, p.name, next.year) : p.letGo ? "Let go" : "Nothing planned";
+	const when = next ? dueLine(next, week, today) : "";
+	return {
+		id: p.id,
+		kind: "person",
+		title: p.name || (p.instagram || p.tiktok ? `@${p.instagram || p.tiktok}` : "Someone"),
+		line: next ? `${what}, ${when.replace(/^Due/, "due")}` : what,
+		day: next ? whenDue(next, week, today) : "",
+		people: [listedAs(p)],
+		params: { person: p.id },
+		more: {
+			next: {
+				title: what,
+				line: when,
+				bg: next ? lookOf(moveLook(next)).bg : "#E1E1DC",
+				icon: next ? markSvg(moveLook(next), 10) : ""
+			},
+			group: GROUPS[p.group] ? groupWords(p) : "",
+			happened: happened(p, lines),
+			done: doneSoFar(p, lines, shoots).map((r) => ({
+				...r,
+				bg: r.mark ? "" : lookOf(r.look).bg,
+				icon: r.mark ? "" : markSvg(r.look, 10)
+			})),
+			hows: {
+				...HOW_CHOICES,
+				moment: momentChoices(p.name)
+			},
+			thanks: next && next.kind === "thanks" ? {
+				due: whenDue(next, week, today),
+				shoots: p.shoots || []
+			} : null
+		},
+		coverKey: ownPhoto ? `own:${p.id}` : p.photoKey ? `eye:${p.photoKey}` : "",
+		covers: () => photoOf$1(p, ownPhoto)
+	};
+}
+async function photoOf$1(p, own) {
+	if (own) {
+		const blob = await getPhoto(p.id);
+		return blob ? [{
+			type: blob.type,
+			bytes: await blob.arrayBuffer()
+		}] : [];
+	}
+	const pic = p.photoKey ? D$2().pictureOf(await eyePhoto(p.photoKey)) : null;
+	return pic ? [pic] : [];
+}
+__name(photoOf$1, "photoOf");
+let soon = null;
+function tellPeople(wait = 1500) {
+	if (!D$2() || !D$2().publishThings) return;
+	clearTimeout(soon);
+	soon = setTimeout(async () => {
+		try {
+			const [people, week, ids, lines] = await Promise.all([
+				listPeople(),
+				getWeek(),
+				photoIds(),
+				listMoves()
+			]);
+			const own = new Set(ids);
+			const shoots = eyeShoots();
+			window.DFYear?.publishYear("rounds", yearTally(people, lines, shoots));
+			await D$2().publishThings("rounds", people.map((p) => personThing(p, dayOf(), week, own.has(p.id), lines, shoots)));
+		} catch (e) {}
+	}, wait);
+}
+const tellPeopleFromNowOn = () => onChange(() => tellPeople());
+const TAKEN = "df-people-taken-rounds";
+async function takePeopleEdits() {
+	if (!D$2() || !D$2().peopleAll) return 0;
+	let taken = "";
+	try {
+		taken = localStorage.getItem(TAKEN) || "";
+	} catch (e) {}
+	const edited = (await D$2().peopleAll()).filter((r) => r.editedAt && r.editedAt > taken);
+	if (!edited.length) return 0;
+	const changed = [];
+	for (const p of await listPeople()) {
+		const r = edited.find((x) => x.sigs.includes(`rounds:${p.id}`));
+		if (!r || p.updatedAt && p.updatedAt > r.editedAt) continue;
+		const next = {
+			...p,
+			name: r.name || p.name,
+			instagram: r.instagram,
+			tiktok: r.tiktok
+		};
+		if (next.name !== p.name || next.instagram !== p.instagram || next.tiktok !== p.tiktok) changed.push(next);
+	}
+	if (changed.length) await savePeople(changed);
+	try {
+		localStorage.setItem(TAKEN, edited.map((r) => r.editedAt).sort().pop());
+	} catch (e) {}
+	return changed.length;
+}
+
+// data/people-store.js
+const D$1 = /* @__PURE__ */ __name(() => window.DFData, "D");
+const bytesOf = async (blob) => blob ? {
+	bytes: await blob.arrayBuffer(),
+	type: blob.type
+} : null;
+const linesOf = async (id) => (await listMoves()).filter((l) => l.personId === id);
+async function mergeInto(keep, other) {
+	const [lines, mine, theirs] = await Promise.all([
+		linesOf(other.id),
+		getPhoto(keep.id).then(bytesOf),
+		getPhoto(other.id).then(bytesOf)
+	]);
+	const photo = !!theirs && !mine && !keep.photoKey;
+	await savePerson(mergePeople(keep, other));
+	if (lines.length) await logMoves(movedLines(lines, other.id, keep.id));
+	if (photo) await savePhoto(keep.id, theirs.bytes, theirs.type);
+	if (theirs) await dropPhoto(other.id);
+	await dropPerson(other.id);
+	shelfAgain();
+	return {
+		keep,
+		other,
+		lines,
+		theirs,
+		photo
+	};
+}
+async function undoMerge({ keep, other, lines, theirs, photo }) {
+	await savePerson(other);
+	await savePerson(keep);
+	if (lines.length) await logMoves(lines);
+	if (theirs) await savePhoto(other.id, theirs.bytes, theirs.type);
+	if (photo) await dropPhoto(keep.id);
+	shelfAgain();
+}
+async function joinShared({ keep, other }) {
+	if (!D$1() || !D$1().answerSame) return;
+	const [a, b] = await Promise.all([D$1().personFor(listedAs(keep)), D$1().personFor(listedAs(other))]);
+	if (a && b && a.id !== b.id) await D$1().answerSame(a.id, b.id, true);
+}
+async function deletePerson(p) {
+	const ids = (await linesOf(p.id)).map((l) => l.id);
+	if (ids.length) await dropMoves(ids);
+	await dropPhoto(p.id);
+	await dropPerson(p.id);
+	shelfAgain();
+	if (D$1() && D$1().forgetPerson) await D$1().forgetPerson("rounds", listedAs(p));
+}
+
+// pages/merge-sheet.js
+const UNDO_FOR = 5400;
+function joinLater(undo) {
+	let timer = null;
+	const go = () => {
+		clearTimeout(timer);
+		removeEventListener("pagehide", go);
+		joinShared(undo).catch(() => {});
+	};
+	timer = setTimeout(go, UNDO_FOR);
+	addEventListener("pagehide", go);
+	return () => {
+		clearTimeout(timer);
+		removeEventListener("pagehide", go);
+	};
+}
+const cardHtml$1 = /* @__PURE__ */ __name((p, lines, on) => `<button type="button" class="merge-card${on ? " on" : ""}" data-keep="${esc(p.id)}" aria-pressed="${on}">${photoHtml(p)}
+  <span class="merge-name">${esc(p.name)}</span><span class="merge-handle">${esc(handleText(p) || "no handle")}</span>
+  <span class="merge-count">${esc(`${GROUPS[p.group] || GROUPS.new} · ${loggedWords(lines, p.id)}`)}</span>
+  <span class="merge-keep">Keep this name${on ? " ✓" : ""}</span></button>`, "cardHtml");
+async function openMerge(a, b, after) {
+	const lines = await listMoves();
+	let keep = a;
+	const s = openSheet({
+		title: "Merge into one person",
+		className: "sheet-small merge-sheet",
+		body: `<div class="merge-cards"></div>
+      <p class="merge-what">Everything from both comes together: what you've done, notes, shoots, handles and groups. Pick which name and photo to keep.</p>
+      <p class="merge-undo">Undo is there for a few seconds after. Sync and the other notebooks follow.</p>
+      <button type="button" class="btn primary merge-go" data-merge>Merge</button>`
+	});
+	const cards = s.body.querySelector(".merge-cards");
+	const draw = () => {
+		cards.innerHTML = [a, b].map((p) => cardHtml$1(p, lines, p === keep)).join("");
+		fillPhotos(cards, [a, b]);
+	};
+	draw();
+	cards.addEventListener("click", (e) => {
+		const c = e.target.closest("[data-keep]");
+		if (c) {
+			keep = c.dataset.keep === a.id ? a : b;
+			draw();
+		}
+	});
+	s.body.querySelector("[data-merge]").addEventListener("click", async (e) => {
+		e.currentTarget.disabled = true;
+		const undo = await mergeInto(keep, keep === a ? b : a);
+		[a.id, b.id].forEach(forgetPhoto);
+		s.close();
+		const stop = joinLater(undo);
+		await after(undo.keep);
+		const name = undo.keep.name;
+		toast(`Merged into ${name}${name.endsWith(".") ? "" : "."}`, { action: {
+			label: "Undo",
+			run: async () => {
+				stop();
+				await undoMerge(undo);
+				[a.id, b.id].forEach(forgetPhoto);
+				await after(undo.keep);
+			}
+		} });
+	});
+	return s;
+}
+async function openMergeWith(person, after) {
+	const [people, lines] = await Promise.all([listPeople(), listMoves()]);
+	const s = openSheet({
+		title: "Merge with",
+		className: "reach-sheet",
+		body: `${searchBoxHtml("Search by name or handle")}<div class="pick-list" data-found></div>`
+	});
+	wireSearch(s.body, people.filter((p) => p.id !== person.id), lines, { onPick: (p) => {
+		s.close();
+		openMerge(person, p, after);
+	} });
+	return s;
+}
+
 // pages/people.js
-const order = (week, today) => (a, b) => (whenDue(a.next, week, today) || "~").localeCompare(whenDue(b.next, week, today) || "~") || a.name.localeCompare(b.name);
-const cardHtml = (p) => `
+const SORT_KEY = "rounds-people-sort";
+const WAVED = "lookAlikeWaved";
+const view$2 = {
+	q: "",
+	filter: "all"
+};
+function sortNow() {
+	try {
+		const k = localStorage.getItem(SORT_KEY);
+		return SORTS.some(([s]) => s === k) ? k : "az";
+	} catch (e) {
+		return "az";
+	}
+}
+function keepSort(k) {
+	try {
+		localStorage.setItem(SORT_KEY, k);
+	} catch (e) {}
+}
+const cardHtml = (p, line) => `
   <a class="person-card" href="#/person/${encodeURIComponent(p.id)}">${photoHtml(p)}
-    <span class="person-card-name">${p.letGo ? "" : miniHtml(p.next?.kind)}<span>${esc(p.name)}</span></span></a>`;
-async function peopleScreen(view, { beside = false } = {}) {
-	const [people, week] = await Promise.all([listPeople(), getWeek()]);
-	const here = people.filter((p) => !p.letGo).sort(order(week, dayOf()));
-	const gone = people.filter((p) => p.letGo).sort((a, b) => a.name.localeCompare(b.name));
+    <span class="person-card-name">${p.letGo ? "" : miniHtml(p.next?.kind)}<span>${esc(p.name)}</span></span>
+    ${line ? `<span class="person-card-line">${esc(line)}</span>` : ""}</a>`;
+const chipHtml = (k, label, on) => `<button type="button" class="pick-chip${on ? " on" : ""}" data-filter="${k}" aria-pressed="${on}">${esc(label)}</button>`;
+const sortHtml = (sort) => `<div class="people-sort">
+  <button type="button" class="people-sort-now" data-sort-next>Sort: ${esc(SORTS.find(([k]) => k === sort)[1])}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
+  <span class="people-sorts">${SORTS.map(([k, n]) => `<button type="button" data-sort="${k}" aria-pressed="${k === sort}">${esc(n)}</button>`).join("<span aria-hidden=\"true\">·</span>")}</span></div>`;
+const alikeHtml = ([a, b]) => `<div class="look-alike"><span class="look-alike-words"><b>${esc(a.name)}</b> and <b>${esc(b.name)}</b> might be the same person.</span>
+  <button type="button" class="list-act" data-merge>Merge</button><button type="button" class="look-alike-x" data-wave aria-label="Not the same person">${X_ICON}</button></div>`;
+async function peopleScreen(root, { beside = false } = {}) {
+	const [people, lines, week, waved] = await Promise.all([
+		listPeople(),
+		listMoves(),
+		getWeek(),
+		getSetting(WAVED, [])
+	]);
+	const today = dayOf();
+	const last = lastLines(lines);
+	const here = people.filter((p) => !p.letGo);
+	const pair = lookAlike(people, waved);
 	const eye = window.DF_SUITE ? " People from your shoots in The Eye come in on their own." : "";
-	view.innerHTML = `<div class="screen"><div class="scroll">
+	root.innerHTML = `<div class="screen"><div class="scroll">
     ${bandHtml({
 		title: "People",
 		place: "Rounds"
 	})}
     <div class="list-head"><h2>People <span>${here.length}</span></h2><button type="button" class="list-act" data-add>${PLUS}Add someone</button></div>
-    ${here.length ? `<div class="people-grid">${here.map(cardHtml).join("")}</div>` : `<p class="note">No one yet. Add the people you work with.${eye}</p>`}
-    ${gone.length ? `<div class="people-gone"><div class="list-head"><h2>Let go <span>${gone.length}</span></h2></div><div class="people-grid">${gone.map(cardHtml).join("")}</div></div>` : ""}
+    ${people.length ? `${searchBoxHtml("Search people", "people-find")}
+    <div class="people-filters">${FILTERS.map(([k, n]) => chipHtml(k, n, k === view$2.filter)).join("")}</div>
+    <div data-sort-row></div>${pair ? alikeHtml(pair) : ""}<div data-people></div>` : `<p class="note">No one yet. Add the people you work with.${eye}</p>`}
   </div></div>`;
-	fillPhotos(view, people);
+	const list = root.querySelector("[data-people]");
+	const draw = () => {
+		const sort = sortNow();
+		root.querySelector("[data-sort-row]").innerHTML = sortHtml(sort);
+		const shown = sortPeople(people.filter((p) => matches(p, view$2.q) && inFilter(p, view$2.filter, week, today)), sort, last, week, today);
+		const on = shown.filter((p) => !p.letGo);
+		const gone = shown.filter((p) => p.letGo);
+		const grid = (list) => `<div class="people-grid">${list.map((p) => cardHtml(p, cardLine(p, last.get(p.id), week, today))).join("")}</div>`;
+		list.innerHTML = `${on.length ? grid(on) : `<p class="note">${view$2.q ? `No one matches "${esc(view$2.q)}".` : "No one here."}</p>`}
+      ${gone.length ? `<div class="people-gone"><div class="list-head"><h2>Let go <span>${gone.length}</span></h2></div>${grid(gone)}</div>` : ""}`;
+		fillPhotos(list, shown);
+	};
+	if (list) draw();
 	if (beside) return;
-	view.querySelector("[data-add]").addEventListener("click", () => openAddPerson((p) => {
+	const redraw = () => peopleScreen(root).then(() => root.querySelector(".screen")?.classList.add("still"));
+	root.querySelector("[data-add]").addEventListener("click", () => openAddPerson((p) => {
 		location.hash = `#/person/${encodeURIComponent(p.id)}`;
 	}));
+	if (!list) return;
+	const find = root.querySelector("[data-find]");
+	find.value = view$2.q;
+	find.addEventListener("input", debounce(() => {
+		view$2.q = find.value;
+		draw();
+	}, 120));
+	root.querySelector(".people-filters").addEventListener("click", (e) => {
+		const b = e.target.closest("[data-filter]");
+		if (!b) return;
+		view$2.filter = b.dataset.filter;
+		root.querySelectorAll("[data-filter]").forEach((c) => {
+			c.classList.toggle("on", c === b);
+			c.setAttribute("aria-pressed", String(c === b));
+		});
+		draw();
+	});
+	root.querySelector("[data-sort-row]").addEventListener("click", (e) => {
+		const b = e.target.closest("[data-sort], [data-sort-next]");
+		if (!b) return;
+		const i = SORTS.findIndex(([k]) => k === sortNow());
+		keepSort(b.dataset.sort || SORTS[(i + 1) % SORTS.length][0]);
+		draw();
+	});
+	root.querySelector("[data-merge]")?.addEventListener("click", () => openMerge(pair[0], pair[1], redraw));
+	root.querySelector("[data-wave]")?.addEventListener("click", async () => {
+		await setSetting(WAVED, [...waved, pairKey(...pair)]);
+		redraw();
+	});
 }
 
 // components/dialogs.js
@@ -3502,7 +4406,7 @@ function choiceSheet({ title, message = "", options, footer = "" }) {
 			body: `
         ${message ? `<p class="sheet-message">${message}</p>` : ""}
         <div class="choice-list">
-          ${options.map((o) => o.heading ? `<span class="field-label choice-heading">${esc(o.heading)}</span>` : `<button type="button" class="choice${o.current ? " current" : ""}${o.danger ? " is-danger" : ""}" data-key="${esc(o.key)}">
+          ${options.map((o) => o.heading ? `<span class="field-label choice-heading">${esc(o.heading)}</span>` : `<button type="button" class="choice${o.current ? " current" : ""}${o.danger ? " is-danger" : ""}" data-key="${esc(o.key)}"${o.skip ? " data-test-skip" : ""}>
                 ${o.icon || ""}<span class="choice-text"><span class="choice-label">${esc(o.label)}</span>
                 ${o.detail ? `<span class="choice-detail">${esc(o.detail)}</span>` : ""}</span></button>`).join("")}
         </div>${footer}`,
@@ -3609,7 +4513,7 @@ const MINE = [{
 	ask: "Where are you based?",
 	hint: "Hoboken"
 }];
-const row$2 = /* @__PURE__ */ __name((attr, mark, name, text) => `<button type="button" class="msg-row" ${attr}>${mark}<span class="msg-words"><span class="msg-kind">${esc(name)}</span><span class="msg-text">${esc(text)}</span></span>${CHEV}</button>`, "row");
+const row$1 = /* @__PURE__ */ __name((attr, mark, name, text) => `<button type="button" class="msg-row" ${attr}>${mark}<span class="msg-words"><span class="msg-kind">${esc(name)}</span><span class="msg-text">${esc(text)}</span></span>${CHEV}</button>`, "row");
 async function messagesScreen(view, { beside = false } = {}) {
 	const [messages, me] = await Promise.all([getMessages(), getMe()]);
 	view.innerHTML = `<div class="screen"><div class="scroll">
@@ -3618,10 +4522,10 @@ async function messagesScreen(view, { beside = false } = {}) {
 		place: "Rounds"
 	})}
     <p class="note">Write each one once, in your words. [name] and the others fill in for each person.</p>
-    <div class="msg-list">${MESSAGE_ORDER.map((k) => row$2(`data-kind="${k}"`, miniHtml(k), KINDS[k].name, messages[k] ?? KINDS[k].starter)).join("")}</div>
+    <div class="msg-list">${MESSAGE_ORDER.map((k) => row$1(`data-kind="${k}"`, miniHtml(k), KINDS[k].name, messages[k] ?? KINDS[k].starter)).join("")}</div>
     <div class="msg-fills">
       <div class="list-head"><h2>Your fill-ins</h2></div>
-      <div class="msg-list">${MINE.map((m) => row$2(`data-mine="${m.key}"`, "", `${m.name} ${m.fill}`, me[m.key] || "Not set yet")).join("")}</div>
+      <div class="msg-list">${MINE.map((m) => row$1(`data-mine="${m.key}"`, "", `${m.name} ${m.fill}`, me[m.key] || "Not set yet")).join("")}</div>
     </div>
   </div></div>`;
 	if (beside) return;
@@ -4103,337 +5007,6 @@ const clientFor = (person, pitched) => ({
 	pitched: pitched || ""
 });
 
-// data/happened.js
-const DONE = {
-	thanks: "you said thanks",
-	yes: "you said thanks for the yes",
-	photos: "you let [whom] know the photos were up",
-	hello: "you said hello",
-	checkin: "you checked in",
-	intros: "you asked [whom] for intros",
-	refresh: "you offered [whom] a refresh",
-	followup: "you followed up",
-	pitch: "you pitched [whom]"
-};
-const ANSWERED$1 = {
-	yes: "[who] said yes",
-	no: "[who] said not now"
-};
-const MOST = 5;
-function happened(person, lines = []) {
-	const first = firstName(person.name);
-	const fill = (s) => s.replace("[who]", first || "they").replace("[whom]", first || "them");
-	const done = lines.filter((l) => l.personId === person.id && DONE[l.kind] && l.day).map((l) => ({
-		day: l.day,
-		at: l.at || 0,
-		words: fill(DONE[l.kind])
-	}));
-	const pitch = person.pitch || {};
-	const answer = ANSWERED$1[pitch.answer] && pitch.on ? [{
-		day: pitch.on,
-		at: Infinity,
-		words: fill(ANSWERED$1[pitch.answer])
-	}] : [];
-	return [...done, ...answer].sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at).slice(0, MOST).map(({ day, words }) => ({
-		day,
-		words
-	}));
-}
-
-// data/so-far.js
-const WHAT = {
-	thanks: "Said thanks",
-	yes: "Said thanks for the yes",
-	photos: "Told [who] the photos were up",
-	hello: "Said hello",
-	checkin: "Checked in",
-	intros: "Asked [who] for intros",
-	refresh: "Offered [who] a refresh",
-	followup: "Followed up",
-	pitch: "Pitched [who]"
-};
-const YEAR = "Sent a final, a year on";
-const ANSWERED = {
-	yes: "[who] said yes",
-	no: "[who] said not now"
-};
-const SHOT = "Shot in The Eye.";
-const row$1 = /* @__PURE__ */ __name((o) => ({
-	id: "",
-	at: 0,
-	look: "",
-	mark: "",
-	how: "",
-	howWords: "",
-	note: "",
-	noteOnly: false,
-	...o
-}), "row");
-function lineRow(l, fill, name) {
-	if (l.kind === "note") return row$1({
-		id: l.id,
-		day: l.day,
-		at: l.at || 0,
-		kind: "note",
-		look: "note",
-		mark: "rounds",
-		what: "Note",
-		how: l.how || "",
-		howWords: howWords(l),
-		note: l.note || "",
-		noteOnly: true
-	});
-	if (l.kind === "moment") return row$1({
-		id: l.id,
-		day: l.day,
-		at: l.at || 0,
-		kind: "moment",
-		look: "moment",
-		mark: "rounds",
-		what: momentWhat(l.what, name),
-		how: l.what || "other",
-		note: l.note || ""
-	});
-	return row$1({
-		id: l.id,
-		day: l.day,
-		at: l.at || 0,
-		kind: "move",
-		look: l.year ? "photos" : l.kind,
-		what: l.year ? YEAR : fill(WHAT[l.kind]),
-		how: l.how || "",
-		howWords: howWords(l),
-		note: l.note || ""
-	});
-}
-function doneSoFar(person, lines = [], shoots = []) {
-	const fill = (s) => s.replace("[who]", firstName(person.name) || "them");
-	const rows = lines.filter((l) => l.personId === person.id && l.day && (WHAT[l.kind] || l.kind === "note" || l.kind === "moment")).map((l) => lineRow(l, fill, person.name));
-	const pitch = person.pitch || {};
-	if (ANSWERED[pitch.answer] && pitch.on) rows.push(row$1({
-		day: pitch.on,
-		at: Infinity,
-		kind: "answer",
-		look: "pitch",
-		what: fill(ANSWERED[pitch.answer]).replace(/^them/, "They")
-	}));
-	const theirs = new Set(person.shoots || []);
-	for (const s of shoots || []) {
-		if (s && theirs.has(s.id) && isDay(s.date)) rows.push(row$1({
-			day: s.date,
-			at: -1,
-			kind: "shoot",
-			look: "shoot",
-			mark: "the-eye",
-			what: s.title || "A shoot",
-			note: SHOT
-		}));
-	}
-	return rows.sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at).map(({ at, ...r }) => r);
-}
-
-// data/year-tally.js
-const WITHIN = 90;
-const THANKS = ["thanks", "yes"];
-const LED_WORDS = {
-	pitch: "Pitches",
-	followup: "Follow ups",
-	intros: "Asking past clients for intros",
-	refresh: "Refresh offers",
-	checkin: "Check ins",
-	photos: "Your photos are up",
-	hello: "Saying hello"
-};
-const yearOf = (day) => day.slice(0, 4);
-const add = (o, y, k, n = 1) => {
-	const t = o[y] = o[y] || {};
-	t[k] = (t[k] || 0) + n;
-};
-const yesesOf = (people) => people.filter((p) => p.pitch && p.pitch.answer === "yes" && isDay(p.pitch.on)).map((p) => ({
-	id: p.id,
-	day: p.pitch.on
-}));
-function bookingsOf(people, shoots) {
-	const on = new Map((shoots || []).filter((s) => s && AFTER_SHOOT.includes(s.status) && isDay(s.date)).map((s) => [s.id, s.date]));
-	const out = [];
-	for (const p of people) {
-		const days = (p.shoots || []).map((id) => on.get(id)).filter(Boolean).sort();
-		for (const day of days.slice(1)) out.push({
-			id: p.id,
-			day
-		});
-	}
-	return out;
-}
-function ledBy(lines, ev) {
-	const before = lines.filter((l) => l.personId === ev.id && !THANKS.includes(l.kind) && LED_WORDS[l.kind] && isDay(l.day) && l.day <= ev.day && daysBetween(l.day, ev.day) <= 90);
-	return before.sort((a, b) => a.day.localeCompare(b.day) || (a.at || 0) - (b.at || 0)).pop() || null;
-}
-const yesWords = (y, all) => y === all ? y === 1 ? "1 yes" : `all ${y} yeses` : `${y} of the ${all} yeses`;
-function ledLine({ sent = 0, yes = 0, booked = 0 }, allYes) {
-	return [
-		sent ? `${sent} sent` : "",
-		yes ? yesWords(yes, allYes) : "",
-		booked ? `${booked} booked again` : ""
-	].filter(Boolean).join(", ");
-}
-function yearTally(people, lines, shoots) {
-	const log = (lines || []).filter((l) => l && isDay(l.day));
-	const pitched = new Set([...log.filter((l) => l.kind === "pitch").map((l) => `${yearOf(l.day)} ${l.personId}`), ...people.filter((p) => isDay(p.pitched)).map((p) => `${yearOf(p.pitched)} ${p.id}`)]);
-	const counts = {};
-	const kinds = {};
-	for (const key of pitched) add(counts, key.slice(0, 4), "pitched");
-	for (const l of log) if (LED_WORDS[l.kind]) add(kinds, yearOf(l.day), `sent ${l.kind}`);
-	const credit = (ev, what) => {
-		const l = ledBy(log, ev);
-		if (l) add(kinds, yearOf(ev.day), `${what} ${l.kind}`);
-	};
-	for (const ev of yesesOf(people)) {
-		add(counts, yearOf(ev.day), "yes");
-		credit(ev, "yes");
-	}
-	for (const ev of bookingsOf(people, shoots)) credit(ev, "booked");
-	const out = {};
-	for (const y of new Set([...Object.keys(counts), ...Object.keys(kinds)])) {
-		const c = counts[y] || {};
-		const k = kinds[y] || {};
-		const led = KIND_KEYS.filter((kind) => (k[`yes ${kind}`] || 0) + (k[`booked ${kind}`] || 0) > 0).map((kind) => ({
-			kind,
-			sent: k[`sent ${kind}`] || 0,
-			yes: k[`yes ${kind}`] || 0,
-			booked: k[`booked ${kind}`] || 0
-		})).sort((a, b) => b.yes + b.booked - (a.yes + a.booked)).map((r) => ({
-			title: LED_WORDS[r.kind],
-			line: ledLine(r, c.yes || 0),
-			bg: KINDS[r.kind].bg,
-			icon: markSvg(r.kind, 10)
-		}));
-		out[y] = {
-			...c.pitched ? { pitched: c.pitched } : {},
-			...c.yes ? { yes: c.yes } : {},
-			led
-		};
-	}
-	return out;
-}
-
-// data/people-out.js
-const D$1 = /* @__PURE__ */ __name(() => window.DFData, "D");
-function dueLine(next, week, today) {
-	const w = dueWords(whenDue(next, week, today), today);
-	return `Due ${w === "Today" || w === "Tomorrow" ? w.toLowerCase() : w}`;
-}
-const listedAs = (p) => ({
-	name: p.name,
-	instagram: p.instagram,
-	tiktok: p.tiktok,
-	roundsId: p.id,
-	at: p.updatedAt || ""
-});
-async function shelfPageOf(p) {
-	if (!D$1() || !D$1().personFor) return null;
-	const r = await D$1().personFor(listedAs(p)).catch(() => null);
-	return r ? D$1().personUrl(r.id) : null;
-}
-function personThing(p, today, week, ownPhoto, lines = [], shoots = []) {
-	const next = p.next && !p.letGo ? p.next : null;
-	const what = next ? phrase(next.kind, p.name, next.year) : p.letGo ? "Let go" : "Nothing planned";
-	const when = next ? dueLine(next, week, today) : "";
-	return {
-		id: p.id,
-		kind: "person",
-		title: p.name || (p.instagram || p.tiktok ? `@${p.instagram || p.tiktok}` : "Someone"),
-		line: next ? `${what}, ${when.replace(/^Due/, "due")}` : what,
-		day: next ? whenDue(next, week, today) : "",
-		people: [listedAs(p)],
-		params: { person: p.id },
-		more: {
-			next: {
-				title: what,
-				line: when,
-				bg: next ? KINDS[moveLook(next)].bg : "#E1E1DC",
-				icon: next ? markSvg(moveLook(next), 10) : ""
-			},
-			group: GROUPS[p.group] ? groupWords(p) : "",
-			happened: happened(p, lines),
-			done: doneSoFar(p, lines, shoots).map((r) => ({
-				...r,
-				bg: r.mark ? "" : KINDS[r.look].bg,
-				icon: r.mark ? "" : markSvg(r.look, 10)
-			})),
-			hows: {
-				...HOW_CHOICES,
-				moment: momentChoices(p.name)
-			},
-			thanks: next && next.kind === "thanks" ? {
-				due: whenDue(next, week, today),
-				shoots: p.shoots || []
-			} : null
-		},
-		coverKey: ownPhoto ? `own:${p.id}` : p.photoKey ? `eye:${p.photoKey}` : "",
-		covers: () => photoOf$1(p, ownPhoto)
-	};
-}
-async function photoOf$1(p, own) {
-	if (own) {
-		const blob = await getPhoto(p.id);
-		return blob ? [{
-			type: blob.type,
-			bytes: await blob.arrayBuffer()
-		}] : [];
-	}
-	const pic = p.photoKey ? D$1().pictureOf(await eyePhoto(p.photoKey)) : null;
-	return pic ? [pic] : [];
-}
-__name(photoOf$1, "photoOf");
-let soon = null;
-function tellPeople(wait = 1500) {
-	if (!D$1() || !D$1().publishThings) return;
-	clearTimeout(soon);
-	soon = setTimeout(async () => {
-		try {
-			const [people, week, ids, lines] = await Promise.all([
-				listPeople(),
-				getWeek(),
-				photoIds(),
-				listMoves()
-			]);
-			const own = new Set(ids);
-			const shoots = eyeShoots();
-			window.DFYear?.publishYear("rounds", yearTally(people, lines, shoots));
-			await D$1().publishThings("rounds", people.map((p) => personThing(p, dayOf(), week, own.has(p.id), lines, shoots)));
-		} catch (e) {}
-	}, wait);
-}
-const tellPeopleFromNowOn = () => onChange(() => tellPeople());
-const TAKEN = "df-people-taken-rounds";
-async function takePeopleEdits() {
-	if (!D$1() || !D$1().peopleAll) return 0;
-	let taken = "";
-	try {
-		taken = localStorage.getItem(TAKEN) || "";
-	} catch (e) {}
-	const edited = (await D$1().peopleAll()).filter((r) => r.editedAt && r.editedAt > taken);
-	if (!edited.length) return 0;
-	const changed = [];
-	for (const p of await listPeople()) {
-		const r = edited.find((x) => x.sigs.includes(`rounds:${p.id}`));
-		if (!r || p.updatedAt && p.updatedAt > r.editedAt) continue;
-		const next = {
-			...p,
-			name: r.name || p.name,
-			instagram: r.instagram,
-			tiktok: r.tiktok
-		};
-		if (next.name !== p.name || next.instagram !== p.instagram || next.tiktok !== p.tiktok) changed.push(next);
-	}
-	if (changed.length) await savePeople(changed);
-	try {
-		localStorage.setItem(TAKEN, edited.map((r) => r.editedAt).sort().pop());
-	} catch (e) {}
-	return changed.length;
-}
-
 // pages/person-edit.js
 const field = (label, name, value, more = "") => `<label class="field"><span class="field-label">${label}</span><input type="text" name="${name}" value="${esc(value)}" autocomplete="off" ${more} /></label>`;
 const HANDLE = "autocapitalize=\"off\" spellcheck=\"false\" placeholder=\"@handle\"";
@@ -4605,12 +5178,22 @@ async function openPersonMenu(p, redraw, { asks = false, pitched = "" } = {}) {
 				key: "yes",
 				label: "Yes, let's shoot"
 			}],
+			{
+				key: "merge",
+				label: "Merge with..."
+			},
 			p.letGo ? {
 				key: "back",
 				label: "Bring back"
 			} : {
 				key: "go",
 				label: "Let go"
+			},
+			{
+				key: "delete",
+				label: "Delete",
+				danger: true,
+				skip: true
 			}
 		]
 	});
@@ -4631,6 +5214,19 @@ async function openPersonMenu(p, redraw, { asks = false, pitched = "" } = {}) {
 	} else if (pick === "yes") {
 		await answer(p, "yes", pitched);
 		redraw();
+	} else if (pick === "merge") openMergeWith(p, (kept) => kept.id === p.id ? redraw() : location.hash = `#/person/${encodeURIComponent(kept.id)}`);
+	else if (pick === "delete") {
+		const yes = await confirmSheet({
+			title: `Delete ${p.name}?`,
+			message: "This removes them and everything logged with them. It can't be undone.",
+			confirmLabel: "Delete",
+			danger: true
+		});
+		if (!yes) return;
+		await deletePerson(p);
+		forgetPhoto(p.id);
+		location.hash = "#/people";
+		toast("Deleted, with everything logged with them.");
 	} else if (pick === "back") {
 		await savePerson(bringBack(p, dayOf()));
 		redraw();
@@ -4667,17 +5263,16 @@ const rowHtml = (r, i) => {
 const soFarHtml = (rows) => rows.length ? `<h2 class="so-far-head">So far</h2><div class="so-far-list">${rows.map(rowHtml).join("")}</div>` : "";
 const chipsHtml = (list, on) => Object.entries(list).map(([k, label]) => `<button type="button" class="pick-chip${k === on ? " on" : ""}" data-how="${esc(k)}" aria-pressed="${k === on}">${esc(label)}</button>`).join("");
 function openEdit(row, line, after) {
-	const noteOnly = row.kind === "note";
 	let how = line.how || "";
 	const s = openSheet({
 		title: row.what,
 		className: "sheet-small done-note so-far-edit",
 		body: `
-      <p class="label done-note-label">${noteOnly ? "What it was" : "How"}</p>
-      <div class="pick-chips">${chipsHtml(noteOnly ? NOTE_HOWS : HOWS, how)}</div>
-      <label class="label done-note-label" for="soFarNote">${noteOnly ? "The note" : "A note (optional)"}</label>
+      <p class="label done-note-label">What it was</p>
+      <div class="pick-chips">${chipsHtml(NOTE_HOWS, how)}</div>
+      <label class="label done-note-label" for="soFarNote">The note</label>
       <textarea class="move-text done-note-text" id="soFarNote" rows="3" maxlength="500">${esc(line.note || "")}</textarea>
-      <div class="done-note-btns">${noteOnly ? "<button type=\"button\" class=\"text-btn\" data-delete>Delete the note</button>" : ""}<button type="button" class="btn primary" data-save>Save</button></div>`
+      <div class="done-note-btns"><button type="button" class="text-btn" data-delete>Delete the note</button><button type="button" class="btn primary" data-save>Save</button></div>`
 	});
 	const note = s.body.querySelector("textarea");
 	s.body.addEventListener("click", async (e) => {
@@ -4690,12 +5285,12 @@ function openEdit(row, line, after) {
 				c.setAttribute("aria-pressed", c.dataset.how === how);
 			});
 		} else if (b.matches("[data-save]")) {
-			if (noteOnly && !how && !note.value.trim()) {
+			if (!how && !note.value.trim()) {
 				note.focus();
 				return;
 			}
 			s.close();
-			await (noteOnly ? saveNote : saveHowNote)(line, {
+			await saveNote(line, {
 				how,
 				note: note.value
 			});
@@ -4720,6 +5315,7 @@ function wireSoFar(view, person, rows, lines, after) {
 			line,
 			after
 		});
+		else if (row.kind === "move") openSaid(person, line, after);
 		else openEdit(row, line, after);
 	}));
 }
@@ -4779,10 +5375,7 @@ async function personScreen(view, id) {
 	wirePitch(view, p, pitched, redraw);
 	view.querySelector("[data-moment]").addEventListener("click", () => openMoment(p, { after: redraw }));
 	wireSoFar(view, p, rows, lines, redraw);
-	view.querySelector("[data-move]")?.addEventListener("click", () => openMove(p, {
-		onDone: (said) => moveDone(p, said, redraw),
-		onLater: () => laterMove(p).then(redraw)
-	}));
+	view.querySelector("[data-move]")?.addEventListener("click", () => writeTo(p, redraw));
 	const once = (key) => {
 		try {
 			const v = sessionStorage.getItem(key) || "";
@@ -4794,6 +5387,9 @@ async function personScreen(view, id) {
 	};
 	if (once("rounds-open-move") === id) view.querySelector("[data-move]")?.click();
 	if (once("rounds-open-moment") === id) view.querySelector("[data-moment]").click();
+	const said = once("rounds-open-said");
+	const saidLine = said && lines.find((l) => l.id === said && l.personId === id);
+	if (saidLine) openSaid(p, saidLine, redraw);
 }
 
 // data/lists.js
@@ -5402,6 +5998,11 @@ if (suite && suite.get && suite.get("person")) {
 				sessionStorage.setItem(key, suite.get("person"));
 			} catch (e) {}
 		}
+	}
+	if (suite.get("said")) {
+		try {
+			sessionStorage.setItem("rounds-open-said", suite.get("said"));
+		} catch (e) {}
 	}
 	history.replaceState(null, "", `#/person/${encodeURIComponent(suite.get("person"))}`);
 } else if ((location.hash || "#/") === "#/") history.replaceState(null, "", suite && suite.at ? `#/${suite.at}` : "#/today");

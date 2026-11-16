@@ -22,6 +22,8 @@ export const later = (a, b) => (a > b ? a : b);
 const short = (d) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 // A day, short: 3 Nov ('' for none).
 export const shortDay = (day) => (isDay(day) ? short(dateOf(day)) : '');
+// With its weekday: Mon 16 Nov (the one sheet, What you said).
+export const longDay = (day) => (isDay(day) ? `${WEEKDAYS[dateOf(day).getDay()].slice(0, 3)} ${short(dateOf(day))}` : '');
 
 // A day gone by, in a sentence: today, yesterday, Tuesday (this past week), 3 Nov.
 export function whenWords(day, today) {

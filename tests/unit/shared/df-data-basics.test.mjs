@@ -297,7 +297,7 @@ describe('the loaded script', () => {
       'restoreZip', 'rows', 'saveFile', 'saveLink', 'sizeText', 'todayStr', 'uid', 'zipBackup',
       // The one list of people (people.js, people-things.js).
       'cleanHandle', 'personKeys', 'findPerson', 'maybePairs', 'peopleAll', 'getPerson', 'gatherPeople', 'answerSame',
-      'editPerson', 'personFor', 'personUrl', 'PEOPLE_APPS', 'pictureOf', 'shootPeople', 'publishThings', 'thingsAll',
+      'editPerson', 'personFor', 'personUrl', 'PEOPLE_APPS', 'pictureOf', 'shootPeople', 'publishThings', 'thingsAll', 'forgetPerson',
       'personView', 'searchIn', 'searchAll', 'askRounds', 'roundsAsks', 'doneWithAsks',
     ].sort());
   });

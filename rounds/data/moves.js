@@ -3,7 +3,8 @@
 // day's pick kept in step. And the day's pick itself, saved for the day.
 import { listPeople, savePerson, logMove, listMoves, dropMove, getSetting, setSetting } from './db.js';
 import { pickFor, markPick, unmarkPick, doneOn, PER_DAY } from './today.js';
-import { markDone, markLater, undoDone as undoPerson } from './person.js';
+import { markDone, markLater } from './person.js';
+import { afterDelete, undoesDue } from './one-move.js';
 import { dayOf } from './dates.js';
 import { weekOf } from './work-days.js';
 import { shelfItems } from './shelf-items.js';
@@ -29,26 +30,28 @@ export async function loadToday() {
   return { people, pick, week };
 }
 
-async function markInPick(id, how) {
+export async function markInPick(id, how) {
   const pick = await getSetting('pick', null);
   if (!pick || pick.date !== dayOf() || !pick.ids.includes(id)) return;
   await setSetting('pick', how ? markPick(pick, id, how) : unmarkPick(pick, id));
 }
 
 // Gives back what UNDO needs. (at: when, for Done today's order.) said:
-// what's in the move's WHAT DID YOU SAY? box, kept with it.
-export async function doMove(person, said = '') {
+// what's in WHAT DID YOU SAY?, kept with it, and how and the note, from
+// the one sheet (pages/one-sheet.js).
+export async function doMove(person, said = '', { how, note } = {}) {
   const { person: after, log } = markDone(person, dayOf());
-  const line = withHowNote({ id: uuid(), at: Date.now(), ...log }, { said });
+  const line = withHowNote({ id: uuid(), at: Date.now(), ...log }, { said, how, note });
   await savePerson(after);
   await logMove(line);
   await markInPick(person.id, 'done');
   shelfAgain();
   return { before: person, after, line };
 }
-// HOW and A NOTE, from the sheet right after DONE: kept with the move's line.
-export async function saveHowNote(line, { how, note }) {
-  const next = withHowNote(line, { how, note, said: line.said }, HOWS);
+// HOW, A NOTE and what you said, changed (the one sheet's EDIT, from What
+// you said): kept with the move's line.
+export async function saveHowNote(line, { how, note, said = line.said }) {
+  const next = withHowNote(line, { how, note, said }, HOWS);
   await logMove(next);
   return next;
 }
@@ -73,10 +76,13 @@ export async function loadDone() {
   const [lines, people] = await Promise.all([listMoves(), listPeople()]);
   return { lines, done: doneOn(lines, people, dayOf()) };
 }
+// (A move that wasn't the due one takes back only what it moved:
+// data/one-move.js afterDelete.)
 export async function undoDone({ line, person }, lines) {
-  await savePerson(undoPerson(person, line, lines));
+  const today = dayOf();
+  await savePerson(afterDelete(person, line, lines, today));
   await dropMove(line.id);
-  await markInPick(person.id, null);
+  if (undoesDue(person, line, lines, today)) await markInPick(person.id, null);
 }
 export async function laterMove(person) {
   const after = markLater(person, dayOf());

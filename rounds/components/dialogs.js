@@ -27,7 +27,8 @@ export function confirmSheet({ title, message = '', confirmLabel = 'OK', cancelL
 }
 
 // A list of choices; resolves with the chosen key, or null.
-// options: [{ key, label, detail, current, danger }]
+// options: [{ key, label, detail, current, danger, skip }] (skip: the
+// button clicker leaves it alone, for one that deletes for good)
 export function choiceSheet({ title, message = '', options, footer = '' }) {
   return new Promise((resolve) => {
     let answer = null;
@@ -39,7 +40,7 @@ export function choiceSheet({ title, message = '', options, footer = '' }) {
         <div class="choice-list">
           ${options
             .map(
-              (o) => o.heading ? `<span class="field-label choice-heading">${esc(o.heading)}</span>` : `<button type="button" class="choice${o.current ? ' current' : ''}${o.danger ? ' is-danger' : ''}" data-key="${esc(o.key)}">
+              (o) => o.heading ? `<span class="field-label choice-heading">${esc(o.heading)}</span>` : `<button type="button" class="choice${o.current ? ' current' : ''}${o.danger ? ' is-danger' : ''}" data-key="${esc(o.key)}"${o.skip ? ' data-test-skip' : ''}>
                 ${o.icon || ''}<span class="choice-text"><span class="choice-label">${esc(o.label)}</span>
                 ${o.detail ? `<span class="choice-detail">${esc(o.detail)}</span>` : ''}</span></button>`
             )

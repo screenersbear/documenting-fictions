@@ -2,17 +2,19 @@
 // with them, newest first (data/so-far.js), each row its date in small
 // capitals, its mark (a move's own; Rounds' for moments and notes, The
 // Eye's for shoots), what (" · how"), and the note under it in light type.
-// Tap a move to change how and its note; a note on its own to change it or
-// delete it; a moment to change it or delete it (pages/moment-sheet.js).
-// Deleting has Undo. Shoots and answers are as they are.
+// Tap a move to see what you said (pages/what-you-said.js, rounds/09: EDIT,
+// COPY AGAIN, DELETE); a note on its own to change it or delete it; a
+// moment to change it or delete it (pages/moment-sheet.js). Deleting has
+// Undo. Shoots and answers are as they are.
 import { openSheet } from '../components/sheet.js';
 import { miniHtml } from '../components/marks.js';
 import { toast } from '../components/toast.js';
 import { esc } from '../components/util.js';
-import { HOWS, NOTE_HOWS } from '../data/done-notes.js';
-import { saveHowNote, saveNote, dropNote, putNoteBack } from '../data/moves.js';
+import { NOTE_HOWS } from '../data/done-notes.js';
+import { saveNote, dropNote, putNoteBack } from '../data/moves.js';
 import { shortDay } from '../data/dates.js';
 import { openMoment } from './moment-sheet.js';
+import { openSaid } from './what-you-said.js';
 
 const C = () => window.DFConnect;
 const TAPPABLE = ['move', 'note', 'moment'];
@@ -34,19 +36,18 @@ export const soFarHtml = (rows) => (rows.length ? `<h2 class="so-far-head">So fa
 
 const chipsHtml = (list, on) => Object.entries(list).map(([k, label]) => `<button type="button" class="pick-chip${k === on ? ' on' : ''}" data-how="${esc(k)}" aria-pressed="${k === on}">${esc(label)}</button>`).join('');
 
-// A move's how and note, or a note on its own (with DELETE THE NOTE).
+// A note on its own: what it was, the note, DELETE THE NOTE.
 function openEdit(row, line, after) {
-  const noteOnly = row.kind === 'note';
   let how = line.how || '';
   const s = openSheet({
     title: row.what,
     className: 'sheet-small done-note so-far-edit',
     body: `
-      <p class="label done-note-label">${noteOnly ? 'What it was' : 'How'}</p>
-      <div class="pick-chips">${chipsHtml(noteOnly ? NOTE_HOWS : HOWS, how)}</div>
-      <label class="label done-note-label" for="soFarNote">${noteOnly ? 'The note' : 'A note (optional)'}</label>
+      <p class="label done-note-label">What it was</p>
+      <div class="pick-chips">${chipsHtml(NOTE_HOWS, how)}</div>
+      <label class="label done-note-label" for="soFarNote">The note</label>
       <textarea class="move-text done-note-text" id="soFarNote" rows="3" maxlength="500">${esc(line.note || '')}</textarea>
-      <div class="done-note-btns">${noteOnly ? '<button type="button" class="text-btn" data-delete>Delete the note</button>' : ''}<button type="button" class="btn primary" data-save>Save</button></div>`,
+      <div class="done-note-btns"><button type="button" class="text-btn" data-delete>Delete the note</button><button type="button" class="btn primary" data-save>Save</button></div>`,
   });
   const note = s.body.querySelector('textarea');
   s.body.addEventListener('click', async (e) => {
@@ -56,9 +57,9 @@ function openEdit(row, line, after) {
       how = how === b.dataset.how ? '' : b.dataset.how;
       s.body.querySelectorAll('[data-how]').forEach((c) => { c.classList.toggle('on', c.dataset.how === how); c.setAttribute('aria-pressed', c.dataset.how === how); });
     } else if (b.matches('[data-save]')) {
-      if (noteOnly && !how && !note.value.trim()) { note.focus(); return; } // a note needs something
+      if (!how && !note.value.trim()) { note.focus(); return; } // a note needs something
       s.close();
-      await (noteOnly ? saveNote : saveHowNote)(line, { how, note: note.value });
+      await saveNote(line, { how, note: note.value });
       await after();
     } else if (b.matches('[data-delete]')) {
       s.close();
@@ -76,6 +77,7 @@ export function wireSoFar(view, person, rows, lines, after) {
     const line = lines.find((l) => l.id === row.id);
     if (!line) return;
     if (row.kind === 'moment') openMoment(person, { line, after });
+    else if (row.kind === 'move') openSaid(person, line, after);
     else openEdit(row, line, after);
   }));
 }

@@ -56,13 +56,14 @@ export async function keepPhoto(person, file) {
   } finally {
     URL.revokeObjectURL(url);
   }
-  forget(person.id);
+  forgetPhoto(person.id);
 }
 export async function removePhoto(person) {
   await dropPhoto(person.id);
-  forget(person.id);
+  forgetPhoto(person.id);
 }
-function forget(id) {
+// Worked out again next time (a photo changed, or merged in).
+export function forgetPhoto(id) {
   const old = srcs.get(id);
   srcs.delete(id);
   old?.then((src) => { if (src.startsWith('blob:')) URL.revokeObjectURL(src); });

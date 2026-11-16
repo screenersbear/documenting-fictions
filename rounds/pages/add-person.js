@@ -2,18 +2,19 @@
 // you met. They start as New, with a Say hello; Edit has the rest.
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
-import { uuid } from '../components/util.js';
+import { uuid, esc } from '../components/util.js';
 import { newPerson } from '../data/person.js';
 import { savePerson } from '../data/db.js';
 import { dayOf } from '../data/dates.js';
 
-// onAdded(person) runs once they're saved.
-export function openAddPerson(onAdded) {
+// onAdded(person) runs once they're saved. name: typed already (Reach out
+// to's Add "<typed>" as a new person).
+export function openAddPerson(onAdded, { name = '' } = {}) {
   const s = openSheet({
     title: 'Add someone',
     body: `
       <form class="form" data-form>
-        <label class="field"><span class="field-label">Name</span><input type="text" name="name" autocomplete="off" required /></label>
+        <label class="field"><span class="field-label">Name</span><input type="text" name="name" value="${esc(name)}" autocomplete="off" required /></label>
         <label class="field"><span class="field-label">Instagram</span><input type="text" name="instagram" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="@handle" /></label>
         <label class="field"><span class="field-label">Where you met</span><input type="text" name="where" autocomplete="off" placeholder="The Brooklyn portrait meetup" /></label>
         <div class="sheet-actions">

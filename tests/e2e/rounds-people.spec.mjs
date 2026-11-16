@@ -157,7 +157,7 @@ test.describe('Rounds: People', () => {
     await expect(page.locator('#view .person-handle')).toHaveText('@jules.mua');
     // Their next move opens from their page too.
     await page.click('#view .person-next');
-    await expect(sheet(page, 'Say thanks')).toBeVisible();
+    await expect(sheet(page, 'Jules M.')).toBeVisible();
     await ctx.close();
   });
 });

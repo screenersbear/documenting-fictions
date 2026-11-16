@@ -126,7 +126,7 @@ test.describe('Rounds: Work days and Sync', () => {
     await page.click('#view [data-write]');
     const move = page.locator('.sheet', { has: page.locator('.move-draft') });
     await expect(move.locator('.move-draft')).toHaveText('Draft waiting in Gmail, written by Claude.');
-    await expect(move.locator('textarea')).toHaveCount(0);
+    await expect(move.locator('[data-go]')).toHaveCount(0); // OPEN GMAIL instead of COPY AND OPEN
     await page.waitForTimeout(500);
     await move.locator('[data-gmail]').click();
     expect(await page.evaluate(() => window.__opened)).toEqual(['https://mail.google.com/mail/u/0/#drafts']);

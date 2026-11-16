@@ -102,6 +102,13 @@ describe('doMove with what you said, and saveHowNote', () => {
     expect(next).toEqual({ ...line, how: 'text', note: 'Wants to shoot again.' });
     expect((await db.listMoves()).map(strip)).toEqual([next]);
   });
+  it('the one sheet: how and a note given with it are kept at once', async () => {
+    const p = person('a');
+    await db.savePerson(p);
+    const { line } = await M.doMove(p, 'Hi', { how: 'email', note: 'Liked it' });
+    expect(line).toMatchObject({ said: 'Hi', how: 'email', note: 'Liked it' });
+    expect(await M.saveHowNote(line, { how: 'text', note: '', said: 'Hello again' })).toEqual({ ...line, how: 'text', note: undefined, said: 'Hello again' });
+  });
   it('an unknown how, or a note\'s how, is left off; an empty note too', async () => {
     const p = person('a');
     await db.savePerson(p);
@@ -200,6 +207,21 @@ describe('undoDone', () => {
     expect((await saved('a')).next).toEqual(p.next);
     expect(await db.listMoves()).toEqual([]);
     expect(await db.getSetting('pick', null)).toEqual(pickOf(['a']));
+  });
+});
+
+describe('undoDone: a move that was not the due one', () => {
+  it('takes back only what it moved, and leaves the card in the day\'s pick', async () => {
+    const p = person('a', { lastMove: '2026-10-01', next: { kind: 'checkin', due: '2026-11-20', step: 0 } });
+    const line = { id: 'x', at: 5, personId: 'a', kind: 'pitch', day: TODAY, extra: true, keeps: true, wasLast: '2026-10-01', moved: { from: '2026-11-20', to: '2026-12-28' } };
+    const after = { ...p, lastMove: TODAY, next: { ...p.next, due: '2026-12-28' } };
+    await db.savePerson(after);
+    await db.logMove(line);
+    await db.setSetting('pick', pickOf(['a'], { a: 'later' }));
+    await M.undoDone({ line, person: after }, await db.listMoves());
+    expect(await saved('a')).toEqual(p);
+    expect(await db.listMoves()).toEqual([]);
+    expect(await db.getSetting('pick', null)).toEqual(pickOf(['a'], { a: 'later' }));
   });
 });
 

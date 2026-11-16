@@ -23,6 +23,9 @@ describe('happened', () => {
       'you pitched June', 'you followed up', 'you offered June a refresh', 'you asked June for intros',
     ]);
   });
+  it('words a move logged as Other', () => {
+    expect(happened(june, [line('other', '2026-11-16')])).toEqual([{ day: '2026-11-16', words: 'you reached out' }]);
+  });
   it('adds their answer to a pitch: yes or not now, not "no reply yet"', () => {
     const yes = { ...june, pitch: { answer: 'yes', on: '2026-11-14' } };
     expect(happened(yes, [line('pitch', '2026-11-14'), line('pitch', '2026-11-02')])).toEqual([

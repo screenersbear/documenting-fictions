@@ -333,40 +333,53 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .today-leads { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin: 0 0 4px; border-bottom: 1px solid var(--line); font: 400 15px/20px var(--ui); }
 .today-leads .text-btn { margin-right: -10px; color: var(--text); }
 
-/* ---- styles/move.css ---- */
-/* A move opened (02-move): the move's tag and the close ring, the person,
-   their starter message filled in and editable, then COPY AND OPEN (to
-   Instagram, their email or website), with DONE and LATER under it. */
-.move-sheet { min-height: min(614px, calc(var(--vv-height, 100svh) * .92)); }
-.move-sheet .sheet-body { display: flex; flex-direction: column; flex: 1; padding-top: 2px; }
-.move-who { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
-.move-who .ph { width: 44px; height: 54px; }
+/* ---- styles/one-sheet.css ---- */
+/* One sheet for any move (rounds/08): in the header the person (a 40 x 50
+   photo, the name in light 20px, "Today, Mon 16 Nov"), then WHAT KIND, WHAT
+   DID YOU SAY? (white, an ink edge), "+ Use your check-in message" in dim
+   13px, HOW, A NOTE FOR YOU (a light edge, "Only you see this"), and COPY
+   AND OPEN with DONE (mango on ink) at the foot. */
+.one-sheet { min-height: min(774px, calc(var(--vv-height, 100svh) * .92)); }
+.one-sheet .sheet-body { display: flex; flex-direction: column; flex: 1; padding-top: 0; }
+.one-sheet .sheet-header h2 { min-width: 0; font: inherit; letter-spacing: 0; text-transform: none; }
+.move-who { display: flex; align-items: center; gap: 12px; }
+.move-who .ph { width: 40px; height: 50px; flex: none; }
 .move-who-words { display: flex; flex-direction: column; min-width: 0; }
-.move-name { font: 300 20px/26px var(--ui); }
-.move-handle { font: 400 14px/18px var(--ui); color: var(--dim); }
-.move-sheet .label { margin: 18px 0 6px; }
-.move-draft { margin: 18px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--paper); font: 400 17px/24px var(--ui); }
-.move-text { display: block; width: 100%; min-height: 140px; field-sizing: content; max-height: 40vh; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--paper);
-  box-shadow: inset 0 0 0 1px var(--line); font: 400 16px/23px var(--ui); color: var(--text); resize: none; outline: none; -webkit-appearance: none; }
-.move-text:focus { box-shadow: inset 0 0 0 1.5px var(--text); }
-.move-actions { margin-top: auto; padding-top: 20px; }
-.move-go { width: 100%; height: 50px; }
-.move-more { display: flex; justify-content: center; gap: 12px; margin-top: 4px; }
-/* Back from Instagram: "Done?" in place of the buttons. */
-.move-ask { margin: 0 0 10px; text-align: center; font: 300 20px/26px var(--ui); }
-.move-ask-btns { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; }
-/* A year since: one of the shoot's finals, as it is, ready to share. */
-.move-final { display: flex; align-items: flex-end; gap: 12px; margin-top: 16px; }
-.move-final img { display: block; width: auto; height: auto; max-width: 62%; max-height: 190px; border-radius: 4px; }
-/* WHAT DID YOU SAY? (thanks/04): white, an ink edge, empty to start; your
-   message offered under it on the segmented track's grey. */
-.move-sheet .move-text { min-height: 92px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--text); }
+.move-name { font: 300 20px/26px var(--ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.move-handle { font: 400 13px/18px var(--ui); color: var(--dim); }
+.one-label { display: block; margin: 16px 0 8px; }
+.one-label[for] { margin-bottom: 6px; }
+.move-text { display: block; width: 100%; field-sizing: content; max-height: 40vh; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--card);
+  font: 400 16px/23px var(--ui); color: var(--text); resize: none; outline: none; -webkit-appearance: none; }
 .move-text::placeholder { color: var(--off-1); }
-.move-offer { display: flex; gap: 10px; width: 100%; margin-top: 10px; padding: 12px 14px; border: 0; border-radius: 12px; background: #EFEFEA; text-align: left; color: var(--text); }
-.move-offer[hidden] { display: none; }
-.move-offer-plus { flex-shrink: 0; display: inline-flex; padding-top: 2px; }
-.move-offer-head { display: block; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
-.move-offer-text { display: block; margin-top: 4px; font: 400 15px/21px var(--ui); color: var(--dim); }
+.one-said { min-height: 70px; box-shadow: inset 0 0 0 1.5px var(--text); }
+.one-note { min-height: 44px; padding-top: 10px; padding-bottom: 10px; box-shadow: inset 0 0 0 1px var(--line); }
+.one-note:focus { box-shadow: inset 0 0 0 1.5px var(--text); }
+.one-offer { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 36px; margin-top: 2px; font: 400 13px/18px var(--ui); color: var(--dim); }
+.one-offer[hidden] { display: none; }
+.one-offer svg { width: 14px; height: 14px; }
+.move-draft { margin: 14px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--paper); font: 400 15px/21px var(--ui); }
+.move-draft[hidden] { display: none; }
+.one-btns { display: flex; gap: 8px; margin-top: auto; padding-top: 20px; }
+.one-btns .btn { flex: 1; min-width: 0; }
+.one-btns .btn.primary { color: var(--partner); } /* DONE in mango, as in rounds/08 */
+/* A year since: one of the shoot's finals, as it is, ready to share. */
+.move-final { display: flex; align-items: flex-end; gap: 12px; margin-top: 12px; }
+.move-final[hidden] { display: none; }
+.move-final img { display: block; width: auto; height: auto; max-width: 62%; max-height: 150px; border-radius: 4px; }
+
+/* What you said (rounds/09): the tag in the header, "Checked in with
+   Lindsey" in light 22px, the day and how, WHAT YOU SAID in light 17px, YOUR
+   NOTE in dim 15px; DELETE (dim text), EDIT and COPY AGAIN at the foot. */
+.said-sheet .sheet-body { padding-top: 2px; }
+.said-title { margin: 0; font: 300 22px/28px var(--ui); }
+.said-when { margin: 4px 0 0; font: 400 14px/20px var(--ui); color: var(--dim); }
+.said-label { margin: 20px 0 6px; }
+.said-words { margin: 0; font: 300 17px/25px var(--ui); white-space: pre-wrap; overflow-wrap: anywhere; }
+.said-note { margin: 0; font: 400 15px/21px var(--ui); color: var(--dim); }
+.said-btns { display: flex; gap: 8px; align-items: center; margin-top: 28px; }
+.said-btns .btn { flex: 1; min-width: 0; }
+.said-btns .text-btn { min-height: 44px; padding: 0 12px; margin-left: -12px; }
 
 /* ---- styles/done-note.css ---- */
 /* Right after a move is done (thanks/02): HOW and A NOTE (OPTIONAL), each
@@ -396,6 +409,70 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .person-card-name span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .people-gone { margin-top: 32px; }
 .people-gone .people-grid { opacity: .6; }
+
+/* ---- styles/reach-out.css ---- */
+/* Reach out to (rounds/07) and Merge with...: a search box, the people it
+   finds (a 40 x 50 photo, the name in 17px, their group and the last thing
+   in dim 13px, a line under each), then OR SOMEONE NEW. People's own search
+   box is the same, lighter until it's typed in. */
+.reach-sheet { min-height: min(724px, calc(var(--vv-height, 100svh) * .92)); }
+.find-box { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--text); color: var(--dim); }
+.find-box input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; font: 400 17px/22px var(--ui); color: var(--text); -webkit-appearance: none; }
+.find-box input::placeholder { color: var(--off-1); }
+.find-box input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.pick-list { margin-top: 6px; }
+.pick-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 0; border-bottom: 1px solid var(--line); text-align: left; color: var(--text); }
+.pick-row .ph { width: 40px; height: 50px; flex: none; }
+.pick-row-words { display: flex; flex-direction: column; min-width: 0; }
+.pick-row-name { font: 400 17px/22px var(--ui); }
+.pick-row-line { font: 400 13px/18px var(--ui); color: var(--dim); }
+.reach-label { margin: 16px 0 6px; }
+.reach-new { display: flex; align-items: center; gap: 10px; min-height: 44px; font: 400 16px/22px var(--ui); color: var(--text); text-align: left; }
+.reach-new svg { flex: none; }
+
+/* Merge into one person (rounds/11): the two side by side, the one kept
+   with an ink edge and KEEP THIS NAME ✓; what happens, then MERGE. */
+.merge-cards { display: flex; gap: 10px; margin-top: 2px; }
+.merge-card { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; padding: 12px; border-radius: 12px; background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--line); text-align: left; color: var(--text); }
+.merge-card.on { box-shadow: inset 0 0 0 2px var(--text); }
+.merge-card .ph { width: 60px; height: 75px; }
+.merge-name { margin-top: 10px; font: 400 17px/22px var(--ui); overflow-wrap: anywhere; }
+.merge-handle { margin-top: 2px; font: 400 13px/18px var(--ui); color: var(--dim); overflow-wrap: anywhere; }
+.merge-count { margin-top: 6px; font: 400 12px/16px var(--ui); color: var(--dim); }
+.merge-keep { margin-top: 10px; font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.merge-what { margin: 16px 0 0; font: 400 15px/21px var(--ui); }
+.merge-undo { margin: 10px 0 0; font: 400 13px/18px var(--ui); color: var(--dim); }
+.merge-go.btn { width: 100%; height: 50px; margin-top: 24px; color: var(--partner); }
+
+/* ---- styles/people-find.css ---- */
+/* People, tightened (rounds/10): the search box (a light edge until it's
+   typed in), the filter chips in a row that scrolls, SORT and its three
+   orders, the quiet merge line on the segmented grey, and each card's one
+   dim line. + REACH OUT beside Today's count (rounds/06). */
+.people-find { height: 44px; margin-top: 8px; box-shadow: inset 0 0 0 1px var(--line); }
+.people-find:focus-within { box-shadow: inset 0 0 0 1.5px var(--text); }
+.people-find input { font-size: 16px; }
+.people-filters { display: flex; gap: 8px; margin: 10px -16px 0; padding: 0 16px; overflow-x: auto; scrollbar-width: none; }
+.people-filters::-webkit-scrollbar { display: none; }
+.people-filters .pick-chip { flex: none; white-space: nowrap; }
+.people-sort { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; }
+.people-sort-now { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.people-sorts { display: flex; align-items: center; gap: 4px; font: 400 12px/16px var(--ui); color: var(--dim); }
+.people-sorts button { min-height: 40px; color: var(--dim); }
+.people-sorts button[aria-pressed="true"] { color: var(--text); font-weight: 600; }
+.look-alike { display: flex; align-items: center; gap: 4px; margin-top: 8px; padding: 6px 4px 6px 14px; border-radius: 12px; background: #EFEFEA; }
+.look-alike-words { flex: 1; font: 400 15px/20px var(--ui); }
+.look-alike-words b { font-weight: 600; }
+.look-alike .list-act { margin-right: 0; }
+.look-alike-x { display: flex; align-items: center; justify-content: center; flex: none; width: 36px; height: 44px; color: var(--dim); }
+.look-alike-x .x-icon { width: 14px; height: 14px; }
+.look-alike + [data-people] .people-grid, [data-sort-row] + [data-people] .people-grid { margin-top: 14px; }
+.person-card-line { display: block; margin-top: 2px; font: 400 12px/16px var(--ui); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.today-count-row { display: flex; align-items: center; gap: 14px; }
+.today-reach { margin: 0 0 0 -6px; }
+/* Done today: tap the move to see what you said. */
+.done-row-open { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; min-height: 44px; text-align: left; color: var(--text); }
 
 /* ---- styles/person.css ---- */
 /* A person (04-person): photo, name, handle (opens the profile), one line
