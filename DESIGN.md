@@ -354,6 +354,14 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
   pill chips in ink with mango text when picked; SKIP and SAVE (mango on ink). The person page shows DONE SO FAR in Rounds'
   part under NEXT, with + ADD A NOTE. The Eye shows Say thanks FROM ROUNDS on a captured shoot, OPEN ROUNDS and <NAME>
   WROTE FIRST (names, since Rounds keeps no pronouns).
+- **Someone you know (Live, 15 Nov, people/NOTES.md):** The Eye's talent picker is SOMEONE YOU KNOW: everyone, talent
+  and team, from its shoots and the one list of people, newest first, labelled "Iryna V. · team, 3 shoots". Typing a name
+  (first, last or a handle) lists up to five under it, in the talent and team member popups; picking fills name, handles
+  and photo. In the suite the talent popup has BOOKED ME (They're the paying client.), a df-switch: on for headshot,
+  branding and other portrait kinds, off for portfolio building, test shoots and editorial, set per person. Rounds: a
+  person can be in more than one group (Edit shows them as chips; Prospect drops once Client is in); a captured shoot makes
+  whoever booked you a Client too, and a Regular who's a Client gets the client moves with check-ins between, one card
+  at a time. People pages read "Regular. Client."
 - **Placing a sticker:** pick a photo, then the placing screen: the book big with the sticker on it (drag to move, pinch to
   size, twist to turn) and a sheet under it with SHAPE (Circle, Square, Card, Cut out) and EDGE (White border, Black outline)
   as segmented controls, the sticker changing as you pick; BACK and STICK IT ON. Shape and edge are chosen there, never after.

@@ -263,6 +263,10 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .switch:checked { background: var(--ink); }
 .switch:checked::after { transform: translateX(20px); }
 .field-error { margin: 4px 0 0; font: 400 15px/21px var(--ui); color: var(--crimson); }
+/* Edit's groups (people/NOTES.md, 15 Nov): pill chips that turn on together
+   (styles/done-note.css), and a dim line on what the ones on do. */
+.field .edit-groups { margin-top: 8px; }
+.edit-groups-words { margin: 8px 0 0; font: 400 13px/18px var(--ui); color: var(--dim); }
 
 /* ---- styles/toast.css ---- */
 /* The toast: a short message over the section bar, with an optional button (like UNDO). */

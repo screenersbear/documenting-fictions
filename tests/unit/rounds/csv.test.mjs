@@ -42,11 +42,11 @@ describe('readPeople', () => {
   it('reads each person in the file\'s columns, cleaned', () => {
     const { rows, bad } = readPeople(`${head}Hoboken Florist,Prospect,@hobokenflorist,hobokenflowers.com,hi@hf.com,"Found by Claude, Nov 2026",A bright storefront,Say hello\n`);
     expect(bad).toBe(0);
-    expect(rows).toEqual([{ name: 'Hoboken Florist', group: 'prospect', instagram: 'hobokenflorist', website: 'https://hobokenflowers.com', email: 'hi@hf.com', where: 'Found by Claude, Nov 2026', note: 'A bright storefront', firstMove: 'hello' }]);
+    expect(rows).toEqual([{ name: 'Hoboken Florist', group: 'prospect', groups: ['prospect'], instagram: 'hobokenflorist', website: 'https://hobokenflowers.com', email: 'hi@hf.com', where: 'Found by Claude, Nov 2026', note: 'A bright storefront', firstMove: 'hello' }]);
   });
   it('takes the columns in any order and case, and fills in the rest', () => {
     const { rows } = readPeople('Instagram , NAME,Where Met,First-Move\nmaya.rr,Maya,Meetup,\n');
-    expect(rows).toEqual([{ name: 'Maya', group: 'prospect', instagram: 'maya.rr', website: '', email: '', where: 'Meetup', note: '', firstMove: null }]);
+    expect(rows).toEqual([{ name: 'Maya', group: 'prospect', groups: ['prospect'], instagram: 'maya.rr', website: '', email: '', where: 'Meetup', note: '', firstMove: null }]);
   });
   it('reads a group, Prospect when it\'s missing or unknown', () => {
     const { rows } = readPeople('name,group\nA,client\nB,\nC,friends\nD,Regular\n');
@@ -82,10 +82,10 @@ describe('newOnes', () => {
 describe('rowOf', () => {
   it("cleans one person's fields, as a file or Claude's inbox gives them", () => {
     expect(rowOf({ name: ' Ana ', group: 'Clients', instagram: 'https://instagram.com/ana.l', website: 'ana.com', email: ' a@ana.com ', where_met: ' Meetup ', note: ' Hi ', first_move: 'say hello' }))
-      .toEqual({ name: 'Ana', group: 'client', instagram: 'ana.l', website: 'https://ana.com', email: 'a@ana.com', where: 'Meetup', note: 'Hi', firstMove: 'hello' });
+      .toEqual({ name: 'Ana', group: 'client', groups: ['client'], instagram: 'ana.l', website: 'https://ana.com', email: 'a@ana.com', where: 'Meetup', note: 'Hi', firstMove: 'hello' });
   });
   it('a prospect with nothing else, unless said', () => {
-    expect(rowOf({ name: 'Bo' })).toEqual({ name: 'Bo', group: 'prospect', instagram: '', website: '', email: '', where: '', note: '', firstMove: null });
+    expect(rowOf({ name: 'Bo' })).toEqual({ name: 'Bo', group: 'prospect', groups: ['prospect'], instagram: '', website: '', email: '', where: '', note: '', firstMove: null });
     expect(rowOf({ name: 'Bo', group: 'nonsense' }).group).toBe('prospect');
   });
   it('numbers and nothing at all read as text', () => {

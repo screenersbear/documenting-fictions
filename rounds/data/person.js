@@ -3,20 +3,22 @@
 // business or for the email newsletter, an address only for the mail one.
 import { addDays } from './dates.js';
 import { cleanHandle, cleanSite } from './contact.js';
-import { firstMove, afterDone, regroup, move } from './plan.js';
+import { firstMove, afterDone, regroup, move, cleanGroups, leadGroup, groupsOf, inGroups } from './plan.js';
 import { isKind } from './kinds.js';
 
 const text = (v) => String(v ?? '').trim();
 
-// f: { id, name, group, instagram, tiktok, website, email, where, note,
-// photoKey (a talent photo in The Eye), source ('added', 'eye', 'import'),
-// next (leave it out for the group's first move) }.
+// f: { id, name, groups (or one group), instagram, tiktok, website, email,
+// where, note, photoKey (a talent photo in The Eye), source ('added', 'eye',
+// 'import'), next (leave it out for the leading group's first move) }.
 export function newPerson(f, today) {
-  const group = f.group || 'new';
+  const groups = cleanGroups(f.groups || [f.group || 'new']);
+  const group = leadGroup(groups);
   return {
     id: f.id,
     name: text(f.name),
     group,
+    groups,
     groupPicked: false,
     instagram: cleanHandle(f.instagram),
     tiktok: cleanHandle(f.tiktok),
@@ -42,21 +44,22 @@ export function newPerson(f, today) {
 export function fromImport(rows, today, perDay, makeId) {
   return rows.map((r, i) => {
     const due = addDays(today, Math.floor(i / perDay));
-    const next = isKind(r.firstMove) ? move(r.firstMove, due) : firstMove(r.group, due);
+    const next = isKind(r.firstMove) ? move(r.firstMove, due) : firstMove(leadGroup(cleanGroups(r.groups || [r.group])), due);
     return newPerson({ ...r, id: makeId(), source: 'import', next }, today);
   });
 }
 
 // The move is done: what comes next, and the line for the log, which keeps
-// the move as it was (its due day and step, and for Your photos are up its
-// shoot and the move it stood in for) so it can be put back. A draft Claude
+// the move as it was (its due day and step, for Your photos are up its
+// shoot and the move it stood in for, and a client's move waiting behind a
+// check-in) so it can be put back. A draft Claude
 // left for it is used up. A Pitch keeps its day (pitched, for HOW DID THE
 // PITCH GO?), and an answer to an earlier pitch is cleared; the log keeps
 // those as they were (was), for its undo.
 export function markDone(person, today) {
-  const { kind, due, step, shoot, year, then } = person.next;
+  const { kind, due, step, shoot, year, then, waits } = person.next;
   const was = kind === 'pitch' ? { ...(person.pitched ? { pitched: person.pitched } : {}), ...(person.pitch ? { pitch: person.pitch } : {}) } : {};
-  const log = { personId: person.id, kind, day: today, due, step, ...(shoot ? { shoot } : {}), ...(year ? { year } : {}), ...(then ? { then } : {}), ...(Object.keys(was).length ? { was } : {}) };
+  const log = { personId: person.id, kind, day: today, due, step, ...(shoot ? { shoot } : {}), ...(year ? { year } : {}), ...(then ? { then } : {}), ...(waits ? { waits } : {}), ...(Object.keys(was).length ? { was } : {}) };
   const { draft, ...rest } = person;
   const after = { ...rest, lastMove: today, next: afterDone(person, today) };
   if (kind === 'pitch') {
@@ -84,7 +87,7 @@ export function undoDone(person, line, lines = []) {
   const guess = line.kind === 'followup' ? followupBefore(person) : 0;
   const step = Number.isInteger(line.step) ? line.step : guess;
   const lastMove = lines.filter((l) => l.personId === person.id && l.id !== line.id).map((l) => l.day).sort().pop() || '';
-  const next = { ...move(line.kind, line.due || line.day, step), ...(line.shoot ? { shoot: line.shoot } : {}), ...(line.year ? { year: line.year } : {}), ...(line.then ? { then: line.then } : {}) };
+  const next = { ...move(line.kind, line.due || line.day, step), ...(line.shoot ? { shoot: line.shoot } : {}), ...(line.year ? { year: line.year } : {}), ...(line.then ? { then: line.then } : {}), ...(line.waits ? { waits: line.waits } : {}) };
   const back = { ...person, lastMove, next };
   if (line.kind === 'pitch') {
     const was = line.was || {};
@@ -96,8 +99,9 @@ export function undoDone(person, line, lines = []) {
 // LATER: the same move, tomorrow.
 export const markLater = (person, today) => ({ ...person, next: { ...person.next, due: addDays(today, 1) } });
 
-// Edit's changes (only the fields given). A new group changes the next move
-// if it isn't one of the group's, and stops The Eye changing it on its own.
+// Edit's changes (only the fields given). New groups (groups, or one group)
+// change the next move if it isn't one of theirs, and stop The Eye changing
+// them on its own.
 export function applyEdit(person, f, today) {
   const p = { ...person };
   if ('name' in f && text(f.name)) p.name = text(f.name);
@@ -105,10 +109,9 @@ export function applyEdit(person, f, today) {
   if ('website' in f) p.website = cleanSite(f.website);
   for (const k of ['email', 'where', 'note', 'address']) if (k in f) p[k] = text(f[k]);
   if ('lists' in f) p.lists = { email: !!f.lists.email, mail: !!f.lists.mail };
-  if ('group' in f && f.group !== person.group) {
-    p.group = f.group;
-    p.groupPicked = true;
-    p.next = regroup(person, f.group, today);
+  const asked = 'groups' in f ? f.groups : 'group' in f ? [f.group] : null;
+  if (asked && cleanGroups(asked).join() !== groupsOf(person).join()) {
+    Object.assign(p, inGroups(p, asked), { groupPicked: true, next: regroup(person, asked, today) });
   }
   return p;
 }

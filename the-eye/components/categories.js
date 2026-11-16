@@ -2,7 +2,7 @@
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addCategories = function addCategories(ed) {
-  Object.assign(ed, { pickRandomSaveMessage, isCategoryVisible, saveCategoryVisibility, randomNewShootTitle });
+  Object.assign(ed, { pickRandomSaveMessage, isCategoryVisible, saveCategoryVisibility, randomNewShootTitle, bookedByDefault });
   const CATEGORY_LABELS = {
     commercial: 'Commercial',
     content_shoot: 'Content shoot',
@@ -22,6 +22,12 @@ window.EyeParts.addCategories = function addCategories(ed) {
     other: 'Other',
     uncategorized: 'Uncategorized',
   }; ed.CATEGORY_LABELS = CATEGORY_LABELS;
+
+  // Kinds where the talent is usually the one paying (people/NOTES.md, 15 Nov):
+  // their Booked me starts on. Portfolio building, Test shoot, Editorial and
+  // the rest (a brand or a host pays, not the talent) start off.
+  const BOOKED_KINDS = ['headshot', 'branding', 'publicity', 'family', 'maternity', 'engagement', 'wedding'];
+  function bookedByDefault(category) { return BOOKED_KINDS.includes(category); }
 
   const CATEGORY_FILTER_ORDER = ['commercial', 'content_shoot', 'video', 'editorial', 'lighting_test', 'portfolio_building', 'test_shoot', 'event', 'wedding', 'engagement', 'family', 'headshot', 'branding', 'publicity', 'maternity', 'other']; ed.CATEGORY_FILTER_ORDER = CATEGORY_FILTER_ORDER;
 

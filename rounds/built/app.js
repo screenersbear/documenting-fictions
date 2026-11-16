@@ -908,15 +908,41 @@ const move = (kind, due, step = 0) => ({
 	due,
 	step
 });
+function groupsOf(p) {
+	const list = Array.isArray(p.groups) ? p.groups.filter((g) => GROUPS[g]) : [];
+	if (list.length && list.includes(p.group)) return GROUP_KEYS.filter((g) => list.includes(g));
+	return [GROUPS[p.group] ? p.group : "new"];
+}
+const inGroup = (p, g) => groupsOf(p).includes(g);
+const leadGroup = (list) => list.includes("client") ? "client" : GROUP_KEYS.find((g) => list.includes(g));
+function cleanGroups(list) {
+	let g = GROUP_KEYS.filter((k) => (list || []).includes(k));
+	if (g.includes("client")) g = g.filter((k) => k !== "prospect");
+	return g.length ? g : ["new"];
+}
+function toggleGroup(list, g) {
+	const on = cleanGroups(list);
+	if (on.includes(g)) return on.length > 1 ? on.filter((k) => k !== g) : on;
+	return cleanGroups([...on.filter((k) => !(g === "prospect" && k === "client")), g]);
+}
+function inGroups(p, list) {
+	const groups = cleanGroups(list);
+	return {
+		...p,
+		groups,
+		group: leadGroup(groups)
+	};
+}
+const groupWords = (p) => groupsOf(p).map((g) => GROUPS[g]).join(". ");
 function firstMove(group, today) {
 	if (group === "regular") return move("checkin", today);
 	if (group === "prospect") return move("pitch", today);
 	if (group === "client") return move("intros", today);
 	return move("hello", today);
 }
-function afterShoot(person, shotOn, today) {
+function afterShoot(person, shotOn, today, booked = false) {
 	const checkin = move("checkin", later(today, addDays(shotOn, GAP.checkin)));
-	if (person.group === "regular") return checkin;
+	if (inGroup(person, "regular") && !(booked && inGroup(person, "client"))) return checkin;
 	if (daysBetween(shotOn, today) <= GAP.fresh) return move("thanks", addDays(shotOn, 1));
 	return person.next || checkin;
 }
@@ -924,18 +950,29 @@ function afterDone(person, today) {
 	const done = person.next;
 	if (done && (done.kind === "photos" || done.year) && done.then) return done.then;
 	if (!done || person.group === "guest") return null;
-	if (person.group === "client") return move(done.kind === "intros" ? "refresh" : "intros", addDays(today, GAP.client));
+	if (person.group === "client") {
+		const client = done.waits || move(done.kind === "intros" ? "refresh" : "intros", addDays(today, GAP.client));
+		if (!inGroup(person, "regular")) return client;
+		const checkin = move("checkin", addDays(today, GAP.checkin));
+		return client.due <= checkin.due ? client : {
+			...checkin,
+			waits: client
+		};
+	}
 	if (person.group === "prospect") {
 		if (done.kind !== "followup") return move("followup", addDays(today, GAP.followup[0]), 1);
 		return done.step < 2 ? move("followup", addDays(today, GAP.followup[1]), 2) : null;
 	}
 	return move("checkin", addDays(today, GAP.checkin));
 }
-function regroup(person, group, today) {
-	if (person.next && (person.next.year || OWN[group].includes(person.next.kind))) return person.next;
-	return firstMove(group, today);
+function regroup(person, groups, today) {
+	const list = cleanGroups(groups);
+	if (person.next && (person.next.year || list.some((g) => OWN[g].includes(person.next.kind)))) return person.next;
+	return firstMove(leadGroup(list), today);
 }
-const becomesRegular = (p) => p.group === "new" && !p.groupPicked && p.shoots.length >= 3;
+const becomesRegular = (p) => inGroup(p, "new") && !p.groupPicked && p.shoots.length >= 3;
+const madeRegular = (p) => inGroups(p, [...groupsOf(p).filter((g) => g !== "new"), "regular"]);
+const madeClient = (p) => inGroups(p, [...groupsOf(p), "client"]);
 
 // data/match.js
 const nameKey = (name) => `name:${String(name ?? "").trim().toLowerCase().replace(/\s+/g, " ")}`;
@@ -1057,11 +1094,13 @@ function markSvg(key, size) {
 // data/person.js
 const text = (v) => String(v ?? "").trim();
 function newPerson(f, today) {
-	const group = f.group || "new";
+	const groups = cleanGroups(f.groups || [f.group || "new"]);
+	const group = leadGroup(groups);
 	return {
 		id: f.id,
 		name: text(f.name),
 		group,
+		groups,
 		groupPicked: false,
 		instagram: cleanHandle(f.instagram),
 		tiktok: cleanHandle(f.tiktok),
@@ -1087,7 +1126,7 @@ function newPerson(f, today) {
 function fromImport(rows, today, perDay, makeId) {
 	return rows.map((r, i) => {
 		const due = addDays(today, Math.floor(i / perDay));
-		const next = isKind(r.firstMove) ? move(r.firstMove, due) : firstMove(r.group, due);
+		const next = isKind(r.firstMove) ? move(r.firstMove, due) : firstMove(leadGroup(cleanGroups(r.groups || [r.group])), due);
 		return newPerson({
 			...r,
 			id: makeId(),
@@ -1097,7 +1136,7 @@ function fromImport(rows, today, perDay, makeId) {
 	});
 }
 function markDone(person, today) {
-	const { kind, due, step, shoot, year, then } = person.next;
+	const { kind, due, step, shoot, year, then, waits } = person.next;
 	const was = kind === "pitch" ? {
 		...person.pitched ? { pitched: person.pitched } : {},
 		...person.pitch ? { pitch: person.pitch } : {}
@@ -1111,6 +1150,7 @@ function markDone(person, today) {
 		...shoot ? { shoot } : {},
 		...year ? { year } : {},
 		...then ? { then } : {},
+		...waits ? { waits } : {},
 		...Object.keys(was).length ? { was } : {}
 	};
 	const { draft, ...rest } = person;
@@ -1142,7 +1182,8 @@ function undoDone$1(person, line, lines = []) {
 		...move(line.kind, line.due || line.day, step),
 		...line.shoot ? { shoot: line.shoot } : {},
 		...line.year ? { year: line.year } : {},
-		...line.then ? { then: line.then } : {}
+		...line.then ? { then: line.then } : {},
+		...line.waits ? { waits: line.waits } : {}
 	};
 	const back = {
 		...person,
@@ -1179,10 +1220,12 @@ function applyEdit(person, f, today) {
 		email: !!f.lists.email,
 		mail: !!f.lists.mail
 	};
-	if ("group" in f && f.group !== person.group) {
-		p.group = f.group;
-		p.groupPicked = true;
-		p.next = regroup(person, f.group, today);
+	const asked = "groups" in f ? f.groups : "group" in f ? [f.group] : null;
+	if (asked && cleanGroups(asked).join() !== groupsOf(person).join()) {
+		Object.assign(p, inGroups(p, asked), {
+			groupPicked: true,
+			next: regroup(person, asked, today)
+		});
 	}
 	return p;
 }
@@ -1211,7 +1254,8 @@ function shootPeople(shoot) {
 		role: "Talent",
 		instagram: handleOn(t.socialHandles, "instagram"),
 		tiktok: handleOn(t.socialHandles, "tiktok"),
-		photoKey: t.id ? `${shoot.id}__talent_${t.id}` : ""
+		photoKey: t.id ? `${shoot.id}__talent_${t.id}` : "",
+		booked: t.bookedMe === true
 	}));
 	const team = (shoot.teamMembers || []).filter(named).map((m) => {
 		const on = m.socialPlatform || "instagram";
@@ -1220,7 +1264,8 @@ function shootPeople(shoot) {
 			role: m.role || "Team",
 			instagram: on === "instagram" ? cleanHandle(m.socialHandle) : "",
 			tiktok: on === "tiktok" ? cleanHandle(m.socialHandle) : "",
-			photoKey: ""
+			photoKey: "",
+			booked: false
 		};
 	});
 	return [...talent, ...team];
@@ -1252,15 +1297,16 @@ function bringIn$1(people, shoots, seen, today, makeId) {
 				all.push(p);
 			}
 			if (p.shoots.includes(s.id)) continue;
-			const q = {
+			let q = {
 				...p,
 				shoots: [...p.shoots, s.id],
 				lastShot: later(p.lastShot, s.date),
 				photoKey: p.photoKey || sp.photoKey,
 				instagram: p.instagram || sp.instagram
 			};
-			if (becomesRegular(q)) q.group = "regular";
-			if (!q.letGo) q.next = afterShoot(q, s.date, today);
+			if (becomesRegular(q)) q = madeRegular(q);
+			if (sp.booked) q = madeClient(q);
+			if (!q.letGo) q.next = afterShoot(q, s.date, today, sp.booked);
 			all[all.indexOf(p)] = q;
 			changed.set(q.id, q);
 		}
@@ -1309,7 +1355,7 @@ function takeYears(people, shoots, today, seen = []) {
 	const changed = new Map();
 	const due = yearsDue(shoots, today, seen);
 	for (const s of due) {
-		for (const p of [...now.values()].filter((x) => !x.letGo && YEAR_GROUPS.includes(x.group) && (x.shoots || []).includes(s.id))) {
+		for (const p of [...now.values()].filter((x) => !x.letGo && YEAR_GROUPS.some((g) => inGroup(x, g)) && (x.shoots || []).includes(s.id))) {
 			const q = yearSince(p, s, today);
 			now.set(p.id, q);
 			changed.set(p.id, q);
@@ -1870,7 +1916,7 @@ const flairHtml = (kind) => `<span class="flair" style="background:${KINDS[kind]
 const miniHtml = (kind) => kind ? `<span class="mini" style="background:${KINDS[kind].bg}" aria-hidden="true">${markSvg(kind, 10)}</span>` : "";
 
 // pages/done-note.js
-const chipsHtml = (list, attr, on = "") => list.map(([k, label]) => `<button type="button" class="pick-chip${k === on ? " on" : ""}" ${attr}="${esc(k)}" aria-pressed="${k === on}">${esc(label)}</button>`).join("");
+const chipsHtml$1 = /* @__PURE__ */ __name((list, attr, on = "") => list.map(([k, label]) => `<button type="button" class="pick-chip${k === on ? " on" : ""}" ${attr}="${esc(k)}" aria-pressed="${k === on}">${esc(label)}</button>`).join(""), "chipsHtml");
 function openHowNote(person, line, how = "") {
 	const s = openSheet({
 		title: moveName(line),
@@ -1878,10 +1924,10 @@ function openHowNote(person, line, how = "") {
 		body: `
       <div class="move-who">${photoHtml(person, "small")}<span class="move-who-words"><span class="move-name">${esc(person.name)}</span><span class="move-handle">Done today</span></span></div>
       <p class="label done-note-label">How</p>
-      <div class="pick-chips" data-hows>${chipsHtml(Object.entries(HOWS), "data-how", how)}</div>
+      <div class="pick-chips" data-hows>${chipsHtml$1(Object.entries(HOWS), "data-how", how)}</div>
       <label class="label done-note-label" for="doneNote">A note (optional)</label>
       <textarea class="move-text done-note-text" id="doneNote" rows="3" maxlength="500"></textarea>
-      <div class="pick-chips" data-taps>${chipsHtml(quickTaps(person.name).map((t) => [t, t]), "data-tap")}</div>
+      <div class="pick-chips" data-taps>${chipsHtml$1(quickTaps(person.name).map((t) => [t, t]), "data-tap")}</div>
       <div class="done-note-btns"><button type="button" class="text-btn" data-skip>Skip</button><button type="button" class="btn primary" data-save>Save</button></div>`
 	});
 	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(moveLook(line), moveName(line));
@@ -2337,9 +2383,12 @@ const cell = (v) => {
 const toCsv = (rows) => rows.map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";
 function rowOf(f) {
 	const text = (k) => String(f[k] ?? "").trim();
+	const named = text("group").split(/\s*(?:[,;/&+]|\band\b)\s*/i).map(groupFromName).filter(Boolean);
+	const groups = named.length ? cleanGroups(named) : ["prospect"];
 	return {
 		name: text("name"),
-		group: groupFromName(text("group")) || "prospect",
+		group: leadGroup(groups),
+		groups,
 		instagram: cleanHandle(text("instagram")),
 		website: cleanSite(text("website")),
 		email: text("email"),
@@ -2887,7 +2936,7 @@ function stopAutoSync() {
 
 // pages/review.js
 const metaOf = (r) => [
-	GROUPS[r.group],
+	groupWords(r).replace(/\. /g, ", "),
 	r.instagram && `@${r.instagram}`,
 	r.note || r.where
 ].filter(Boolean).join(" · ");
@@ -3770,6 +3819,7 @@ function answerPitch(person, answer, today) {
 	if (!KEYS.includes(answer)) return person;
 	const before = person.pitch && person.pitch.before || {
 		group: person.group,
+		groups: groupsOf(person),
 		groupPicked: !!person.groupPicked,
 		next: person.next || null
 	};
@@ -3779,14 +3829,14 @@ function answerPitch(person, answer, today) {
 		before
 	};
 	if (answer === "yes") return {
-		...person,
-		group: "client",
+		...madeClient(person),
 		groupPicked: true,
 		next: move("yes", today),
 		pitch
 	};
 	const was = {
 		group: before.group,
+		groups: before.groups || [before.group],
 		groupPicked: before.groupPicked
 	};
 	return {
@@ -3962,7 +4012,7 @@ function personThing(p, today, week, ownPhoto, lines = []) {
 				bg: next ? KINDS[moveLook(next)].bg : "#E1E1DC",
 				icon: next ? markSvg(moveLook(next), 10) : ""
 			},
-			group: GROUPS[p.group] || "",
+			group: GROUPS[p.group] ? groupWords(p) : "",
 			happened: happened(p, lines),
 			done: doneSoFar(p, lines).map((r) => ({
 				...r,
@@ -4048,14 +4098,18 @@ const GROUP_WORDS = {
 	prospect: "Brands and agencies. A pitch and two follow ups.",
 	guest: "People from an event. One friendly note, then the newsletter."
 };
+const chipsHtml = (on) => GROUP_KEYS.map((k) => `<button type="button" class="pick-chip${on.includes(k) ? " on" : ""}" data-group="${k}" aria-pressed="${on.includes(k)}">${GROUPS[k]}</button>`).join("");
+const wordsOf = (on) => on.map((k) => GROUP_WORDS[k]).join(" ");
 function openEdit(p, onSaved) {
-	let group = p.group;
+	let groups = groupsOf(p);
 	const s = openSheet({
 		title: "Edit",
 		body: `
       <form class="form" data-form>
         ${field("Name", "name", p.name, "required")}
-        <button type="button" class="field-row" data-group><span class="choice-text"><span class="field-label">Group</span><span class="field-value" data-group-name>${esc(GROUPS[group])}</span></span>${CHEV}</button>
+        <div class="field"><span class="field-label" id="groupsLabel">Groups</span>
+          <div class="pick-chips edit-groups" role="group" aria-labelledby="groupsLabel">${chipsHtml(groups)}</div>
+          <p class="edit-groups-words" data-group-words>${esc(wordsOf(groups))}</p></div>
         ${field("Instagram", "instagram", p.instagram, HANDLE)}
         ${field("TikTok", "tiktok", p.tiktok, HANDLE)}
         ${field("Website", "website", p.website, "autocapitalize=\"off\" spellcheck=\"false\" inputmode=\"url\"")}
@@ -4078,27 +4132,20 @@ function openEdit(p, onSaved) {
 	form.mailList.addEventListener("change", () => {
 		s.body.querySelector("[data-address]").hidden = !form.mailList.checked;
 	});
-	s.body.querySelector("[data-group]").addEventListener("click", async () => {
-		const pick = await choiceSheet({
-			title: "Group",
-			options: GROUP_KEYS.map((k) => ({
-				key: k,
-				label: GROUPS[k],
-				detail: GROUP_WORDS[k],
-				current: k === group
-			}))
-		});
-		if (pick) {
-			group = pick;
-			s.body.querySelector("[data-group-name]").textContent = GROUPS[group];
-		}
+	const chips = s.body.querySelector(".edit-groups");
+	chips.addEventListener("click", (e) => {
+		const b = e.target.closest("[data-group]");
+		if (!b) return;
+		groups = toggleGroup(groups, b.dataset.group);
+		chips.innerHTML = chipsHtml(groups);
+		s.body.querySelector("[data-group-words]").textContent = wordsOf(groups);
 	});
 	form.addEventListener("submit", async (e) => {
 		e.preventDefault();
 		const f = Object.fromEntries(new FormData(form));
 		const edited = applyEdit(p, {
 			...f,
-			group,
+			groups,
 			lists: {
 				email: form.emailList.checked,
 				mail: form.mailList.checked
@@ -4269,7 +4316,7 @@ async function personScreen(view, id) {
 	const url = profileUrl(p);
 	const pitched = pitchedOn(p, !p.pitched && (p.group === "prospect" || p.pitch) ? await listMoves() : []);
 	const asks = asksAboutPitch(p, pitched);
-	const line = saidYes(p) ? yesLine(pitched) : [GROUPS[p.group], p.note || p.where].filter(Boolean).join(". ");
+	const line = saidYes(p) ? yesLine(pitched) : [GROUPS[p.group] && groupWords(p), p.note || p.where].filter(Boolean).join(". ");
 	const next = p.next && !p.letGo;
 	view.innerHTML = `<div class="screen"><div class="scroll">
     ${shortBandHtml({
@@ -4322,7 +4369,7 @@ function listRows(people, which) {
 const SEEN = "rounds-intro-seen";
 const CARDS = [
 	["A few people a day", "Today picks three people to write to: a thank you, a hello, a check-in. Write, tap Done, and that is it. No streaks, and nothing overdue."],
-	["Groups set the pace", "Regulars, New people, Clients, Prospects and Event guests each get their own moves, at their own pace. A person's group is in their Edit."],
+	["Groups set the pace", "Regulars, New people, Clients, Prospects and Event guests each get their own moves, at their own pace. A person's groups are in their Edit: someone can be a Regular and a Client at once."],
 	["Your words", "Messages has one starter for each kind of move, in your words. Their name and the rest fill in for each person, and you can change it before sending."]
 ];
 const introSeen = () => {
@@ -4373,6 +4420,7 @@ function openIntro() {
 const FIELDS = {
 	name: "Name",
 	group: "Group",
+	groups: "Groups",
 	instagram: "Instagram",
 	tiktok: "TikTok",
 	website: "Website",
@@ -4398,6 +4446,7 @@ function valueWords(path, v, id = "") {
 	if (v === undefined || v === null || v === "") return "Nothing";
 	if (typeof v === "boolean") return v ? "Yes" : "No";
 	if (path === "group") return GROUPS[v] || String(v);
+	if (path === "groups" && Array.isArray(v)) return v.map((g) => GROUPS[g] || String(g)).join(", ") || "Nothing";
 	if (path === "next" || path === "draft") return KINDS[v.kind] ? [KINDS[v.kind].name, v.due && `due ${v.due}`].filter(Boolean).join(", ") : "Nothing";
 	if ((id === "workDays" || id === "daysOff") && Array.isArray(v)) return WEEK.filter(([d]) => v.includes(d)).map(([, n]) => n).join(", ") || "Nothing";
 	return typeof v === "object" ? JSON.stringify(v) : String(v);

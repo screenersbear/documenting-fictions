@@ -12,7 +12,7 @@ import { esc } from '../components/util.js';
 import { CHEV_SMALL } from '../components/icons.js';
 import { getPerson, listMoves } from '../data/db.js';
 import { pitchedOn, asksAboutPitch, saidYes, yesLine } from '../data/pitch.js';
-import { GROUPS } from '../data/plan.js';
+import { GROUPS, groupWords } from '../data/plan.js';
 import { phrase } from '../data/reasons.js';
 import { handleText, profileUrl } from '../data/contact.js';
 import { dayOf, dueWords } from '../data/dates.js';
@@ -39,7 +39,7 @@ export async function personScreen(view, id) {
   // The day of their pitch, from the log for a pitch from before Rounds kept it.
   const pitched = pitchedOn(p, !p.pitched && (p.group === 'prospect' || p.pitch) ? await listMoves() : []);
   const asks = asksAboutPitch(p, pitched);
-  const line = saidYes(p) ? yesLine(pitched) : [GROUPS[p.group], p.note || p.where].filter(Boolean).join('. ');
+  const line = saidYes(p) ? yesLine(pitched) : [GROUPS[p.group] && groupWords(p), p.note || p.where].filter(Boolean).join('. ');
   const next = p.next && !p.letGo;
   view.innerHTML = `<div class="screen"><div class="scroll">
     ${shortBandHtml({ place: 'People', back: '#/people', more: 'More' })}

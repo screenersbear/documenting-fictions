@@ -5,7 +5,7 @@ import { openSheet } from '../components/sheet.js';
 const SEEN = 'rounds-intro-seen';
 const CARDS = [
   ['A few people a day', 'Today picks three people to write to: a thank you, a hello, a check-in. Write, tap Done, and that is it. No streaks, and nothing overdue.'],
-  ['Groups set the pace', 'Regulars, New people, Clients, Prospects and Event guests each get their own moves, at their own pace. A person\'s group is in their Edit.'],
+  ['Groups set the pace', 'Regulars, New people, Clients, Prospects and Event guests each get their own moves, at their own pace. A person\'s groups are in their Edit: someone can be a Regular and a Client at once.'],
   ['Your words', 'Messages has one starter for each kind of move, in your words. Their name and the rest fill in for each person, and you can change it before sending.'],
 ];
 

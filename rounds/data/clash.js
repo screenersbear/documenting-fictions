@@ -7,7 +7,7 @@ import { getPath } from './merge.js';
 import { WEEK } from './work-days.js';
 
 const FIELDS = {
-  name: 'Name', group: 'Group', instagram: 'Instagram', tiktok: 'TikTok', website: 'Website', email: 'Email',
+  name: 'Name', group: 'Group', groups: 'Groups', instagram: 'Instagram', tiktok: 'TikTok', website: 'Website', email: 'Email',
   where: 'Where you met', note: 'Note', address: 'Address', next: 'Next move', draft: 'Draft in Gmail',
   letGo: 'Let go', 'lists.email': 'Email newsletter', 'lists.mail': 'Mail newsletter', text: 'Message',
 };
@@ -18,6 +18,7 @@ export function valueWords(path, v, id = '') {
   if (v === undefined || v === null || v === '') return 'Nothing';
   if (typeof v === 'boolean') return v ? 'Yes' : 'No';
   if (path === 'group') return GROUPS[v] || String(v);
+  if (path === 'groups' && Array.isArray(v)) return v.map((g) => GROUPS[g] || String(g)).join(', ') || 'Nothing';
   if (path === 'next' || path === 'draft') return KINDS[v.kind] ? [KINDS[v.kind].name, v.due && `due ${v.due}`].filter(Boolean).join(', ') : 'Nothing';
   if ((id === 'workDays' || id === 'daysOff') && Array.isArray(v)) return WEEK.filter(([d]) => v.includes(d)).map(([, n]) => n).join(', ') || 'Nothing';
   return typeof v === 'object' ? JSON.stringify(v) : String(v);

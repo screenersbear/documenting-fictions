@@ -1,0 +1,13 @@
+/* The talent and team member popups (people/NOTES.md, 15 Nov): the people
+   you know, up to five, under Name as you type (pages/shoot/known-people.js),
+   and the talent's Booked me switch (the shared .df-switch). */
+.name-suggest { margin: -6px 0 12px; border-top: 1px solid #E1E1DC; }
+.name-suggest[hidden] { display: none; }
+.name-suggest-row { display: flex; align-items: baseline; gap: 8px; width: 100%; min-height: 44px; padding: 10px 0; border: 0; border-bottom: 1px solid #E1E1DC; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.name-suggest-name { font-size: 16px; line-height: 22px; }
+.name-suggest-label { font-size: 13px; line-height: 18px; color: #5C666D; }
+.booked-row { display: flex; align-items: center; gap: 12px; margin: 4px 0 14px; }
+.booked-row[hidden] { display: none; }
+.booked-words { flex: 1; min-width: 0; }
+.booked-title { display: block; font-size: 16px; line-height: 22px; color: var(--text); }
+.booked-line { display: block; font-size: 13px; line-height: 18px; color: #5C666D; }

@@ -12,7 +12,7 @@ import { eyePhoto, eyeShoots } from './eye.js';
 import { yearTally } from './year-tally.js';
 import { KINDS, markSvg, moveLook } from './kinds.js';
 import { phrase } from './reasons.js';
-import { GROUPS } from './plan.js';
+import { GROUPS, groupWords } from './plan.js';
 import { dueWords, dayOf } from './dates.js';
 import { whenDue } from './work-days.js';
 import { getWeek } from './moves.js';
@@ -55,7 +55,7 @@ export function personThing(p, today, week, ownPhoto, lines = []) {
     params: { person: p.id },
     more: {
       next: { title: what, line: when, bg: next ? KINDS[moveLook(next)].bg : '#E1E1DC', icon: next ? markSvg(moveLook(next), 10) : '' },
-      group: GROUPS[p.group] || '',
+      group: GROUPS[p.group] ? groupWords(p) : '',
       happened: happened(p, lines),
       // DONE SO FAR on the person page (thanks/03), each with its mark.
       done: doneSoFar(p, lines).map((r) => ({ ...r, bg: r.noteOnly ? '' : KINDS[r.look].bg, icon: r.noteOnly ? '' : markSvg(r.look, 10) })),

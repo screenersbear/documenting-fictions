@@ -106,7 +106,7 @@ window.EyeParts.addShootOpen = function addShootOpen(ed) {
     // Talents saved before they had ids get one assigned on load — needed as
     // a stable IndexedDB key for their photo (see talentPhotoKey).
     ed.currentTalents = s && Array.isArray(s.talents)
-      ? s.talents.map(t => ({ id: t.id || ed.uid(), name: t.name || '', socialHandles: (t.socialHandles || []).map(sh => ({ ...sh })), photo: t.photo || '' }))
+      ? s.talents.map(t => ({ id: t.id || ed.uid(), name: t.name || '', socialHandles: (t.socialHandles || []).map(sh => ({ ...sh })), photo: t.photo || '', ...(typeof t.bookedMe === 'boolean' ? { bookedMe: t.bookedMe } : {}) }))
       : [];
     // Same safety net as the cover above: a talent whose photo hasn't reached
     // memory yet would show a blank card here and then have that blank saved

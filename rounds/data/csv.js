@@ -2,7 +2,7 @@
 // with a comma, a quote or a line break in it, "" for a quote inside one.
 // And Import people's file (rounds/NOTES.md): a header row, then
 //   name, group, instagram, website, email, where_met, note, first_move
-import { groupFromName } from './plan.js';
+import { groupFromName, cleanGroups, leadGroup } from './plan.js';
 import { kindFromName } from './kinds.js';
 import { cleanHandle, cleanSite } from './contact.js';
 import { findMatch } from './match.js';
@@ -35,12 +35,16 @@ export const toCsv = (rows) => rows.map((r) => r.map(cell).join(',')).join('\r\n
 
 // One person from a file's row or one of Claude's leads (data/inbox.js),
 // cleaned up: f has the file's columns (name, group, instagram, website,
-// email, where_met, note, first_move). A prospect unless said otherwise.
+// email, where_met, note, first_move). A prospect unless said otherwise;
+// a group cell can name more than one ("Regular, Client", "Regular and Client").
 export function rowOf(f) {
   const text = (k) => String(f[k] ?? '').trim();
+  const named = text('group').split(/\s*(?:[,;/&+]|\band\b)\s*/i).map(groupFromName).filter(Boolean);
+  const groups = named.length ? cleanGroups(named) : ['prospect'];
   return {
     name: text('name'),
-    group: groupFromName(text('group')) || 'prospect',
+    group: leadGroup(groups),
+    groups,
     instagram: cleanHandle(text('instagram')),
     website: cleanSite(text('website')),
     email: text('email'),

@@ -22,11 +22,11 @@ describe('shootPeople', () => {
       teamMembers: [{ role: 'Makeup', name: 'Jules', socialPlatform: 'tiktok', socialHandle: '@jules' }, { name: 'Sam', socialHandle: 'sam.k' }, { role: 'Styling', name: 'Lee', socialPlatform: 'other', socialHandle: 'lee' }, { role: 'Hair' }],
     });
     expect(shootPeople(s)).toEqual([
-      { name: 'Maya R.', role: 'Talent', instagram: 'maya.rr', tiktok: 'mayatok', photoKey: 's1__talent_t1' },
-      { name: 'Ana', role: 'Talent', instagram: '', tiktok: '', photoKey: '' },
-      { name: 'Jules', role: 'Makeup', instagram: '', tiktok: 'jules', photoKey: '' },
-      { name: 'Sam', role: 'Team', instagram: 'sam.k', tiktok: '', photoKey: '' },
-      { name: 'Lee', role: 'Styling', instagram: '', tiktok: '', photoKey: '' },
+      { name: 'Maya R.', role: 'Talent', instagram: 'maya.rr', tiktok: 'mayatok', photoKey: 's1__talent_t1', booked: false },
+      { name: 'Ana', role: 'Talent', instagram: '', tiktok: '', photoKey: '', booked: false },
+      { name: 'Jules', role: 'Makeup', instagram: '', tiktok: 'jules', photoKey: '', booked: false },
+      { name: 'Sam', role: 'Team', instagram: 'sam.k', tiktok: '', photoKey: '', booked: false },
+      { name: 'Lee', role: 'Styling', instagram: '', tiktok: '', photoKey: '', booked: false },
     ]);
   });
   it('is no one for a shoot with no one on it', () => {

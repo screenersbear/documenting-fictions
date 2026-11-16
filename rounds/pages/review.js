@@ -4,9 +4,9 @@
 // under each name.
 import { openSheet } from '../components/sheet.js';
 import { esc } from '../components/util.js';
-import { GROUPS } from '../data/plan.js';
+import { groupWords } from '../data/plan.js';
 
-const metaOf = (r) => [GROUPS[r.group], r.instagram && `@${r.instagram}`, r.note || r.where].filter(Boolean).join(' · ');
+const metaOf = (r) => [groupWords(r).replace(/\. /g, ', '), r.instagram && `@${r.instagram}`, r.note || r.where].filter(Boolean).join(' · ');
 
 // items: [{ row, from }]. onAdd(ticked) gets each item's tick, in order, once
 // the button's pressed. none: the button's words with no one ticked (left

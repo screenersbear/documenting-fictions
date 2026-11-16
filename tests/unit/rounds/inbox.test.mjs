@@ -38,7 +38,7 @@ describe('inboxText', () => {
 describe('leadOf and passedOf', () => {
   it("a lead as a person to add, with Claude's note", () => {
     const l = leadOf(lead('1', { name: ' Abrams ', group: 'Client', instagram: '@abrams', website: 'abrams.com', where_met: 'Agency list', first_move: 'Say hello', found_by: ' Monday search ' }));
-    expect(l).toEqual({ id: '1', foundBy: 'Monday search', row: { name: 'Abrams', group: 'client', instagram: 'abrams', website: 'https://abrams.com', email: '', where: 'Agency list', note: '', firstMove: 'hello' } });
+    expect(l).toEqual({ id: '1', foundBy: 'Monday search', row: { name: 'Abrams', group: 'client', groups: ['client'], instagram: 'abrams', website: 'https://abrams.com', email: '', where: 'Agency list', note: '', firstMove: 'hello' } });
     expect(leadOf({ id: '2', name: 'X' })).toMatchObject({ foundBy: '', row: { group: 'prospect', firstMove: null } });
   });
   it('passed on: what it is matched by', () => {

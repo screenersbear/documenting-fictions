@@ -53,17 +53,30 @@ test.describe('Rounds: People', () => {
     await ctx.close();
   });
 
-  test('Edit changes the group and puts them on the email list', async ({ browser }, testInfo) => {
+  test('Edit turns groups on together (a Client and a Regular) and puts them on the email list', async ({ browser }, testInfo) => {
     const { ctx, page } = await openRounds(browser, testInfo);
     await addDana(page);
     await goTo(page, 'people');
     await page.locator('#view .person-card', { hasText: 'Dana Ortiz' }).click();
     await menu(page, 'Dana Ortiz', 'Edit');
     const edit = await opened(page, 'Edit');
-    await edit.locator('[data-group]').click();
-    const group = await opened(page, 'Group');
-    await group.locator('.choice', { hasText: 'Client' }).click();
-    await expect(edit.locator('[data-group-name]')).toHaveText('Client');
+    // Groups (people/NOTES.md): chips that turn on together; Client and Prospect never both.
+    await expect(edit.locator('.edit-groups [data-group]')).toHaveText(['Regular', 'New', 'Client', 'Prospect', 'Event guest']);
+    const on = edit.locator('.edit-groups .on');
+    await expect(on).toHaveText(['New']);
+    await edit.locator('[data-group="new"]').click(); // the last one on stays on
+    await expect(on).toHaveText(['New']);
+    await edit.locator('[data-group="client"]').click();
+    await expect(on).toHaveText(['New', 'Client']);
+    await edit.locator('[data-group="new"]').click();
+    await edit.locator('[data-group="regular"]').click();
+    await expect(on).toHaveText(['Regular', 'Client']);
+    await edit.locator('[data-group="prospect"]').click();
+    await expect(on).toHaveText(['Regular', 'Prospect']);
+    await edit.locator('[data-group="client"]').click();
+    await expect(on).toHaveText(['Regular', 'Client']);
+    await expect(edit.locator('[data-group-words]')).toContainText('Repeat collaborators.');
+    await expect(edit.locator('[data-group="client"]')).toHaveAttribute('aria-pressed', 'true');
     await expect(edit.locator('[data-email]')).toBeHidden();
     await edit.locator('.switch-row', { hasText: 'email newsletter' }).click();
     await expect(edit.locator('[data-email]')).toBeVisible();
@@ -71,7 +84,7 @@ test.describe('Rounds: People', () => {
     await edit.locator('textarea[name="note"]').fill('Hired me for the spring lookbook');
     await edit.locator('button[type="submit"]').click();
     await expect(edit).toHaveCount(0);
-    await expect(page.locator('#view .person-line')).toHaveText('Client. Hired me for the spring lookbook.');
+    await expect(page.locator('#view .person-line')).toHaveText('Regular. Client. Hired me for the spring lookbook.');
     // The email list has them now: Options exports it as a CSV.
     await page.evaluate(() => Object.defineProperty(navigator, 'canShare', { configurable: true, value: undefined }));
     await goTo(page, 'today');

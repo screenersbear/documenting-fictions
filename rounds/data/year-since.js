@@ -7,7 +7,7 @@
 // which comes back once it's done (data/plan.js afterDone). Coming late
 // (Rounds wasn't opened on the day), it still comes for a month; a shoot
 // older than that is passed by. Rounds only reads The Eye's shoots.
-import { move } from './plan.js';
+import { move, inGroup } from './plan.js';
 import { isDay, dayOf, dateOf, daysBetween } from './dates.js';
 
 export const LATE = 30; // days after the day it can still come
@@ -46,7 +46,7 @@ export function takeYears(people, shoots, today, seen = []) {
   const changed = new Map();
   const due = yearsDue(shoots, today, seen);
   for (const s of due) {
-    for (const p of [...now.values()].filter((x) => !x.letGo && YEAR_GROUPS.includes(x.group) && (x.shoots || []).includes(s.id))) {
+    for (const p of [...now.values()].filter((x) => !x.letGo && YEAR_GROUPS.some((g) => inGroup(x, g)) && (x.shoots || []).includes(s.id))) {
       const q = yearSince(p, s, today);
       now.set(p.id, q);
       changed.set(p.id, q);

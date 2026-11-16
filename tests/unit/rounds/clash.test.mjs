@@ -9,6 +9,9 @@ describe('valueWords', () => {
     expect(valueWords('lists.email', false)).toBe('No');
     expect(valueWords('group', 'guest')).toBe('Event guest');
     expect(valueWords('group', 'other')).toBe('other');
+    expect(valueWords('groups', ['regular', 'client'])).toBe('Regular, Client'); // more than one group (people/NOTES.md)
+    expect(valueWords('groups', ['other'])).toBe('other');
+    expect(valueWords('groups', [])).toBe('Nothing');
   });
   it('a next move or a draft, by name and day', () => {
     expect(valueWords('next', { kind: 'pitch', due: '2026-11-16', step: 0 })).toBe('Pitch, due 2026-11-16');

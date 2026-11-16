@@ -39,6 +39,8 @@ describe('personThing: DONE SO FAR and a Say thanks waiting', () => {
   it('a Say thanks waiting: when it comes up, and the shoots they were on', () => {
     const p = person({ group: 'new', shoots: ['s1'], next: { kind: 'thanks', due: '2026-11-15', step: 0 } });
     expect(R.personThing(p, TODAY, WEEK, false).more.thanks).toEqual({ due: '2026-11-15', shoots: ['s1'] });
+    // More than one group (people/NOTES.md): both, for the person page.
+    expect(R.personThing(person({ group: 'client', groups: ['regular', 'client'] }), TODAY, WEEK, false).more.group).toBe('Regular. Client');
     expect(R.personThing({ ...p, shoots: undefined }, TODAY, WEEK, false).more.thanks).toEqual({ due: '2026-11-15', shoots: [] });
   });
   it('no Say thanks waiting: none (another move, let go, or nothing planned)', () => {

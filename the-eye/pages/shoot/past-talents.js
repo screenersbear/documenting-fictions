@@ -2,7 +2,7 @@
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootPastTalents = function addShootPastTalents(ed) {
-  Object.assign(ed, { refreshPastTalentsSelect, openManageTalentsModal });
+  Object.assign(ed, { refreshPastTalentsSelect, openManageTalentsModal, pickKnownTalent });
   // ---------- Talent popup (name/handles/photo + a "returning talent" picker) ----------
   // talentModalTargetIdx: index into currentTalents being edited, or null
   // while adding a new one. talentModalDraft holds the in-progress edits —
@@ -46,22 +46,22 @@ window.EyeParts.addShootPastTalents = function addShootPastTalents(ed) {
       .map(key => samples[key]);
   }
 
-  function refreshPastTalentsSelect() {
-    ed.pastTalentSamples = getAllPastTalents();
+  // The picker (people/NOTES.md, 15 Nov): everyone you know, talent and
+  // team, from The Eye's shoots and the one list of people, newest first,
+  // each with a short label: "Iryna V. · team, 3 shoots". (Manage talents
+  // still lists The Eye's own past talent: getAllPastTalents.)
+  async function refreshPastTalentsSelect() {
+    const list = await ed.knownPeople();
+    ed.pastTalentSamples = list;
     const select = document.getElementById('pastTalentsSelect');
-    select.innerHTML = '<option value="">Select a past talent…</option>'
-      + ed.pastTalentSamples.map((t, i) => `<option value="${i}">${ed.escapeHtml(t.name)}</option>`).join('')
+    select.innerHTML = '<option value="">Pick someone you know…</option>'
+      + list.map((t, i) => `<option value="${i}">${ed.escapeHtml(t.name)}${ed.knownLabel(t) ? ` · ${ed.escapeHtml(ed.knownLabel(t))}` : ''}</option>`).join('')
       + '<option value="__manage__">Edit saved talent…</option>';
   }
 
-  document.getElementById('pastTalentsSelect').addEventListener('change', (e) => {
-    if (e.target.value === '__manage__') {
-      e.target.value = '';
-      openManageTalentsModal();
-      return;
-    }
-    if (e.target.value === '') return;
-    const t = ed.pastTalentSamples[Number(e.target.value)];
+  // Someone you know, picked (from the list, or as you type the name): their
+  // name, handles and photo fill the card.
+  function pickKnownTalent(t) {
     if (!t || !ed.talentModalDraft) return;
     ed.talentModalDraft.name = t.name || '';
     ed.talentModalDraft.socialHandles = (t.socialHandles || []).map(sh => ({ ...sh }));
@@ -71,12 +71,22 @@ window.EyeParts.addShootPastTalents = function addShootPastTalents(ed) {
     // person's other shoots, and any earlier Remove press no longer applies.
     ed.talentModalDraft.photoRemoved = false;
     ed.talentModalDraft.photoSwapped = true;
-    // Picking a returning talent links this draft to their identity (by
-    // name, same matching getAllPastTalents already uses) — saveTalentModalBtn
-    // uses this to propagate any edits back to every other shoot's copy of
-    // the same person instead of leaving them out of sync.
+    // Picking someone links this draft to their identity (by name, same
+    // matching getAllPastTalents uses) — saveTalentModalBtn uses this to
+    // propagate any edits back to every other shoot's copy of the same
+    // person instead of leaving them out of sync.
     ed.talentModalDraft._matchName = t.name || '';
     ed.fillTalentModalForm();
+  }
+
+  document.getElementById('pastTalentsSelect').addEventListener('change', (e) => {
+    if (e.target.value === '__manage__') {
+      e.target.value = '';
+      openManageTalentsModal();
+      return;
+    }
+    if (e.target.value === '') return;
+    pickKnownTalent(ed.pastTalentSamples[Number(e.target.value)]);
   });
 
   // Same non-destructive "dismiss" pattern as Manage Locations — deleting

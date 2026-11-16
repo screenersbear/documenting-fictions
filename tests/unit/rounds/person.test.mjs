@@ -10,7 +10,7 @@ describe('newPerson', () => {
   it('keeps a name, cleaned handles and where you met; no lists, shoots or moves yet', () => {
     const p = newPerson({ id: 'x', name: ' Maya R. ', instagram: '@maya.rr', tiktok: ' @maya ', website: 'maya.com', email: ' m@maya.com ', where: ' Brooklyn meetup ', note: ' Lovely ' }, T);
     expect(p).toEqual({
-      id: 'x', name: 'Maya R.', group: 'new', groupPicked: false, instagram: 'maya.rr', tiktok: 'maya', website: 'https://maya.com',
+      id: 'x', name: 'Maya R.', group: 'new', groups: ['new'], groupPicked: false, instagram: 'maya.rr', tiktok: 'maya', website: 'https://maya.com',
       email: 'm@maya.com', where: 'Brooklyn meetup', note: 'Lovely', lists: { email: false, mail: false }, address: '',
       shoots: [], lastShot: '', lastMove: '', photoKey: '', source: 'added', letGo: false, added: T, next: move('hello', T),
     });

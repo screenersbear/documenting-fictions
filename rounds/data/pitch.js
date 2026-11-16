@@ -7,7 +7,7 @@
 //     today, and they pass to Ref for a mood board (data/to-ref.js).
 // Someone who asks to shoot first gets the same Yes from their page's menu.
 // An answer can be changed: each starts from how they were before the first.
-import { move } from './plan.js';
+import { move, groupsOf, madeClient } from './plan.js';
 import { shortDay } from './dates.js';
 
 export const ANSWERS = [
@@ -39,10 +39,10 @@ export function asksAboutPitch(person, pitched) {
 // The person after their answer (as they were, for one Rounds doesn't know).
 export function answerPitch(person, answer, today) {
   if (!KEYS.includes(answer)) return person;
-  const before = (person.pitch && person.pitch.before) || { group: person.group, groupPicked: !!person.groupPicked, next: person.next || null };
+  const before = (person.pitch && person.pitch.before) || { group: person.group, groups: groupsOf(person), groupPicked: !!person.groupPicked, next: person.next || null };
   const pitch = { answer, on: today, before };
-  if (answer === 'yes') return { ...person, group: 'client', groupPicked: true, next: move('yes', today), pitch };
-  const was = { group: before.group, groupPicked: before.groupPicked };
+  if (answer === 'yes') return { ...madeClient(person), groupPicked: true, next: move('yes', today), pitch };
+  const was = { group: before.group, groups: before.groups || [before.group], groupPicked: before.groupPicked };
   return { ...person, ...was, next: answer === 'no' ? null : before.next, pitch };
 }
 

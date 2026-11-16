@@ -673,9 +673,9 @@
       <button class="icon-btn close-btn" data-close="talent"><svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     </div>
     <div id="talentForm">
-      <label>Returning talent
+      <label>Someone you know
         <select id="pastTalentsSelect">
-          <option value="">Select a past talent…</option>
+          <option value="">Pick someone you know…</option>
         </select>
       </label>
       <label>Name
@@ -685,6 +685,10 @@
         <p class="team-question talent-social-heading">Social media handle(s)</p>
         <div id="talentModalHandlesList" class="social-handles-list"></div>
         <button type="button" id="talentModalAddHandleBtn" class="secondary small-btn">+ Add handle</button>
+      </div>
+      <div class="booked-row" id="talentBookedRow" hidden>
+        <span class="booked-words"><span class="booked-title">Booked me</span><span class="booked-line">They're the paying client.</span></span>
+        <button type="button" class="df-switch" role="switch" aria-checked="false" aria-label="Booked me" id="talentBookedSwitch"><span></span></button>
       </div>
       <button type="button" id="talentModalPhotoBtn" class="secondary small-btn">+ Add talent photo</button>
       <div id="talentModalPhotoWrap"></div>

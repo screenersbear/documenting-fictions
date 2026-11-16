@@ -60,7 +60,7 @@ describe('answerPitch', () => {
   it('Yes makes them a Client, with a thank-you for the yes today', () => {
     const yes = answerPitch(dana, 'yes', T);
     expect(yes).toMatchObject({ group: 'client', groupPicked: true, next: move('yes', T) });
-    expect(yes.pitch).toEqual({ answer: 'yes', on: T, before: { group: 'prospect', groupPicked: false, next: dana.next } });
+    expect(yes.pitch).toEqual({ answer: 'yes', on: T, before: { group: 'prospect', groups: ['prospect'], groupPicked: false, next: dana.next } });
     expect(saidYes(yes)).toBe(true);
     expect(dana.group).toBe('prospect'); // the old one stays as it was
   });
@@ -88,8 +88,8 @@ describe('answerPitch', () => {
   });
   it('takes how they are now when an earlier answer kept nothing of before', () => {
     const odd = { ...dana, pitch: { answer: 'no', on: '2026-11-05' } };
-    expect(answerPitch(odd, 'yes', T).pitch.before).toEqual({ group: 'prospect', groupPicked: false, next: dana.next });
-    expect(answerPitch({ ...dana, next: undefined, groupPicked: undefined }, 'no', T).pitch.before).toEqual({ group: 'prospect', groupPicked: false, next: null });
+    expect(answerPitch(odd, 'yes', T).pitch.before).toEqual({ group: 'prospect', groups: ['prospect'], groupPicked: false, next: dana.next });
+    expect(answerPitch({ ...dana, next: undefined, groupPicked: undefined }, 'no', T).pitch.before).toEqual({ group: 'prospect', groups: ['prospect'], groupPicked: false, next: null });
   });
   it('leaves them as they are for an answer it does not know', () => {
     expect(answerPitch(dana, 'maybe', T)).toBe(dana);

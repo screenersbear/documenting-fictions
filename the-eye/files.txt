@@ -52,6 +52,7 @@ built/app.css smaller
   styles/lighting-setups.css
   styles/export-previous.css
   styles/talents.css
+  styles/known-people.css
   styles/social-handles.css
   styles/references.css
   styles/shot-list.css
@@ -241,6 +242,7 @@ built/app.js smaller
   pages/journal/starting-prompt.js
   pages/shoot/framework-tags.js
   pages/shoot/known-contacts.js
+  pages/shoot/known-people.js
   pages/shoot/talents.js
   pages/shoot/past-talents.js
   pages/shoot/talent-popup.js

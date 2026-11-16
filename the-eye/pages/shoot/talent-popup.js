@@ -1,4 +1,6 @@
-// The talent popup: name, handles and photo.
+// The talent popup: name (people you know suggested as you type), handles,
+// Booked me (in the suite: they're the paying client, so Rounds makes them a
+// Client once the shoot's captured; people/NOTES.md, 15 Nov) and photo.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootTalentPopup = function addShootTalentPopup(ed) {
@@ -74,27 +76,45 @@ window.EyeParts.addShootTalentPopup = function addShootTalentPopup(ed) {
     }).catch(() => {});
   });
 
+  // Booked me: shown in the suite (it's for Rounds), on or off per person.
+  function renderBookedMe() {
+    const D = window.DFData;
+    document.getElementById('talentBookedRow').hidden = !(D && D.inSuite());
+    document.getElementById('talentBookedSwitch').setAttribute('aria-checked', String(!!ed.talentModalDraft.bookedMe));
+  }
+  document.getElementById('talentBookedSwitch').addEventListener('click', () => {
+    ed.talentModalDraft.bookedMe = !ed.talentModalDraft.bookedMe;
+    renderBookedMe();
+  });
+
   function fillTalentModalForm() {
     document.getElementById('talentModalNameInput').value = ed.talentModalDraft.name || '';
     renderTalentModalHandles();
+    renderBookedMe();
     renderTalentModalPhoto();
   }
 
   function openTalentModal(idx) {
     ed.talentModalTargetIdx = (idx === null || idx === undefined) ? null : idx;
     const existing = ed.talentModalTargetIdx !== null ? ed.currentTalents[ed.talentModalTargetIdx] : null;
+    // Booked me starts as the kind of shoot has it (ed.bookedByDefault) until it's set for them.
+    const booked = existing && typeof existing.bookedMe === 'boolean' ? existing.bookedMe : ed.bookedByDefault(document.getElementById('shootCategory').value);
     ed.talentModalDraft = existing
-      ? { id: existing.id, name: existing.name || '', socialHandles: (existing.socialHandles || []).map(sh => ({ ...sh })), photo: existing.photo || '' }
-      : { id: ed.uid(), name: '', socialHandles: [], photo: '' };
+      ? { id: existing.id, name: existing.name || '', socialHandles: (existing.socialHandles || []).map(sh => ({ ...sh })), photo: existing.photo || '', bookedMe: booked }
+      : { id: ed.uid(), name: '', socialHandles: [], photo: '', bookedMe: booked };
     // Editing someone already named (whether typed fresh earlier or picked
     // from "returning talent" on a past visit) still counts as their
     // identity — an edit here should propagate to their other shoots too,
     // not just to picks made in this exact session. See saveTalentModalBtn.
     ed.talentModalDraft._matchName = ed.talentModalDraft.name || '';
     ed.refreshPastTalentsSelect();
+    suggest.hide();
     fillTalentModalForm();
     document.getElementById('talentModalOverlay').hidden = false;
   }
+
+  // Up to five people you know under Name as you type; picking one fills the card.
+  const suggest = ed.attachSuggestions(document.getElementById('talentModalNameInput'), p => ed.pickKnownTalent(p));
 
   document.getElementById('talentModalNameInput').addEventListener('input', (e) => {
     ed.talentModalDraft.name = e.target.value;

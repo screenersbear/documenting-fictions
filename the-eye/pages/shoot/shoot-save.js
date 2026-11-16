@@ -23,7 +23,9 @@ window.EyeParts.addShootSave = function addShootSave(ed) {
       crewCallTime: document.getElementById('shootCrewCallTime').value,
       talentCallTime: document.getElementById('shootTalentCallTime').value,
       location: { ...ed.currentShootLocation },
-      talents: ed.currentTalents.map(t => ({ id: t.id, name: t.name.trim(), socialHandles: [...t.socialHandles], photo: t.photo || '' })),
+      // bookedMe: set in the talent popup (people/NOTES.md); left off for
+      // someone saved before it, so their shoot reads as it always did.
+      talents: ed.currentTalents.map(t => ({ id: t.id, name: t.name.trim(), socialHandles: [...t.socialHandles], photo: t.photo || '', ...(typeof t.bookedMe === 'boolean' ? { bookedMe: t.bookedMe } : {}) })),
       category: document.getElementById('shootCategory').value,
       premise: document.getElementById('shootPremise').value.trim(),
       character: document.getElementById('shootCharacter').value.trim(),

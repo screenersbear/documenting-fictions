@@ -1,4 +1,4 @@
-// The team member popup: name, role and handle, or someone from before.
+// The team member popup: name (people you know suggested as you type), role and handle, or someone from before.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootTeamMemberPopup = function addShootTeamMemberPopup(ed) {
@@ -123,9 +123,21 @@ window.EyeParts.addShootTeamMemberPopup = function addShootTeamMemberPopup(ed) {
       ? { ...existing }
       : { role: 'makeup_artist', name: '', socialPlatform: 'instagram', socialHandle: '' };
     refreshPastTeamMembersSelect();
+    ed.knownPeople();
+    suggest.hide();
     fillTeamMemberModalForm();
     document.getElementById('teamMemberModalOverlay').hidden = false;
   }
+
+  // People you know (talent too: people/NOTES.md, 15 Nov), up to five under
+  // Name as you type; picking one fills their name and handle.
+  const suggest = ed.attachSuggestions(document.getElementById('teamMemberModalNameInput'), p => {
+    const draft = teamMemberModalDraft;
+    draft.name = p.name;
+    const h = ed.bestHandle(p);
+    if (h) { draft.socialPlatform = h.platform; draft.socialHandle = h.handle; }
+    fillTeamMemberModalForm();
+  });
 
   document.getElementById('teamMemberModalRoleSelect').addEventListener('change', (e) => {
     teamMemberModalDraft.role = e.target.value;

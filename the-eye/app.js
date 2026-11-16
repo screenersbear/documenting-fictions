@@ -82,6 +82,7 @@
   window.EyeParts.addJournalStartingPrompt(ed);
   window.EyeParts.addShootFrameworkTags(ed);
   window.EyeParts.addShootKnownContacts(ed);
+  window.EyeParts.addShootKnownPeople(ed);
   window.EyeParts.addShootTalents(ed);
   window.EyeParts.addShootPastTalents(ed);
   window.EyeParts.addShootTalentPopup(ed);
