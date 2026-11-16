@@ -5,7 +5,7 @@
 // with UNDO, and DONE TODAY lists the day's done moves to undo any later.
 // Going between sections is a plain slide, as in Ref.
 import { test, expect } from '@playwright/test';
-import { openRounds, eyeShoot, sheet, opened } from './_rounds.mjs';
+import { openRounds, eyeShoot, sheet, opened, skipNote } from './_rounds.mjs';
 
 const count = (page) => page.locator('#view .today-count');
 // Instagram and the clipboard, stood in for: what was opened and copied.
@@ -43,15 +43,19 @@ test.describe('Rounds: Today', () => {
     const move = await opened(page, 'Say thanks');
     await expect(move.locator('.move-name')).toHaveText('Maya R.');
     await expect(move.locator('.move-handle')).toHaveText('@maya.rr');
-    expect(await move.locator('#moveText').inputValue()).toContain('Maya');
+    // WHAT DID YOU SAY? starts empty, her thank-you offered under it; with nothing typed, COPY AND OPEN takes that.
+    await expect(move.locator('#moveText')).toHaveValue('');
+    await expect(move.locator('[data-offer] .move-offer-text')).toContainText('Maya');
     await expect(move.locator('.move-go')).toContainText('Copy and open Instagram');
     await move.locator('.move-go').click();
+    expect(await move.locator('#moveText').inputValue()).toContain('Maya');
     await expect.poll(() => page.evaluate(() => window.__opened)).toEqual([expect.stringContaining('instagram.com/maya.rr')]);
     expect(await page.evaluate(() => window.__copied)).toBe(await move.locator('#moveText').inputValue());
     // Back from Instagram: was it sent?
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     await expect(move.locator('.move-ask')).toHaveText('Done?');
     await move.locator('.move-ask-btns [data-done]').click();
+    await skipNote(page, 'Maya R.');
     await expect(move).toHaveCount(0);
     await expect(page.locator('#view .today-calm h2')).toHaveText("That's today.");
     await expect(count(page)).toHaveText('2 of 2 today');
@@ -94,9 +98,11 @@ test.describe('Rounds: Today', () => {
     const doneToday = page.locator('#view [data-done-today]');
     await expect(doneToday).toHaveCount(0);
     await swipe(page);
+    await skipNote(page, 'Jules M.');
     await expect(doneToday).toHaveText('Done today 1');
     await expect(top(page)).toContainText('Maya R.');
     await swipe(page);
+    await skipNote(page, 'Maya R.');
     await expect(page.locator('#view .today-calm h2')).toHaveText("That's today.");
     await expect(doneToday).toHaveText('Done today 2');
     // Long after the toast's Undo has gone.

@@ -1,5 +1,7 @@
 // A move opened (02-move), from Today or a person's page: the move's tag,
-// the person, their starter message filled in and editable, and one button
+// the person, WHAT DID YOU SAY? (thanks/04: a record, since Rounds sends
+// nothing itself; it starts empty, with USE YOUR <KIND> MESSAGE under it,
+// the starter filled in, which puts it in the box to edit), and one button
 // that copies it and opens their Instagram (or email or website). DONE and
 // LATER under it. Coming back from Instagram, it asks "Done?". When Claude
 // drafted it in Gmail already, the button opens Gmail instead, so it's never
@@ -10,8 +12,9 @@ import { tagHtml } from '../components/marks.js';
 import { photoHtml, fillPhotos } from '../components/photo.js';
 import { toast } from '../components/toast.js';
 import { esc } from '../components/util.js';
-import { ARROW } from '../components/icons.js';
-import { KINDS, moveName, moveLook } from '../data/kinds.js';
+import { ARROW, PLUS } from '../components/icons.js';
+import { KINDS, moveName, moveLook, messageWord } from '../data/kinds.js';
+import { howFromGo } from '../data/done-notes.js';
 import { fill, fillValues } from '../data/fill.js';
 import { contactFor, handleText, GMAIL_DRAFTS } from '../data/contact.js';
 import { draftWaiting } from '../data/person.js';
@@ -49,7 +52,8 @@ async function showFinal(box, year) {
   });
 }
 
-// onDone and onLater run once the sheet has closed.
+// onDone ({ said, how }: what's in the box, and where the button went) and
+// onLater run once the sheet has closed.
 export async function openMove(person, { onDone, onLater }) {
   const kind = person.next.kind;
   const [messages, me] = await Promise.all([getMessages(), getMe()]);
@@ -59,6 +63,7 @@ export async function openMove(person, { onDone, onLater }) {
   const draft = draftWaiting(person);
   const year = person.next.year;
   let away = false;
+  let went = ''; // where COPY AND OPEN (or OPEN GMAIL) went, for HOW
   const s = openSheet({
     title: moveName(person.next),
     className: 'move-sheet',
@@ -68,14 +73,21 @@ export async function openMove(person, { onDone, onLater }) {
       ${year ? `<div class="move-final" hidden><img alt="${esc(`A final from ${year.shoot || 'the shoot'}`)}" />
         <!-- SHARE THE PHOTO hands it to the phone's share sheet (a download on a computer): the button clicker leaves it alone. -->
         <button type="button" class="text-btn move-share" data-share data-test-skip>Share the photo</button></div>` : ''}
-      ${draft ? '<p class="move-draft">Draft waiting in Gmail, written by Claude.</p>' : `<label class="label" for="moveText">Your message</label>
-      <textarea class="move-text" id="moveText" rows="6">${esc(text)}</textarea>`}
+      ${draft ? '<p class="move-draft">Draft waiting in Gmail, written by Claude.</p>' : `<label class="label" for="moveText">What did you say?</label>
+      <textarea class="move-text" id="moveText" rows="4" placeholder="Type it here, or use your message below."></textarea>
+      <button type="button" class="move-offer" data-offer><span class="move-offer-plus">${PLUS}</span><span><span class="move-offer-head">Use your ${esc(messageWord(person.next.kind))} message</span><span class="move-offer-text">${esc(text)}</span></span></button>`}
       <div class="move-actions"></div>`,
   });
   s.el.querySelector('.sheet-header h2').innerHTML = tagHtml(moveLook(person.next), moveName(person.next));
   fillPhotos(s.el, [person]);
   if (year) showFinal(s.body.querySelector('.move-final'), year);
   const actions = s.body.querySelector('.move-actions');
+  const box = s.body.querySelector('.move-text');
+  const offer = s.body.querySelector('[data-offer]');
+  // The message offered: into the box, to edit (the offer goes once it's used).
+  const useMessage = () => { if (!offer || offer.hidden) return; box.value = text; offer.hidden = true; };
+  offer?.addEventListener('click', () => { useMessage(); box.focus(); });
+  const said = () => ({ said: box ? box.value : '', how: howFromGo(went) });
   const buttons = () => {
     // COPY AND OPEN goes out to Instagram (or email, or a website), and OPEN GMAIL to Gmail: the button clicker leaves them alone.
     actions.innerHTML = `
@@ -95,19 +107,22 @@ export async function openMove(person, { onDone, onLater }) {
   actions.addEventListener('click', async (e) => {
     const b = e.target.closest('button');
     if (!b) return;
-    if (b.matches('[data-done]')) { s.close(); onDone(); }
+    if (b.matches('[data-done]')) { const r = said(); s.close(); onDone(r); }
     else if (b.matches('[data-later]')) { s.close(); onLater(); }
     else if (b.matches('[data-not-yet]')) buttons();
     else if (b.matches('[data-gmail]')) {
       away = true;
+      went = 'gmail';
       window.open(GMAIL_DRAFTS, '_blank', 'noopener');
     }
     else if (b.matches('[data-go]')) {
-      const words = s.body.querySelector('.move-text').value;
+      if (!box.value.trim()) useMessage(); // nothing typed: your message goes
+      const words = box.value;
       const copied = await copy(words);
       const to = contactFor(person, words);
       if (!to) { toast(copied ? 'Copied.' : 'Select the message and copy it.'); return; }
       away = true;
+      went = to.how;
       window.open(to.url, '_blank', 'noopener');
       if (!copied) toast('Select the message and copy it.');
     }

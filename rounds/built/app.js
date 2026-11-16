@@ -917,7 +917,7 @@ function firstMove(group, today) {
 function afterShoot(person, shotOn, today) {
 	const checkin = move("checkin", later(today, addDays(shotOn, GAP.checkin)));
 	if (person.group === "regular") return checkin;
-	if (daysBetween(shotOn, today) <= GAP.fresh) return move("thanks", today);
+	if (daysBetween(shotOn, today) <= GAP.fresh) return move("thanks", addDays(shotOn, 1));
 	return person.next || checkin;
 }
 function afterDone(person, today) {
@@ -1030,6 +1030,18 @@ const MESSAGE_ORDER = [
 	"followup"
 ];
 const isKind = (key) => KIND_KEYS.includes(key);
+const MESSAGE_WORDS = {
+	thanks: "thank-you",
+	yes: "thank-you",
+	photos: "photos are up",
+	hello: "hello",
+	checkin: "check-in",
+	intros: "intros",
+	refresh: "refresh",
+	followup: "follow-up",
+	pitch: "pitch"
+};
+const messageWord = (key) => MESSAGE_WORDS[key] || "own";
 const YEAR_NAME = "A year since";
 const moveName = (m) => m.year ? YEAR_NAME : KINDS[m.kind].name;
 const moveLook = (m) => m.year ? "photos" : m.kind;
@@ -1514,7 +1526,7 @@ function whenDue(next, week, today = "") {
 	const work = WORK_ONLY.includes(next.kind);
 	const fits = (iso) => {
 		const d = dateOf(iso).getDay();
-		return !week.off.includes(d) && (!work || week.work.includes(d));
+		return (!week.off.includes(d) || next.kind === "thanks") && (!work || week.work.includes(d));
 	};
 	if (!work && next.due < today && fits(today)) return next.due;
 	const from = next.due > today ? next.due : today;
@@ -1526,7 +1538,7 @@ const comesUp = (next, today, week) => !!next && whenDue(next, week, today) <= t
 
 // data/today.js
 const PER_DAY = 3;
-const MOST$1 = 5;
+const MOST$2 = 5;
 const rank = (k) => KIND_KEYS.indexOf(k);
 const perDayOf = (n) => Math.min(5, Math.max(1, Math.floor(Number(n)) || 3));
 const isDue = (p, today, week) => !p.letGo && comesUp(p.next, today, week);
@@ -1608,6 +1620,162 @@ function shelfItems(people, saved, today, perDay, week, days = 14) {
 	return items;
 }
 
+// data/fill.js
+const FILLS = [
+	"name",
+	"where",
+	"offer",
+	"brand",
+	"when",
+	"city",
+	"shoot"
+];
+const firstName = (name) => String(name ?? "").trim().split(/\s+/)[0];
+function fillValues(person, me, today) {
+	const whole = String(person.name ?? "").trim();
+	return {
+		name: person.group === "prospect" ? whole : firstName(whole),
+		where: person.where || "",
+		offer: me.offer || "",
+		brand: whole,
+		when: person.lastMove ? whenWords(person.lastMove, today) : "",
+		city: me.city || "",
+		shoot: person.next && (person.next.shoot || person.next.year && person.next.year.shoot) || ""
+	};
+}
+function fill(text, values) {
+	return String(text ?? "").replace(/\[(\w+)\]/g, (all, key) => {
+		const k = key.toLowerCase();
+		return FILLS.includes(k) && values[k] ? values[k] : all;
+	});
+}
+
+// data/done-notes.js
+const HOWS = {
+	text: "Text",
+	instagram: "Instagram",
+	email: "Email",
+	person: "In person"
+};
+const NOTE_HOWS = {
+	call: "A call",
+	text: "A text",
+	person: "In person",
+	email: "An email"
+};
+const NOTE_KIND = "note";
+const HOW_WORDS = {
+	text: "by text",
+	instagram: "on Instagram",
+	email: "by email",
+	person: "in person"
+};
+const NOTE_WORDS = {
+	call: "a call",
+	text: "a text",
+	person: "in person",
+	email: "an email"
+};
+const howWords = (line) => (line.kind === "note" ? NOTE_WORDS : HOW_WORDS)[line.how] || "";
+const MOST$1 = 500;
+const HOW_CHOICES = {
+	move: Object.keys(HOWS).map((k) => [
+		k,
+		HOWS[k],
+		HOW_WORDS[k]
+	]),
+	note: Object.keys(NOTE_HOWS).map((k) => [
+		k,
+		NOTE_HOWS[k],
+		NOTE_WORDS[k]
+	])
+};
+const WHAT = {
+	thanks: "Said thanks",
+	yes: "Said thanks for the yes",
+	photos: "Told [who] the photos were up",
+	hello: "Said hello",
+	checkin: "Checked in",
+	intros: "Asked [who] for intros",
+	refresh: "Offered [who] a refresh",
+	followup: "Followed up",
+	pitch: "Pitched [who]"
+};
+const YEAR = "Sent a final, a year on";
+const ANSWERED$1 = {
+	yes: "[who] said yes",
+	no: "[who] said not now"
+};
+function howFromGo(went) {
+	const w = String(went ?? "").toLowerCase();
+	if (w === "instagram") return "instagram";
+	if (w === "email" || w === "gmail") return "email";
+	return "";
+}
+const cleanNote = (v) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, MOST$1);
+const quickTaps = (name) => [
+	`${firstName(name) || "They"} reached out first`,
+	"Wants to shoot again",
+	"No reply yet"
+];
+function addTap(note, tap) {
+	const n = String(note ?? "").trim();
+	if (n.toLowerCase().includes(tap.toLowerCase())) return n;
+	if (!n) return `${tap}.`;
+	return `${n}${/[.!?]$/.test(n) ? "" : "."} ${tap}.`;
+}
+function withHowNote(line, { how, note, said } = {}, hows = HOWS) {
+	const out = { ...line };
+	for (const k of [
+		"how",
+		"note",
+		"said"
+	]) delete out[k];
+	if (how && hows[how]) out.how = how;
+	const n = cleanNote(note);
+	if (n) out.note = n;
+	const s = String(said ?? "").trim();
+	if (s) out.said = s;
+	return out;
+}
+const noteLine = (personId, day, { how, note }, id, at) => withHowNote({
+	id,
+	at,
+	personId,
+	kind: NOTE_KIND,
+	day
+}, {
+	how,
+	note
+}, NOTE_HOWS);
+function doneSoFar(person, lines = []) {
+	const fill = (s) => s.replace("[who]", firstName(person.name) || "them");
+	const rows = lines.filter((l) => l.personId === person.id && l.day && (WHAT[l.kind] || l.kind === "note")).map((l) => ({
+		id: l.id,
+		day: l.day,
+		at: l.at || 0,
+		look: l.kind === "note" ? "note" : l.year ? "photos" : l.kind,
+		what: l.kind === "note" ? "Note" : l.year ? YEAR : fill(WHAT[l.kind]),
+		how: l.how || "",
+		howWords: howWords(l),
+		note: l.note || "",
+		noteOnly: l.kind === NOTE_KIND
+	}));
+	const pitch = person.pitch || {};
+	if (ANSWERED$1[pitch.answer] && pitch.on) rows.push({
+		id: "",
+		day: pitch.on,
+		at: Infinity,
+		look: "pitch",
+		what: fill(ANSWERED$1[pitch.answer]).replace(/^them/, "They"),
+		how: "",
+		howWords: "",
+		note: "",
+		noteOnly: false
+	});
+	return rows.sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at).map(({ at, ...r }) => r);
+}
+
 // data/moves.js
 const getWeek = async () => weekOf(...await Promise.all([getSetting("workDays", null), getSetting("daysOff", null)]));
 const loadAll = () => Promise.all([
@@ -1634,13 +1802,13 @@ async function markInPick(id, how) {
 	if (!pick || pick.date !== dayOf() || !pick.ids.includes(id)) return;
 	await setSetting("pick", how ? markPick(pick, id, how) : unmarkPick(pick, id));
 }
-async function doMove(person) {
+async function doMove(person, said = "") {
 	const { person: after, log } = markDone(person, dayOf());
-	const line = {
+	const line = withHowNote({
 		id: uuid(),
 		at: Date.now(),
 		...log
-	};
+	}, { said });
 	await savePerson(after);
 	await logMove(line);
 	await markInPick(person.id, "done");
@@ -1650,6 +1818,15 @@ async function doMove(person) {
 		after,
 		line
 	};
+}
+async function saveHowNote(line, { how, note }) {
+	const next = withHowNote(line, {
+		how,
+		note,
+		said: line.said
+	}, HOWS);
+	await logMove(next);
+	return next;
 }
 async function undoMove({ before, line }) {
 	await savePerson(before);
@@ -1684,34 +1861,63 @@ async function getMe() {
 	};
 }
 
-// data/fill.js
-const FILLS = [
-	"name",
-	"where",
-	"offer",
-	"brand",
-	"when",
-	"city",
-	"shoot"
-];
-const firstName = (name) => String(name ?? "").trim().split(/\s+/)[0];
-function fillValues(person, me, today) {
-	const whole = String(person.name ?? "").trim();
-	return {
-		name: person.group === "prospect" ? whole : firstName(whole),
-		where: person.where || "",
-		offer: me.offer || "",
-		brand: whole,
-		when: person.lastMove ? whenWords(person.lastMove, today) : "",
-		city: me.city || "",
-		shoot: person.next && (person.next.shoot || person.next.year && person.next.year.shoot) || ""
-	};
+// components/marks.js
+function tagHtml(kind, name = KINDS[kind].name) {
+	const k = KINDS[kind];
+	return `<span class="tag" style="background:${k.bg};color:${k.fg}">${esc(name)}</span>`;
 }
-function fill(text, values) {
-	return String(text ?? "").replace(/\[(\w+)\]/g, (all, key) => {
-		const k = key.toLowerCase();
-		return FILLS.includes(k) && values[k] ? values[k] : all;
+const flairHtml = (kind) => `<span class="flair" style="background:${KINDS[kind].bg}" aria-hidden="true">${markSvg(kind, 132)}</span>`;
+const miniHtml = (kind) => kind ? `<span class="mini" style="background:${KINDS[kind].bg}" aria-hidden="true">${markSvg(kind, 10)}</span>` : "";
+
+// pages/done-note.js
+const chipsHtml = (list, attr, on = "") => list.map(([k, label]) => `<button type="button" class="pick-chip${k === on ? " on" : ""}" ${attr}="${esc(k)}" aria-pressed="${k === on}">${esc(label)}</button>`).join("");
+function openHowNote(person, line, how = "") {
+	const s = openSheet({
+		title: moveName(line),
+		className: "sheet-small done-note",
+		body: `
+      <div class="move-who">${photoHtml(person, "small")}<span class="move-who-words"><span class="move-name">${esc(person.name)}</span><span class="move-handle">Done today</span></span></div>
+      <p class="label done-note-label">How</p>
+      <div class="pick-chips" data-hows>${chipsHtml(Object.entries(HOWS), "data-how", how)}</div>
+      <label class="label done-note-label" for="doneNote">A note (optional)</label>
+      <textarea class="move-text done-note-text" id="doneNote" rows="3" maxlength="500"></textarea>
+      <div class="pick-chips" data-taps>${chipsHtml(quickTaps(person.name).map((t) => [t, t]), "data-tap")}</div>
+      <div class="done-note-btns"><button type="button" class="text-btn" data-skip>Skip</button><button type="button" class="btn primary" data-save>Save</button></div>`
 	});
+	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(moveLook(line), moveName(line));
+	fillPhotos(s.el, [person]);
+	const note = s.body.querySelector(".done-note-text");
+	s.body.addEventListener("click", async (e) => {
+		const b = e.target.closest("button");
+		if (!b) return;
+		if (b.dataset.how !== undefined) {
+			how = how === b.dataset.how ? "" : b.dataset.how;
+			s.body.querySelectorAll("[data-how]").forEach((c) => {
+				c.classList.toggle("on", c.dataset.how === how);
+				c.setAttribute("aria-pressed", c.dataset.how === how);
+			});
+		} else if (b.dataset.tap !== undefined) {
+			note.value = addTap(note.value, b.dataset.tap);
+			b.classList.add("on");
+		} else if (b.matches("[data-skip]")) s.close();
+		else if (b.matches("[data-save]")) {
+			if (how || note.value.trim()) await saveHowNote(line, {
+				how,
+				note: note.value
+			});
+			s.close();
+		}
+	});
+	return s;
+}
+async function moveDone(person, { said = "", how = "" } = {}, redraw, away = null) {
+	const [undo] = await Promise.all([doMove(person, said), away]);
+	await redraw();
+	toast("Done.", { action: {
+		label: "Undo",
+		run: () => undoMove(undo).then(redraw)
+	} });
+	return openHowNote(person, undo.line, how);
 }
 
 // data/reasons.js
@@ -1742,14 +1948,6 @@ function phrase(kind, name, year) {
 	if (kind === "refresh") return "Offer a refresh";
 	return KINDS[kind].name;
 }
-
-// components/marks.js
-function tagHtml(kind, name = KINDS[kind].name) {
-	const k = KINDS[kind];
-	return `<span class="tag" style="background:${k.bg};color:${k.fg}">${esc(name)}</span>`;
-}
-const flairHtml = (kind) => `<span class="flair" style="background:${KINDS[kind].bg}" aria-hidden="true">${markSvg(kind, 132)}</span>`;
-const miniHtml = (kind) => kind ? `<span class="mini" style="background:${KINDS[kind].bg}" aria-hidden="true">${markSvg(kind, 10)}</span>` : "";
 
 // pages/today-card.js
 function cardHtml$1(p, today) {
@@ -1952,6 +2150,7 @@ async function openMove(person, { onDone, onLater }) {
 	const draft = draftWaiting(person);
 	const year = person.next.year;
 	let away = false;
+	let went = "";
 	const s = openSheet({
 		title: moveName(person.next),
 		className: "move-sheet",
@@ -1961,14 +2160,30 @@ async function openMove(person, { onDone, onLater }) {
       ${year ? `<div class="move-final" hidden><img alt="${esc(`A final from ${year.shoot || "the shoot"}`)}" />
         <!-- SHARE THE PHOTO hands it to the phone's share sheet (a download on a computer): the button clicker leaves it alone. -->
         <button type="button" class="text-btn move-share" data-share data-test-skip>Share the photo</button></div>` : ""}
-      ${draft ? "<p class=\"move-draft\">Draft waiting in Gmail, written by Claude.</p>" : `<label class="label" for="moveText">Your message</label>
-      <textarea class="move-text" id="moveText" rows="6">${esc(text)}</textarea>`}
+      ${draft ? "<p class=\"move-draft\">Draft waiting in Gmail, written by Claude.</p>" : `<label class="label" for="moveText">What did you say?</label>
+      <textarea class="move-text" id="moveText" rows="4" placeholder="Type it here, or use your message below."></textarea>
+      <button type="button" class="move-offer" data-offer><span class="move-offer-plus">${PLUS}</span><span><span class="move-offer-head">Use your ${esc(messageWord(person.next.kind))} message</span><span class="move-offer-text">${esc(text)}</span></span></button>`}
       <div class="move-actions"></div>`
 	});
 	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(moveLook(person.next), moveName(person.next));
 	fillPhotos(s.el, [person]);
 	if (year) showFinal(s.body.querySelector(".move-final"), year);
 	const actions = s.body.querySelector(".move-actions");
+	const box = s.body.querySelector(".move-text");
+	const offer = s.body.querySelector("[data-offer]");
+	const useMessage = () => {
+		if (!offer || offer.hidden) return;
+		box.value = text;
+		offer.hidden = true;
+	};
+	offer?.addEventListener("click", () => {
+		useMessage();
+		box.focus();
+	});
+	const said = () => ({
+		said: box ? box.value : "",
+		how: howFromGo(went)
+	});
 	const buttons = () => {
 		actions.innerHTML = `
       ${draft ? `<button type="button" class="btn primary move-go" data-gmail data-test-skip>Open Gmail ${ARROW}</button>` : `<button type="button" class="btn primary move-go" data-go ${where ? "data-test-skip" : ""}>${where ? `Copy and open ${esc(where.how)}` : "Copy the message"} ${ARROW}</button>`}
@@ -1986,17 +2201,20 @@ async function openMove(person, { onDone, onLater }) {
 		const b = e.target.closest("button");
 		if (!b) return;
 		if (b.matches("[data-done]")) {
+			const r = said();
 			s.close();
-			onDone();
+			onDone(r);
 		} else if (b.matches("[data-later]")) {
 			s.close();
 			onLater();
 		} else if (b.matches("[data-not-yet]")) buttons();
 		else if (b.matches("[data-gmail]")) {
 			away = true;
+			went = "gmail";
 			window.open(GMAIL_DRAFTS, "_blank", "noopener");
 		} else if (b.matches("[data-go]")) {
-			const words = s.body.querySelector(".move-text").value;
+			if (!box.value.trim()) useMessage();
+			const words = box.value;
 			const copied = await copy(words);
 			const to = contactFor(person, words);
 			if (!to) {
@@ -2004,6 +2222,7 @@ async function openMove(person, { onDone, onLater }) {
 				return;
 			}
 			away = true;
+			went = to.how;
 			window.open(to.url, "_blank", "noopener");
 			if (!copied) toast("Select the message and copy it.");
 		}
@@ -2049,7 +2268,7 @@ function openAddPerson(onAdded) {
 // pages/done-today.js
 const rowHtml = ({ line, person }, i) => `
   <div class="done-row">${miniHtml(moveLook(line))}
-    <span class="choice-text"><span class="choice-label">${esc(person.name)}</span><span class="choice-detail">${esc(moveName(line))}</span></span>
+    <span class="choice-text"><span class="choice-label">${esc(person.name)}</span><span class="choice-detail">${esc([moveName(line), howWords(line)].filter(Boolean).join(" · "))}</span>${line.note ? `<span class="done-row-note">${esc(line.note)}</span>` : ""}</span>
     <button type="button" class="text-btn" data-undo="${i}">Undo</button>
   </div>`;
 async function openDoneToday(onChange) {
@@ -2903,34 +3122,20 @@ async function todayScreen(view, { beside = false } = {}) {
 			return;
 		}
 		openMove(p, {
-			onDone: async () => {
-				const undo = await doMove(p);
-				await redraw();
-				toast("Done.", { action: {
-					label: "Undo",
-					run: () => undoMove(undo).then(redraw)
-				} });
-			},
+			onDone: (said) => moveDone(p, said, redraw),
 			onLater: () => laterMove(p).then(redraw)
 		});
 	});
 	if (!left.length) return;
 	const top = left[0];
 	const card = view.querySelector(".card.top");
-	const done = async (dir = 1, dx = 0) => {
-		const [undo] = await Promise.all([doMove(top), cardAway(card, dir, dx)]);
-		await redraw();
-		toast("Done.", { action: {
-			label: "Undo",
-			run: () => undoMove(undo).then(redraw)
-		} });
-	};
+	const done = (dir = 1, dx = 0, said = {}) => moveDone(top, said, redraw, cardAway(card, dir, dx));
 	const later = async () => {
 		await Promise.all([laterMove(top), cardAway(card, 0)]);
 		await redraw();
 	};
 	const open = () => openMove(top, {
-		onDone: () => done(1),
+		onDone: (said) => done(1, 0, said),
 		onLater: later
 	});
 	wireCard(card, {
@@ -3758,7 +3963,17 @@ function personThing(p, today, week, ownPhoto, lines = []) {
 				icon: next ? markSvg(moveLook(next), 10) : ""
 			},
 			group: GROUPS[p.group] || "",
-			happened: happened(p, lines)
+			happened: happened(p, lines),
+			done: doneSoFar(p, lines).map((r) => ({
+				...r,
+				bg: r.noteOnly ? "" : KINDS[r.look].bg,
+				icon: r.noteOnly ? "" : markSvg(r.look, 10)
+			})),
+			hows: HOW_CHOICES,
+			thanks: next && next.kind === "thanks" ? {
+				due: whenDue(next, week, today),
+				shoots: p.shoots || []
+			} : null
 		},
 		coverKey: ownPhoto ? `own:${p.id}` : p.photoKey ? `eye:${p.photoKey}` : "",
 		covers: () => photoOf$1(p, ownPhoto)
@@ -4085,16 +4300,15 @@ async function personScreen(view, id) {
 	}));
 	wirePitch(view, p, pitched, redraw);
 	view.querySelector("[data-move]")?.addEventListener("click", () => openMove(p, {
-		onDone: async () => {
-			const undo = await doMove(p);
-			await redraw();
-			toast("Done.", { action: {
-				label: "Undo",
-				run: () => undoMove(undo).then(redraw)
-			} });
-		},
+		onDone: (said) => moveDone(p, said, redraw),
 		onLater: () => laterMove(p).then(redraw)
 	}));
+	let openNow = "";
+	try {
+		openNow = sessionStorage.getItem("rounds-open-move") || "";
+		sessionStorage.removeItem("rounds-open-move");
+	} catch (e) {}
+	if (openNow === id) view.querySelector("[data-move]")?.click();
 }
 
 // data/lists.js
@@ -4540,6 +4754,86 @@ async function takeFromLayouts() {
 	return changed.length;
 }
 
+// data/asks.js
+function askResult(ask, people, lines, today, makeId, now) {
+	const none = {
+		person: null,
+		put: null,
+		drop: ""
+	};
+	const a = ask && typeof ask === "object" ? ask : {};
+	const person = people.find((p) => p.id === a.personId && !p.letGo);
+	const line = lines.find((l) => l.id === a.lineId);
+	if (a.do === "done") {
+		if (!person || !person.next || person.next.kind !== a.kind) return none;
+		const { person: after, log } = markDone(person, today);
+		return {
+			person: after,
+			put: withHowNote({
+				id: makeId(),
+				at: now,
+				...log
+			}, {
+				how: a.how,
+				note: a.note
+			}),
+			drop: ""
+		};
+	}
+	if (a.do === "note") {
+		if (!person || !a.note && !a.how) return none;
+		return {
+			...none,
+			put: noteLine(person.id, a.day || today, a, makeId(), now)
+		};
+	}
+	if (a.do === "edit" && line) return {
+		...none,
+		put: withHowNote(line, {
+			how: a.how,
+			note: a.note,
+			said: line.said
+		}, line.kind === "note" ? NOTE_HOWS : HOWS)
+	};
+	if (a.do === "drop" && line && line.kind === "note") return {
+		...none,
+		drop: line.id
+	};
+	return none;
+}
+async function takeAsks() {
+	const D = window.DFData;
+	if (!D || !D.linksWhere) return 0;
+	const waiting = (await D.linksWhere({
+		toApp: "rounds",
+		type: "rounds-ask"
+	})).filter((l) => !l.takenAt);
+	if (!waiting.length) return 0;
+	let [people, lines] = await Promise.all([listPeople(), listMoves()]);
+	let did = 0;
+	for (const link of waiting) {
+		const r = askResult(link.ask, people, lines, dayOf(), uuid, Date.now());
+		if (r.person) {
+			await savePerson(r.person);
+			people = people.map((p) => p.id === r.person.id ? r.person : p);
+		}
+		if (r.put) {
+			await logMove(r.put);
+			lines = [...lines.filter((l) => l.id !== r.put.id), r.put];
+		}
+		if (r.drop) {
+			await dropMove(r.drop);
+			lines = lines.filter((l) => l.id !== r.drop);
+		}
+		if (r.person || r.put || r.drop) did++;
+		await D.saveLink({
+			...link,
+			takenAt: new Date().toISOString()
+		});
+	}
+	return did;
+}
+
 // app.js
 const view = document.getElementById("view");
 const suite = window.DF_SUITE;
@@ -4602,9 +4896,15 @@ function onSynced(r) {
 	if (r.changedHere || leadsNew) redrawSoon();
 }
 window.addEventListener("hashchange", route);
-if (suite && suite.get && suite.get("person")) history.replaceState(null, "", `#/person/${encodeURIComponent(suite.get("person"))}`);
-else if ((location.hash || "#/") === "#/") history.replaceState(null, "", suite && suite.at ? `#/${suite.at}` : "#/today");
-const bringIn = async () => await takePeopleEdits().catch(() => 0) + await bringInFromEye() + await yearsFromEye() + await takeFromLayouts();
+if (suite && suite.get && suite.get("person")) {
+	if (suite.get("move")) {
+		try {
+			sessionStorage.setItem("rounds-open-move", suite.get("person"));
+		} catch (e) {}
+	}
+	history.replaceState(null, "", `#/person/${encodeURIComponent(suite.get("person"))}`);
+} else if ((location.hash || "#/") === "#/") history.replaceState(null, "", suite && suite.at ? `#/${suite.at}` : "#/today");
+const bringIn = async () => await takePeopleEdits().catch(() => 0) + await bringInFromEye() + await yearsFromEye() + await takeFromLayouts() + await takeAsks().catch(() => 0);
 tellPeopleFromNowOn();
 tellPeople(3e3);
 bringIn().catch(console.error).finally(() => {

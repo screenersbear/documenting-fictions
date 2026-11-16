@@ -31,7 +31,8 @@ describe('shelfItems', () => {
   });
   it('nothing on days off, and nothing for no one', () => {
     const week = { work: [1, 2, 3, 4, 5], off: [0, 6] };
-    expect(shelfItems([p('a', 'thanks', T)], null, T, 3, week, 1)).toEqual([]); // the 14th is a Saturday
+    expect(shelfItems([p('a', 'hello', T)], null, T, 3, week, 1)).toEqual([]); // the 14th is a Saturday
+    expect(shelfItems([p('a', 'thanks', T)], null, T, 3, week, 1)).toEqual([item('a', 'Say thanks', T)]); // a thank-you still comes
     expect(shelfItems([], null, T, 3, ANY_DAY)).toEqual([]);
     expect(shelfItems([p('a', 'thanks', T)], null, T, 3, ANY_DAY, 0)).toEqual([]);
   });

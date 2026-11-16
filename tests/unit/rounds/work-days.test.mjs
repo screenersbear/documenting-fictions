@@ -161,17 +161,25 @@ describe('days off', () => {
     expect(toggleDay([0, 2], 2)).toEqual([0]);
   });
   it('nothing comes up on a day off: it waits for the next day', () => {
-    for (const kind of ['thanks', 'hello', 'checkin', 'intros']) {
+    for (const kind of ['yes', 'photos', 'hello', 'checkin', 'intros']) {
       expect(whenDue(move(kind, SUN), WEEKLY)).toBe(MON);
       expect(comesUp(move(kind, SUN), SUN, WEEKLY)).toBe(false);
       expect(comesUp(move(kind, SUN), MON, WEEKLY)).toBe(true);
     }
   });
   it('one overdue on a day off waits too, then reads as overdue again', () => {
-    expect(whenDue(move('thanks', LAST_FRI), WEEKLY, SUN)).toBe(MON);
-    expect(comesUp(move('thanks', LAST_FRI), SUN, WEEKLY)).toBe(false);
-    expect(whenDue(move('thanks', LAST_FRI), WEEKLY, MON)).toBe(LAST_FRI);
-    expect(whenDue(move('thanks', LAST_FRI), WEEKLY, SAT)).toBe(LAST_FRI);
+    expect(whenDue(move('hello', LAST_FRI), WEEKLY, SUN)).toBe(MON);
+    expect(comesUp(move('hello', LAST_FRI), SUN, WEEKLY)).toBe(false);
+    expect(whenDue(move('hello', LAST_FRI), WEEKLY, MON)).toBe(LAST_FRI);
+    expect(whenDue(move('hello', LAST_FRI), WEEKLY, SAT)).toBe(LAST_FRI);
+  });
+  it('a thank-you after a shoot ignores days off: it comes up on a Sunday too', () => {
+    expect(whenDue(move('thanks', SUN), WEEKLY)).toBe(SUN);
+    expect(comesUp(move('thanks', SUN), SUN, WEEKLY)).toBe(true);
+    expect(whenDue(move('thanks', LAST_FRI), WEEKLY, SUN)).toBe(LAST_FRI);
+    expect(comesUp(move('thanks', LAST_FRI), SUN, WEEKLY)).toBe(true);
+    expect(whenDue(move('thanks', SUN), { work: [1], off: EVERY_DAY })).toBe(SUN);
+    expect(comesUp(move('thanks', MON), SUN, WEEKLY)).toBe(false);
   });
   it('Saturday: personal moves, no Pitch or Follow up', () => {
     expect(comesUp(move('thanks', SAT), SAT, WEEKLY)).toBe(true);

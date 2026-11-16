@@ -5,7 +5,7 @@
     "data/retire-overthoughts.js",
     "components/cut-out.js", "components/sticker-bends.js",
     "tools/join-files.mjs", "tools/join-modules.mjs", "tools/smaller.mjs", "the-eye/components/load-lib.js", "the-eye/components/row-words.js", "the-eye/components/shoot-stage.js", "the-eye/components/today-items.js", "the-eye/components/shelf-items.js", "the-eye/components/people-out.js",
-      "the-eye/components/talent-since.js", "the-eye/components/lessons-to-ref.js", "the-eye/components/finals-tags.js", "the-eye/components/slide-steps.js", "the-eye/components/status-steps.js",
+      "the-eye/components/talent-since.js", "the-eye/components/say-thanks.js", "the-eye/components/lessons-to-ref.js", "the-eye/components/finals-tags.js", "the-eye/components/slide-steps.js", "the-eye/components/status-steps.js",
     "the-eye/components/stats-words.js",
     "ref/data/db.js",
     "ref/data/library.js",
@@ -51,7 +51,7 @@
     "rounds/data/clash.js",
     "rounds/data/pitch.js",
     "rounds/data/photos-up.js", "rounds/data/shelf-items.js", "rounds/data/people-out.js", "rounds/data/happened.js", "rounds/data/year-since.js", "rounds/data/year-tally.js",
-    "rounds/data/moves.js", "rounds/data/eye.js", "rounds/data/from-layouts.js", "rounds/data/to-ref.js"
+    "rounds/data/moves.js", "rounds/data/eye.js", "rounds/data/from-layouts.js", "rounds/data/done-notes.js", "rounds/data/asks.js", "rounds/data/to-ref.js"
   ],
   "ignore": [
     "**/vendor/**",

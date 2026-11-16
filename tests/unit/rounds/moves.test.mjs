@@ -85,6 +85,31 @@ describe('loadToday', () => {
   });
 });
 
+describe('doMove with what you said, and saveHowNote', () => {
+  it('keeps what was in the box with the move (nothing for an empty box)', async () => {
+    const p = person('a');
+    await db.savePerson(p);
+    expect((await M.doMove(p, '  Thank you!  ')).line.said).toBe('Thank you!');
+    const q = person('b');
+    await db.savePerson(q);
+    expect((await M.doMove(q, '   ')).line).not.toHaveProperty('said');
+  });
+  it('HOW and A NOTE are kept with the move, what you said stays', async () => {
+    const p = person('a');
+    await db.savePerson(p);
+    const { line } = await M.doMove(p, 'Hi');
+    const next = await M.saveHowNote(line, { how: 'text', note: ' Wants to shoot again. ' });
+    expect(next).toEqual({ ...line, how: 'text', note: 'Wants to shoot again.' });
+    expect((await db.listMoves()).map(strip)).toEqual([next]);
+  });
+  it('an unknown how, or a note\'s how, is left off; an empty note too', async () => {
+    const p = person('a');
+    await db.savePerson(p);
+    const { line } = await M.doMove(p);
+    expect(await M.saveHowNote(line, { how: 'call', note: '' })).toEqual(line);
+  });
+});
+
 describe('doMove', () => {
   it('saves them with their next move planned and logs the move, now', async () => {
     const p = person('a');

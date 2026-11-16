@@ -348,6 +348,12 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
 - **Paper pages (Live, 15 Nov):** the person page, HOW THEY CONNECT and YOUR YEAR are paper with no band: a back ring
   button, a small caps title, then rows on a 1px ink rule. Each notebook shows under its mark on its colour (28px tile,
   6px corners); a move's kind under its 16px mini. YOUR YEAR's numbers are 44px light.
+- **Thank-yous (Live, 15 Nov, thanks/01-04):** Say thanks after a shoot is due the day after it, Sundays too. A move opened
+  says WHAT DID YOU SAY? over an empty box, with USE YOUR <KIND> MESSAGE under it (a plus, on #EFEFEA, the starter in dim 15px)
+  that fills it. After DONE, a small sheet: HOW (Text, Instagram, Email, In person) and A NOTE (OPTIONAL) with quick taps,
+  pill chips in ink with mango text when picked; SKIP and SAVE (mango on ink). The person page shows DONE SO FAR in Rounds'
+  part under NEXT, with + ADD A NOTE. The Eye shows Say thanks FROM ROUNDS on a captured shoot, OPEN ROUNDS and <NAME>
+  WROTE FIRST (names, since Rounds keeps no pronouns).
 - **Placing a sticker:** pick a photo, then the placing screen: the book big with the sticker on it (drag to move, pinch to
   size, twist to turn) and a sheet under it with SHAPE (Circle, Square, Card, Cut out) and EDGE (White border, Black outline)
   as segmented controls, the sticker changing as you pick; BACK and STICK IT ON. Shape and edge are chosen there, never after.

@@ -132,6 +132,7 @@
   window.ShelfParts.addYear(ed);
   window.ShelfParts.addYearImage(ed);
   window.ShelfParts.addWaiting(ed);
+  window.ShelfParts.addPersonDone(ed);
   window.ShelfParts.addPerson(ed);
   window.ShelfParts.addPersonEdit(ed);
   window.ShelfParts.addSearch(ed);

@@ -8,6 +8,7 @@ import { dayOf } from './dates.js';
 import { weekOf } from './work-days.js';
 import { shelfItems } from './shelf-items.js';
 import { uuid } from '../components/util.js';
+import { withHowNote, HOWS } from './done-notes.js';
 
 // The work days and days off (Options): Monday to Friday, Sunday off, unless changed.
 export const getWeek = async () => weekOf(...(await Promise.all([getSetting('workDays', null), getSetting('daysOff', null)])));
@@ -33,15 +34,22 @@ async function markInPick(id, how) {
   await setSetting('pick', how ? markPick(pick, id, how) : unmarkPick(pick, id));
 }
 
-// Gives back what UNDO needs. (at: when, for Done today's order.)
-export async function doMove(person) {
+// Gives back what UNDO needs. (at: when, for Done today's order.) said:
+// what's in the move's WHAT DID YOU SAY? box, kept with it.
+export async function doMove(person, said = '') {
   const { person: after, log } = markDone(person, dayOf());
-  const line = { id: uuid(), at: Date.now(), ...log };
+  const line = withHowNote({ id: uuid(), at: Date.now(), ...log }, { said });
   await savePerson(after);
   await logMove(line);
   await markInPick(person.id, 'done');
   shelfAgain();
   return { before: person, after, line };
+}
+// HOW and A NOTE, from the sheet right after DONE: kept with the move's line.
+export async function saveHowNote(line, { how, note }) {
+  const next = withHowNote(line, { how, note, said: line.said }, HOWS);
+  await logMove(next);
+  return next;
 }
 export async function undoMove({ before, line }) {
   await savePerson(before);

@@ -11,6 +11,7 @@
   window.EyeParts.addShelfItems(ed);
   window.EyeParts.addPeopleOut(ed);
   window.EyeParts.addTalentSince(ed);
+  window.EyeParts.addSayThanks(ed);
   window.EyeParts.addLessonsToRef(ed);
   window.EyeParts.addFinalsTags(ed);
   window.EyeParts.addStatusSteps(ed);

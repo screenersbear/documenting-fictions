@@ -298,7 +298,7 @@ describe('the loaded script', () => {
       // The one list of people (people.js, people-things.js).
       'cleanHandle', 'personKeys', 'findPerson', 'maybePairs', 'peopleAll', 'getPerson', 'gatherPeople', 'answerSame',
       'editPerson', 'personFor', 'personUrl', 'PEOPLE_APPS', 'pictureOf', 'shootPeople', 'publishThings', 'thingsAll',
-      'personView', 'searchIn', 'searchAll',
+      'personView', 'searchIn', 'searchAll', 'askRounds', 'roundsAsks', 'doneWithAsks',
     ].sort());
   });
   it('opens no database just by loading', async () => {

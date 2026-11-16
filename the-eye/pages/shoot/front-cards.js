@@ -102,7 +102,8 @@ window.EyeParts.addShootFrontCards = function addShootFrontCards(ed) {
     let onFront = [];
     if (ed.isPostCaptureStatus(s.status) || s.archived) {
       const drawn = ed.drawStageCards(s, c);
-      html = drawn.html;
+      // Say thanks from Rounds, first (components/say-thanks.js fills it).
+      html = '<div class="eye-thanks-box" id="shootThanks"></div>' + drawn.html;
       onFront = drawn.onFront;
     } else if (s.status === 'waiting_to_shoot') {
       html = moodboardBlock(s, c) + shotListBlock(s) + talentBlock(s);
@@ -114,6 +115,7 @@ window.EyeParts.addShootFrontCards = function addShootFrontCards(ed) {
     box.innerHTML = html;
     if (box.querySelector('#shootPassedOn')) ed.renderPassedOn();
     ed.fillTalentSince(box);
+    if (box.querySelector('#shootThanks')) ed.fillSayThanks(box.querySelector('#shootThanks'), s);
     // An empty shot list isn't on the front page, so it stays a row.
     if (!box.querySelector('[data-page="shotListHeading"]')) onFront = onFront.filter(k => k !== 'shotList');
     return onFront;

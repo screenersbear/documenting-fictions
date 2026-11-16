@@ -39,3 +39,23 @@
 .person-input { display: block; width: 100%; box-sizing: border-box; height: 48px; padding: 0 12px; border: 0; border-radius: 8px; box-shadow: inset 0 0 0 1.5px #E1E1DC; background: #fff; color: var(--text); font: inherit; font-size: 17px; }
 .person-input:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--text); }
 .person-edit .opt-note { margin-bottom: 8px; }
+/* DONE SO FAR in Rounds' part (thanks/03): the label and ADD A NOTE, then a
+   row per move done or note: the date, its mark, what and how, the note. */
+.done-head { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; }
+.done-label { font-size: 11px; font-weight: 500; letter-spacing: .12em; line-height: 14px; text-transform: uppercase; color: var(--dim); }
+.done-add { display: inline-flex; align-items: center; gap: 6px; height: 44px; margin-right: -8px; padding: 0 8px; border: 0; background: none; color: var(--text); font: inherit; font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+.done-list { margin-top: 4px; border-top: 1px solid #E1E1DC; }
+.done-row { display: flex; gap: 12px; width: 100%; padding: 12px 0; border: 0; border-bottom: 1px solid #E1E1DC; background: none; color: var(--text); font: inherit; text-align: left; }
+button.done-row { cursor: pointer; }
+.done-row .person-kind { margin-top: 3px; }
+.done-day { flex: none; width: 50px; padding-top: 3px; font-size: 11px; font-weight: 500; letter-spacing: .12em; line-height: 14px; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
+.done-words { flex: 1; min-width: 0; }
+.done-what { display: block; font-size: 17px; line-height: 22px; }
+.done-what span { color: var(--dim); }
+.done-note { display: block; margin-top: 3px; font-size: 15px; font-weight: 300; line-height: 21px; overflow-wrap: anywhere; }
+.done-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.done-chip { height: 34px; padding: 0 12px; border: 0; border-radius: 17px; background: #EFEFEA; color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
+.done-chip.on { background: var(--text); color: #FFD100; }
+.done-text { height: auto; min-height: 76px; padding: 12px; line-height: 23px; resize: none; }
+.done-sheet .sheet-btn + .sheet-btn { margin-top: 8px; }
+.person-kind.nb svg { width: 16px; height: 16px; }

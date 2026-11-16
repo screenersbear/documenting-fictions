@@ -22,3 +22,12 @@
 /* A year since: one of the shoot's finals, as it is, ready to share. */
 .move-final { display: flex; align-items: flex-end; gap: 12px; margin-top: 16px; }
 .move-final img { display: block; width: auto; height: auto; max-width: 62%; max-height: 190px; border-radius: 4px; }
+/* WHAT DID YOU SAY? (thanks/04): white, an ink edge, empty to start; your
+   message offered under it on the segmented track's grey. */
+.move-sheet .move-text { min-height: 92px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--text); }
+.move-text::placeholder { color: var(--off-1); }
+.move-offer { display: flex; gap: 10px; width: 100%; margin-top: 10px; padding: 12px 14px; border: 0; border-radius: 12px; background: #EFEFEA; text-align: left; color: var(--text); }
+.move-offer[hidden] { display: none; }
+.move-offer-plus { flex-shrink: 0; display: inline-flex; padding-top: 2px; }
+.move-offer-head { display: block; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.move-offer-text { display: block; margin-top: 4px; font: 400 15px/21px var(--ui); color: var(--dim); }

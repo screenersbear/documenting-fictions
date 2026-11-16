@@ -7,6 +7,7 @@
 // With them, Rounds' part of the year page (data/year-tally.js).
 import { listPeople, savePeople, getPhoto, photoIds, listMoves, onChange } from './db.js';
 import { happened } from './happened.js';
+import { doneSoFar, HOW_CHOICES } from './done-notes.js';
 import { eyePhoto, eyeShoots } from './eye.js';
 import { yearTally } from './year-tally.js';
 import { KINDS, markSvg, moveLook } from './kinds.js';
@@ -38,7 +39,8 @@ export async function shelfPageOf(p) {
 
 // A person as the list keeps them: their name, their next move ("Check in,
 // due 2 Dec"), their group, what's happened with them (lines: the moves log,
-// for The Eye's talent card) and their photo (asked for only when it changed).
+// for The Eye's talent card), what's been done (DONE SO FAR), a Say thanks
+// waiting (for The Eye) and their photo (asked for only when it changed).
 export function personThing(p, today, week, ownPhoto, lines = []) {
   const next = p.next && !p.letGo ? p.next : null;
   const what = next ? phrase(next.kind, p.name, next.year) : p.letGo ? 'Let go' : 'Nothing planned';
@@ -55,6 +57,11 @@ export function personThing(p, today, week, ownPhoto, lines = []) {
       next: { title: what, line: when, bg: next ? KINDS[moveLook(next)].bg : '#E1E1DC', icon: next ? markSvg(moveLook(next), 10) : '' },
       group: GROUPS[p.group] || '',
       happened: happened(p, lines),
+      // DONE SO FAR on the person page (thanks/03), each with its mark.
+      done: doneSoFar(p, lines).map((r) => ({ ...r, bg: r.noteOnly ? '' : KINDS[r.look].bg, icon: r.noteOnly ? '' : markSvg(r.look, 10) })),
+      hows: HOW_CHOICES,
+      // A Say thanks waiting, for The Eye's nudge on a captured shoot (thanks/01).
+      thanks: next && next.kind === 'thanks' ? { due: whenDue(next, week, today), shoots: p.shoots || [] } : null,
     },
     coverKey: ownPhoto ? `own:${p.id}` : p.photoKey ? `eye:${p.photoKey}` : '',
     covers: () => photoOf(p, ownPhoto),

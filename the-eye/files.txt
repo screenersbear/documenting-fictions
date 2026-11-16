@@ -23,6 +23,7 @@ built/shared-data.js smaller
   data/shared/year.js
   data/shared/people.js
   data/shared/people-things.js
+  data/shared/asks.js
   data/shared/df-data.js
   data/shared/backup-books.js
   data/shared/backup-json.js
@@ -189,6 +190,7 @@ built/app.js smaller
   components/shelf-items.js
   components/people-out.js
   components/talent-since.js
+  components/say-thanks.js
   components/lessons-to-ref.js
   components/finals-tags.js
   components/status-steps.js

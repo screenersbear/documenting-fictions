@@ -5,7 +5,7 @@
 // Layouts gives the people tagged in it Your photos are up, with a slip on
 // Today. The Eye's shoot people are noted for the shoot's record.
 import { test, expect } from '@playwright/test';
-import { openRounds, eyeShoot, goTo, opened, importCsv, weekdayNow } from './_rounds.mjs';
+import { openRounds, eyeShoot, goTo, opened, importCsv, weekdayNow, useMessage, skipNote } from './_rounds.mjs';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const now = weekdayNow();
@@ -44,6 +44,7 @@ test.describe('Rounds: how the notebooks connect', () => {
     await page.click('#view [data-move]');
     const pitch = await opened(page, 'Pitch');
     await pitch.locator('.move-more [data-done]').click();
+    await skipNote(page, 'Dana Ortiz');
     await expect(page.locator('#view .pitch-label')).toHaveText('How did the pitch go?');
     await expect(page.locator('#view .pitch-chip')).toHaveText(['No reply yet', 'Not now', "Yes, let's shoot"]);
     await expect(page.locator('#view .pitch-chip[aria-checked="true"]')).toHaveCount(0);
@@ -128,9 +129,10 @@ test.describe('Rounds: how the notebooks connect', () => {
     // WRITE TO JUNE: her move, with its own starter message.
     await slip.locator('[data-slip-open]').click();
     const move = await opened(page, 'Your photos are up');
-    await expect(move.locator('.move-text')).toHaveValue('The Rooftop portraits set is up. Thank you again, feel free to share it.');
+    await useMessage(move, 'photos are up', 'The Rooftop portraits set is up. Thank you again, feel free to share it.');
     await move.locator('.move-more [data-done]').click();
     await expect(page.locator('#toast')).toContainText('Done.');
+    await skipNote(page, 'June Park');
     await expect(page.locator('#view .df-slip')).toHaveCount(0);
     expect((await page.evaluate((x) => window.DFData.getLink(x), id)).openedAt).toBeTruthy();
     // Her hello, which it stood in for, is back; Sam wasn't tagged.

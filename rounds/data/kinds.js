@@ -31,6 +31,10 @@ export const MESSAGE_ORDER = ['thanks', 'yes', 'photos', 'hello', 'checkin', 're
 
 export const isKind = (key) => KIND_KEYS.includes(key);
 
+// What a kind's message is called, for USE YOUR THANK-YOU MESSAGE (thanks/04).
+const MESSAGE_WORDS = { thanks: 'thank-you', yes: 'thank-you', photos: 'photos are up', hello: 'hello', checkin: 'check-in', intros: 'intros', refresh: 'refresh', followup: 'follow-up', pitch: 'pitch' };
+export const messageWord = (key) => MESSAGE_WORDS[key] || 'own';
+
 // A YEAR SINCE a shoot (round 2, connect/12; data/year-since.js) is a Check
 // in with the shoot on it (next.year). Its tag says A year since, and it's
 // drawn in the thank-yous' mango and sun, as its mockup has it. Every place

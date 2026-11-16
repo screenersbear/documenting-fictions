@@ -1,5 +1,6 @@
 // rounds/data/kinds.js: the nine kinds of move, their colour pairs, marks and starter messages.
 import { describe, it, expect } from 'vitest';
+import * as K from '../../../rounds/data/kinds.js';
 import { KINDS, KIND_KEYS, MARKS, MESSAGE_ORDER, isKind, kindFromName, markSvg, moveName, moveLook, YEAR_NAME } from '../../../rounds/data/kinds.js';
 
 describe('the kinds', () => {
@@ -104,5 +105,21 @@ describe('moveName and moveLook', () => {
     expect(moveName({ personId: 'j', kind: 'checkin', day: '2026-11-15', year })).toBe('A year since');
     expect(moveName({ kind: 'checkin', year: null })).toBe('Check in');
     expect(moveLook({ kind: 'hello', year: undefined })).toBe('hello');
+  });
+});
+
+describe('messageWord', () => {
+  it('names a kind\'s message for USE YOUR ... MESSAGE', () => {
+    expect(K.messageWord('thanks')).toBe('thank-you');
+    expect(K.messageWord('yes')).toBe('thank-you');
+    expect(K.messageWord('checkin')).toBe('check-in');
+    expect(K.messageWord('followup')).toBe('follow-up');
+  });
+  it('every kind has one', () => {
+    for (const k of K.KIND_KEYS) expect(K.messageWord(k)).not.toBe('own');
+  });
+  it('an unknown kind: your own message', () => {
+    expect(K.messageWord('mystery')).toBe('own');
+    expect(K.messageWord(undefined)).toBe('own');
   });
 });

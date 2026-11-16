@@ -6,10 +6,10 @@
 // Layouts that tags people here shows as a slip at the top, once.
 import { bandHtml } from '../components/band.js';
 import { fillPhotos } from '../components/photo.js';
-import { toast } from '../components/toast.js';
 import { esc } from '../components/util.js';
 import { PLUS } from '../components/icons.js';
-import { loadToday, loadDone, doMove, undoMove, laterMove } from '../data/moves.js';
+import { loadToday, loadDone, laterMove } from '../data/moves.js';
+import { moveDone } from './done-note.js';
 import { waiting } from '../data/today.js';
 import { whenDue } from '../data/work-days.js';
 import { dayOf, dueWords } from '../data/dates.js';
@@ -70,27 +70,19 @@ export async function todayScreen(view, { beside = false } = {}) {
     const p = byId.get(id);
     if (!p || !p.next) { redraw(); return; }
     openMove(p, {
-      onDone: async () => {
-        const undo = await doMove(p);
-        await redraw();
-        toast('Done.', { action: { label: 'Undo', run: () => undoMove(undo).then(redraw) } });
-      },
+      onDone: (said) => moveDone(p, said, redraw),
       onLater: () => laterMove(p).then(redraw),
     });
   });
   if (!left.length) return;
   const top = left[0];
   const card = view.querySelector('.card.top');
-  const done = async (dir = 1, dx = 0) => {
-    const [undo] = await Promise.all([doMove(top), cardAway(card, dir, dx)]);
-    await redraw();
-    toast('Done.', { action: { label: 'Undo', run: () => undoMove(undo).then(redraw) } });
-  };
+  const done = (dir = 1, dx = 0, said = {}) => moveDone(top, said, redraw, cardAway(card, dir, dx));
   const later = async () => {
     await Promise.all([laterMove(top), cardAway(card, 0)]);
     await redraw();
   };
-  const open = () => openMove(top, { onDone: () => done(1), onLater: later });
+  const open = () => openMove(top, { onDone: (said) => done(1, 0, said), onLater: later });
   wireCard(card, { onOpen: open, onSwipe: done });
   view.querySelector('[data-write]').addEventListener('click', open);
   view.querySelector('[data-later]').addEventListener('click', later);

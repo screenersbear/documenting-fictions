@@ -8,7 +8,6 @@ import { shortBandHtml } from '../components/band.js';
 import { photoHtml, fillPhotos } from '../components/photo.js';
 import { miniHtml } from '../components/marks.js';
 import { moveLook } from '../data/kinds.js';
-import { toast } from '../components/toast.js';
 import { esc } from '../components/util.js';
 import { CHEV_SMALL } from '../components/icons.js';
 import { getPerson, listMoves } from '../data/db.js';
@@ -17,7 +16,8 @@ import { GROUPS } from '../data/plan.js';
 import { phrase } from '../data/reasons.js';
 import { handleText, profileUrl } from '../data/contact.js';
 import { dayOf, dueWords } from '../data/dates.js';
-import { doMove, undoMove, laterMove, getWeek } from '../data/moves.js';
+import { laterMove, getWeek } from '../data/moves.js';
+import { moveDone } from './done-note.js';
 import { whenDue } from '../data/work-days.js';
 import { shelfPageOf } from '../data/people-out.js';
 import { firstName } from '../data/fill.js';
@@ -64,11 +64,11 @@ export async function personScreen(view, id) {
   view.querySelector('[data-band-more]').addEventListener('click', () => openPersonMenu(p, redraw, { asks, pitched }));
   wirePitch(view, p, pitched, redraw);
   view.querySelector('[data-move]')?.addEventListener('click', () => openMove(p, {
-    onDone: async () => {
-      const undo = await doMove(p);
-      await redraw();
-      toast('Done.', { action: { label: 'Undo', run: () => undoMove(undo).then(redraw) } });
-    },
+    onDone: (said) => moveDone(p, said, redraw),
     onLater: () => laterMove(p).then(redraw),
   }));
+  // Sent here to do the move (The Eye's OPEN ROUNDS): it opens once.
+  let openNow = '';
+  try { openNow = sessionStorage.getItem('rounds-open-move') || ''; sessionStorage.removeItem('rounds-open-move'); } catch (e) { /* private mode */ }
+  if (openNow === id) view.querySelector('[data-move]')?.click();
 }

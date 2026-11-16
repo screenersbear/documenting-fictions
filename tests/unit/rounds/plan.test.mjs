@@ -57,9 +57,17 @@ describe('afterShoot', () => {
   it('makes an old shoot\'s check-in due today, not in the past', () => {
     expect(afterShoot(who('regular'), '2026-08-01', T)).toEqual(move('checkin', T));
   });
-  it('says thanks today for a shoot up to two weeks ago', () => {
-    expect(afterShoot(who('new'), T, T)).toEqual(move('thanks', T));
-    expect(afterShoot(who('client', move('intros', '2027-01-01')), '2026-10-31', T)).toEqual(move('thanks', T));
+  it('says thanks the day after the shoot, for a shoot up to two weeks ago', () => {
+    expect(afterShoot(who('new'), T, T)).toEqual(move('thanks', '2026-11-15'));
+    expect(afterShoot(who('guest'), '2026-11-13', T)).toEqual(move('thanks', T));
+  });
+  it('a shoot picked up late still has its thanks the day after the shoot (overdue)', () => {
+    expect(afterShoot(who('client', move('intros', '2027-01-01')), '2026-10-31', T)).toEqual(move('thanks', '2026-11-01'));
+    expect(afterShoot(who('new'), '2026-11-07', T)).toEqual(move('thanks', '2026-11-08'));
+  });
+  it('the day after crosses a month and a year end', () => {
+    expect(afterShoot(who('new'), '2026-11-30', '2026-12-01')).toEqual(move('thanks', '2026-12-01'));
+    expect(afterShoot(who('new'), '2026-12-31', '2027-01-01')).toEqual(move('thanks', '2027-01-01'));
   });
   it('leaves an older shoot\'s next move as it was, or brings a check-in', () => {
     const next = move('pitch', '2026-11-20');

@@ -27,6 +27,27 @@ describe('dueLine', () => {
   });
 });
 
+describe('personThing: DONE SO FAR and a Say thanks waiting', () => {
+  const lines = [{ id: 'l1', at: 1, personId: 'r1', kind: 'checkin', day: '2026-11-10', how: 'text', note: 'Coffee soon.' }, { id: 'n1', at: 2, personId: 'r1', kind: 'note', day: '2026-11-12', how: 'call', note: 'Booked.' }];
+  it('the rows, each with its mark (a note on its own has none here), and the how chips', () => {
+    const more = R.personThing(person(), TODAY, WEEK, false, lines).more;
+    expect(more.done.map((r) => [r.id, r.what, r.howWords, r.note, r.bg])).toEqual([['n1', 'Note', 'a call', 'Booked.', ''], ['l1', 'Checked in', 'by text', 'Coffee soon.', '#0A4FD6']]);
+    expect(more.done[1].icon).toContain('<svg');
+    expect(more.done[0].icon).toBe('');
+    expect(more.hows.move.map((c) => c[0])).toEqual(['text', 'instagram', 'email', 'person']);
+  });
+  it('a Say thanks waiting: when it comes up, and the shoots they were on', () => {
+    const p = person({ group: 'new', shoots: ['s1'], next: { kind: 'thanks', due: '2026-11-15', step: 0 } });
+    expect(R.personThing(p, TODAY, WEEK, false).more.thanks).toEqual({ due: '2026-11-15', shoots: ['s1'] });
+    expect(R.personThing({ ...p, shoots: undefined }, TODAY, WEEK, false).more.thanks).toEqual({ due: '2026-11-15', shoots: [] });
+  });
+  it('no Say thanks waiting: none (another move, let go, or nothing planned)', () => {
+    expect(R.personThing(person(), TODAY, WEEK, false).more.thanks).toBeNull();
+    expect(R.personThing(person({ letGo: true, next: { kind: 'thanks', due: TODAY, step: 0 } }), TODAY, WEEK, false).more.thanks).toBeNull();
+    expect(R.personThing(person({ next: null }), TODAY, WEEK, false).more.thanks).toBeNull();
+  });
+});
+
 describe('personThing', () => {
   it('gives a person: their name, next move and when, group, opening at them', () => {
     const t = R.personThing(person({ updatedAt: '2026-11-01T00:00:00.000Z' }), TODAY, WEEK, false);

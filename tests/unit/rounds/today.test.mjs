@@ -135,11 +135,11 @@ describe('work days (a Pitch or Follow up waits for one)', () => {
     expect(pickFor(people, saved, SAT, 3, MON_FRI)).toEqual({ date: SAT, ids: ['pitch', 'thanks'], marks: { pitch: 'done' } });
     expect(pickFor(people, saved, SAT, 3).ids).toEqual(['pitch', 'fu', 'thanks']);
   });
-  it('Sunday off: nothing at all; Monday, all of it', () => {
+  it('Sunday off: only a thank-you after a shoot; Monday, all of it', () => {
     const week = { work: [1, 2, 3, 4, 5], off: [0] };
     const sun = [...people, p('hi', 'hello', '2026-11-15')];
-    expect(dueOn(sun, '2026-11-15', week)).toEqual([]);
-    expect(pickFor(sun, null, '2026-11-15', 3, week)).toEqual({ date: '2026-11-15', ids: [], marks: {} });
+    expect(dueOn(sun, '2026-11-15', week).map((x) => x.id)).toEqual(['thanks']);
+    expect(pickFor(sun, null, '2026-11-15', 3, week)).toEqual({ date: '2026-11-15', ids: ['thanks'], marks: {} });
     expect(dueOn(sun, '2026-11-16', week).map((x) => x.id)).toEqual(['thanks', 'hi', 'fu', 'pitch']);
   });
 });

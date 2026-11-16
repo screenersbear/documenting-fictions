@@ -45,12 +45,14 @@ export function firstMove(group, today) {
 }
 
 // After a shoot together (from The Eye): thanks while it's fresh (two weeks),
-// except for Regulars, whose next check-in comes six weeks after. An older
-// shoot leaves the next move as it was, or brings a check-in.
+// due the day after the shoot (a text the day after; one picked up late is
+// overdue, not moved), except for Regulars, whose next check-in comes six
+// weeks after. An older shoot leaves the next move as it was, or brings a
+// check-in.
 export function afterShoot(person, shotOn, today) {
   const checkin = move('checkin', later(today, addDays(shotOn, GAP.checkin)));
   if (person.group === 'regular') return checkin;
-  if (daysBetween(shotOn, today) <= GAP.fresh) return move('thanks', today);
+  if (daysBetween(shotOn, today) <= GAP.fresh) return move('thanks', addDays(shotOn, 1));
   return person.next || checkin;
 }
 

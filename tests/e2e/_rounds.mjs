@@ -71,6 +71,33 @@ export async function opened(page, title) {
   return s;
 }
 
+// A move opened (thanks/04): WHAT DID YOU SAY? starts empty, with USE YOUR
+// <KIND> MESSAGE under it showing the starter. A tap puts it in the box to
+// edit, and the offer goes.
+export async function useMessage(move, word, text) {
+  const box = move.locator('.move-text');
+  const offer = move.locator('[data-offer]');
+  await expect(move.locator('label[for="moveText"]')).toHaveText('What did you say?');
+  await expect(box).toHaveValue('');
+  await expect(offer.locator('.move-offer-head')).toHaveText(`Use your ${word} message`);
+  await expect(offer.locator('.move-offer-text')).toHaveText(text);
+  await offer.click();
+  await expect(box).toHaveValue(text);
+  await expect(offer).toBeHidden();
+}
+
+// Right after a move's done (thanks/02): the sheet for how and a note, over
+// whatever's next. SKIP leaves the move done without them.
+export async function skipNote(page, name) {
+  const s = page.locator('.sheet.done-note');
+  await expect(s).toBeVisible();
+  await expect(s.locator('.move-name')).toHaveText(name);
+  await expect(s.locator('.move-handle')).toHaveText('Done today');
+  await page.waitForTimeout(500); // taps count once it's been up 450ms (components/sheet.js)
+  await s.locator('[data-skip]').click();
+  await expect(s).toHaveCount(0);
+}
+
 // Options, from the band's menu.
 export async function options(page) {
   await page.click('#view [data-app-menu]');

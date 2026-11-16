@@ -19,6 +19,7 @@ built/shared-data.js smaller
   data/shared/year.js
   data/shared/people.js
   data/shared/people-things.js
+  data/shared/asks.js
   data/shared/df-data.js
   data/shared/backup-books.js
   data/shared/backup-json.js
@@ -40,6 +41,7 @@ built/app.css
   styles/marks.css
   styles/today.css
   styles/move.css
+  styles/done-note.css
   styles/people.css
   styles/person.css
   styles/messages.css

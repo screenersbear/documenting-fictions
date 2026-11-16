@@ -2,7 +2,8 @@
 // only comes up on a work day, and one due on another day waits for the next
 // work day. Say thanks, Say hello, Check in and Ask come up any day (they're
 // about timing), except a day off: on those nothing comes up at all, and
-// anything due waits for the next day that isn't off. Days as the phone
+// anything due waits for the next day that isn't off. A Say thanks after a
+// shoot ignores days off too: it's about timing (thanks/NOTES.md). Days as the phone
 // counts them, 0 Sunday to 6 Saturday; Monday to Friday to work and Sunday
 // off unless changed. A week: { work, off }.
 import { addDays, dateOf } from './dates.js';
@@ -56,7 +57,7 @@ export function whenDue(next, week, today = '') {
   const work = WORK_ONLY.includes(next.kind);
   const fits = (iso) => {
     const d = dateOf(iso).getDay();
-    return !week.off.includes(d) && (!work || week.work.includes(d));
+    return (!week.off.includes(d) || next.kind === 'thanks') && (!work || week.work.includes(d));
   };
   if (!work && next.due < today && fits(today)) return next.due;
   const from = next.due > today ? next.due : today;

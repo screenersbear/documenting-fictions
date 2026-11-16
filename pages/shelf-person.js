@@ -2,7 +2,7 @@
 // notebooks have with them, in the suite's own look (paper, no band), like
 // HOW THEY CONNECT. Their photo, name, handle (opens their profile) and
 // group, then a part per notebook under its mark, in loop order: NEXT
-// (Rounds' next move), SHOOTS (The Eye), BOARDS (Ref) and the posts they're
+// (Rounds' next move, and DONE SO FAR: pages/shelf-person-done.js), SHOOTS (The Eye), BOARDS (Ref) and the posts they're
 // in (Layouts, a row of covers). Each row opens it in its notebook. When it
 // isn't clear whether two people are one, SAME PERSON? asks (the answer is
 // kept). ... changes their name and handles everywhere
@@ -35,13 +35,13 @@ window.ShelfParts.addPerson = function addPerson(ed) {
   // SAME PERSON? for each person it might be: "June Park (@june.other) might be the same person."
   const sameHtml = (o) => `<div class="person-same"><h2>Same person?</h2><p>${esc(o.name)}${o.instagram || o.tiktok ? ` (@${esc(o.instagram || o.tiktok)})` : ''} might be the same person.</p>
     <div class="person-same-btns"><button type="button" class="sheet-btn primary" data-same="${esc(o.id)}">Same person</button><button type="button" class="sheet-btn" data-apart="${esc(o.id)}">Not the same</button></div></div>`;
-  function bodyHtml(page, v) {
+  function bodyHtml(page, v, done = '') {
     const first = firstName(v.person.name);
     const none = `<p class="person-none">Nothing with ${esc(first)} yet.</p>`;
     const list = (things, row) => (things.length ? things.map(row).join('') : none);
     const posts = v.byApp['contact-sheet'];
     return v.maybe.map(sameHtml).join('')
-      + partHtml('rounds', 'Next', 0, v.rounds ? nextHtml(v.rounds) : none)
+      + partHtml('rounds', 'Next', 0, v.rounds ? nextHtml(v.rounds) + done : none)
       + partHtml('the-eye', 'Shoots', v.byApp['the-eye'].length, list(v.byApp['the-eye'], (t) => rowHtml(t, shootThumb(page, t))))
       + partHtml('ref', 'Boards', v.byApp.ref.length, list(v.byApp.ref, (t) => rowHtml(t, boardThumb(page, t))))
       + partHtml('contact-sheet', `Posts ${first}'s in`, posts.length, posts.length ? `<div class="person-posts">${posts.map((t) => postHtml(page, t)).join('')}</div>` : none);
@@ -55,7 +55,9 @@ window.ShelfParts.addPerson = function addPerson(ed) {
     page.urls.splice(0).forEach((u) => URL.revokeObjectURL(u));
     page.view = v;
     page.setAttribute('aria-label', v.person.name || 'Person');
-    page.querySelector('.person-scroll').innerHTML = headHtml(page, v) + bodyHtml(page, v);
+    const done = await ed.doneHtml(page, v.rounds);
+    page.querySelector('.person-scroll').innerHTML = headHtml(page, v) + bodyHtml(page, v, done);
+    if (v.rounds) ed.wireDone(page, v.rounds, () => paint(page, id));
     return v;
   }
   // back: what the back button does instead of shutting the page (going

@@ -1,16 +1,17 @@
 // Done today (from Today): each move marked done today, the newest first,
-// with Undo to put it back as it was. For a card swiped away by mistake once
+// with how it was done and its note, and Undo to put it back as it was. For a card swiped away by mistake once
 // the toast's Undo has gone: its card comes back on Today.
 import { openSheet } from '../components/sheet.js';
 import { miniHtml } from '../components/marks.js';
 import { toast } from '../components/toast.js';
 import { esc } from '../components/util.js';
 import { moveName, moveLook } from '../data/kinds.js';
+import { howWords } from '../data/done-notes.js';
 import { loadDone, undoDone } from '../data/moves.js';
 
 const rowHtml = ({ line, person }, i) => `
   <div class="done-row">${miniHtml(moveLook(line))}
-    <span class="choice-text"><span class="choice-label">${esc(person.name)}</span><span class="choice-detail">${esc(moveName(line))}</span></span>
+    <span class="choice-text"><span class="choice-label">${esc(person.name)}</span><span class="choice-detail">${esc([moveName(line), howWords(line)].filter(Boolean).join(' · '))}</span>${line.note ? `<span class="done-row-note">${esc(line.note)}</span>` : ''}</span>
     <button type="button" class="text-btn" data-undo="${i}">Undo</button>
   </div>`;
 

@@ -72,6 +72,7 @@ export async function loadDFData() {
   await import('../../../shared/data/year.js');
   await import('../../../shared/data/people.js');
   await import('../../../shared/data/people-things.js');
+  await import('../../../shared/data/asks.js');
   await import('../../../shared/data/df-data.js');
   return window.DFData;
 }

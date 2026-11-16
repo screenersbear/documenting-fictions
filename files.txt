@@ -47,6 +47,7 @@ built/app.js smaller
   components/year-image.js
   pages/shelf-waiting.js
   components/thing-rows.js
+  pages/shelf-person-done.js
   pages/shelf-person.js
   pages/shelf-person-edit.js
   pages/shelf-search.js
@@ -67,6 +68,7 @@ built/app.js smaller
   shared/data/year.js
   shared/data/people.js
   shared/data/people-things.js
+  shared/data/asks.js
   shared/data/df-data.js
   data/retire-overthoughts.js
   shared/data/backup-books.js

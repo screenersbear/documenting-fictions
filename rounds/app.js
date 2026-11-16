@@ -16,6 +16,7 @@ import { introSeen, openIntro } from './pages/intro.js';
 import { welcome } from './pages/welcome.js';
 import { bringInFromEye, yearsFromEye } from './data/eye.js';
 import { takeFromLayouts } from './data/from-layouts.js';
+import { takeAsks } from './data/asks.js';
 import { takePeopleEdits, tellPeople, tellPeopleFromNowOn } from './data/people-out.js';
 import { startAutoSync } from './data/auto-sync.js';
 import { openConflicts } from './pages/conflicts.js';
@@ -83,15 +84,19 @@ function onSynced(r) {
 }
 
 window.addEventListener('hashchange', route);
-// Opened at a person from their page on the shelf (?person=<id>).
-if (suite && suite.get && suite.get('person')) history.replaceState(null, '', `#/person/${encodeURIComponent(suite.get('person'))}`);
+// Opened at a person from their page on the shelf (?person=<id>), or at
+// their move from The Eye's Say thanks (&move=1: the move opens there).
+if (suite && suite.get && suite.get('person')) {
+  if (suite.get('move')) { try { sessionStorage.setItem('rounds-open-move', suite.get('person')); } catch (e) { /* the person page, then */ } }
+  history.replaceState(null, '', `#/person/${encodeURIComponent(suite.get('person'))}`);
+}
 else if ((location.hash || '#/') === '#/') history.replaceState(null, '', suite && suite.at ? `#/${suite.at}` : '#/today');
 // People from The Eye's shoots, and the people in posts shared from
 // Layouts, come in first (and A year since for a shoot whose year came),
 // then the notebook's drawn; and again whenever Rounds comes back on screen.
 // One after the other: both can change the same person. A name changed on
 // the person page on the shelf comes in before them.
-const bringIn = async () => (await takePeopleEdits().catch(() => 0)) + (await bringInFromEye()) + (await yearsFromEye()) + (await takeFromLayouts());
+const bringIn = async () => (await takePeopleEdits().catch(() => 0)) + (await bringInFromEye()) + (await yearsFromEye()) + (await takeFromLayouts()) + (await takeAsks().catch(() => 0));
 // Rounds tells the one list of people its people, now and after each change.
 tellPeopleFromNowOn();
 tellPeople(3000);
