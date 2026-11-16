@@ -29,6 +29,7 @@ function seed(safeTop) {
     shoot({ id: 'e2', title: 'Studio', status: 'waiting_to_shoot', date: day(7), deadline: day(9) }),
     shoot({ id: 'e3', title: 'Beach', status: 'captured', date: day(-5), deadline: day(3) }),
     shoot({ id: 'e4', title: 'Band', status: 'captured', date: day(-8), deadline: day(4) }),
+    shoot({ id: 'e5', title: 'Old garden', status: 'delivered', date: day(-60), archived: true }),
   ];
   localStorage.setItem('dailies_state_v1', JSON.stringify({ shoots, projects: [], journalEntries: [] }));
 }
@@ -88,19 +89,29 @@ test.describe('The Eye on an iPhone: the band and the lists', () => {
     await ctx.close();
   });
 
-  test('the shoot pictures in the lists are 56 by 72, corners 6', async ({ browser }, testInfo) => {
+  // Bigger photos (round 2, the-eye/14, 16 Nov): 104 by 130 wherever the
+  // shoot list appears; the Archive keeps its own, 56 by 72.
+  test('the shoot pictures in the lists are 104 by 130, corners 6; the Archive keeps 56 by 72', async ({ browser }, testInfo) => {
     const { ctx, page } = await openEye(browser, testInfo);
     const sizes = (view) => page.evaluate((view) => [...document.querySelectorAll(`#${view} .shoot-row .shoot-thumb`)].map((el) => {
       const r = el.getBoundingClientRect();
       return `${Math.round(r.width)}x${Math.round(r.height)} r${getComputedStyle(el).borderTopLeftRadius}`;
     }), view);
+    const titles = (view) => page.evaluate((view) => [...document.querySelectorAll(`#${view} .shoot-row .shoot-row-title`)].map((el) => getComputedStyle(el).fontSize), view);
     const overview = await sizes('view-overview');
     expect(overview.length, 'Overview lists its shoots').toBeGreaterThanOrEqual(3);
-    for (const s of overview) expect(s).toBe('56x72 r6px');
+    for (const s of overview) expect(s).toBe('104x130 r6px');
     await turnTo(page, 'shoots');
     const shoots = await sizes('view-shoots');
     expect(shoots.length).toBe(4);
-    for (const s of shoots) expect(s).toBe('56x72 r6px');
+    for (const s of shoots) expect(s).toBe('104x130 r6px');
+    for (const f of await titles('view-shoots')) expect(f).toBe('21px');
+    await turnTo(page, 'archive');
+    await page.click('#view-archive .archive-month'); // the month opens
+    const archive = await sizes('view-archive');
+    expect(archive.length, 'the Archive lists its shoot').toBe(1);
+    for (const s of archive) expect(s).toBe('56x72 r6px');
+    for (const f of await titles('view-archive')) expect(f).toBe('18px');
     await ctx.close();
   });
 });

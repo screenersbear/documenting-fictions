@@ -5,7 +5,8 @@ window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootRow = function addShootRow(ed) {
   Object.assign(ed, { shootThumbHtml, shootDateWords, shootFlagWords, flagsHtml, moreBtnHtml, renderShootRow, renderCompactShootRow });
   const SHOOT_THUMB_EMPTY_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
-  const MORE_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';
+  // Three dots across (round 6, 14-shoots-bigger-photos), top right of the row.
+  const MORE_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
 
   function shootThumbHtml(s) {
     return s.projectPhoto

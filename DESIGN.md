@@ -281,7 +281,7 @@ button. Used for a shoot's page, a guide, a board.
 |---|---|
 | Card | white, radius 12, padding 16 (12 for a card holding a row) |
 | Row | 12px top and bottom, a 1px `line` under it; a picture at the left, the name (18px 300) over its meta line (label type) |
-| Row picture | The Eye's shoots: portrait, 56 × 72, radius 6 (a multi-day project shows three photos split); Ref's boards: one big cover, full width, 196px tall |
+| Row picture | The Eye's shoots: portrait 4:5, 104 × 130, radius 6, with the name at 21px 300 (two lines at most), the date and flags under it and the ... menu top right (the Shoots list, its stat box lists and search, since 16 Nov); the Archive keeps 56 × 72 with an 18px name; Ref's boards: one big cover, full width, 196px tall |
 | Field row | an 11px label over a 17px value, a chevron, at least 52px tall |
 | Detail row | on a long page: a label (12px 700 capitals), a one-line summary (15px), an 8px dot (filled = has something, open = empty), a chevron. It opens that part's own page |
 | Flag | a 20px pill with a 1px berry blade black outline, 10px 700 capitals (TEAM, MOOD BOARD, PROOFS, REFLECTION, FINAL IMAGES) |
