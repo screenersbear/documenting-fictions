@@ -106,13 +106,6 @@ window.EyeParts.addSwipeTabs = function addSwipeTabs(ed) {
         at: () => Math.max(0, ed.shootFlatPages().findIndex(p => p.id === ed.shootPageId && p.sub === ed.shootSub)),
         go: (i) => { const page = ed.shootFlatPages()[i]; if (page) ed.showShootPage(page.id, { sub: page.sub }); },
       },
-      {
-        el: document.getElementById('shootModeFoot'),
-        ok: () => !ed.shootModeOverlay.hidden && !!ed.shootModeFlows,
-        count: () => ed.shootModePages().length,
-        at: () => ed.shootModeAt,
-        go: (i) => { ed.shootModeAt = i; ed.drawShootModePage(); },
-      },
     ];
     let hold = null;
     let scrub = null;

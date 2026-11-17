@@ -1,0 +1,28 @@
+/* The big buttons (round 7, 17 Nov): full width (or half, two in a row),
+   56px, radius 10, a disc with a plus, a word in caps and a line under it.
+   Ink with mango (NEW SHOOT on the Overview, 15-overview-new-shoot), mango
+   with ink (the mood board's ADD) and white with an ink line (FROM REF,
+   16-mood-board-pdf). */
+.big-btn {
+  display: flex; align-items: center; gap: 12px; width: 100%; height: auto; min-height: 56px; margin: 0; padding: 0 16px;
+  box-sizing: border-box; border: 0; border-radius: 10px; text-align: left; box-shadow: none; cursor: pointer;
+  font-family: var(--ui); text-transform: none; letter-spacing: 0;
+}
+.big-btn[hidden] { display: none; }
+.big-btn-plus { flex: none; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; }
+.big-btn-plus svg { fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; }
+.big-btn-words { flex: 1; min-width: 0; }
+.big-btn-words b { display: block; font: 700 14px/18px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.big-btn-words span { display: block; font: 400 13px/17px var(--ui); letter-spacing: 0; text-transform: none; opacity: .8; }
+.big-btn-ink { background: var(--text); color: var(--accent); }
+.big-btn-ink .big-btn-plus { background: var(--accent); color: var(--text); }
+.big-btn-mango { background: var(--accent); color: var(--text); }
+.big-btn-mango .big-btn-plus { background: var(--text); color: var(--accent); }
+.big-btn-line { background: #FFFFFF; color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text); }
+.big-btn-line .big-btn-plus { background: var(--text); color: #FFFFFF; }
+.big-btn-row { display: flex; gap: 8px; margin: 4px 0 0; }
+.big-btn-row .big-btn { flex: 1 1 0; min-width: 0; }
+
+/* NEW SHOOT sits right under the Today card (or first, when it's away). */
+#view-overview .overview-new-shoot { margin: 12px 0 0; }
+#view-overview .today-card[hidden] + .overview-new-shoot { margin-top: 0; }

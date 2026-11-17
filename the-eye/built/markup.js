@@ -20,6 +20,10 @@
       <button type="button" class="today-more" id="todayMoreBtn" hidden><span id="todayMoreWords"></span><span class="today-more-dots" id="todayMoreDots" aria-hidden="true"></span></button>
     </div>
 
+    <!-- NEW SHOOT, right under the Today card (round 7, 17 Nov): the new-shoot
+         guide, as New shoot beside the Shoots list (which stays). -->
+    <button type="button" class="big-btn big-btn-ink overview-new-shoot" id="overviewNewShootBtn"><span class="big-btn-plus" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span class="big-btn-words"><b>New shoot</b><span>Plan it step by step</span></span></button>
+
     <!-- The next shoot coming up, as a card (pages/overview/next-shoot.js). -->
     <div class="section-block" id="nextShootSection" hidden>
       <h2>Next shoot</h2>
@@ -453,9 +457,14 @@
 
         <div class="moodboard-section">
           <span class="moodboard-label" id="moodboardSectionLabel">Mood board</span>
-          <button type="button" id="addMoodboardPhotos" class="primary small-btn">+ Add photos</button>
-          <button type="button" id="importRefBoardBtn" class="primary small-btn">+ Import board</button>
-          <input type="file" id="moodboardFileInput" accept="image/*" multiple hidden />
+          <!-- ADD (photos or a PDF, each page a photo: pages/shoot/moodboard-add.js)
+               and FROM REF (in the suite, pick a board in Ref; on its own, a
+               board file from Ref), round 7, the-eye/16-mood-board-pdf. -->
+          <div class="big-btn-row">
+            <button type="button" id="addMoodboardPhotos" class="big-btn big-btn-mango"><span class="big-btn-plus" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span class="big-btn-words"><b>Add</b><span>photos or a PDF</span></span></button>
+            <button type="button" id="importRefBoardBtn" class="big-btn big-btn-line"><span class="big-btn-plus" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span class="big-btn-words"><b>From Ref</b><span>a board</span></span></button>
+          </div>
+          <input type="file" id="moodboardFileInput" accept="image/*,application/pdf,.pdf" multiple hidden />
           <div id="refBoards" class="ref-boards" hidden></div>
           <div id="moodboardGrid" class="moodboard-grid"></div>
           <label class="checkbox-row" id="moodboardCompleteRow"><input type="checkbox" id="shootMoodboardComplete" /> <span id="moodboardCompleteLabel">Mood board complete or not required?</span></label>
@@ -1600,15 +1609,12 @@
 <!-- ============ TAB INTRO ============ -->
 <!-- Shoot mode: a stripped-back, full-screen working view for the day of -->
 <div id="shootModeOverlay" class="modal-overlay shoot-mode-overlay sm-dark" hidden>
-  <!-- A page of the notebook, like Archive mode's, with the notebook around it
-       dimmed so it reads as a page of its own (see breakShootModePages in
-       app.js), in three parts that each start a fresh page: last time's
-       lesson, the quick review buttons and the shot list (running on over
-       as many pages as it takes); the mood board, its photos sized to fill
-       its page; then the shooting notes. -->
+  <!-- One page that scrolls (round 7, 17 Nov: pages/shoot-mode/one-page.js),
+       its header pinned at the top. Under it: last time's lesson, the quick
+       review buttons, the shot list, the mood board, then the shooting notes. -->
   <div class="nb-chapter-board" aria-hidden="true"></div>
   <div class="modal shoot-mode-modal">
-    <div class="shoot-mode-sheet" id="shootModeSheet" data-part="main">
+    <div class="shoot-mode-sheet" id="shootModeSheet">
     <div class="shoot-mode-header">
       <div class="shoot-mode-heading-wrap">
         <div class="shoot-mode-top">
@@ -1634,8 +1640,6 @@
           <p class="shoot-mode-chip shoot-mode-clock-line" id="shootModeGoldenHour" hidden></p>
           <p class="shoot-mode-chip shoot-mode-clock-line shoot-mode-must-haves" id="shootModeMustHaves" hidden></p>
         </div>
-        <!-- Which of the three pages this is (pages/shoot-mode/pages.js). -->
-        <div class="shoot-mode-dots" id="shootModeDots" aria-hidden="true"></div>
       </div>
     </div>
     <div class="shoot-mode-body shoot-mode-page-main" id="shootModeMain">
@@ -1674,12 +1678,6 @@
       </label>
     </div>
     </div>
-  </div>
-  <div class="nb-turn-layer" aria-hidden="true"></div>
-  <div class="nb-page-foot">
-    <button type="button" class="nb-page-step" id="shootModePrev" aria-label="Previous page"></button>
-    <span id="shootModeFoot"></span>
-    <button type="button" class="nb-page-step" id="shootModeNext" aria-label="Next page"></button>
   </div>
     <!-- A wild card (the same as Quick review's), and "Done shooting",
          which wraps up the shoot. One bar, split in two. Exit is up top. -->

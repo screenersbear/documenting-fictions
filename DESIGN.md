@@ -289,6 +289,7 @@ button. Used for a shoot's page, a guide, a board.
 | Status card | on a shoot's page, full width under its date and place: a white card (radius 12, a 1px `line` ring), STATUS (label type) and CHANGE › (button type) on top, the status at 22px with "3 OF 7" (label type) at its right, then one bar per stage in order (Prospect, Active planning, Shoot ready, Captured, the photo or video stages, Delivered), 4px apart, growing from 10 to 28px tall: done ones berry blade black, this one the notebook colour with a 1.5px berry blade black ring, the rest `#D6DADD`; the first and last stage named under the ends (11px dim). Postponed and Canceled show one crimson line saying so instead. The whole card is one button that opens Change status |
 | Today card | The Eye's Overview: TODAY with "N THINGS" (label type) on top, then the two most urgent (a question first, then anything overdue), then a row "N MORE IN TODAY'S REPORT" with a dot for each, which opens the full report. The full report lists everything on the Today card first |
 | Primary button | 40px tall (48 in a bottom bar), radius 8, the notebook colour with its small-text colour, button type |
+| Big button (Live, 17 Nov) | for the main ways in (The Eye: NEW SHOOT on the Overview, ADD and FROM REF on a mood board; Ref: NEW BOARD and IMPORT on Mood boards, ADD A NEW PERSON in Who it's for): full width (two side by side share a row, 8px apart), 56px tall, radius 10, a 28px disc with a plus at the left, the action (14px 700 capitals) over a short line (13px, 80%). Kinds: ink (berry blade black, mango words and disc), the notebook colour (white words), and line (white with a 1.5px berry blade black ring) |
 | Outline button | the same shape with a 1.5px berry blade black ring on paper or white |
 | Text button | button type, no box |
 | Segmented control | white segments on a `track` |
@@ -312,6 +313,20 @@ button. Used for a shoot's page, a guide, a board.
 
 Ref's picture viewer and The Eye's Shoot mode are dark on purpose: berry blade black ground, paper text, the notebook colour
 for what matters (ticks, must-haves, the main action). So photos read true and the screen doesn't light up the set.
+
+**Shoot mode is one page (Live, 17 Nov, the-eye round 7):** the header stays pinned (name, wrap time, time left, golden hour,
+must-haves to go); under it, scrolling: Last time, Quick review, the shot list, the mood board (its own photos, then the pages
+of any Ref boards, in rows of three; a tap opens the viewer; + Add photos), shooting notes. No page dots, no swiping between
+pages; coming back to it opens where you were.
+
+**PDFs on a mood board (Live, 17 Nov):** each page becomes one photo, made on the phone (long side 2400px), under a small
+label with the file's name and its pages ("FROM LOOKBOOK.PDF · 8 PAGES", 11px 500 capitals, dim). A toast says they're in.
+Ref's IMPORT makes a board of a PDF the same way: a page of the board for each page, edge to edge, named after the file with
+"(from PDF)" after it in the list until it's renamed; photos imported go through the usual layout step.
+
+**Who it's for (Live, 17 Nov, ref round 3):** ADD A NEW PERSON (big button, "Name and handle") first, then search, then RECENT
+(the 12 people with the newest shoot or board; each with a short line: their group or role, then their shoots or their handle),
+then "No one, it's just for me" as a text button at the end.
 
 ### 9.8 The shelf
 

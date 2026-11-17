@@ -228,12 +228,13 @@ window.EyeParts.addOffline = function addOffline(ed) {
     }
     Promise.resolve(back).catch(() => {}).then(() => {
       // Shoot mode comes back on its own (resumeShootModeIfActive), whatever
-      // the sun menu says; it comes back on the page you were on, too.
+      // the sun menu says; it comes back scrolled to where you were, too
+      // (once the mood board's photos are in, as they set its height).
       const was = ed.readLastPlace();
       const mode = was && was.shootMode;
-      if (mode && !ed.shootModeOverlay.hidden && mode.id === ed.getShootModeShootId() && Number.isInteger(mode.at) && mode.at > 0) {
-        if (!ed.shootModeBoardIn) ed.shootModeWanted = mode.at;
-        ed.breakShootModePages({ at: mode.at, force: true });
+      if (mode && !ed.shootModeOverlay.hidden && mode.id === ed.getShootModeShootId() && Number.isFinite(mode.top) && mode.top > 0) {
+        ed.shootModeWantedTop = mode.top;
+        ed.layoutShootMode();
       }
       ed.lastPlaceArmed = true;
       ed.queueLastPlace();

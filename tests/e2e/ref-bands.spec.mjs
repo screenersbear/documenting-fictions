@@ -1,6 +1,7 @@
 // Ref's bands (Starky, 14 Nov): only Notebooks and Options in the band, no
-// +. Adding sits beside the list it adds to: NEW BOARD beside "Boards N",
-// NEW TAG beside "Your tags N". And the band's rising mark is the 2 x 2
+// +. Adding sits by the list it adds to: NEW BOARD and IMPORT over "Boards
+// N" (round 3, 17 Nov: ref/08-new-and-import), NEW TAG beside "Your tags
+// N". And the band's rising mark is the 2 x 2
 // board turned 45 degrees and cut by the band's edge, a peak 80 wide and 40
 // tall (ref/NOTES.md, round 2).
 import { test, expect } from '@playwright/test';
@@ -16,11 +17,17 @@ async function openRef(browser, testInfo, hash) {
 const bandButtons = (page) => page.$$eval('.band:not(.band-short) .band-btns button', (els) => els.map((b) => b.getAttribute('aria-label')));
 
 test.describe('Ref: two buttons in the band, adding beside the list, the turned mark', () => {
-  test('Mood boards: Notebooks and Options only; NEW BOARD beside the count opens a new board', async ({ browser }, testInfo) => {
+  test('Mood boards: Notebooks and Options only; NEW BOARD and IMPORT over the count; NEW BOARD opens a new board', async ({ browser }, testInfo) => {
     const { ctx, page } = await openRef(browser, testInfo, '#/boards');
     expect(await bandButtons(page)).toEqual(['Back to your notebooks', 'Options']);
-    const add = page.locator('.list-head .list-act', { hasText: 'New board' });
-    await expect(add).toBeVisible();
+    const adds = page.locator('.boards-adds .big-btn');
+    await expect(adds).toHaveText(['New board', 'Importa PDF or photos']);
+    await expect(page.locator('.list-head .list-act')).toHaveCount(0);
+    const row = await page.locator('.boards-adds').boundingBox();
+    const head = await page.locator('.list-head h2').boundingBox();
+    expect(row.y + row.height).toBeLessThan(head.y);
+    for (const b of await adds.all()) expect(Math.round((await b.boundingBox()).height)).toBe(56);
+    const add = adds.first();
     await add.click();
     await expect(page).toHaveURL(/#\/new$/);
     await ctx.close();

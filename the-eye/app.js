@@ -120,6 +120,8 @@
   window.EyeParts.addReflectionHelperHelper(ed);
   window.EyeParts.addShootOpen(ed);
   window.EyeParts.addShootMoodboard(ed);
+  window.EyeParts.addBoardGroups(ed);
+  window.EyeParts.addMoodboardAdd(ed);
   window.EyeParts.addImageViewer(ed);
   window.EyeParts.addProjectsPhotoCrop(ed);
   window.EyeParts.addImageViewerTouch(ed);
@@ -155,6 +157,7 @@
   window.EyeParts.addPdfSections(ed);
   window.EyeParts.addPdfPreview(ed);
   window.EyeParts.addPdfViewer(ed);
+  window.EyeParts.addPdfPhotos(ed);
   window.EyeParts.addPdfViewerOpen(ed);
   window.EyeParts.addJournalEntryPdf(ed);
   window.EyeParts.addPdfExportPicker(ed);
@@ -182,7 +185,7 @@
   window.EyeParts.addNoticesReportDay(ed);
   window.EyeParts.addShootModeShotList(ed);
   window.EyeParts.addShootMode(ed);
-  window.EyeParts.addShootModePages(ed);
+  window.EyeParts.addShootModePage(ed);
   window.EyeParts.addShootModeClock(ed);
   window.EyeParts.addShootModeGoldenHour(ed);
   window.EyeParts.addShootModeLastTime(ed);

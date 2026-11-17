@@ -120,7 +120,7 @@ window.EyeParts.addShootModeShotList = function addShootModeShotList(ed) {
     // The pages are cut again, on whichever page the new row landed (a row
     // added at the foot of a page starts the next one).
     const focusInput = focusIdx !== undefined ? list.querySelector(`.shot-text[data-idx="${focusIdx}"]`) : null;
-    ed.breakShootModePages({ show: focusInput ? focusInput.closest('.shoot-mode-shot-row') : null, force: true });
+    ed.layoutShootMode({ show: focusInput ? focusInput.closest('.shoot-mode-shot-row') : null });
     if (focusInput) focusInput.focus();
   }
 

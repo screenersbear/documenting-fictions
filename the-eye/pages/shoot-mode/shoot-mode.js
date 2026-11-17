@@ -22,7 +22,7 @@ window.EyeParts.addShootMode = function addShootMode(ed) {
       // opening its own board's pages, read only).
       const tiles = images.map((img, idx) => ({ src: img.src, open: () => ed.openImageViewer(images, idx, shoot.id, () => renderShootModeMoodboard(shoot), false) }));
       boards.forEach(b => b.pages.forEach((src, i) => tiles.push({ src, open: () => ed.openImageViewer(b.pages.map(u => ({ src: u, caption: '' })), i, null, null, false) })));
-      // A grid per row of three, so a page can break between rows.
+      // In rows of three.
       const rows = [];
       let row = null;
       tiles.forEach((tile, idx) => {
@@ -37,7 +37,7 @@ window.EyeParts.addShootMode = function addShootMode(ed) {
         thumb.querySelector('img').addEventListener('click', tile.open);
         row.appendChild(thumb);
       });
-      // Their shapes are wanted to size them to fill the board's page.
+      // In once they're ready to show, so the page doesn't jump as each arrives.
       const imgs = rows.flatMap(r => [...r.querySelectorAll('img')]);
       return Promise.all(imgs.map(img => (img.decode ? img.decode().catch(() => {}) : null))).then(() => {
         if (draw !== shootModeBoardDraw) { urls.forEach(u => URL.revokeObjectURL(u)); return; }
@@ -46,16 +46,14 @@ window.EyeParts.addShootMode = function addShootMode(ed) {
         document.getElementById('shootModeMoodEmpty').hidden = tiles.length !== 0;
         grid.replaceChildren(...rows);
         ed.shootModeBoardIn = true;
-        ed.breakShootModePages();
-        ed.shootModeWanted = null;
+        ed.layoutShootMode();
       });
     }).catch(() => {
       if (draw !== shootModeBoardDraw) return;
       grid.innerHTML = '';
       document.getElementById('shootModeMoodEmpty').hidden = false;
       ed.shootModeBoardIn = true;
-      ed.breakShootModePages();
-      ed.shootModeWanted = null;
+      ed.layoutShootMode();
     });
   }
 
@@ -80,11 +78,11 @@ window.EyeParts.addShootMode = function addShootMode(ed) {
     // renderShootModeShots() ran while shootModeOverlay was still hidden, so
     // every row measured zero height and kept its one-line default — same
     // trap as openShootModal, same fix: re-size once there's real layout
-    // (breakShootModePages sizes them before it cuts the pages).
-    ed.breakShootModePages({ at: 0, force: true });
+    // (layoutShootMode sizes them).
+    ed.layoutShootMode({ top: 0 });
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        ed.breakShootModePages({ force: true });
+        ed.layoutShootMode();
       });
     });
     return true;
@@ -94,10 +92,7 @@ window.EyeParts.addShootMode = function addShootMode(ed) {
     ed.setShootModeShootId(null);
     ed.stopShootModeClock();
     ed.shootCoordsAsked = false;
-    ed.clearTurn(ed.shootModeOverlay.querySelector('.nb-turn-layer'));
-    ed.shootModeFlows = null;
-    ed.shootModeWanted = null;
-    ed.shootModeShowDue = null;
+    ed.shootModeWantedTop = null;
     ed.shootModeOverlay.hidden = true;
   }
 };

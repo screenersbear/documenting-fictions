@@ -48,10 +48,6 @@
 #view-journal #journalFilters:not([hidden]) { min-height: 56px; margin: 0; align-items: center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
 #view-journal #journalFilters::-webkit-scrollbar { display: none; }
 
-/* Shoot mode (user, 11-11): the mood board on a page of its own is sized to
-   fill it (fitShootModeBoard sets the columns and the cell). */
-#shootModeMoodboard.is-fitted .shoot-mode-moodboard-row { grid-template-columns: repeat(var(--mb-cols), var(--mb-w)); justify-content: center; }
-#shootModeMoodboard.is-fitted .moodboard-thumb { width: var(--mb-w); height: var(--mb-h); aspect-ratio: auto; }
 /* The bar is white, like the navigator: laid out short, iOS leaves the strip
    under the page blank (white), and a white bar runs on into it. Full width,
    its two buttons kept over the page's 560px. */

@@ -45,7 +45,7 @@ window.EyeParts.addShootModeLastTime = function addShootModeLastTime(ed) {
     };
     show(false);
     // Open or shut, it's a different height: Shoot mode's pages are cut again.
-    const flip = () => { show(more.getAttribute('aria-expanded') !== 'true'); ed.breakShootModePages(); };
+    const flip = () => { show(more.getAttribute('aria-expanded') !== 'true'); ed.layoutShootMode(); };
     more.addEventListener('click', flip);
     quote.addEventListener('click', flip);
   }
@@ -115,7 +115,7 @@ window.EyeParts.addShootModeLastTime = function addShootModeLastTime(ed) {
         if (!shoot || ed.getShootModeShootId() !== uploadShootId) return;
         ed.renderShootModeMoodboard(shoot).then(() => {
           const thumbs = document.querySelectorAll('#shootModeMoodboard .moodboard-thumb');
-          if (thumbs.length) ed.breakShootModePages({ show: thumbs[thumbs.length - 1] });
+          if (thumbs.length) ed.layoutShootMode({ show: thumbs[thumbs.length - 1] });
         });
       })
       .catch(ed.noteStorageFull);

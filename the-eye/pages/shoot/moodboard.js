@@ -1,4 +1,5 @@
-// The mood board, and boards from Ref (its Send to shoot, or + Import board).
+// The mood board, and boards from Ref (its Send to shoot, or FROM REF).
+// ADD (photos or a PDF) is in moodboard-add.js.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addShootMoodboard = function addShootMoodboard(ed) {
@@ -8,7 +9,15 @@ window.EyeParts.addShootMoodboard = function addShootMoodboard(ed) {
     grid.innerHTML = '';
     return ed.idbGetImages(ed.currentShootId).then(images => {
       grid.innerHTML = images.length ? '' : '<p class="empty-hint">No photos yet.</p>';
+      // A PDF's pages together, under the file's name (components/board-groups.js).
+      const runs = new Map(ed.pdfRuns(images).map(run => [run.at, run]));
       images.forEach((img, idx) => {
+        if (runs.has(idx)) {
+          const from = document.createElement('p');
+          from.className = 'moodboard-from';
+          from.textContent = ed.pdfRunWords(runs.get(idx));
+          grid.appendChild(from);
+        }
         const item = document.createElement('div');
         item.className = 'moodboard-item';
         item.innerHTML = `
@@ -41,7 +50,7 @@ window.EyeParts.addShootMoodboard = function addShootMoodboard(ed) {
     }).catch(() => { grid.innerHTML = ''; });
   }
 
-  // ---------- Boards from Ref (its Send to shoot, or + Import board) ----------
+  // ---------- Boards from Ref (its Send to shoot, or FROM REF) ----------
   // Kept apart from this notebook's own data, in df-links (df-data.js): each
   // a link to a shoot plus the board's pages as pictures. One sent from Ref
   // inside Documenting Fictions stays live (Ref draws its pages again when it
@@ -127,10 +136,19 @@ window.EyeParts.addShootMoodboard = function addShootMoodboard(ed) {
     });
   }
 
-  // + Import board: a board file from a Ref installed on its own.
+  // FROM REF. In the suite: Ref opens on its boards to pick one for this
+  // shoot, which it sends as Send to shoot does, then comes back here (a
+  // shoot not saved yet is saved first, so the board has a shoot to be on).
+  // On its own: a board file from a Ref installed on its own.
   document.getElementById('importRefBoardBtn').addEventListener('click', () => {
     if (!ed.refApi) return;
     const shootId = ed.currentShootId;
+    if (ed.refApi.inSuite()) {
+      if (!ed.state.shoots.some(x => x.id === shootId)) ed.autosaveShoot(true);
+      ed.saveShootNow();
+      location.href = ed.refApi.notebookUrl('ref', { pickFor: shootId });
+      return;
+    }
     ed.refApi.pickFile('application/json,.json') // straight from the tap, or iOS won't open the picker
       .then(file => file && ed.refApi.readBoardFile(file))
       .then(got => {
@@ -223,56 +241,4 @@ window.EyeParts.addShootMoodboard = function addShootMoodboard(ed) {
       if (ed.refBoardShootIds.size) { ed.renderAll(); freezeShotBoards(); }
     });
   }
-
-  document.getElementById('addMoodboardPhotos').addEventListener('click', () => {
-    document.getElementById('moodboardFileInput').click();
-  });
-
-  document.getElementById('moodboardFileInput').addEventListener('change', (e) => {
-    const files = [...e.target.files];
-    e.target.value = '';
-    if (!files.length) return;
-    // The photos belong to the shoot they were picked on, even if resizing
-    // takes long enough for that shoot to be closed and another opened.
-    const uploadShootId = ed.currentShootId;
-    const stillOpen = () => ed.currentShootId === uploadShootId && !ed.shootModalOverlay.hidden;
-    let coverSet = false;
-    Promise.all(files.map(f => ed.resizeImageFile(f, 1280, 0.72)))
-      .then(newImages => {
-        // A never-saved draft that was closed in the meantime is gone (its
-        // rows were cleared on close) — don't leave orphaned photos behind.
-        if (!stillOpen() && !ed.state.shoots.some(x => x.id === uploadShootId)) return null;
-        return ed.idbGetImages(uploadShootId).then(existing => {
-          const savedShoot = ed.state.shoots.find(x => x.id === uploadShootId);
-          const hasCover = stillOpen() ? !!ed.pendingProjectPhoto : !!(savedShoot && savedShoot.projectPhoto);
-          const shouldAutoSetProjectPhoto = existing.length === 0 && !hasCover && newImages.length > 0;
-          const combined = existing.concat(newImages.map(src => ({ src, caption: '' })));
-          return ed.idbSetImages(uploadShootId, combined).then(() => {
-            if (shouldAutoSetProjectPhoto) {
-              return ed.resizeDataUrlThumb(newImages[0], 200, 0.6).then(thumb => {
-                coverSet = true;
-                if (stillOpen()) ed.pendingProjectPhoto = thumb;
-                else {
-                  const live = ed.state.shoots.find(x => x.id === uploadShootId);
-                  if (live) live.projectPhoto = thumb;
-                }
-                return ed.savePhotoToIdb(ed.projectPhotoKey(uploadShootId), thumb);
-              });
-            }
-          }).then(() => true);
-        });
-      })
-      .then((uploaded) => {
-        if (!uploaded) return;
-        if (stillOpen()) {
-          ed.shootHasImages = true;
-          ed.scheduleShootAutosave();
-          renderMoodboard();
-        } else {
-          ed.renderAll();
-        }
-        ed.onShootImagesChanged(uploadShootId, { board: true, cover: coverSet });
-      })
-      .catch(ed.noteStorageFull);
-  });
 };

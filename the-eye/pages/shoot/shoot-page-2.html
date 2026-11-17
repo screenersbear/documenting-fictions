@@ -66,9 +66,14 @@
 
         <div class="moodboard-section">
           <span class="moodboard-label" id="moodboardSectionLabel">Mood board</span>
-          <button type="button" id="addMoodboardPhotos" class="primary small-btn">+ Add photos</button>
-          <button type="button" id="importRefBoardBtn" class="primary small-btn">+ Import board</button>
-          <input type="file" id="moodboardFileInput" accept="image/*" multiple hidden />
+          <!-- ADD (photos or a PDF, each page a photo: pages/shoot/moodboard-add.js)
+               and FROM REF (in the suite, pick a board in Ref; on its own, a
+               board file from Ref), round 7, the-eye/16-mood-board-pdf. -->
+          <div class="big-btn-row">
+            <button type="button" id="addMoodboardPhotos" class="big-btn big-btn-mango"><span class="big-btn-plus" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span class="big-btn-words"><b>Add</b><span>photos or a PDF</span></span></button>
+            <button type="button" id="importRefBoardBtn" class="big-btn big-btn-line"><span class="big-btn-plus" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span class="big-btn-words"><b>From Ref</b><span>a board</span></span></button>
+          </div>
+          <input type="file" id="moodboardFileInput" accept="image/*,application/pdf,.pdf" multiple hidden />
           <div id="refBoards" class="ref-boards" hidden></div>
           <div id="moodboardGrid" class="moodboard-grid"></div>
           <label class="checkbox-row" id="moodboardCompleteRow"><input type="checkbox" id="shootMoodboardComplete" /> <span id="moodboardCompleteLabel">Mood board complete or not required?</span></label>

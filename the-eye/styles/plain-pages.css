@@ -68,7 +68,7 @@
 /* The Weekly tab (the Journal before) is the weekly log: no new entries of your own are written in it. */
 #addJournalBtn { display: none !important; }
 
-/* Boards from Ref on the shoot page (Send to shoot, or + Import board) */
+/* Boards from Ref on the shoot page (Send to shoot, or FROM REF) */
 .ref-boards { display: flex; flex-direction: column; gap: 10px; }
 .ref-board { display: flex; gap: 12px; align-items: flex-start; }
 .ref-board-cover { flex: 0 0 auto; width: 88px; aspect-ratio: 1; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: none; cursor: pointer; }

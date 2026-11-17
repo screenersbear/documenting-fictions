@@ -2,7 +2,7 @@
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addToast = function addToast(ed) {
-  Object.assign(ed, { showToast, showNoticeToast, showUndoToast, fitButtonPair });
+  Object.assign(ed, { showToast, hideToast, showNoticeToast, showUndoToast, fitButtonPair });
   // ---------- Toast ----------
   let toastTimer = null;
   // True while an Undo toast (showUndoToast) is up. A notice the app raises

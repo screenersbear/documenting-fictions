@@ -52,7 +52,7 @@ window.EyeParts.addNotebook = function addNotebook(ed) {
     ed.syncPageSide();
     ed.repaginate(ed.currentScreen());
     // The handwriting arrives after the first draw, and it's a different width.
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { ed.repaginate(ed.currentScreen()); ed.breakShootPages(); ed.breakShootModePages(); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { ed.repaginate(ed.currentScreen()); ed.breakShootPages(); ed.layoutShootMode(); });
     let pagesWidth = window.innerWidth;
     function placeBook() {
       if (overlay.hidden) return;
@@ -62,7 +62,7 @@ window.EyeParts.addNotebook = function addNotebook(ed) {
     function breakAllPages() {
       ed.repaginate(ed.currentScreen());
       ed.breakShootPages();
-      ed.breakShootModePages();
+      ed.layoutShootMode();
     }
     // A nudge is under way (nudgeShortScreen): what iOS says in the middle of
     // one isn't kept, only what it says once it's done.

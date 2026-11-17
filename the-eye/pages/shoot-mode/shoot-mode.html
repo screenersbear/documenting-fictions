@@ -2,15 +2,12 @@
 <!-- ============ TAB INTRO ============ -->
 <!-- Shoot mode: a stripped-back, full-screen working view for the day of -->
 <div id="shootModeOverlay" class="modal-overlay shoot-mode-overlay sm-dark" hidden>
-  <!-- A page of the notebook, like Archive mode's, with the notebook around it
-       dimmed so it reads as a page of its own (see breakShootModePages in
-       app.js), in three parts that each start a fresh page: last time's
-       lesson, the quick review buttons and the shot list (running on over
-       as many pages as it takes); the mood board, its photos sized to fill
-       its page; then the shooting notes. -->
+  <!-- One page that scrolls (round 7, 17 Nov: pages/shoot-mode/one-page.js),
+       its header pinned at the top. Under it: last time's lesson, the quick
+       review buttons, the shot list, the mood board, then the shooting notes. -->
   <div class="nb-chapter-board" aria-hidden="true"></div>
   <div class="modal shoot-mode-modal">
-    <div class="shoot-mode-sheet" id="shootModeSheet" data-part="main">
+    <div class="shoot-mode-sheet" id="shootModeSheet">
     <div class="shoot-mode-header">
       <div class="shoot-mode-heading-wrap">
         <div class="shoot-mode-top">
@@ -36,8 +33,6 @@
           <p class="shoot-mode-chip shoot-mode-clock-line" id="shootModeGoldenHour" hidden></p>
           <p class="shoot-mode-chip shoot-mode-clock-line shoot-mode-must-haves" id="shootModeMustHaves" hidden></p>
         </div>
-        <!-- Which of the three pages this is (pages/shoot-mode/pages.js). -->
-        <div class="shoot-mode-dots" id="shootModeDots" aria-hidden="true"></div>
       </div>
     </div>
     <div class="shoot-mode-body shoot-mode-page-main" id="shootModeMain">
@@ -76,12 +71,6 @@
       </label>
     </div>
     </div>
-  </div>
-  <div class="nb-turn-layer" aria-hidden="true"></div>
-  <div class="nb-page-foot">
-    <button type="button" class="nb-page-step" id="shootModePrev" aria-label="Previous page"></button>
-    <span id="shootModeFoot"></span>
-    <button type="button" class="nb-page-step" id="shootModeNext" aria-label="Next page"></button>
   </div>
     <!-- A wild card (the same as Quick review's), and "Done shooting",
          which wraps up the shoot. One bar, split in two. Exit is up top. -->

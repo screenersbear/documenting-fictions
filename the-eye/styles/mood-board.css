@@ -60,3 +60,12 @@
   min-width: 0;
   overflow: hidden;
 }
+
+/* A PDF's pages on the mood board, under the file's name (FROM LOOKBOOK.PDF
+   · 8 PAGES), across the whole grid. */
+.moodboard-grid .moodboard-from {
+  grid-column: 1 / -1; margin: 8px 0 -2px; padding: 0;
+  font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.moodboard-grid .moodboard-from:first-child { margin-top: 0; }

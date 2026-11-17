@@ -2,7 +2,8 @@
    paper text, mango for the must-haves, ticks and Done shooting, so it
    doesn't light up the set or the talent's face. Exit up top; the big
    time-left figure and the wrap time; golden hour and the must-haves as
-   chips; three pages with dots; Wild card and Done shooting at the foot.
+   chips; one page that scrolls under them (round 7, 17 Nov: it was three
+   pages with dots); Wild card and Done shooting at the foot.
    The last layer for Shoot mode (.sm-dark), after every older one. Its
    Quick review and Wild card popups are in shoot-mode-dark-popups.css. */
 .sm-dark {
@@ -10,15 +11,11 @@
   color: var(--sm-paper);
 }
 #shootModeOverlay.sm-dark, #shootModeOverlay.sm-dark > .modal.shoot-mode-modal { background: var(--sm-ground); }
-#shootModeOverlay.sm-dark > .modal.shoot-mode-modal { padding-top: 14px; }
+#shootModeOverlay.sm-dark > .modal.shoot-mode-modal { padding-top: 0; }
 
-/* One of the three pages at a time (pages/shoot-mode/pages.js). */
-.shoot-mode-sheet:not([data-part="main"]) .shoot-mode-page-main,
-.shoot-mode-sheet:not([data-part="board"]) .shoot-mode-page-board,
-.shoot-mode-sheet:not([data-part="more"]) .shoot-mode-page-more { display: none; }
-
-/* The top: SHOOT MODE and Exit, then the shoot's name. */
-#shootModeOverlay .shoot-mode-header { display: block; padding: 0; background: none; }
+/* The top: SHOOT MODE and Exit, then the shoot's name. It stays pinned
+   while the page scrolls under it (pages/shoot-mode/one-page.js). */
+#shootModeOverlay .shoot-mode-header { position: sticky; top: 0; z-index: 3; display: block; padding: 14px 0 12px; background: var(--sm-ground); }
 #shootModeOverlay .shoot-mode-heading-wrap { display: block; }
 .shoot-mode-top { display: flex; align-items: center; justify-content: space-between; min-height: 36px; }
 #shootModeOverlay .shoot-mode-eyebrow { margin: 0; font: 700 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
@@ -50,12 +47,7 @@
 #shootModeOverlay .shoot-mode-chip svg { flex: none; width: 24px; height: 12px; color: var(--accent); }
 #shootModeOverlay .shoot-mode-chip.shoot-mode-must-haves { background: var(--accent); color: #313D45; }
 
-/* Which page this is. */
-.shoot-mode-dots { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 18px 0 0; }
-.shoot-mode-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--sm-rule); }
-.shoot-mode-dots span.on { width: 8px; height: 8px; background: var(--sm-paper); }
-
-/* Last time's lesson, a card at the top of the first page. */
+/* Last time's lesson, a card at the top of the page. */
 #shootModeOverlay .shoot-mode-last-time { margin: 18px 0 0; padding: 14px 16px; border-radius: 12px; background: var(--sm-raised); font: 300 17px/24px var(--ui); color: var(--sm-paper); }
 #shootModeOverlay .shoot-mode-last-time[hidden] { display: none; }
 .shoot-mode-last-time-lead { display: block; margin: 0 0 4px; font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
@@ -105,8 +97,8 @@
 #shootModeOverlay .shoot-mode-shot-row .shot-drag-handle { color: var(--sm-off); background: none; }
 #shootModeOverlay .shoot-mode-empty { margin: 8px 0 0; padding: 0; font: 300 17px/24px var(--ui); color: var(--sm-quiet); }
 
-/* The mood board and the notes, each a page of its own. */
-#shootModeOverlay .shoot-mode-page-board .shoot-mode-section-heading, #shootModeOverlay .shoot-mode-page-more .shoot-mode-shooting-notes-label { margin-top: 18px; }
+/* The mood board and the notes, each its own section of the page. */
+#shootModeOverlay .shoot-mode-page-board .shoot-mode-section-heading, #shootModeOverlay .shoot-mode-page-more .shoot-mode-shooting-notes-label { margin-top: 28px; }
 #shootModeOverlay .shoot-mode-shooting-notes-label {
   margin-left: 0; margin-right: 0; padding: 0; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--sm-quiet);
 }

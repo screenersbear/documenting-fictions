@@ -97,6 +97,7 @@ built/app.css smaller
   styles/section-titles.css
   styles/shoot-rows.css
   styles/today-card.css
+  styles/big-buttons.css
   styles/next-shoot.css
   styles/list-head.css
   styles/archive-list.css
@@ -280,6 +281,8 @@ built/app.js smaller
   pages/reflection-helper/helper.js
   pages/shoot/shoot-open.js
   pages/shoot/moodboard.js
+  components/board-groups.js
+  pages/shoot/moodboard-add.js
   components/image-viewer.js
   pages/projects/photo-crop.js
   components/image-viewer-touch.js
@@ -317,6 +320,7 @@ built/app.js smaller
   pages/pdf/sections.js
   pages/pdf/preview.js
   pages/pdf/viewer.js
+  components/pdf-photos.js
   pages/pdf/viewer-open.js
   pages/journal/entry-pdf.js
   pages/pdf/export-picker.js
@@ -345,7 +349,7 @@ built/app.js smaller
   pages/notices/report-day.js
   pages/shoot-mode/shot-list.js
   pages/shoot-mode/shoot-mode.js
-  pages/shoot-mode/pages.js
+  pages/shoot-mode/one-page.js
   pages/shoot-mode/clock.js
   pages/shoot-mode/golden-hour.js
   pages/shoot-mode/last-time.js

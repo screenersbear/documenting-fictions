@@ -163,6 +163,9 @@ window.EyeParts.addOverview = function addOverview(ed) {
     setTimeout(() => { overlay.hidden = true; }, 200);
   }
 
+  // NEW SHOOT under the Today card: the new-shoot guide, as on the Shoots list.
+  document.getElementById('overviewNewShootBtn').addEventListener('click', () => ed.openShootModal(null));
+
   document.getElementById('statBoxDetailCloseBtn').addEventListener('click', closeStatBoxDetail);
   document.getElementById('statBoxDetailOverlay').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeStatBoxDetail();
