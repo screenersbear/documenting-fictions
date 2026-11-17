@@ -19,8 +19,9 @@ import { openSaid } from './what-you-said.js';
 const C = () => window.DFConnect;
 const TAPPABLE = ['move', 'note', 'moment'];
 
-// A notebook's own mark (Rounds', The Eye's), from the suite's shared marks.
-function markHtml(r) {
+// A row's mark: a move's own, or a notebook's (Rounds', The Eye's) from the
+// suite's shared marks. DONE TODAY's rows on Today use it too.
+export function markHtml(r) {
   if (!r.mark) return miniHtml(r.look);
   const nb = C() && C().NOTEBOOKS[r.mark];
   return `<span class="mini nb" style="background:${nb ? nb.bg : 'var(--ink)'}" aria-hidden="true">${nb ? C().markSvg(r.mark, 16) : ''}</span>`;

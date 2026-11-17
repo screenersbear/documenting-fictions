@@ -102,6 +102,12 @@ export async function toldShelf(page, name, n = 1) {
   await expect.poll(moves, { timeout: 8000 }).toBe(n);
 }
 
+// DONE TODAY on Today (rounds/12): its rows, their words ("Said thanks to
+// Maya R. · text") and the line under each (what you said, in quotes).
+export const doneRows = (page) => page.locator('#view .done-today-row');
+export const doneWhat = (page) => page.locator('#view .done-today-what');
+export const doneSaid = (page) => page.locator('#view .done-today-said');
+
 // Options, from the band's menu.
 export async function options(page) {
   await page.click('#view [data-app-menu]');

@@ -8,7 +8,7 @@
 // tests/unit/rounds/one-move, one-move-store, people-find, look-alike,
 // merge-people, people-store.)
 import { test, expect } from '@playwright/test';
-import { openRounds, eyeShoot, goTo, opened, doneNoSheet, toldShelf } from './_rounds.mjs';
+import { openRounds, eyeShoot, goTo, opened, doneNoSheet, toldShelf, doneRows, doneWhat, doneSaid } from './_rounds.mjs';
 
 // People (and what was done with them) put straight into Rounds' database,
 // then Rounds opened again. due: days from today for their next move.
@@ -73,10 +73,7 @@ test.describe('Rounds: tightened', () => {
     await expect(move.locator('[data-kind][aria-pressed="true"]')).toHaveText('Check in');
     await move.locator('[data-done]').click();
     await doneNoSheet(page);
-    await page.click('#view [data-done-today]');
-    const done = await opened(page, 'Done today');
-    await expect(done.locator('.choice-label')).toHaveText(['Lindsey T.']);
-    await done.locator('[data-close]').click();
+    await expect(doneWhat(page)).toHaveText(['Checked in with Lindsey T.']);
     // Someone new: their name carried over, then the one sheet for them.
     await page.click('#view [data-reach]');
     const again = await opened(page, 'Reach out to');
@@ -104,9 +101,8 @@ test.describe('Rounds: tightened', () => {
     await move.locator('[data-done]').click();
     await doneNoSheet(page);
     await expect(page.locator('#view .card.top')).toContainText('Maya R.');
-    await page.click('#view [data-done-today]');
-    const list = await opened(page, 'Done today');
-    await list.locator('[data-said]').click();
+    await expect(doneSaid(page)).toHaveText([`"${said}"`]);
+    await doneRows(page).first().click();
     let s = await opened(page, 'Say thanks');
     await expect(s.locator('.said-title')).toHaveText('Said thanks to Jules');
     await expect(s.locator('.said-when')).toHaveText(/^(Mon|Tue|Wed|Thu|Fri|Sat) \d{1,2} [A-Z][a-z]{2} · by text$/);
@@ -126,21 +122,20 @@ test.describe('Rounds: tightened', () => {
     await edit.locator('.one-note').fill('Loved the light. Wants to shoot again.');
     await edit.locator('[data-done]').click();
     await expect(edit).toHaveCount(0);
-    // Back on Done today, which has the change.
-    await expect(list.locator('.done-row-note')).toHaveText(['Loved the light. Wants to shoot again.']);
-    await page.waitForTimeout(500);
-    await list.locator('[data-said]').click();
+    // Back on Today; opened again, it has the change.
+    await expect(page.locator('.sheet')).toHaveCount(0);
+    await doneRows(page).first().click();
     s = await opened(page, 'Say thanks');
     await expect(s.locator('.said-note')).toHaveText('Loved the light. Wants to shoot again.');
-    // DELETE: the thank you is due again, Jules' card back on Today, and Done today (empty now) closes; Undo takes it out again.
+    // DELETE: the thank you is due again, Jules' card back on Today, and DONE TODAY gone; Undo takes it out again.
     await s.locator('[data-delete]').click();
     await expect(toast(page)).toContainText('Deleted.');
     await expect(page.locator('.sheet')).toHaveCount(0);
     await expect(page.locator('#view .card.top')).toContainText('Jules M.');
+    await expect(page.locator('#view .done-today')).toHaveCount(0);
     await undo(page).click();
     await expect(page.locator('#view .card.top')).toContainText('Maya R.');
-    await page.click('#view [data-done-today]');
-    await expect((await opened(page, 'Done today')).locator('.choice-label')).toHaveText(['Jules M.']);
+    await expect(doneWhat(page)).toHaveText(['Said thanks to Jules M. · text']);
     expect(problems).toEqual([]);
     await ctx.close();
   });

@@ -4,7 +4,7 @@
 // Run over Rounds' real database (fake-indexeddb) and the suite's shared files.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { loadDFData } from '../shared/_env.mjs';
-import { markDone, markLater, undoDone as undoPerson } from '../../../rounds/data/person.js';
+import { markDone, markLater } from '../../../rounds/data/person.js';
 import { pickFor, doneOn } from '../../../rounds/data/today.js';
 import { shelfItems } from '../../../rounds/data/shelf-items.js';
 
@@ -192,36 +192,6 @@ describe('loadDone', () => {
   });
   it('is nothing on a day with no moves', async () => {
     expect(await M.loadDone()).toEqual({ lines: [], done: [] });
-  });
-});
-
-describe('undoDone', () => {
-  it('puts the move back from its line, drops the line and brings the card back', async () => {
-    const p = person('a', { next: { kind: 'followup', due: TODAY, step: 1 } });
-    await db.savePerson(p);
-    await db.setSetting('pick', pickOf(['a']));
-    const { after, line } = await M.doMove(p);
-    const lines = await db.listMoves();
-    await M.undoDone({ line, person: after }, lines);
-    expect(await saved('a')).toEqual(undoPerson(after, line, lines));
-    expect((await saved('a')).next).toEqual(p.next);
-    expect(await db.listMoves()).toEqual([]);
-    expect(await db.getSetting('pick', null)).toEqual(pickOf(['a']));
-  });
-});
-
-describe('undoDone: a move that was not the due one', () => {
-  it('takes back only what it moved, and leaves the card in the day\'s pick', async () => {
-    const p = person('a', { lastMove: '2026-10-01', next: { kind: 'checkin', due: '2026-11-20', step: 0 } });
-    const line = { id: 'x', at: 5, personId: 'a', kind: 'pitch', day: TODAY, extra: true, keeps: true, wasLast: '2026-10-01', moved: { from: '2026-11-20', to: '2026-12-28' } };
-    const after = { ...p, lastMove: TODAY, next: { ...p.next, due: '2026-12-28' } };
-    await db.savePerson(after);
-    await db.logMove(line);
-    await db.setSetting('pick', pickOf(['a'], { a: 'later' }));
-    await M.undoDone({ line, person: after }, await db.listMoves());
-    expect(await saved('a')).toEqual(p);
-    expect(await db.listMoves()).toEqual([]);
-    expect(await db.getSetting('pick', null)).toEqual(pickOf(['a'], { a: 'later' }));
   });
 });
 

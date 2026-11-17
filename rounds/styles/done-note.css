@@ -12,4 +12,3 @@
 .done-note-btns .btn { flex: 1; height: 50px; }
 .done-note-btns .btn.primary { color: var(--partner); } /* SAVE in mango, as in thanks/02 */
 /* Done today: the note under the move, in light type. */
-.done-row-note { display: block; margin-top: 2px; font: 300 15px/20px var(--ui); color: var(--text); }

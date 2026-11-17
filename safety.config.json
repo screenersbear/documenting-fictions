@@ -54,7 +54,9 @@
     "rounds/data/moves.js", "rounds/data/eye.js", "rounds/data/from-layouts.js", "rounds/data/done-notes.js", "rounds/data/moments.js", "rounds/data/so-far.js", "rounds/data/moment-store.js", "rounds/data/asks.js", "rounds/data/to-ref.js",
     "rounds/data/one-move.js", "rounds/data/one-move-store.js", "rounds/data/people-find.js", "rounds/data/look-alike.js", "rounds/data/merge-people.js", "rounds/data/people-store.js",
     "rounds/data/callback-read.js",
-    "rounds/data/callback-bring.js"
+    "rounds/data/callback-bring.js",
+    "rounds/data/done-rows.js",
+    "rounds/data/next-up.js"
   ],
   "ignore": [
     "**/vendor/**",

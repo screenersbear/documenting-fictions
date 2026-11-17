@@ -6,7 +6,7 @@
 // too, with ADD WHAT YOU SAID; DONE TODAY lists the day's done moves to
 // undo any later. Going between sections is a plain slide, as in Ref.
 import { test, expect } from '@playwright/test';
-import { openRounds, eyeShoot, sheet, opened, doneNoSheet } from './_rounds.mjs';
+import { openRounds, eyeShoot, sheet, opened, doneNoSheet, doneRows, doneWhat, doneSaid } from './_rounds.mjs';
 
 const count = (page) => page.locator('#view .today-count');
 // The arc's stops, as drawn: 'half' (this one, started), 'ink' (done) or 'open'.
@@ -67,22 +67,23 @@ test.describe('Rounds: Today', () => {
     await move.locator('[data-go]').click();
     expect(await move.locator('.one-said').inputValue()).toContain('Maya');
     await expect.poll(() => page.evaluate(() => window.__opened)).toEqual([expect.stringContaining('instagram.com/maya.rr')]);
-    expect(await page.evaluate(() => window.__copied)).toBe(await move.locator('.one-said').inputValue());
+    const said = await move.locator('.one-said').inputValue();
+    expect(await page.evaluate(() => window.__copied)).toBe(said);
     await expect(pressed(move, 'data-how')).toHaveText('Instagram');
     await move.locator('.one-note').fill('Loved the light.');
     await move.locator('[data-done]').click();
     await doneNoSheet(page);
-    await expect(page.locator('#view .today-calm h2')).toHaveText("That's today.");
-    await expect(count(page)).toHaveText('2 of 2 today');
-    // The day's done: the whole arc and every stop in ink (Jules' LATER too), until tomorrow.
+    // The day's done (rounds/13): ALL 2 DONE, the whole arc and every stop in ink (Jules' LATER too), until tomorrow,
+    // "That's today." and who's next (Jules, LATER: tomorrow).
+    await expect(count(page)).toHaveText('All 2 done');
     expect(await arcStops(page)).toEqual(['ink', 'ink']);
     expect(await arcInk(page)).toBe('74 40');
-    // Done today has it all, as one line.
-    await page.click('#view [data-done-today]');
-    const s = await opened(page, 'Done today');
-    await expect(s.locator('.choice-detail')).toHaveText(['Say thanks · on Instagram']);
-    await expect(s.locator('.done-row-note')).toHaveText(['Loved the light.']);
-    await s.locator('[data-close]').click();
+    await expect(page.locator('#view .today-calm h2')).toHaveText("That's today.");
+    await expect(page.locator('#view .today-calm p')).toHaveText('Next up tomorrow: a thank-you to Jules M.');
+    // DONE TODAY right there, as the page: the move, how, and what was said.
+    await expect(page.locator('#view .done-today-head')).toHaveText('Done today 1');
+    await expect(doneWhat(page)).toHaveText(['Said thanks to Maya R. · Instagram']);
+    await expect(doneSaid(page)).toHaveText([`"${said}"`]);
     expect(problems).toEqual([]);
     await ctx.close();
   });
@@ -113,12 +114,10 @@ test.describe('Rounds: Today', () => {
     await doneNoSheet(page);
     await expect(top(page)).toContainText('Jules M.');
     await expect(count(page)).toHaveText('2 today');
-    await page.click('#view [data-done-today]');
-    const s = await opened(page, 'Done today');
-    await expect(s.locator('.choice-label')).toHaveText(['Jules M.']);
-    await expect(s.locator('.choice-detail')).toHaveText(['Other · by text']);
+    await expect(doneWhat(page)).toHaveText(['Reached out to Jules M. · text']);
+    await expect(doneSaid(page)).toHaveText(['"Sent the behind the scenes clips."']);
     // Tapped: what was said, in full.
-    await s.locator('[data-said]').click();
+    await doneRows(page).first().click();
     const said = await opened(page, 'Other');
     await expect(said.locator('.said-title')).toHaveText('Reached out to Jules');
     await expect(said.locator('.said-words')).toHaveText('Sent the behind the scenes clips.');
@@ -140,41 +139,50 @@ test.describe('Rounds: Today', () => {
     await move.locator('[data-how="text"]').click();
     await move.locator('[data-done]').click();
     await expect(move).toHaveCount(0);
-    await page.click('#view [data-done-today]');
-    const s = await opened(page, 'Done today');
-    await expect(s.locator('.choice-detail')).toHaveText(['Say thanks · by text']);
+    await expect(doneWhat(page)).toHaveText(['Said thanks to Jules M. · text']);
+    await expect(doneSaid(page)).toHaveText(['"Thank you for today!"']);
     expect(problems).toEqual([]);
     await ctx.close();
   });
 
-  test('DONE TODAY lists the cards swiped away, newest first, and Undo brings each back', async ({ browser }, testInfo) => {
+  test('DONE TODAY on Today lists the cards swiped away, newest first; a row\'s DELETE brings its card back, with Undo', async ({ browser }, testInfo) => {
     const { ctx, page, problems } = await openRounds(browser, testInfo, '/rounds/', eyeShoot);
-    const doneToday = page.locator('#view [data-done-today]');
-    await expect(doneToday).toHaveCount(0);
+    const head = page.locator('#view .done-today-head');
+    await expect(page.locator('#view .done-today')).toHaveCount(0); // nothing done yet: no section
+    await expect(page.locator('#view [data-done-today]')).toHaveCount(0); // the old button is gone
     await swipe(page);
-    await expect(doneToday).toHaveText('Done today 1');
+    await expect(head).toHaveText('Done today 1');
     await expect(top(page)).toContainText('Maya R.');
     await swipe(page);
     await expect(page.locator('#view .today-calm h2')).toHaveText("That's today.");
-    await expect(doneToday).toHaveText('Done today 2');
+    await expect(head).toHaveText('Done today 2');
     // Long after the toast's Undo has gone.
     await page.reload();
-    await page.click('#view [data-done-today]');
-    const s = await opened(page, 'Done today');
-    await expect(s.locator('.choice-label')).toHaveText(['Maya R.', 'Jules M.']);
-    await expect(s.locator('.choice-detail')).toHaveText(['Say thanks', 'Say thanks']);
-    await s.locator('.done-row', { hasText: 'Jules M.' }).locator('[data-undo]').click();
-    await expect(page.locator('#toast')).toHaveText('Undone.');
-    await expect(s.locator('.choice-label')).toHaveText(['Maya R.']);
-    // Behind the sheet, Jules is back on Today.
+    await expect(doneWhat(page)).toHaveText(['Said thanks to Maya R.', 'Said thanks to Jules M.']);
+    await expect(doneSaid(page)).toHaveCount(0); // swiped: nothing said
+    await expect(doneRows(page).locator('.mini')).toHaveCount(2);
+    await doneRows(page).filter({ hasText: 'Jules M.' }).click();
+    const s = await opened(page, 'Say thanks');
+    await expect(s.locator('.said-title')).toHaveText('Said thanks to Jules');
+    await s.locator('[data-delete]').click();
+    await expect(page.locator('#toast')).toContainText('Deleted.');
+    // Jules is back on Today.
     await expect(count(page)).toHaveText('Last one');
     await expect(top(page)).toContainText('Jules M.');
-    await expect(doneToday).toHaveText('Done today 1');
-    // The last one: the sheet closes, and the day is as it was.
-    await s.locator('[data-undo]').click();
-    await expect(s).toHaveCount(0);
+    await expect(head).toHaveText('Done today 1');
+    await expect(doneWhat(page)).toHaveText(['Said thanks to Maya R.']);
+    // Undo: done again.
+    await page.click('#toast .toast-action');
+    await expect(head).toHaveText('Done today 2');
+    await expect(count(page)).toHaveText('All 2 done');
+    // The last one too: the day is as it was, and stays so.
+    for (const name of ['Jules M.', 'Maya R.']) {
+      await doneRows(page).filter({ hasText: name }).click();
+      await (await opened(page, 'Say thanks')).locator('[data-delete]').click();
+      await expect(page.locator('.sheet')).toHaveCount(0);
+    }
+    await expect(page.locator('#view .done-today')).toHaveCount(0);
     await expect(count(page)).toHaveText('2 today');
-    await expect(doneToday).toHaveCount(0);
     await page.reload();
     await expect(count(page)).toHaveText('2 today');
     await expect(top(page)).toContainText('Jules M.');

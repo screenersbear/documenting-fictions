@@ -4,7 +4,6 @@
 import { listPeople, savePerson, logMove, listMoves, dropMove, getSetting, setSetting } from './db.js';
 import { pickFor, markPick, unmarkPick, doneOn, PER_DAY } from './today.js';
 import { markDone, markLater } from './person.js';
-import { afterDelete, undoesDue } from './one-move.js';
 import { dayOf } from './dates.js';
 import { weekOf } from './work-days.js';
 import { shelfItems } from './shelf-items.js';
@@ -70,19 +69,11 @@ export async function undoMove({ before, line }) {
   await markInPick(before.id, null);
   shelfAgain();
 }
-// Done today, from the log, and its Undo: the move back as it was, and its
-// card back in the day's pick.
+// DONE TODAY, from the log (each one's Delete, with Undo, is on What you
+// said: data/one-move-store.js).
 export async function loadDone() {
   const [lines, people] = await Promise.all([listMoves(), listPeople()]);
   return { lines, done: doneOn(lines, people, dayOf()) };
-}
-// (A move that wasn't the due one takes back only what it moved:
-// data/one-move.js afterDelete.)
-export async function undoDone({ line, person }, lines) {
-  const today = dayOf();
-  await savePerson(afterDelete(person, line, lines, today));
-  await dropMove(line.id);
-  if (undoesDue(person, line, lines, today)) await markInPick(person.id, null);
 }
 export async function laterMove(person) {
   const after = markLater(person, dayOf());

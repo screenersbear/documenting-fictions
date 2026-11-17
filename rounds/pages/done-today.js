@@ -1,53 +1,39 @@
-// Done today (from Today): each move marked done today, the newest first,
-// with how it was done and its note, and Undo to put it back as it was. For a card swiped away by mistake once
-// the toast's Undo has gone: its card comes back on Today. Under them ADD A
-// MOMENT, with anyone (pages/moment-who.js). Tap one to see what you said
-// (pages/what-you-said.js, rounds/09).
-import { openSheet } from '../components/sheet.js';
-import { miniHtml } from '../components/marks.js';
-import { toast } from '../components/toast.js';
+// DONE TODAY on Today (rounds/12 and 13, 16 Nov): under the cards, and the
+// page's content once the day is done. It took the place of the Done today
+// button and its sheet. Every move and moment done today, newest first
+// (data/today.js doneOn), each row its mark, "Said thanks to Maya R. ·
+// text" and the first line of what you said (data/done-rows.js). Tap a
+// move for What you said (pages/what-you-said.js, rounds/09: edit, copy,
+// delete with Undo, which brings a due move's card back); a moment opens to
+// change or delete (pages/moment-sheet.js). No section when nothing's done.
 import { esc } from '../components/util.js';
-import { moveName, moveLook } from '../data/kinds.js';
-import { howWords } from '../data/done-notes.js';
-import { loadDone, undoDone } from '../data/moves.js';
-import { openMomentWho } from './moment-who.js';
+import { CHEV_SMALL } from '../components/icons.js';
+import { doneRow } from '../data/done-rows.js';
+import { MOMENT_KIND } from '../data/moments.js';
+import { markHtml } from './so-far.js';
 import { openSaid } from './what-you-said.js';
+import { openMoment } from './moment-sheet.js';
 
-const rowHtml = ({ line, person }, i) => `
-  <div class="done-row"><button type="button" class="done-row-open" data-said="${i}">${miniHtml(moveLook(line))}
-    <span class="choice-text"><span class="choice-label">${esc(person.name)}</span><span class="choice-detail">${esc([moveName(line), howWords(line)].filter(Boolean).join(' · '))}</span>${line.note ? `<span class="done-row-note">${esc(line.note)}</span>` : ''}</span></button>
-    <button type="button" class="text-btn" data-undo="${i}">Undo</button>
-  </div>`;
+function rowHtml(done, i) {
+  const r = doneRow(done);
+  const under = r.said ? `"${r.said}"` : r.note;
+  return `<button type="button" class="done-today-row" data-done="${i}">${markHtml(r)}
+    <span class="done-today-words"><span class="done-today-what">${esc(r.before)}<b>${esc(r.name)}</b>${esc(r.after)}${r.how ? ` <span>· ${esc(r.how)}</span>` : ''}</span>${under ? `<span class="done-today-said">${esc(under)}</span>` : ''}</span>
+    <span class="done-today-chev">${CHEV_SMALL}</span></button>`;
+}
 
-// onChange: Today drawn again behind the sheet after each Undo.
-export async function openDoneToday(onChange) {
-  let { lines, done } = await loadDone();
-  const s = openSheet({ title: 'Done today', className: 'sheet-small', body: '<div class="done-list"></div><button type="button" class="btn secondary done-moment" data-moment>Add a moment</button>' });
-  const list = s.body.querySelector('.done-list');
-  s.body.querySelector('[data-moment]').addEventListener('click', () => {
-    s.close();
-    openMomentWho(done.map((d) => d.person.id), onChange);
-  });
-  const draw = () => { list.innerHTML = done.map(rowHtml).join(''); };
-  draw();
-  // Changed or deleted on What you said: the list and Today again.
-  const again = async () => {
-    ({ lines, done } = await loadDone());
-    await onChange();
-    if (done.length) draw();
-    else s.close();
-  };
-  list.addEventListener('click', async (e) => {
-    const open = e.target.closest('[data-said]');
-    if (open) { const d = done[Number(open.dataset.said)]; openSaid(d.person, d.line, again); return; }
-    const b = e.target.closest('[data-undo]');
-    if (!b || b.disabled) return;
-    b.disabled = true;
-    await undoDone(done[Number(b.dataset.undo)], lines);
-    ({ lines, done } = await loadDone());
-    await onChange();
-    toast('Undone.');
-    if (done.length) draw();
-    else s.close();
+// done: doneOn's list.
+export const doneTodayHtml = (done) => (done.length ? `<section class="done-today">
+  <h2 class="done-today-head">Done today <span>${done.length}</span></h2>
+  <div class="done-today-list">${done.map(rowHtml).join('')}</div></section>` : '');
+
+// after: Today drawn again, once one's changed or deleted.
+export function wireDoneToday(view, done, after) {
+  view.querySelector('.done-today-list')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-done]');
+    if (!b) return;
+    const { line, person } = done[Number(b.dataset.done)];
+    if (line.kind === MOMENT_KIND) openMoment(person, { line, after });
+    else openSaid(person, line, after);
   });
 }

@@ -24,6 +24,12 @@ export const MOMENTS = {
 const MOVES_OUT = { checkin: GAP.checkin, refresh: GAP.client, intros: GAP.client };
 const NEXT_WORDS = { checkin: 'next check-in', refresh: 'next refresh offer', intros: 'next ask for intros' };
 
+// With their whole name, for DONE TODAY's rows on Today (data/done-rows.js).
+export const MOMENT_WITH = {
+  photos: 'Sent photos to [who]', text: 'Texted [who]', call: 'Called [who]', email: 'Emailed [who]', instagram: 'Messaged [who] on Instagram',
+  ran: 'Ran into [who]', met: 'Met up with [who]', comment: "Commented on [who]'s post", other: 'A moment with [who]',
+};
+
 const who = (s, name) => s.replace('[who]', firstName(name) || 'them');
 // The chips for this person, and what a row says for each: [key, chip, row].
 export const momentChoices = (name) => Object.keys(MOMENTS).map((k) => [k, who(MOMENTS[k], name), k === 'other' ? 'A moment' : who(MOMENTS[k], name)]);

@@ -33,17 +33,16 @@ export function extraMove(person, kind, day, fields, id, at) {
   return afterMoment(person, line);
 }
 
-// What you said's title: "Checked in with Lindsey". [who] is their first name.
-const WITH = {
+// What you said's title: "Checked in with Lindsey". [who] is their first
+// name (their whole name in DONE TODAY's rows: data/done-rows.js).
+export const WITH = {
   thanks: 'Said thanks to [who]', yes: 'Said thanks to [who] for the yes', photos: 'Told [who] the photos were up',
   hello: 'Said hello to [who]', checkin: 'Checked in with [who]', intros: 'Asked [who] for intros',
   refresh: 'Offered [who] a refresh', followup: 'Followed up with [who]', pitch: 'Pitched [who]', other: 'Reached out to [who]',
 };
-export function withWords(line, name) {
-  const who = firstName(name) || 'them';
-  if (line.year) return `Sent ${who} a final, a year on`;
-  return (WITH[line.kind] || WITH.other).replace('[who]', who);
-}
+export const YEAR_WITH = 'Sent [who] a final, a year on';
+export const withWhat = (line) => (line.year ? YEAR_WITH : WITH[line.kind] || WITH.other);
+export const withWords = (line, name) => withWhat(line).replace('[who]', firstName(name) || 'them');
 
 // A move deleted (lines: the whole log). An extra one takes back what it
 // moved, as a moment does. The due move done last, today, is undone: it's

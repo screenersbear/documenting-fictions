@@ -24,4 +24,3 @@
 .today-count-row { display: flex; align-items: center; gap: 14px; }
 .today-reach { margin: 0 0 0 -6px; }
 /* Done today: tap the move to see what you said. */
-.done-row-open { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; min-height: 44px; text-align: left; color: var(--text); }

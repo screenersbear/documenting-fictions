@@ -31,13 +31,27 @@
 .today-calm h2 { margin: 0; font: 300 30px/34px var(--ui); }
 .today-calm p { margin: 10px 0 0; max-width: 32em; font: 400 17px/24px var(--ui); color: var(--dim); }
 .today-calm .btn { margin-top: 24px; }
-/* DONE TODAY (a text button, under it all once a move's done) and its
-   sheet: each one done today, its mark, the name over the move, UNDO. */
-.today-done { display: block; margin: 14px 0 0 -10px; }
-.today-done span { font-weight: 500; }
-.done-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 0; border-bottom: 1px solid var(--line); }
-.done-row:last-child { border-bottom: 0; }
-.done-row .text-btn { margin-right: -10px; }
+/* The day's cards all done (rounds/13): closer under the count, and who's next in 15px, then DONE TODAY. */
+.today-calm.today-finished { margin-top: 22px; }
+.today-finished h2 { line-height: 36px; }
+.today-finished p { margin-top: 6px; font: 400 15px/21px var(--ui); }
+/* DONE TODAY (rounds/12 and 13): a section under the cards, the page once
+   the day is done. The heading in small capitals with its count dim, an ink
+   rule, then a row per move or moment: the mark, "Said thanks to Maya R."
+   (17px, the name 500, how dim), the first line of what you said under it
+   (14px dim, one line), a pale chevron; a 1px line under each. */
+.done-today { margin: 28px 0 24px; }
+.done-today-head { margin: 0; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.done-today-head span { font-weight: 500; color: var(--dim); }
+.done-today-list { margin-top: 8px; border-top: 1px solid var(--text); }
+.done-today-row { display: flex; gap: 12px; width: 100%; padding: 12px 0; border-bottom: 1px solid var(--line); text-align: left; color: var(--text); }
+.done-today-row .mini { margin-top: 3px; }
+.done-today-words { flex: 1; min-width: 0; }
+.done-today-what { display: block; font: 400 17px/22px var(--ui); overflow-wrap: anywhere; }
+.done-today-what b { font-weight: 500; }
+.done-today-what span { color: var(--dim); }
+.done-today-said { display: block; margin-top: 3px; font: 400 14px/19px var(--ui); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.done-today-chev { flex: none; padding-top: 3px; color: var(--off-1); }
 /* Leads from Claude: one quiet line above the cards, with REVIEW. */
 .today-leads { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin: 0 0 4px; border-bottom: 1px solid var(--line); font: 400 15px/20px var(--ui); }
 .today-leads .text-btn { margin-right: -10px; color: var(--text); }

@@ -1,18 +1,14 @@
 // Thank-yous (round 2, thanks/01-04, 15 Nov; one sheet since 16 Nov,
 // rounds/08): a move opened offers your message instead of typing it in;
-// HOW and an optional note go with it on the same sheet, in Done today and on their page on the shelf (the latest two,
+// HOW and an optional note go with it on the same sheet, in DONE TODAY on Today and on their page on the shelf (the latest two,
 // since 16 Nov: thanks/06), whose ADD A MOMENT opens Rounds' sheet for it.
 // The Eye shows Say thanks FROM ROUNDS on a captured shoot, and <NAME> WROTE
 // FIRST marks it done there. (Timing, how, notes and moments are unit
 // tested: tests/unit/rounds/plan, done-notes, moments, so-far.)
 import { test, expect } from '@playwright/test';
-import { openRounds, eyeShoot, opened, useMessage, doneNoSheet, toldShelf } from './_rounds.mjs';
+import { openRounds, eyeShoot, opened, useMessage, doneNoSheet, toldShelf, doneWhat, doneSaid } from './_rounds.mjs';
 
 const THANKS = (name) => `Thank you for today, ${name}! It was so good working with you.`;
-const doneToday = async (page) => {
-  await page.click('#view [data-done-today]');
-  return opened(page, 'Done today');
-};
 
 test('done with how and a note: in Done today, and the latest on their page on the shelf, whose ADD A MOMENT opens Rounds', async ({ browser }, testInfo) => {
   const { ctx, page, problems } = await openRounds(browser, testInfo, '/rounds/', eyeShoot);
@@ -29,10 +25,8 @@ test('done with how and a note: in Done today, and the latest on their page on t
   await move.locator('[data-done]').click();
   await doneNoSheet(page);
 
-  const list = await doneToday(page);
-  await expect(list.locator('.choice-label')).toHaveText(['Jules M.']);
-  await expect(list.locator('.choice-detail')).toContainText('Say thanks · by text');
-  await expect(list.locator('.done-row-note')).toHaveText('Loved the light. Wants to shoot again.');
+  await expect(doneWhat(page)).toHaveText(['Said thanks to Jules M. · text']);
+  await expect(doneSaid(page)).toHaveText([`"${THANKS('Jules')}"`]);
 
   // Their page on the shelf (Rounds' EVERYTHING WITH JULES), once the one list
   // of people has them (Rounds tells it a moment after it opens): the latest
@@ -86,9 +80,8 @@ test('The Eye: Say thanks FROM ROUNDS on the captured shoot, and WROTE FIRST mar
   // In Rounds, Maya's thanks is done, with the note.
   await page.goto('/rounds/');
   await expect(page.locator('#view .band')).toBeVisible();
-  const list = await doneToday(page);
-  await expect(list.locator('.choice-label')).toHaveText(['Maya R.']);
-  await expect(list.locator('.done-row-note')).toHaveText('Maya reached out first.');
+  await expect(doneWhat(page)).toHaveText(['Said thanks to Maya R.']);
+  await expect(doneSaid(page)).toHaveText(['Maya reached out first.']);
   expect(problems).toEqual([]);
   await ctx.close();
 });

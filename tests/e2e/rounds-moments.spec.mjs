@@ -2,10 +2,10 @@
 // thanks/05 and 06, 16 Nov): ADD A MOMENT under the next move (what
 // happened, when, a note, and whether it counts as keeping in touch, which
 // moves a Check in out), SO FAR listing everything, each moment and note
-// changed or deleted with Undo, and ADD A MOMENT from Done today too. (What
+// changed or deleted with Undo, and today's in DONE TODAY on Today. (What
 // moves and when is unit tested: tests/unit/rounds/moments, moment-store.)
 import { test, expect } from '@playwright/test';
-import { openRounds, goTo, opened, importCsv, weekdayNow, doneNoSheet } from './_rounds.mjs';
+import { openRounds, goTo, opened, importCsv, weekdayNow, doneNoSheet, doneRows, doneWhat, doneSaid } from './_rounds.mjs';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const dayN = (n) => { const d = weekdayNow(); d.setDate(d.getDate() + n); return d; };
@@ -128,32 +128,33 @@ test('a note in SO FAR: its words changed, deleted, and put back', async ({ brow
   await ctx.close();
 });
 
-test('Done today: ADD A MOMENT, with whoever it was', async ({ browser }, testInfo) => {
+test('DONE TODAY on Today: a moment done today is a row with Rounds\' mark; tapped, it opens to change or delete (with Undo)', async ({ browser }, testInfo) => {
   const { ctx, page, problems } = await june(browser, testInfo);
-  // The Check in done, from her page.
+  // The Check in done, from her page, then a moment.
   await page.click('#view [data-move]');
   const move = await opened(page, 'June Park');
   await move.locator('[data-done]').click();
   await doneNoSheet(page);
-  await goTo(page, 'today');
-  await page.click('#view [data-done-today]');
-  const done = await opened(page, 'Done today');
-  await done.locator('[data-moment]').click();
-  const who = await opened(page, 'A moment with');
-  await expect(who.locator('.choice-label')).toHaveText(['June Park']);
-  await who.locator('input').fill('zz');
-  await expect(who.locator('.choice')).toHaveCount(0);
-  await who.locator('input').fill('@june');
-  await who.locator('.choice').first().click();
-  const m = await opened(page, 'A moment with June');
-  await expect(m.locator('.moment-keeps-sub')).toHaveText("June's next check-in moves out from today.");
-  await m.locator('[data-what="text"]').click();
+  await page.click('#view [data-moment]');
+  const m = await momentSheet(page);
+  await m.locator('[data-what="email"]').click();
+  await m.locator('.moment-note').fill('Sent the call sheet.\nAnd the map.');
   await m.locator('[data-save]').click();
   await expect(m).toHaveCount(0);
-  await expect(page.locator('#toast')).toContainText('Moment added.');
-  await goTo(page, 'people');
-  await page.locator('#view .person-card', { hasText: 'June Park' }).click();
-  await expect(soFar(page).locator('.so-far-what')).toHaveText(['Texted', 'Checked in']);
+  await goTo(page, 'today');
+  await expect(page.locator('#view .done-today-head')).toHaveText('Done today 2');
+  await expect(doneWhat(page)).toHaveText(['Emailed June Park', 'Checked in with June Park']);
+  await expect(doneSaid(page)).toHaveText(['Sent the call sheet. And the map.']);
+  await expect(doneRows(page).first().locator('.mini.nb svg')).toHaveCount(1);
+  // Tapped: the moment's own sheet; DELETE THE MOMENT, then Undo.
+  await doneRows(page).first().click();
+  const open = await momentSheet(page);
+  await expect(open.locator('[data-what="email"]')).toHaveAttribute('aria-pressed', 'true');
+  await open.locator('[data-delete]').click();
+  await expect(open).toHaveCount(0);
+  await expect(doneWhat(page)).toHaveText(['Checked in with June Park']);
+  await page.locator('#toast .toast-action').click();
+  await expect(doneWhat(page)).toHaveText(['Emailed June Park', 'Checked in with June Park']);
   expect(problems).toEqual([]);
   await ctx.close();
 });

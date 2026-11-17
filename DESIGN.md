@@ -368,13 +368,20 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
   and DONE (mango on ink). Another kind than the due one is a move of its own that still counts as keeping in touch; the
   card stays. A swiped card's toast offers ADD WHAT YOU SAID. Today has REACH OUT (button type) beside the count: a search
   sheet (rows: photo, name, "Client · last: sent photos, 2 Nov", the last in touch first) and OR SOMEONE NEW, ADD "<TYPED>"
-  AS A NEW PERSON. A done move tapped (Done today, SO FAR, the shelf's person page) shows WHAT YOU SAID: the kind's tag in
+  AS A NEW PERSON. A done move tapped (DONE TODAY on Today, SO FAR, the shelf's person page) shows WHAT YOU SAID: the kind's tag in
   the header, "Said thanks to Jules", "Mon 16 Nov · by text", WHAT YOU SAID and YOUR NOTE, then DELETE (text, with Undo),
   EDIT and COPY AGAIN. People: a search box (name, handle, note), one filter chip at a time (All, Due, Regulars, Clients,
   New, Prospects), "Sort: A to Z ▾" (Next move, Recently in touch; kept on the device), one dim line per card (the last
   thing this past week, else when they're due). Two people who look alike get one quiet line, "<A> and <B> might be the
   same person.", with MERGE and an ×; the merge sheet shows both as cards (KEEP THIS NAME ✓) and MERGE, mango on ink, with
   Undo after. The person menu adds MERGE WITH... and DELETE (asks first, can't be undone).
+- **Done today on Today (Live, 16 Nov, rounds/12-13, rounds/NOTES.md):** no Done today button or sheet. DONE TODAY <n> is a
+  section under the cards (heading in small capitals, the count dim, an ink rule under it): a row per move or moment done
+  today, newest first, the 16px mark (Rounds' for moments), "Said thanks to **Maya R.** · text" (17px, the name 500, how
+  dim), the first line of what you said in quotes under it (14px dim, one line; a moment's note without quotes), a pale
+  chevron. A move opens WHAT YOU SAID (Delete with Undo brings its card back); a moment its sheet. Once the day's cards
+  are done the count reads ALL 3 DONE, "That's today." (light 30px, 22px under the count), one 15px dim line on who's next
+  ("Next up tomorrow: a check-in with Ana L." or "Nothing due this week."), then DONE TODAY as the page.
 - **Bring in from Callback (ONE-TIME, Live, 16 Nov, rounds/NOTES.md):** Starky's own move from Callback; out again when he
   says it's done. A row in Options under Import people ("From a Callback backup"). The same tick list as Import people and
   Claude's leads, with "3 touchpoints" (or "In Rounds already: 2 touchpoints go on their page", and "· Let go" for someone
@@ -386,8 +393,8 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
   delete (with Undo), moves to change how and the note. EVERYTHING WITH <NAME>, IN ALL FOUR at the bottom. The ADD A MOMENT
   sheet: A MOMENT WITH <NAME> (button type); WHAT HAPPENED, 36px pill chips (ink with mango when picked); WHEN, a 48px pale
   box with a 1px `line` ring ("Today, Mon 16 Nov", the date picker over it); A NOTE (OPTIONAL) with an ink ring; COUNTS AS
-  KEEPING IN TOUCH, a switch with what it moves under it in 13px dim; ADD THE MOMENT, 50px, mango on ink. Done today has
-  ADD A MOMENT under its list (who with, then the same sheet). On the shelf's person page Rounds' part shows NEXT, the
+  KEEPING IN TOUCH, a switch with what it moves under it in 13px dim; ADD THE MOMENT, 50px, mango on ink. (Done today's
+  ADD A MOMENT went with its sheet on 16 Nov.) On the shelf's person page Rounds' part shows NEXT, the
   latest two rows, then ALL IN ROUNDS › and ADD A MOMENT (button type), both opening Rounds.
 - **Someone you know (Live, 15 Nov, people/NOTES.md):** The Eye's talent picker is SOMEONE YOU KNOW: everyone, talent
   and team, from its shoots and the one list of people, newest first, labelled "Iryna V. · team, 3 shoots". Typing a name

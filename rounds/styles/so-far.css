@@ -32,7 +32,3 @@
 .moment-btns .btn { height: 50px; color: var(--partner); }
 .moment-btns .btn:disabled { opacity: .4; }
 .moment-btns .text-btn { align-self: center; }
-
-/* ADD A MOMENT under Done today, and who it was with. */
-.done-moment { display: flex; width: 100%; margin-top: 16px; }
-.moment-who .choice-list { margin-top: 8px; }

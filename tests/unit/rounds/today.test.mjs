@@ -106,15 +106,15 @@ describe('doneOn', () => {
     expect(done.map((d) => d.line.id)).toEqual(['2', '3', '1']);
     expect(done[0].person).toBe(people[1]);
   });
-  it("only that day's, and only each person's latest", () => {
-    const lines = [line('old', 'a', '2026-11-13', 900), line('1', 'a', T, 100), line('2', 'a', T, 200, 'followup'), line('3', 'b', T, 50)];
-    expect(doneOn(lines, people, T).map((d) => d.line.id)).toEqual(['2', '3']);
-    expect(doneOn([line('2', 'a', T, 200), line('1', 'a', T, 100)], people, T).map((d) => d.line.id)).toEqual(['2']);
+  it("only that day's, every move and moment (several for one person too), never a note", () => {
+    const lines = [line('old', 'a', '2026-11-13', 900), line('1', 'a', T, 100), line('2', 'a', T, 200, 'followup'), line('3', 'b', T, 50), line('m', 'a', T, 150, 'moment'), line('n', 'a', T, 400, 'note')];
+    expect(doneOn(lines, people, T).map((d) => d.line.id)).toEqual(['2', 'm', '1', '3']);
+    expect(doneOn([line('2', 'a', T, 200), line('1', 'a', T, 100)], people, T).map((d) => d.line.id)).toEqual(['2', '1']);
   });
   it('lines from before 14 Nov (no time) come after, by name', () => {
     const lines = [line('c1', 'c', T), line('b1', 'b', T), line('a1', 'a', T, 5)];
     expect(doneOn(lines, people, T).map((d) => d.line.id)).toEqual(['a1', 'b1', 'c1']);
-    expect(doneOn([line('x', 'a', T), line('y', 'a', T)], people, T).map((d) => d.line.id)).toEqual(['x']);
+    expect(doneOn([line('x', 'a', T), line('y', 'a', T)], people, T).map((d) => d.line.id)).toEqual(['x', 'y']);
   });
   it('leaves out anyone let go or no longer here, and lines with no known move', () => {
     const lines = [line('1', 'gone', T, 1), line('2', 'nobody', T, 2), line('3', 'a', T, 3, 'wave'), line('4', 'b', T, 4, null)];
