@@ -19,7 +19,7 @@ export const NOTE_KIND = 'note';
 const HOW_WORDS = { text: 'by text', instagram: 'on Instagram', email: 'by email', person: 'in person' };
 const NOTE_WORDS = { call: 'a call', text: 'a text', person: 'in person', email: 'an email', instagram: 'on Instagram' };
 export const howWords = (line) => ((line.kind === NOTE_KIND ? NOTE_WORDS : HOW_WORDS)[line.how] || '');
-const MOST = 500; // letters in a note
+export const NOTE_MOST = 500; // letters in a note
 // The chips as other notebooks show them (the person page, shared/data/asks.js): [key, label, words].
 export const HOW_CHOICES = {
   move: Object.keys(HOWS).map((k) => [k, HOWS[k], HOW_WORDS[k]]),
@@ -35,7 +35,7 @@ export function howFromGo(went) {
   return '';
 }
 
-export const cleanNote = (v) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, MOST);
+export const cleanNote = (v) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, NOTE_MOST);
 
 // The quick taps under the note, for this person.
 export const quickTaps = (name) => [`${firstName(name) || 'They'} reached out first`, 'Wants to shoot again', 'No reply yet'];

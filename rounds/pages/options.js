@@ -1,5 +1,6 @@
 // Options, from the band's menu: how many moves a day (three, at most five),
-// the work days and days off, Sync (with Claude, through GitHub), Import people, the two
+// the work days and days off, Sync (with Claude, through GitHub), Import people, Bring in
+// from Callback (ONE-TIME, Starky's own move: out again when it's done), the two
 // newsletter lists to export, Back up and Restore a backup (pages/backup.js), and How it works.
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
@@ -12,6 +13,7 @@ import { listRows } from '../data/lists.js';
 import { toCsv } from '../data/csv.js';
 import { dayOf } from '../data/dates.js';
 import { openImport } from './import.js';
+import { openFromCallback } from './from-callback.js'; // ONE-TIME: out when Starky's move from Callback is done
 import { openIntro } from './intro.js';
 import { syncRowHtml, openSync } from './sync-sheet.js';
 import { backUp, restoreBackup } from './backup.js';
@@ -39,6 +41,7 @@ export async function openOptions(onChange, autoHandler) {
       <div class="choice-list">
         ${syncRow}
         ${row('data-import', 'Import people', 'From a CSV file')}
+        ${row('data-callback', 'Bring in from Callback', 'From a Callback backup')}
         ${row('data-list="email"', 'Export the email list', `${people1(count('email'))}, for your newsletter tool`)}
         ${row('data-list="mail"', 'Export the mail list', `${people1(count('mail'))}, names and addresses`)}
         ${row('data-backup', 'Back up')}
@@ -68,6 +71,7 @@ export async function openOptions(onChange, autoHandler) {
       await setSetting('perDay', n);
       onChange();
     } else if (b.matches('[data-import]')) { s.close(); openImport(onChange); }
+    else if (b.matches('[data-callback]')) { s.close(); openFromCallback(onChange); } // ONE-TIME, with its row above
     else if (b.matches('[data-sync]')) { s.close(); openSync(onChange, autoHandler); }
     else if (b.matches('[data-intro]')) { s.close(); openIntro(); }
     else if (b.matches('[data-backup]')) backUp();

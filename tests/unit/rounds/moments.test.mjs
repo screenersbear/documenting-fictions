@@ -9,8 +9,8 @@ const move = (kind, due) => ({ kind, due, step: 0 });
 
 describe('the chips', () => {
   it('WHAT HAPPENED in order, their name where it needs it, and what each row says', () => {
-    expect(Object.keys(MOMENTS)).toEqual(['photos', 'text', 'call', 'instagram', 'ran', 'met', 'comment', 'other']);
-    expect(momentChoices('June Park').map((c) => c[1])).toEqual(['Sent photos', 'Texted', 'Called', 'Messaged on Instagram', 'Ran into June', 'Met up', 'Commented on a post', 'Other']);
+    expect(Object.keys(MOMENTS)).toEqual(['photos', 'text', 'call', 'email', 'instagram', 'ran', 'met', 'comment', 'other']);
+    expect(momentChoices('June Park').map((c) => c[1])).toEqual(['Sent photos', 'Texted', 'Called', 'Emailed', 'Messaged on Instagram', 'Ran into June', 'Met up', 'Commented on a post', 'Other']);
     expect(momentChoices('June Park').find((c) => c[0] === 'other')[2]).toBe('A moment');
     expect(momentChoices('').find((c) => c[0] === 'ran')[1]).toBe('Ran into them');
   });

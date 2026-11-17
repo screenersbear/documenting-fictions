@@ -37,7 +37,7 @@ test('ADD A MOMENT: it goes in SO FAR with Rounds\' mark and moves the Check in 
   await page.click('#view [data-moment]');
   const m = await momentSheet(page);
   await expect(m.locator('.sheet-header h2')).toHaveText('A moment with June');
-  await expect(m.locator('[data-what]')).toHaveText(['Sent photos', 'Texted', 'Called', 'Messaged on Instagram', 'Ran into June', 'Met up', 'Commented on a post', 'Other']);
+  await expect(m.locator('[data-what]')).toHaveText(['Sent photos', 'Texted', 'Called', 'Emailed', 'Messaged on Instagram', 'Ran into June', 'Met up', 'Commented on a post', 'Other']);
   await expect(m.locator('.moment-when-words')).toHaveText(new RegExp(`^Today, \\w{3} ${short(dayN(0))}$`));
   await expect(m.locator('.moment-keeps-sub')).toHaveText("June's next check-in moves out from today.");
   await expect(m.locator('#momentKeeps')).toBeChecked();

@@ -1102,22 +1102,22 @@ function markSvg(key, size) {
 }
 
 // data/person.js
-const text = (v) => String(v ?? "").trim();
+const text$1 = /* @__PURE__ */ __name((v) => String(v ?? "").trim(), "text");
 function newPerson(f, today) {
 	const groups = cleanGroups(f.groups || [f.group || "new"]);
 	const group = leadGroup(groups);
 	return {
 		id: f.id,
-		name: text(f.name),
+		name: text$1(f.name),
 		group,
 		groups,
 		groupPicked: false,
 		instagram: cleanHandle(f.instagram),
 		tiktok: cleanHandle(f.tiktok),
 		website: cleanSite(f.website),
-		email: text(f.email),
-		where: text(f.where),
-		note: text(f.note),
+		email: text$1(f.email),
+		where: text$1(f.where),
+		note: text$1(f.note),
 		lists: {
 			email: false,
 			mail: false
@@ -1217,7 +1217,7 @@ const markLater = (person, today) => ({
 });
 function applyEdit(person, f, today) {
 	const p = { ...person };
-	if ("name" in f && text(f.name)) p.name = text(f.name);
+	if ("name" in f && text$1(f.name)) p.name = text$1(f.name);
 	for (const k of ["instagram", "tiktok"]) if (k in f) p[k] = cleanHandle(f[k]);
 	if ("website" in f) p.website = cleanSite(f.website);
 	for (const k of [
@@ -1225,7 +1225,7 @@ function applyEdit(person, f, today) {
 		"where",
 		"note",
 		"address"
-	]) if (k in f) p[k] = text(f[k]);
+	]) if (k in f) p[k] = text$1(f[k]);
 	if ("lists" in f) p.lists = {
 		email: !!f.lists.email,
 		mail: !!f.lists.mail
@@ -1594,7 +1594,7 @@ const comesUp = (next, today, week) => !!next && whenDue(next, week, today) <= t
 
 // data/today.js
 const PER_DAY = 3;
-const MOST$4 = 5;
+const MOST$3 = 5;
 const rank = (k) => KIND_KEYS.indexOf(k);
 const perDayOf = (n) => Math.min(5, Math.max(1, Math.floor(Number(n)) || 3));
 const isDue = (p, today, week) => !p.letGo && comesUp(p.next, today, week);
@@ -1720,7 +1720,7 @@ const NOTE_WORDS = {
 	instagram: "on Instagram"
 };
 const howWords = (line) => (line.kind === "note" ? NOTE_WORDS : HOW_WORDS)[line.how] || "";
-const MOST$3 = 500;
+const NOTE_MOST = 500;
 const HOW_CHOICES = {
 	move: Object.keys(HOWS).map((k) => [
 		k,
@@ -1739,7 +1739,7 @@ function howFromGo(went) {
 	if (w === "email" || w === "gmail") return "email";
 	return "";
 }
-const cleanNote = (v) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, MOST$3);
+const cleanNote = (v) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, 500);
 const quickTaps = (name) => [
 	`${firstName(name) || "They"} reached out first`,
 	"Wants to shoot again",
@@ -1782,6 +1782,7 @@ const MOMENTS = {
 	photos: "Sent photos",
 	text: "Texted",
 	call: "Called",
+	email: "Emailed",
 	instagram: "Messaged on Instagram",
 	ran: "Ran into [who]",
 	met: "Met up",
@@ -4152,10 +4153,10 @@ const bytesOf = async (blob) => blob ? {
 	bytes: await blob.arrayBuffer(),
 	type: blob.type
 } : null;
-const linesOf = async (id) => (await listMoves()).filter((l) => l.personId === id);
+const linesOf$1 = /* @__PURE__ */ __name(async (id) => (await listMoves()).filter((l) => l.personId === id), "linesOf");
 async function mergeInto(keep, other) {
 	const [lines, mine, theirs] = await Promise.all([
-		linesOf(other.id),
+		linesOf$1(other.id),
 		getPhoto(keep.id).then(bytesOf),
 		getPhoto(other.id).then(bytesOf)
 	]);
@@ -4188,7 +4189,7 @@ async function joinShared({ keep, other }) {
 	if (a && b && a.id !== b.id) await D$1().answerSame(a.id, b.id, true);
 }
 async function deletePerson(p) {
-	const ids = (await linesOf(p.id)).map((l) => l.id);
+	const ids = (await linesOf$1(p.id)).map((l) => l.id);
 	if (ids.length) await dropMoves(ids);
 	await dropPhoto(p.id);
 	await dropPerson(p.id);
@@ -5399,6 +5400,255 @@ function listRows(people, which) {
 	return [["name", "address"], ...on.filter((p) => p.address).map((p) => [p.name, p.address])];
 }
 
+// data/callback-read.js
+const NOT_CALLBACK = "This file isn't a Callback backup. In Callback's Settings, Export backup makes one.";
+const GROUP_OF = {
+	pastClient: "client",
+	collaborator: "regular",
+	prospect: "prospect",
+	industry: "new"
+};
+const MOMENT_OF = {
+	text: "text",
+	dm: "instagram",
+	call: "call",
+	meeting: "met",
+	event: "met",
+	sent_work: "photos",
+	comment: "comment",
+	email: "email"
+};
+const TYPE_WORDS = {
+	idea: "Idea",
+	followed: "Followed",
+	gift: "Gift or card",
+	other: ""
+};
+const text = (v) => typeof v === "string" ? v.trim() : "";
+const dayFrom = (v) => {
+	const d = text(v).slice(0, 10);
+	return isDay(d) ? d : "";
+};
+const sentences = (parts) => parts.map(text).filter(Boolean).reduce((all, s) => all ? `${all}${/[.!?:]$/.test(all) ? "" : "."} ${s}` : s, "");
+function pieces(note) {
+	const out = [];
+	let rest = String(note ?? "").replace(/\s+/g, " ").trim();
+	while (rest.length > 500) {
+		const cut = rest.lastIndexOf(" ", 500);
+		const at = cut > 0 ? cut : 500;
+		out.push(rest.slice(0, at));
+		rest = rest.slice(at).trim();
+	}
+	return rest ? [...out, rest] : out;
+}
+function touchOf(tp) {
+	const day = dayFrom(tp.date) || dayFrom(tp.createdAt);
+	if (!day) return null;
+	const replied = text(tp.replyNote) ? `They replied: ${text(tp.replyNote)}` : "They replied.";
+	const reply = tp.responded === "yes" ? replied : "";
+	const at = Date.parse(tp.createdAt) || 0;
+	if (tp.type === "project_wrapped") return {
+		id: tp.id,
+		day,
+		at,
+		kind: "note",
+		what: "",
+		note: sentences([
+			"Project wrapped",
+			tp.note,
+			reply
+		])
+	};
+	const what = MOMENT_OF[tp.type] || "other";
+	const first = what === "other" ? TYPE_WORDS[tp.type] ?? text(tp.type) : "";
+	return {
+		id: tp.id,
+		day,
+		at,
+		kind: "moment",
+		what,
+		note: sentences([
+			first,
+			tp.note,
+			reply
+		])
+	};
+}
+function personOf(p, orgName, touches = []) {
+	const types = Array.isArray(p.relationshipTypes) && p.relationshipTypes.length ? p.relationshipTypes : [p.relationshipType || "prospect"];
+	const groups = cleanGroups(types.map((t) => GROUP_OF[t]));
+	const role = text(p.role);
+	const org = text(orgName);
+	const notes = text(p.notes);
+	return {
+		row: {
+			name: text(p.name),
+			groups,
+			group: leadGroup(groups),
+			instagram: cleanHandle(text(p.instagram)),
+			website: cleanSite(text(p.website)),
+			email: text(p.email),
+			where: text(p.howWeMet),
+			note: role && org ? `${role} at ${org}` : role || org
+		},
+		letGo: p.warmth === "parked",
+		nextDay: dayFrom(p.nextTouchpointDate),
+		touches: [...touches].sort((a, b) => a.day.localeCompare(b.day) || a.at - b.at),
+		notes: notes ? {
+			id: `${p.id}-notes`,
+			day: dayFrom(p.createdAt),
+			at: Date.parse(p.createdAt) || 0,
+			kind: "note",
+			what: "",
+			note: notes,
+			fromNotes: true
+		} : null
+	};
+}
+function readCallback(payload) {
+	if (!payload || payload.app !== "callback" || !payload.data || typeof payload.data !== "object") throw new Error(NOT_CALLBACK);
+	const list = (k) => (Array.isArray(payload.data[k]) ? payload.data[k] : []).filter((r) => r && typeof r === "object" && typeof r.id === "string");
+	const orgs = new Map(list("organizations").map((o) => [o.id, o.name]));
+	const touches = new Map();
+	for (const tp of list("touchpoints")) {
+		const t = touchOf(tp);
+		if (t) touches.set(tp.personId, [...touches.get(tp.personId) || [], t]);
+	}
+	const people = [];
+	let bad = 0;
+	for (const p of list("people")) {
+		const one = personOf(p, orgs.get(p.organizationId), touches.get(p.id));
+		if (one.row.name) people.push(one);
+		else bad++;
+	}
+	return {
+		people,
+		bad
+	};
+}
+
+// data/callback-bring.js
+const lineId = (t) => `cb-${t.id}`;
+const touchCount = (item) => item.touches.filter((t) => !t.fromNotes).length;
+function bringPlan(entries, people, lines) {
+	const inLog = new Set(lines.map((l) => l.id));
+	const items = [];
+	let skipped = 0;
+	for (const e of entries) {
+		const touches = [...e.touches, ...e.notes ? [e.notes] : []].filter((t) => !inLog.has(lineId(t)));
+		const to = findMatch(people, e.row);
+		const same = to ? null : items.find((i) => !i.to && findMatch([i.row], e.row));
+		if (same) same.touches.push(...touches);
+		else if (to && !touches.length) skipped++;
+		else items.push({
+			row: e.row,
+			to,
+			letGo: e.letGo,
+			nextDay: e.nextDay,
+			touches
+		});
+	}
+	return {
+		items,
+		skipped
+	};
+}
+function fromWords(item) {
+	const n = touchCount(item);
+	if (!item.to) return `${n === 1 ? "1 touchpoint" : `${n || "No"} touchpoints`}${item.letGo ? " · Let go" : ""}`;
+	if (!n) return "In Rounds already: a note goes on their page";
+	return `In Rounds already: ${n === 1 ? "1 touchpoint goes" : `${n} touchpoints go`} on their page`;
+}
+function linesOf(t, personId, day, at, wasLast) {
+	const [first = "", ...more] = pieces(t.note);
+	const id = lineId(t);
+	const head = t.kind === "note" ? noteLine(personId, day, { note: first }, id, at) : {
+		...momentLine(personId, {
+			what: t.what,
+			day,
+			note: first
+		}, id, at),
+		wasLast
+	};
+	return [head, ...more.map((note, i) => noteLine(personId, day, { note }, `${id}-${i + 2}`, at + i + 1))];
+}
+function bring(items, today, perDay, makeId, now) {
+	const out = new Map();
+	const lines = [];
+	let spread = 0;
+	for (const i of items) {
+		let p = i.to && (out.get(i.to.id) || i.to);
+		if (!p) {
+			const next = i.nextDay ? move("checkin", i.nextDay) : firstMove(i.row.group, addDays(today, Math.floor(spread++ / perDay)));
+			p = {
+				...newPerson({
+					...i.row,
+					id: makeId(),
+					source: "import",
+					next
+				}, today),
+				letGo: !!i.letGo
+			};
+		}
+		const wasLast = i.to ? i.to.lastMove || "" : "";
+		let last = p.lastMove || "";
+		for (const t of i.touches) {
+			const day = t.day || today;
+			lines.push(...linesOf(t, p.id, day, t.at || now, wasLast));
+			if (t.kind === "moment" && day <= today) last = later(last, day);
+		}
+		out.set(p.id, {
+			...p,
+			lastMove: last
+		});
+	}
+	return {
+		people: [...out.values()],
+		lines
+	};
+}
+
+// pages/from-callback.js
+const WHO = ["person", "people"];
+function broughtWords(picked) {
+	const added = picked.filter((i) => !i.to).length;
+	const kept = picked.length - added;
+	return [added && `${plural(added, ...WHO)} added.`, kept && `${plural(kept, ...WHO)} in Rounds already got their history.`].filter(Boolean).join(" ");
+}
+async function openFromCallback(onAdded) {
+	const file = await pickFile(".json,application/json");
+	if (!file) return null;
+	let found;
+	try {
+		found = readCallback(JSON.parse(await file.text()));
+	} catch (e) {
+		toast(e instanceof SyntaxError ? NOT_CALLBACK : e.message, { ms: 6e3 });
+		return null;
+	}
+	const { items, skipped } = bringPlan(found.people, await listPeople(), await listMoves());
+	const notes = leftOut(skipped, found.bad, WHO);
+	if (!items.length) {
+		toast(`No one new to bring in. ${notes}`.trim(), { ms: 6e3 });
+		return null;
+	}
+	return openReview({
+		title: "Bring in from Callback",
+		notes,
+		items: items.map((i) => ({
+			row: i.row,
+			from: fromWords(i)
+		})),
+		onAdd: async (ticked) => {
+			const picked = items.filter((_, i) => ticked[i]);
+			const out = bring(picked, dayOf(), perDayOf(await getSetting("perDay", 3)), uuid, Date.now());
+			await savePeople(out.people);
+			await logMoves(out.lines);
+			toast(broughtWords(picked), { ms: 5e3 });
+			onAdded();
+		}
+	});
+}
+
 // pages/intro.js
 const SEEN = "rounds-intro-seen";
 const CARDS = [
@@ -5713,6 +5963,7 @@ async function openOptions(onChange, autoHandler) {
       <div class="choice-list">
         ${syncRow}
         ${row("data-import", "Import people", "From a CSV file")}
+        ${row("data-callback", "Bring in from Callback", "From a Callback backup")}
         ${row("data-list=\"email\"", "Export the email list", `${people1(count("email"))}, for your newsletter tool`)}
         ${row("data-list=\"mail\"", "Export the mail list", `${people1(count("mail"))}, names and addresses`)}
         ${row("data-backup", "Back up")}
@@ -5744,6 +5995,9 @@ async function openOptions(onChange, autoHandler) {
 		} else if (b.matches("[data-import]")) {
 			s.close();
 			openImport(onChange);
+		} else if (b.matches("[data-callback]")) {
+			s.close();
+			openFromCallback(onChange);
 		} else if (b.matches("[data-sync]")) {
 			s.close();
 			openSync(onChange, autoHandler);

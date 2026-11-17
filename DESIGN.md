@@ -375,6 +375,10 @@ for what matters (ticks, must-haves, the main action). So photos read true and t
   thing this past week, else when they're due). Two people who look alike get one quiet line, "<A> and <B> might be the
   same person.", with MERGE and an ×; the merge sheet shows both as cards (KEEP THIS NAME ✓) and MERGE, mango on ink, with
   Undo after. The person menu adds MERGE WITH... and DELETE (asks first, can't be undone).
+- **Bring in from Callback (ONE-TIME, Live, 16 Nov, rounds/NOTES.md):** Starky's own move from Callback; out again when he
+  says it's done. A row in Options under Import people ("From a Callback backup"). The same tick list as Import people and
+  Claude's leads, with "3 touchpoints" (or "In Rounds already: 2 touchpoints go on their page", and "· Let go" for someone
+  Parked) small under each name. Touchpoints are moments in SO FAR; ADD A MOMENT gained EMAILED (after CALLED), for good.
 - **Moments and SO FAR (Live, 16 Nov, thanks/05-06):** a person in Rounds: photo, name, handle, one line; the next move;
   ADD A MOMENT (outline button, full width); SO FAR (button type) over every row, newest first: the date in 11px small
   capitals (50px wide), the mark (a move's own mini; Rounds' ink + mango mark for moments and notes; The Eye's for shoots),

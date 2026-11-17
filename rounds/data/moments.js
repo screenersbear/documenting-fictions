@@ -15,8 +15,9 @@ import { firstName } from './fill.js';
 export const MOMENT_KIND = 'moment';
 // WHAT HAPPENED: the chips, in order. [who] is their first name (Rounds
 // keeps no pronouns).
+// Emailed came with Bring in from Callback (16 Nov), and stays.
 export const MOMENTS = {
-  photos: 'Sent photos', text: 'Texted', call: 'Called', instagram: 'Messaged on Instagram',
+  photos: 'Sent photos', text: 'Texted', call: 'Called', email: 'Emailed', instagram: 'Messaged on Instagram',
   ran: 'Ran into [who]', met: 'Met up', comment: 'Commented on a post', other: 'Other',
 };
 // How far out each move goes from the moment's day; the others stay.
