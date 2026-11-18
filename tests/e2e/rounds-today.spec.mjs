@@ -2,8 +2,9 @@
 // people from a shoot in The Eye come in with a thank you due today. One
 // card at a time: LATER moves it to tomorrow; WRITE TO opens the one sheet,
 // whose COPY AND OPEN copies the message, opens their Instagram and picks
-// HOW, and whose DONE saves it all with no second sheet. A swipe is done
-// too, with ADD WHAT YOU SAID; DONE TODAY lists the day's done moves to
+// HOW, and whose DONE saves it all with no second sheet. A swipe only
+// flips through the cards (18 Nov: "2 of 2", nothing done); DONE on the
+// card opens the one sheet too. DONE TODAY lists the day's done moves to
 // undo any later. Going between sections is a plain slide, as in Ref.
 import { test, expect } from '@playwright/test';
 import { openRounds, eyeShoot, sheet, opened, doneNoSheet, doneRows, doneWhat, doneSaid } from './_rounds.mjs';
@@ -22,15 +23,24 @@ const standIns = (page) => page.evaluate(() => {
 });
 const top = (page) => page.locator('#view .card.top');
 const pressed = (s, attr) => s.locator(`[${attr}][aria-pressed="true"]`);
-// The top card swiped away to the right.
-async function swipe(page) {
+// The top card swiped to the left (dir -1, the next card) or right (1, the one before).
+async function swipe(page, dir = -1) {
   const box = await top(page).boundingBox();
   const y = box.y + box.height / 2;
-  await page.mouse.move(box.x + 120, y);
+  const x = box.x + box.width / 2;
+  await page.mouse.move(x, y);
   await page.mouse.down();
-  await page.mouse.move(box.x + 140, y + 2, { steps: 2 });
-  await page.mouse.move(box.x + 330, y + 4, { steps: 6 });
+  await page.mouse.move(x + dir * 20, y + 2, { steps: 2 });
+  await page.mouse.move(x + dir * 200, y + 4, { steps: 6 });
   await page.mouse.up();
+  await page.waitForTimeout(400); // the card goes, the next comes up
+}
+// DONE on the card, then DONE on the one sheet it opens.
+async function doneOnCard(page, name) {
+  await page.click('#view [data-card-done]');
+  const move = await opened(page, name);
+  await move.locator('[data-done]').click();
+  await doneNoSheet(page);
 }
 
 test.describe('Rounds: Today', () => {
@@ -125,41 +135,56 @@ test.describe('Rounds: Today', () => {
     await ctx.close();
   });
 
-  test('a card swiped away is done, and ADD WHAT YOU SAID opens the one sheet for it', async ({ browser }, testInfo) => {
+  test('swiping only flips through the cards, "2 of 2", and nothing is done; DONE on the card opens the one sheet', async ({ browser }, testInfo) => {
     const { ctx, page, problems } = await openRounds(browser, testInfo, '/rounds/', eyeShoot);
-    await swipe(page);
-    await expect(page.locator('#toast')).toContainText('Done.');
-    await expect(page.locator('.sheet')).toHaveCount(0);
+    await expect(count(page)).toHaveText('2 today');
+    await expect(top(page)).toContainText('Jules M.');
+    // Left: the next card, its stop on the arc ringed; the count says where it is.
+    await swipe(page, -1);
     await expect(top(page)).toContainText('Maya R.');
-    await expect(page.locator('#toast .toast-action')).toHaveText('Add what you said');
-    await page.click('#toast .toast-action');
-    const move = await opened(page, 'Jules M.');
-    await expect(move.locator('[data-kind]')).toHaveText(['Say thanks']); // as it was logged
-    await move.locator('.one-said').fill('Thank you for today!');
-    await move.locator('[data-how="text"]').click();
-    await move.locator('[data-done]').click();
-    await expect(move).toHaveCount(0);
-    await expect(doneWhat(page)).toHaveText(['Said thanks to Jules M. · text']);
-    await expect(doneSaid(page)).toHaveText(['"Thank you for today!"']);
+    await expect(count(page)).toHaveText('2 of 2');
+    expect(await arcStops(page)).toEqual(['open', 'half']);
+    await expect(page.locator('#view [data-write]')).toHaveText('Write to Maya');
+    // Left again: round to the first, and the usual words come back.
+    await swipe(page, -1);
+    await expect(top(page)).toContainText('Jules M.');
+    await expect(count(page)).toHaveText('2 today');
+    // Right: the one before (round to the last).
+    await swipe(page, 1);
+    await expect(top(page)).toContainText('Maya R.');
+    await expect(count(page)).toHaveText('2 of 2');
+    // Nothing was marked done.
+    await expect(page.locator('#view .done-today')).toHaveCount(0);
+    await expect(page.locator('#toast')).not.toContainText('Done.');
+    // DONE on Maya's card: the one sheet for her; its DONE does it, and the next card comes up.
+    await expect(page.locator('#view [data-card-done]')).toHaveText('Done');
+    await doneOnCard(page, 'Maya R.');
+    await expect(top(page)).toContainText('Jules M.');
+    await expect(count(page)).toHaveText('Last one');
+    await expect(doneWhat(page)).toHaveText(['Said thanks to Maya R.']);
+    // One card left: a swipe has nothing to flip to, and it stays.
+    await swipe(page, -1);
+    await expect(top(page)).toContainText('Jules M.');
+    await expect(count(page)).toHaveText('Last one');
     expect(problems).toEqual([]);
     await ctx.close();
   });
 
-  test('DONE TODAY on Today lists the cards swiped away, newest first; a row\'s DELETE brings its card back, with Undo', async ({ browser }, testInfo) => {
+  test('DONE TODAY on Today lists the moves done, newest first; a row\'s DELETE brings its card back, with Undo', async ({ browser }, testInfo) => {
     const { ctx, page, problems } = await openRounds(browser, testInfo, '/rounds/', eyeShoot);
     const head = page.locator('#view .done-today-head');
     await expect(page.locator('#view .done-today')).toHaveCount(0); // nothing done yet: no section
     await expect(page.locator('#view [data-done-today]')).toHaveCount(0); // the old button is gone
-    await swipe(page);
+    await doneOnCard(page, 'Jules M.');
     await expect(head).toHaveText('Done today 1');
     await expect(top(page)).toContainText('Maya R.');
-    await swipe(page);
+    await doneOnCard(page, 'Maya R.');
     await expect(page.locator('#view .today-calm h2')).toHaveText("That's today.");
     await expect(head).toHaveText('Done today 2');
     // Long after the toast's Undo has gone.
     await page.reload();
     await expect(doneWhat(page)).toHaveText(['Said thanks to Maya R.', 'Said thanks to Jules M.']);
-    await expect(doneSaid(page)).toHaveCount(0); // swiped: nothing said
+    await expect(doneSaid(page)).toHaveCount(0); // nothing said
     await expect(doneRows(page).locator('.mini')).toHaveCount(2);
     await doneRows(page).filter({ hasText: 'Jules M.' }).click();
     const s = await opened(page, 'Say thanks');

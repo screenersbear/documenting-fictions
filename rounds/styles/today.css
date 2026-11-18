@@ -1,4 +1,4 @@
-/* Today (01-today): "1 OF 3 TODAY" and the arc's stops, then a short stack
+/* Today (01-today): "3 TODAY" (or "2 OF 3" while flipping) and the arc's stops, then a short stack
    of cards, the next two peeking out behind (turned 3 and -2.5 degrees).
    The top card (358 x 380 on a phone, white, radius 6): the move's mark as
    a big corner flair, the person's photo, the move's tag, the name in light
@@ -10,6 +10,11 @@
 .card { position: absolute; top: 14px; left: 16px; right: 16px; height: 380px; border-radius: 6px; overflow: hidden; background: var(--card); color: var(--text);
   box-shadow: 0 1px 0 #E1E1DC, 0 10px 24px rgba(49, 61, 69, .10); }
 .card.top { z-index: 3; touch-action: pan-y; cursor: pointer; text-align: left; }
+/* The top card in its holder, with DONE beside its tag (18 Nov): the holder
+   is what a swipe moves, so the two go together. */
+.card-top { position: absolute; z-index: 3; top: 14px; left: 16px; right: 16px; height: 380px; touch-action: pan-y; }
+.card-top > .card.top { top: 0; left: 0; right: 0; height: 100%; }
+.card-top .card-done { position: absolute; z-index: 4; top: 163px; right: 12px; margin: 0; color: var(--text); }
 .card.behind-1 { z-index: 2; top: 6px; left: 26px; right: 34px; transform: rotate(-2.5deg); }
 .card.behind-2 { z-index: 1; top: 0; left: 34px; right: 34px; transform: rotate(3deg); }
 .flair { position: absolute; right: 0; top: 0; width: 150px; height: 150px; border-radius: 0 0 0 75px; overflow: hidden; }

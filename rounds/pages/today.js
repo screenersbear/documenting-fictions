@@ -1,6 +1,8 @@
 // Today (01-today): three moves a day (at most five), one card at a time.
-// Swipe the card away when it's done, or LATER for tomorrow; WRITE TO (or a
-// tap on the card) opens the one sheet (pages/one-sheet.js). + REACH OUT
+// Swiping only flips through them (18 Nov, data/flip.js): "2 of 3" while
+// flipping, and nothing is marked done. WRITE TO (or a tap on the card), or
+// DONE on the card for something done outside the app, opens the one sheet
+// (pages/one-sheet.js); LATER moves it to tomorrow. + REACH OUT
 // beside the count starts one with anyone (pages/reach-out.js). No overdue
 // counts, no streaks: when the day's done (rounds/13), the arc stays full,
 // the count says ALL 3 DONE, then a calm "That's today." and who's next.
@@ -17,8 +19,9 @@ import { whenDue } from '../data/work-days.js';
 import { dayOf, dueWords } from '../data/dates.js';
 import { nextUpWords } from '../data/next-up.js';
 import { cardHtml, behindHtml, writeLabel, arcHtml } from './today-card.js';
-import { wireCard, cardAway } from './card-swipe.js';
-import { swipeDone, writeTo } from './move-done.js';
+import { wireCard, cardAway, cardIn, settleBack } from './card-swipe.js';
+import { writeTo } from './move-done.js';
+import { fresh, frontAt, flipTo, inFront, flipWords } from '../data/flip.js';
 import { openReachOut } from './reach-out.js';
 import { openAddPerson } from './add-person.js';
 import { doneTodayHtml, wireDoneToday } from './done-today.js';
@@ -28,12 +31,19 @@ import { postSlipsHtml, wirePostSlips } from './post-slip.js';
 // The count, + REACH OUT beside it (rounds/06), and the arc.
 const head = (count, arc) => `<div class="today-head"><span class="today-count-row">${count ? `<span class="today-count">${count}</span>` : ''}<button type="button" class="list-act today-reach" data-reach>${PLUS}Reach out</button></span>${arc}</div>`;
 
-function stackHtml(pick, left, today) {
+// The card in front while flipping (data/flip.js); a new visit to Today
+// starts at the first again.
+let flip = fresh();
+
+// left: the people still waiting, in order; at: where the one in front
+// sits among them. The stack shows it first, the next two behind it.
+function stackHtml(pick, left, today, at) {
   const n = pick.ids.length;
-  const at = n - left.length + 1;
-  const [top, next, after] = left;
+  const [top, next, after] = inFront(left, at);
+  const words = flipWords(pick.ids, left.map((p) => p.id), at);
+  const label = words ? `Move ${words}` : `Move ${n - left.length + 1} of ${n}`;
   return `
-    ${head(countWords(n, left.length), arcHtml(pick, top.id, `Move ${at} of ${n}`))}
+    ${head(words || countWords(n, left.length), arcHtml(pick, top.id, label))}
     <div class="stack">${after ? behindHtml(after, 2) : ''}${next ? behindHtml(next, 1) : ''}${cardHtml(top, today)}</div>
     <div class="today-btns">
       <button type="button" class="btn secondary" data-later>Later</button>
@@ -56,16 +66,19 @@ function calmHtml(people, pick, today, week) {
   return `${head('', '')}<div class="today-calm"><h2>Nothing today.</h2><p>${when}</p></div>`;
 }
 
-export async function todayScreen(view, { beside = false } = {}) {
+export async function todayScreen(view, { beside = false, again = false } = {}) {
   const today = dayOf();
+  if (!again) flip = fresh(today);
   const [{ people, pick, week }, { done: doneToday }] = await Promise.all([loadToday(), loadDone()]);
   const [leads, slips] = await Promise.all([leadsHtml(people), postSlipsHtml(people).catch(() => '')]);
   const byId = new Map(people.map((p) => [p.id, p]));
   const left = waiting(pick).map((id) => byId.get(id));
-  view.innerHTML = `<div class="screen"><div class="scroll">${bandHtml({ title: 'Rounds', place: 'Today' })}${slips}${leads}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today, week)}${doneTodayHtml(doneToday)}</div></div>`;
+  const ids = left.map((p) => p.id);
+  const at = frontAt(ids, flip, today);
+  view.innerHTML = `<div class="screen"><div class="scroll">${bandHtml({ title: 'Rounds', place: 'Today' })}${slips}${leads}${left.length ? stackHtml(pick, left, today, at) : calmHtml(people, pick, today, week)}${doneTodayHtml(doneToday)}</div></div>`;
   fillPhotos(view, people);
   if (beside) return;
-  const redraw = () => todayScreen(view).then(() => view.querySelector('.screen')?.classList.add('still'));
+  const redraw = () => todayScreen(view, { again: true }).then(() => view.querySelector('.screen')?.classList.add('still'));
   view.querySelector('[data-add]')?.addEventListener('click', () => openAddPerson(() => todayScreen(view)));
   wireDoneToday(view, doneToday, redraw);
   view.querySelector('[data-leads]')?.addEventListener('click', () => openLeads(redraw));
@@ -77,16 +90,27 @@ export async function todayScreen(view, { beside = false } = {}) {
     writeTo(p, redraw);
   });
   if (!left.length) return;
-  const top = left[0];
-  const card = view.querySelector('.card.top');
-  const done = (dir = 1, dx = 0) => swipeDone(top, redraw, cardAway(card, dir, dx));
+  const top = left[at];
+  // While flipping, the front stays where it is (its card gone, the one after it comes up); otherwise it's the first.
+  flip = at ? { day: today, id: top.id, at } : fresh(today);
+  const holder = view.querySelector('.card-top');
+  const card = holder.querySelector('.card.top');
+  // A swipe left shows the next card, right the one before; with one card there's nothing to flip to.
+  const turn = async (sign, dx) => {
+    if (left.length < 2) { settleBack(holder, dx); return; }
+    await cardAway(holder, sign, dx);
+    flip = flipTo(ids, at, -sign, today);
+    await redraw();
+    const next = view.querySelector('.card-top');
+    if (next) cardIn(next);
+  };
   const later = async () => {
-    await Promise.all([laterMove(top), cardAway(card, 0)]);
+    await Promise.all([laterMove(top), cardAway(holder, 0)]);
     await redraw();
   };
-  // Their due move done on the sheet: the card goes as a swipe sends it.
-  const open = () => writeTo(top, redraw, { gone: (d) => (d.line.extra ? null : cardAway(card, 1, 0)) });
-  wireCard(card, { onOpen: open, onSwipe: done });
+  // Their due move done on the sheet: the card goes off to the side.
+  const open = () => writeTo(top, redraw, { gone: (d) => (d.line.extra ? null : cardAway(holder, 1, 0)) });
+  wireCard(holder, card, { onOpen: open, onSwipe: turn, onDone: open });
   view.querySelector('[data-write]').addEventListener('click', open);
   view.querySelector('[data-later]').addEventListener('click', later);
 }

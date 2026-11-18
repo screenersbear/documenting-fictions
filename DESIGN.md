@@ -381,7 +381,7 @@ then "No one, it's just for me" as a text button at the end.
   pill chips, preset from the card or their next move); WHAT DID YOU SAY? with USE YOUR <KIND> MESSAGE under it; HOW
   (picked for you once COPY AND OPEN has gone out); A NOTE FOR YOU (OPTIONAL), "Only you see this"; COPY AND OPEN (outline)
   and DONE (mango on ink). Another kind than the due one is a move of its own that still counts as keeping in touch; the
-  card stays. A swiped card's toast offers ADD WHAT YOU SAID. Today has REACH OUT (button type) beside the count: a search
+  card stays. Today has REACH OUT (button type) beside the count: a search
   sheet (rows: photo, name, "Client · last: sent photos, 2 Nov", the last in touch first) and OR SOMEONE NEW, ADD "<TYPED>"
   AS A NEW PERSON. A done move tapped (DONE TODAY on Today, SO FAR, the shelf's person page) shows WHAT YOU SAID: the kind's tag in
   the header, "Said thanks to Jules", "Mon 16 Nov · by text", WHAT YOU SAID and YOUR NOTE, then DELETE (text, with Undo),
@@ -390,6 +390,15 @@ then "No one, it's just for me" as a text button at the end.
   thing this past week, else when they're due). Two people who look alike get one quiet line, "<A> and <B> might be the
   same person.", with MERGE and an ×; the merge sheet shows both as cards (KEEP THIS NAME ✓) and MERGE, mango on ink, with
   Undo after. The person menu adds MERGE WITH... and DELETE (asks first, can't be undone).
+- **Rounds, flipping and saved messages (Live, 18 Nov, rounds/14, rounds/NOTES.md):** swiping Today's cards only flips
+  through them (left the next, right the one before, round again); nothing is done by a swipe. While flipping the count
+  says "2 OF 3" and the arc rings the one in front (done ink, the rest open); a card with nothing to flip to slides back.
+  A move is done only on the one sheet: WRITE TO, a tap on the card, or DONE (button type) beside the card's tag, for
+  something already done outside the app. On the sheet, once USE YOUR <KIND> MESSAGE was used and the words then
+  changed, a line under the box (#EFEFEA, radius 10): a 20px tick box, off to start (ticked: berry blade black with a mango
+  tick), "Save this as your <kind> message" (14px) over "You changed it. Next time it starts like this." (12px dim); it
+  takes the place of the USE YOUR line. DONE with it ticked saves the words in Messages with the person's details back
+  as blanks ([name], [brand], [where], [when], [offer], [city], [shoot]).
 - **Done today on Today (Live, 16 Nov, rounds/12-13, rounds/NOTES.md):** no Done today button or sheet. DONE TODAY <n> is a
   section under the cards (heading in small capitals, the count dim, an ink rule under it): a row per move or moment done
   today, newest first, the 16px mark (Rounds' for moments), "Said thanks to **Maya R.** · text" (17px, the name 500, how

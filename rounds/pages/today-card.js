@@ -1,6 +1,8 @@
 // What Today draws (01-today): the top card, the cards peeking out behind
-// it, and the arc's stops (done in berry blade black, this one half teal in
-// a ring, the rest open).
+// it, and the arc's stops (done in berry blade black, the one in front half
+// teal in a ring, the rest open). The top card sits in a holder with DONE
+// (18 Nov: for something already done outside the app), so the button
+// isn't inside the card's own button; the two move together.
 import { moveName, moveLook } from '../data/kinds.js';
 import { reasonFor } from '../data/reasons.js';
 import { handleText } from '../data/contact.js';
@@ -16,6 +18,7 @@ export function cardHtml(p, today) {
   const handle = handleText(p);
   const draft = draftWaiting(p);
   return `
+    <div class="card-top">
     <div class="card top${draft ? ' has-draft' : ''}" role="button" tabindex="0" data-open aria-label="${esc(`${moveName(p.next)}, ${p.name}. Open the move`)}">
       ${flairHtml(look)}${photoHtml(p)}
       <div class="card-words">
@@ -25,6 +28,8 @@ export function cardHtml(p, today) {
         <p class="card-why">${esc(reasonFor(p, today))}</p>
         ${draft ? '<p class="card-draft">Draft waiting in Gmail</p>' : ''}
       </div>
+    </div>
+    <button type="button" class="list-act card-done" data-card-done>Done</button>
     </div>`;
 }
 

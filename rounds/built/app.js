@@ -1620,6 +1620,22 @@ function fill(text, values) {
 		return FILLS.includes(k) && values[k] ? values[k] : all;
 	});
 }
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function unfill(text, values, had = "") {
+	const used = (k) => new RegExp(`\\[${k}\\]`, "i").test(had);
+	const words = (k) => String(values[k] ?? "").trim();
+	const keys = FILLS.filter(words).sort((a, b) => words(b).length - words(a).length || used(b) - used(a));
+	const seen = new Set();
+	let out = String(text ?? "");
+	for (const k of keys) {
+		const v = words(k).toLowerCase();
+		if (seen.has(v)) continue;
+		seen.add(v);
+		const re = new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(words(k))}(?![\\p{L}\\p{N}])`, "giu");
+		out = out.split(/(\[\w+\])/).map((part, i) => i % 2 ? part : part.replace(re, `[${k}]`)).join("");
+	}
+	return out;
+}
 
 // data/done-notes.js
 const HOWS = {
@@ -2073,6 +2089,7 @@ function cardHtml$2(p, today) {
 	const handle = handleText(p);
 	const draft = draftWaiting(p);
 	return `
+    <div class="card-top">
     <div class="card top${draft ? " has-draft" : ""}" role="button" tabindex="0" data-open aria-label="${esc(`${moveName(p.next)}, ${p.name}. Open the move`)}">
       ${flairHtml(look)}${photoHtml(p)}
       <div class="card-words">
@@ -2082,6 +2099,8 @@ function cardHtml$2(p, today) {
         <p class="card-why">${esc(reasonFor(p, today))}</p>
         ${draft ? "<p class=\"card-draft\">Draft waiting in Gmail</p>" : ""}
       </div>
+    </div>
+    <button type="button" class="list-act card-done" data-card-done>Done</button>
     </div>`;
 }
 __name(cardHtml$2, "cardHtml");
@@ -2112,10 +2131,10 @@ const FADE_MS$1 = 150;
 const EASE$1 = "cubic-bezier(.4, 0, .2, 1)";
 const still$1 = /* @__PURE__ */ __name(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches, "still");
 const held = (dx) => `translate3d(${dx}px, 0px, 0px) rotate(${(dx / 24).toFixed(2)}deg)`;
-function wireCard(card, { onOpen, onSwipe }) {
+function wireCard(holder, card, { onOpen, onSwipe, onDone }) {
 	let d = null;
 	let swiped = -Infinity;
-	card.addEventListener("pointerdown", (e) => {
+	holder.addEventListener("pointerdown", (e) => {
 		if (e.button) return;
 		e.stopPropagation();
 		d = {
@@ -2129,7 +2148,7 @@ function wireCard(card, { onOpen, onSwipe }) {
 			lastT: performance.now()
 		};
 	});
-	card.addEventListener("pointermove", (e) => {
+	holder.addEventListener("pointermove", (e) => {
 		if (!d || e.pointerId !== d.id) return;
 		const dx = e.clientX - d.x0;
 		const dy = e.clientY - d.y0;
@@ -2141,7 +2160,7 @@ function wireCard(card, { onOpen, onSwipe }) {
 			}
 			d.moved = true;
 			try {
-				card.setPointerCapture(e.pointerId);
+				holder.setPointerCapture(e.pointerId);
 			} catch {}
 		}
 		const now = performance.now();
@@ -2149,7 +2168,7 @@ function wireCard(card, { onOpen, onSwipe }) {
 		d.lastX = e.clientX;
 		d.lastT = now;
 		d.dx = dx;
-		card.style.transform = held(dx);
+		holder.style.transform = held(dx);
 	});
 	const end = (e) => {
 		if (!d || e.pointerId !== d.id) return;
@@ -2158,13 +2177,15 @@ function wireCard(card, { onOpen, onSwipe }) {
 		if (!g.moved) return;
 		swiped = performance.now();
 		const flick = Math.abs(g.vx) > .6 && Math.sign(g.vx) === Math.sign(g.dx);
-		if (e.type === "pointerup" && (Math.abs(g.dx) > card.offsetWidth * .3 || flick)) onSwipe(Math.sign(g.dx), g.dx);
-		else settleBack(card, g.dx);
+		if (e.type === "pointerup" && (Math.abs(g.dx) > holder.offsetWidth * .3 || flick)) onSwipe(Math.sign(g.dx), g.dx);
+		else settleBack(holder, g.dx);
 	};
-	card.addEventListener("pointerup", end);
-	card.addEventListener("pointercancel", end);
-	card.addEventListener("click", () => {
-		if (performance.now() - swiped > 350) onOpen();
+	holder.addEventListener("pointerup", end);
+	holder.addEventListener("pointercancel", end);
+	holder.addEventListener("click", (e) => {
+		if (performance.now() - swiped <= 350) return;
+		if (e.target.closest("[data-card-done]")) onDone();
+		else if (card.contains(e.target)) onOpen();
 	});
 	card.addEventListener("keydown", (e) => {
 		if (e.key === "Enter" || e.key === " ") {
@@ -2197,6 +2218,13 @@ function cardAway(card, dir, dx = 0) {
 	return new Promise((done) => {
 		a.onfinish = done;
 		setTimeout(done, MS + 200);
+	});
+}
+function cardIn(card) {
+	const frames = still$1() ? [{ opacity: 0 }, { opacity: 1 }] : [{ transform: "translate3d(10px, -8px, 0px) rotate(-2.5deg)" }, { transform: "translate3d(0px, 0px, 0px) rotate(0deg)" }];
+	card.animate(frames, {
+		duration: still$1() ? FADE_MS$1 : MS,
+		easing: EASE$1
 	});
 }
 
@@ -2382,6 +2410,39 @@ async function showFinal(box, year) {
 	});
 }
 
+// pages/save-message.js
+const TICK = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polyline points=\"5 12.5 10 17 19 7\"/></svg>";
+const saveMessageHtml = () => `
+  <label class="save-msg" hidden><input type="checkbox" class="save-msg-input" data-save-msg /><span class="save-msg-box" aria-hidden="true">${TICK}</span>
+    <span class="save-msg-words"><span class="save-msg-title"></span><span class="save-msg-sub">You changed it. Next time it starts like this.</span></span></label>`;
+function wireSaveMessage(row, box, onShow = () => {}) {
+	const tick = row.querySelector("[data-save-msg]");
+	let used = null;
+	const changed = () => !!used && !!box.value.trim() && box.value.trim() !== used.text.trim();
+	function draw() {
+		const show = changed();
+		if (!show) tick.checked = false;
+		if (row.hidden !== !show) {
+			row.hidden = !show;
+			onShow(show);
+		}
+	}
+	box.addEventListener("input", draw);
+	return {
+		used(kind, text) {
+			used = {
+				kind,
+				text
+			};
+			row.querySelector(".save-msg-title").innerHTML = esc(`Save this as your ${messageWord(kind)} message`);
+			draw();
+		},
+		shown: changed,
+		wanted: () => changed() && tick.checked,
+		kind: () => used && used.kind
+	};
+}
+
 // pages/one-sheet.js
 const chipHtml$1 = /* @__PURE__ */ __name((attr, k, label, on) => `<button type="button" class="pick-chip${on ? " on" : ""}" ${attr}="${esc(k)}" aria-pressed="${on}">${esc(label)}</button>`, "chipHtml");
 const setOn = (root, attr, k) => root.querySelectorAll(`[${attr}]`).forEach((c) => {
@@ -2406,6 +2467,7 @@ async function openOneMove(person, { chip, line = null, after = () => {} } = {})
       <p class="move-draft" hidden>Draft waiting in Gmail, written by Claude.</p>
       <label class="label one-label" for="oneSaid">What did you say?</label>
       <textarea class="move-text one-said" id="oneSaid" rows="3">${esc(line?.said || "")}</textarea>
+      ${saveMessageHtml()}
       <button type="button" class="one-offer" data-offer>${PLUS}<span></span></button>
       <p class="label one-label">How</p>
       <div class="pick-chips">${Object.entries(HOWS).map(([k, n]) => chipHtml$1("data-how", k, n, k === how)).join("")}</div>
@@ -2421,11 +2483,21 @@ async function openOneMove(person, { chip, line = null, after = () => {} } = {})
 	const offer = s.body.querySelector("[data-offer]");
 	const btns = s.body.querySelector(".one-btns");
 	const kind = () => line ? line.kind : kindFor(person, pick);
-	const starter = () => KINDS[kind()] ? fill(messages[kind()] ?? KINDS[kind()].starter, fillValues(person, me, today)) : "";
+	const yours = (k) => messages[k] ?? KINDS[k].starter;
+	const starter = () => KINDS[kind()] ? fill(yours(kind()), values) : "";
 	const drafted = () => !line && draftWaiting(person) && doesDue(person, pick);
 	const where = contactFor(person);
+	const values = fillValues(person, me, today);
+	const offerShown = () => {
+		offer.hidden = !starter() || save.shown();
+	};
+	const save = wireSaveMessage(s.body.querySelector(".save-msg"), box, offerShown);
+	const useStarter = () => {
+		box.value = starter();
+		save.used(kind(), box.value);
+	};
 	function draw() {
-		offer.hidden = !starter();
+		offerShown();
 		offer.querySelector("span").textContent = `Use your ${messageWord(kind())} message`;
 		s.body.querySelector(".move-draft").hidden = !drafted();
 		const go = drafted() ? "<button type=\"button\" class=\"btn secondary\" data-gmail data-test-skip>Open Gmail</button>" : `<button type="button" class="btn secondary" data-go ${where ? "data-test-skip" : ""}>${where ? "Copy and open" : "Copy"}</button>`;
@@ -2445,13 +2517,13 @@ async function openOneMove(person, { chip, line = null, after = () => {} } = {})
 			draw();
 		} else if (b.dataset.how !== undefined) pickHow(how === b.dataset.how ? "" : b.dataset.how);
 		else if (b.matches("[data-offer]")) {
-			box.value = starter();
+			useStarter();
 			box.focus();
 		} else if (b.matches("[data-gmail]")) {
 			pickHow("email");
 			window.open(GMAIL_DRAFTS, "_blank", "noopener");
 		} else if (b.matches("[data-go]")) {
-			if (!box.value.trim()) box.value = starter();
+			if (!box.value.trim()) useStarter();
 			const copied = box.value ? await copy(box.value) : false;
 			const to = contactFor(person, box.value);
 			if (!to) {
@@ -2468,6 +2540,7 @@ async function openOneMove(person, { chip, line = null, after = () => {} } = {})
 				how,
 				note: note.value
 			};
+			if (save.wanted()) await saveMessage(save.kind(), unfill(box.value, values, yours(save.kind())));
 			const result = line ? await saveHowNote(line, fields) : await saveOneMove(person, pick, fields);
 			s.close();
 			after(result);
@@ -2477,18 +2550,6 @@ async function openOneMove(person, { chip, line = null, after = () => {} } = {})
 }
 
 // pages/move-done.js
-async function swipeDone(person, redraw, away = null) {
-	const [done] = await Promise.all([doMove(person), away]);
-	await redraw();
-	toast("Done.", { action: {
-		label: "Add what you said",
-		run: () => openOneMove(done.after, {
-			line: done.line,
-			after: redraw
-		})
-	} });
-	return done;
-}
 function writeTo(person, redraw, { chip, gone = () => null } = {}) {
 	return openOneMove(person, {
 		chip,
@@ -2501,6 +2562,32 @@ function writeTo(person, redraw, { chip, gone = () => null } = {}) {
 			} });
 		}
 	});
+}
+
+// data/flip.js
+const fresh = (day = "") => ({
+	day,
+	id: "",
+	at: 0
+});
+function frontAt(left, flip, day) {
+	if (!flip || flip.day !== day) return 0;
+	const i = left.indexOf(flip.id);
+	if (i >= 0) return i;
+	return flip.at < left.length ? flip.at : 0;
+}
+function flipTo(left, at, dir, day) {
+	const n = left.length;
+	const to = n ? ((at + dir) % n + n) % n : 0;
+	return {
+		day,
+		id: left[to] || "",
+		at: to
+	};
+}
+const inFront = (list, at) => [...list.slice(at), ...list.slice(0, at)];
+function flipWords(ids, left, at) {
+	return at ? `${ids.indexOf(left[at]) + 1} of ${ids.length}` : null;
 }
 
 // data/so-far.js
@@ -3825,12 +3912,14 @@ function wirePostSlips(root, open) {
 
 // pages/today.js
 const head = (count, arc) => `<div class="today-head"><span class="today-count-row">${count ? `<span class="today-count">${count}</span>` : ""}<button type="button" class="list-act today-reach" data-reach>${PLUS}Reach out</button></span>${arc}</div>`;
-function stackHtml(pick, left, today) {
+let flip = fresh();
+function stackHtml(pick, left, today, at) {
 	const n = pick.ids.length;
-	const at = n - left.length + 1;
-	const [top, next, after] = left;
+	const [top, next, after] = inFront(left, at);
+	const words = flipWords(pick.ids, left.map((p) => p.id), at);
+	const label = words ? `Move ${words}` : `Move ${n - left.length + 1} of ${n}`;
 	return `
-    ${head(countWords(n, left.length), arcHtml(pick, top.id, `Move ${at} of ${n}`))}
+    ${head(words || countWords(n, left.length), arcHtml(pick, top.id, label))}
     <div class="stack">${after ? behindHtml(after, 2) : ""}${next ? behindHtml(next, 1) : ""}${cardHtml$2(top, today)}</div>
     <div class="today-btns">
       <button type="button" class="btn secondary" data-later>Later</button>
@@ -3850,19 +3939,22 @@ function calmHtml(people, pick, today, week) {
 	const when = next ? `The next move is due ${dueWords(next, today).replace("Tomorrow", "tomorrow")}.` : "Nothing is planned.";
 	return `${head("", "")}<div class="today-calm"><h2>Nothing today.</h2><p>${when}</p></div>`;
 }
-async function todayScreen(view, { beside = false } = {}) {
+async function todayScreen(view, { beside = false, again = false } = {}) {
 	const today = dayOf();
+	if (!again) flip = fresh(today);
 	const [{ people, pick, week }, { done: doneToday }] = await Promise.all([loadToday(), loadDone()]);
 	const [leads, slips] = await Promise.all([leadsHtml(people), postSlipsHtml(people).catch(() => "")]);
 	const byId = new Map(people.map((p) => [p.id, p]));
 	const left = waiting$1(pick).map((id) => byId.get(id));
+	const ids = left.map((p) => p.id);
+	const at = frontAt(ids, flip, today);
 	view.innerHTML = `<div class="screen"><div class="scroll">${bandHtml({
 		title: "Rounds",
 		place: "Today"
-	})}${slips}${leads}${left.length ? stackHtml(pick, left, today) : calmHtml(people, pick, today, week)}${doneTodayHtml(doneToday)}</div></div>`;
+	})}${slips}${leads}${left.length ? stackHtml(pick, left, today, at) : calmHtml(people, pick, today, week)}${doneTodayHtml(doneToday)}</div></div>`;
 	fillPhotos(view, people);
 	if (beside) return;
-	const redraw = () => todayScreen(view).then(() => view.querySelector(".screen")?.classList.add("still"));
+	const redraw = () => todayScreen(view, { again: true }).then(() => view.querySelector(".screen")?.classList.add("still"));
 	view.querySelector("[data-add]")?.addEventListener("click", () => openAddPerson(() => todayScreen(view)));
 	wireDoneToday(view, doneToday, redraw);
 	view.querySelector("[data-leads]")?.addEventListener("click", () => openLeads(redraw));
@@ -3876,17 +3968,34 @@ async function todayScreen(view, { beside = false } = {}) {
 		writeTo(p, redraw);
 	});
 	if (!left.length) return;
-	const top = left[0];
-	const card = view.querySelector(".card.top");
-	const done = (dir = 1, dx = 0) => swipeDone(top, redraw, cardAway(card, dir, dx));
+	const top = left[at];
+	flip = at ? {
+		day: today,
+		id: top.id,
+		at
+	} : fresh(today);
+	const holder = view.querySelector(".card-top");
+	const card = holder.querySelector(".card.top");
+	const turn = async (sign, dx) => {
+		if (left.length < 2) {
+			settleBack(holder, dx);
+			return;
+		}
+		await cardAway(holder, sign, dx);
+		flip = flipTo(ids, at, -sign, today);
+		await redraw();
+		const next = view.querySelector(".card-top");
+		if (next) cardIn(next);
+	};
 	const later = async () => {
-		await Promise.all([laterMove(top), cardAway(card, 0)]);
+		await Promise.all([laterMove(top), cardAway(holder, 0)]);
 		await redraw();
 	};
-	const open = () => writeTo(top, redraw, { gone: (d) => d.line.extra ? null : cardAway(card, 1, 0) });
-	wireCard(card, {
+	const open = () => writeTo(top, redraw, { gone: (d) => d.line.extra ? null : cardAway(holder, 1, 0) });
+	wireCard(holder, card, {
 		onOpen: open,
-		onSwipe: done
+		onSwipe: turn,
+		onDone: open
 	});
 	view.querySelector("[data-write]").addEventListener("click", open);
 	view.querySelector("[data-later]").addEventListener("click", later);

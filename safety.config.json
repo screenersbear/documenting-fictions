@@ -35,7 +35,7 @@
     "rounds/data/fill.js",
     "rounds/data/reasons.js",
     "rounds/data/person.js",
-    "rounds/data/today.js",
+    "rounds/data/today.js", "rounds/data/flip.js",
     "rounds/data/csv.js",
     "rounds/data/lists.js",
     "rounds/data/eye-people.js",

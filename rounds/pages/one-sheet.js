@@ -11,7 +11,8 @@
 // their due one still counts as keeping in touch. Opened with a line (EDIT
 // on What you said, or ADD WHAT YOU SAID after a swipe), it's that move
 // filled in, its kind as it was. A year since shows one of the shoot's
-// finals (pages/move-final.js).
+// finals (pages/move-final.js). Your message used and then changed: SAVE
+// THIS AS YOUR <KIND> MESSAGE under the box (pages/save-message.js).
 import { openSheet } from '../components/sheet.js';
 import { photoHtml, fillPhotos } from '../components/photo.js';
 import { toast } from '../components/toast.js';
@@ -21,14 +22,15 @@ import { PLUS } from '../components/icons.js';
 import { KINDS, messageWord } from '../data/kinds.js';
 import { HOWS, howFromGo } from '../data/done-notes.js';
 import { KIND_CHIPS, chipOf, startChip, doesDue, kindFor } from '../data/one-move.js';
-import { fill, fillValues } from '../data/fill.js';
+import { fill, fillValues, unfill } from '../data/fill.js';
 import { contactFor, GMAIL_DRAFTS } from '../data/contact.js';
 import { draftWaiting } from '../data/person.js';
-import { getMessages } from '../data/db.js';
+import { getMessages, saveMessage } from '../data/db.js';
 import { getMe, saveHowNote } from '../data/moves.js';
 import { saveOneMove } from '../data/one-move-store.js';
 import { dayOf, longDay } from '../data/dates.js';
 import { finalHtml, showFinal } from './move-final.js';
+import { saveMessageHtml, wireSaveMessage } from './save-message.js';
 
 const chipHtml = (attr, k, label, on) => `<button type="button" class="pick-chip${on ? ' on' : ''}" ${attr}="${esc(k)}" aria-pressed="${on}">${esc(label)}</button>`;
 const setOn = (root, attr, k) => root.querySelectorAll(`[${attr}]`).forEach((c) => {
@@ -57,6 +59,7 @@ export async function openOneMove(person, { chip, line = null, after = () => {} 
       <p class="move-draft" hidden>Draft waiting in Gmail, written by Claude.</p>
       <label class="label one-label" for="oneSaid">What did you say?</label>
       <textarea class="move-text one-said" id="oneSaid" rows="3">${esc(line?.said || '')}</textarea>
+      ${saveMessageHtml()}
       <button type="button" class="one-offer" data-offer>${PLUS}<span></span></button>
       <p class="label one-label">How</p>
       <div class="pick-chips">${Object.entries(HOWS).map(([k, n]) => chipHtml('data-how', k, n, k === how)).join('')}</div>
@@ -72,13 +75,19 @@ export async function openOneMove(person, { chip, line = null, after = () => {} 
   const offer = s.body.querySelector('[data-offer]');
   const btns = s.body.querySelector('.one-btns');
   const kind = () => (line ? line.kind : kindFor(person, pick));
-  const starter = () => (KINDS[kind()] ? fill(messages[kind()] ?? KINDS[kind()].starter, fillValues(person, me, today)) : '');
+  const yours = (k) => messages[k] ?? KINDS[k].starter;
+  const starter = () => (KINDS[kind()] ? fill(yours(kind()), values) : '');
   const drafted = () => !line && draftWaiting(person) && doesDue(person, pick);
   const where = contactFor(person);
+  const values = fillValues(person, me, today);
+  // Once your message is in the box and changed, the offer gives way to SAVE THIS AS YOUR <KIND> MESSAGE.
+  const offerShown = () => { offer.hidden = !starter() || save.shown(); };
+  const save = wireSaveMessage(s.body.querySelector('.save-msg'), box, offerShown);
+  const useStarter = () => { box.value = starter(); save.used(kind(), box.value); };
 
   // What follows the kind: the message offered, a draft in Gmail, the button.
   function draw() {
-    offer.hidden = !starter();
+    offerShown();
     offer.querySelector('span').textContent = `Use your ${messageWord(kind())} message`;
     s.body.querySelector('.move-draft').hidden = !drafted();
     // COPY AND OPEN goes out to Instagram (or email, or a website), and OPEN GMAIL to Gmail: the button clicker leaves them alone.
@@ -94,10 +103,10 @@ export async function openOneMove(person, { chip, line = null, after = () => {} 
     if (!b) return;
     if (b.dataset.kind !== undefined && !line) { pick = b.dataset.kind; setOn(s.body, 'data-kind', pick); draw(); }
     else if (b.dataset.how !== undefined) pickHow(how === b.dataset.how ? '' : b.dataset.how);
-    else if (b.matches('[data-offer]')) { box.value = starter(); box.focus(); }
+    else if (b.matches('[data-offer]')) { useStarter(); box.focus(); }
     else if (b.matches('[data-gmail]')) { pickHow('email'); window.open(GMAIL_DRAFTS, '_blank', 'noopener'); }
     else if (b.matches('[data-go]')) {
-      if (!box.value.trim()) box.value = starter(); // nothing typed: your message goes
+      if (!box.value.trim()) useStarter(); // nothing typed: your message goes
       const copied = box.value ? await copy(box.value) : false;
       const to = contactFor(person, box.value);
       if (!to) { toast(copied ? 'Copied.' : 'Nothing to copy yet.'); return; }
@@ -107,6 +116,7 @@ export async function openOneMove(person, { chip, line = null, after = () => {} 
     } else if (b.matches('[data-done]')) {
       b.disabled = true;
       const fields = { said: box.value, how, note: note.value };
+      if (save.wanted()) await saveMessage(save.kind(), unfill(box.value, values, yours(save.kind())));
       const result = line ? await saveHowNote(line, fields) : await saveOneMove(person, pick, fields);
       s.close();
       after(result);

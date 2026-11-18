@@ -1,6 +1,6 @@
 // rounds/data/fill.js: a starter message filled in for one person.
 import { describe, it, expect } from 'vitest';
-import { FILLS, firstName, fillValues, fill } from '../../../rounds/data/fill.js';
+import { FILLS, firstName, fillValues, fill, unfill } from '../../../rounds/data/fill.js';
 
 const T = '2026-11-14';
 
@@ -56,5 +56,36 @@ describe('fill', () => {
   });
   it('gives nothing for nothing', () => {
     expect(fill(null, values)).toBe('');
+  });
+});
+
+// SAVE THIS AS YOUR <KIND> MESSAGE (rounds/14, 18 Nov): the person's
+// details back into blanks.
+describe('unfill', () => {
+  const values = { name: 'Maya', where: 'the rooftop shoot', offer: 'a mini session', brand: 'Maya Ruiz', when: 'Tuesday', city: 'Hoboken', shoot: '' };
+  it('turns each of their details back into its blank, however it is capitalised', () => {
+    expect(unfill('Thanks so much, Maya! Loved TUESDAY at the rooftop shoot.', values)).toBe('Thanks so much, [name]! Loved [when] at [where].');
+    expect(unfill('Next time in Hoboken: a mini session?', values)).toBe('Next time in [city]: [offer]?');
+  });
+  it('takes the longest first: their whole name before their first name', () => {
+    expect(unfill('Maya Ruiz, or Maya to friends', values)).toBe('[brand], or [name] to friends');
+  });
+  it('only whole words, and the blanks already there stay', () => {
+    expect(unfill('Mayan art, Mayas, Maya.', values)).toBe('Mayan art, Mayas, [name].');
+    expect(unfill('Hi [name], from [city]', { name: 'name', city: 'city' })).toBe('Hi [name], from [city]');
+    expect(unfill('a [name] b name', { name: 'name' })).toBe('a [name] b [name]');
+  });
+  it('two blanks with the same words take the one the message had', () => {
+    const shop = { name: 'Bloom Studio', brand: 'Bloom Studio' };
+    expect(unfill('Hi Bloom Studio team', shop, 'Hello [brand]!')).toBe('Hi [brand] team');
+    expect(unfill('Hi Bloom Studio team', shop, 'Hello [NAME]!')).toBe('Hi [name] team');
+    expect(unfill('Hi Bloom Studio team', shop)).toBe('Hi [name] team');
+    expect(unfill('Hi Bloom Studio team', { brand: 'Bloom Studio', name: 'Bloom Studio' }, 'x')).toBe('Hi [name] team');
+  });
+  it('leaves what it knows nothing of, and words with signs in them', () => {
+    expect(unfill('See you soon!', { name: '', where: '  ' })).toBe('See you soon!');
+    expect(unfill('Hi Jo (J.R.) and J.R.', { name: 'J.R.' })).toBe('Hi Jo ([name]) and [name]');
+    expect(unfill(null, values)).toBe('');
+    expect(unfill('Hi Maya', { name: 'Maya', when: undefined })).toBe('Hi [name]');
   });
 });
