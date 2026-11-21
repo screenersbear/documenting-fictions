@@ -65,8 +65,12 @@ describe('clientBoard', () => {
 
 describe('boardClient', () => {
   it('passes a client board\'s client on', () => {
-    expect(boardClient({ client: { name: ' Dana Ortiz ', handle: 'danaortiz.studio', from: 'l1' } })).toEqual({ name: 'Dana Ortiz', handle: 'danaortiz.studio' });
+    expect(boardClient({ client: { name: ' Dana Ortiz ', handle: 'danaortiz.studio', from: 'l1' } })).toEqual({ name: 'Dana Ortiz', handle: 'danaortiz.studio', from: 'l1' });
     expect(boardClient({ client: { name: 'Ana' } })).toEqual({ name: 'Ana', handle: '' });
+  });
+  it("says which yes they came from, so The Eye can show their photo from Rounds; nothing for a client typed in", () => {
+    expect(boardClient({ client: { name: 'Dana', handle: '', from: 'l9' } }).from).toBe('l9');
+    expect(boardClient({ client: { name: 'Dana', from: '' } })).toEqual({ name: 'Dana', handle: '' });
   });
   it('is null for a board of your own', () => {
     expect(boardClient({ name: 'Rooftop' })).toBe(null);
