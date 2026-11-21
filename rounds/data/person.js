@@ -56,9 +56,17 @@ export function fromImport(rows, today, perDay, makeId) {
 // left for it is used up. A Pitch keeps its day (pitched, for HOW DID THE
 // PITCH GO?), and an answer to an earlier pitch is cleared; the log keeps
 // those as they were (was), for its undo.
+// What a Pitch changes on them (its day, and an answer to an earlier one),
+// as it was; and those put back.
+export const pitchWas = (p) => ({ ...(p.pitched ? { pitched: p.pitched } : {}), ...(p.pitch ? { pitch: p.pitch } : {}) });
+export function pitchBack(person, was = {}) {
+  const back = { ...person };
+  for (const k of ['pitched', 'pitch']) if (was[k]) back[k] = was[k]; else delete back[k];
+  return back;
+}
 export function markDone(person, today) {
   const { kind, due, step, shoot, year, then, waits } = person.next;
-  const was = kind === 'pitch' ? { ...(person.pitched ? { pitched: person.pitched } : {}), ...(person.pitch ? { pitch: person.pitch } : {}) } : {};
+  const was = kind === 'pitch' ? pitchWas(person) : {};
   const log = { personId: person.id, kind, day: today, due, step, ...(shoot ? { shoot } : {}), ...(year ? { year } : {}), ...(then ? { then } : {}), ...(waits ? { waits } : {}), ...(Object.keys(was).length ? { was } : {}) };
   const { draft, ...rest } = person;
   const after = { ...rest, lastMove: today, next: afterDone(person, today) };
@@ -89,11 +97,7 @@ export function undoDone(person, line, lines = []) {
   const lastMove = lines.filter((l) => l.personId === person.id && l.id !== line.id).map((l) => l.day).sort().pop() || '';
   const next = { ...move(line.kind, line.due || line.day, step), ...(line.shoot ? { shoot: line.shoot } : {}), ...(line.year ? { year: line.year } : {}), ...(line.then ? { then: line.then } : {}), ...(line.waits ? { waits: line.waits } : {}) };
   const back = { ...person, lastMove, next };
-  if (line.kind === 'pitch') {
-    const was = line.was || {};
-    for (const k of ['pitched', 'pitch']) if (was[k]) back[k] = was[k]; else delete back[k];
-  }
-  return back;
+  return line.kind === 'pitch' ? pitchBack(back, line.was) : back;
 }
 
 // LATER: the same move, tomorrow.

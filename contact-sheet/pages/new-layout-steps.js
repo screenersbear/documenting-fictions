@@ -1,12 +1,13 @@
-// The new layout guide's three steps, drawn (round 2, 02-new-layout-size
-// and 03-new-layout-template): Name (a field), Size (cards drawn at their
-// true shape, in three groups) and Template (cards with a two-slide spread,
-// Blank first). new-layout.js runs them.
+// The new layout guide's two steps, drawn (round 2, 02-new-layout-size
+// and 03-new-layout-template): Size (cards drawn at their true shape, in
+// three groups) and Template (cards with a two-slide spread, Blank first).
+// The Name step went on 21 Nov: a layout is named for the day it's made.
+// new-layout.js runs them.
 import { RATIOS, SLIDE_W } from '../data/formats.js';
 import { spreadSvg } from '../components/template-picture.js';
 import { esc } from '../components/util.js';
 
-export const MARKS = ['Name', 'Size', 'Template'];
+export const MARKS = ['Size', 'Template'];
 
 // The sizes as the guide shows them: a short name and what's under it.
 export const SIZE_GROUPS = [
@@ -19,11 +20,6 @@ export const SIZE_GROUPS = [
 const MORE = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="19" r="1.6" fill="currentColor"/></svg>';
 
 const head = (title, ask) => `<h1 class="page-title">${esc(title)}</h1><p class="page-ask">${esc(ask)}</p>`;
-
-export function nameStep(W) {
-  return `${head('Name', 'What is this one called?')}
-    <input class="guide-input" type="text" data-name value="${esc(W.name)}" placeholder="${esc(W.defaultName)}" aria-label="Name" autocomplete="off" enterkeyhint="next" />`;
-}
 
 // A size's shape: about the same area for each, the longer side at most 60.
 function shape(ratio) {

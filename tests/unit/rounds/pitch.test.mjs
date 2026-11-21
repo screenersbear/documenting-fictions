@@ -42,10 +42,20 @@ describe('asksAboutPitch', () => {
     expect(asksAboutPitch(dana, '')).toBe(false);
     expect(asksAboutPitch({ ...dana, next: move('pitch', T) }, '2026-11-03')).toBe(false);
   });
-  it('does not ask someone let go, or anyone but a prospect without a yes', () => {
+  it('does not ask someone let go', () => {
     expect(asksAboutPitch({ ...dana, letGo: true }, '2026-11-03')).toBe(false);
-    expect(asksAboutPitch({ ...dana, group: 'client' }, '2026-11-03')).toBe(false);
-    expect(asksAboutPitch({ ...dana, group: 'new', next: null }, '2026-11-03')).toBe(false);
+    expect(asksAboutPitch({ ...dana, group: 'client', letGo: true }, '2026-11-03')).toBe(false);
+  });
+  it('asks anyone else after a pitch too, whatever is next, until they answer (21 Nov)', () => {
+    const lindsey = { ...newPerson({ id: 'l', name: 'Lindsey Tran', group: 'client' }, T), next: move('intros', '2027-01-10'), pitched: '2026-11-03' };
+    expect(asksAboutPitch(lindsey, '2026-11-03')).toBe(true);
+    expect(asksAboutPitch({ ...lindsey, group: 'new', next: null }, '2026-11-03')).toBe(true);
+    expect(asksAboutPitch({ ...lindsey, group: 'regular', next: move('checkin', T) }, '2026-11-03')).toBe(true);
+    // No reply yet keeps asking; Not now is an answer.
+    expect(asksAboutPitch(answerPitch(lindsey, 'waiting', T), '2026-11-03')).toBe(true);
+    expect(asksAboutPitch(answerPitch(lindsey, 'no', T), '2026-11-03')).toBe(false);
+    // Never pitched: nothing to ask.
+    expect(asksAboutPitch(lindsey, '')).toBe(false);
   });
   it('keeps asking after a yes until it is thanked for', () => {
     const yes = answerPitch(dana, 'yes', T);
@@ -67,6 +77,14 @@ describe('answerPitch', () => {
   it('Not now lets them go quietly: nothing more planned', () => {
     const no = answerPitch(dana, 'no', T);
     expect(no).toMatchObject({ group: 'prospect', next: null, pitch: { answer: 'no', on: T } });
+  });
+  it('Not now leaves anyone but a prospect with their usual moves', () => {
+    const lindsey = { ...newPerson({ id: 'l', name: 'Lindsey Tran', group: 'client' }, T), next: move('intros', '2027-01-10') };
+    expect(answerPitch(lindsey, 'no', T)).toMatchObject({ group: 'client', next: move('intros', '2027-01-10'), pitch: { answer: 'no', on: T } });
+    const reg = { ...newPerson({ id: 'r', name: 'Rae', group: 'regular' }, T), next: move('checkin', T) };
+    expect(answerPitch(reg, 'no', T).next).toEqual(move('checkin', T));
+    // Changed from a yes: back to their moves before it, not to nothing.
+    expect(answerPitch(answerPitch(reg, 'yes', T), 'no', T)).toMatchObject({ group: 'regular', next: move('checkin', T) });
   });
   it('No reply yet keeps the follow ups as they were', () => {
     const wait = answerPitch(dana, 'waiting', T);

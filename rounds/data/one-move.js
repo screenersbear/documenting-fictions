@@ -5,12 +5,14 @@
 // own (Ask is Ask for intros, Other is 'other'). A move that isn't their due
 // move is an extra line ({ extra: true, keeps: true }): it leaves the due
 // move as it is but counts as keeping in touch, as a moment does
-// (data/moments.js afterMoment). Here too: what What you said (rounds/09) is
-// titled, and what deleting a move puts back.
+// (data/moments.js afterMoment). A Pitch to anyone keeps its day, as a due
+// one does, so their page asks HOW DID THE PITCH GO? (21 Nov, his yes: after
+// any pitch, not only a Prospect's). Here too: what What you said
+// (rounds/09) is titled, and what deleting a move puts back.
 import { firstName } from './fill.js';
 import { withHowNote } from './done-notes.js';
 import { afterMoment, withoutMoment, MOMENT_KIND } from './moments.js';
-import { undoDone } from './person.js';
+import { undoDone, pitchWas, pitchBack } from './person.js';
 import { OTHER } from './kinds.js';
 
 // The chips, in order, and the kinds each one is.
@@ -27,10 +29,15 @@ export const doesDue = (person, chip) => !!(person.next && !person.letGo && (CHI
 export const kindFor = (person, chip) => (doesDue(person, chip) ? person.next.kind : (CHIP_KINDS[chip] || [OTHER])[0]);
 
 // A move that isn't the due one, for the log, and the person after it
-// (it counts as keeping in touch). fields: { said, how, note }.
+// (it counts as keeping in touch). fields: { said, how, note }. A Pitch
+// keeps its day (pitched) and clears an answer to an earlier one; its line
+// keeps those as they were (was), for deleting it.
 export function extraMove(person, kind, day, fields, id, at) {
   const line = withHowNote({ id, at, personId: person.id, kind, day, extra: true, keeps: true }, fields);
-  return afterMoment(person, line);
+  if (kind !== 'pitch') return afterMoment(person, line);
+  const done = afterMoment(person, { ...line, was: pitchWas(person) });
+  const { pitch, ...after } = done.person;
+  return { person: { ...after, pitched: day }, line: done.line };
 }
 
 // What you said's title: "Checked in with Lindsey". [who] is their first
@@ -47,9 +54,13 @@ export const withWords = (line, name) => withWhat(line).replace('[who]', firstNa
 // A move deleted (lines: the whole log). An extra one takes back what it
 // moved, as a moment does. The due move done last, today, is undone: it's
 // due again (as Done today's Undo). Any other is only taken out of the log,
-// their last move going back to the latest of the rest.
+// their last move going back to the latest of the rest. An extra Pitch
+// gives back the pitch before it, unless they've been pitched again since.
 export function afterDelete(person, line, lines, today) {
-  if (line.extra) return withoutMoment(person, line, lines);
+  if (line.extra) {
+    const out = withoutMoment(person, line, lines);
+    return line.kind === 'pitch' && line.was && person.pitched === line.day ? pitchBack(out, line.was) : out;
+  }
   const mine = lines.filter((l) => l.personId === person.id && !l.extra && l.kind !== MOMENT_KIND && l.kind !== 'note');
   const last = mine.reduce((a, b) => ((b.at || 0) > (a.at || 0) ? b : a), mine[0] || line);
   if (line.day === today && last.id === line.id) return undoDone(person, line, lines);

@@ -48,9 +48,28 @@ describe('doesDue and kindFor', () => {
 describe('extraMove', () => {
   it('is a line of its own that counts as keeping in touch: their check-in moves out', () => {
     const { person, line } = O.extraMove(lindsey(), 'pitch', TODAY, { said: ' Hi! ', how: 'text', note: 'Liked it' }, 'x1', 5);
-    expect(line).toEqual({ id: 'x1', at: 5, personId: 'l', kind: 'pitch', day: TODAY, extra: true, keeps: true, said: 'Hi!', how: 'text', note: 'Liked it', wasLast: '2026-10-01', moved: { from: '2026-11-20', to: '2026-12-28' } });
+    expect(line).toEqual({ id: 'x1', at: 5, personId: 'l', kind: 'pitch', day: TODAY, extra: true, keeps: true, said: 'Hi!', how: 'text', note: 'Liked it', was: {}, wasLast: '2026-10-01', moved: { from: '2026-11-20', to: '2026-12-28' } });
     expect(person.lastMove).toBe(TODAY);
     expect(person.next.due).toBe('2026-12-28');
+  });
+  it('a Pitch to anyone keeps its day, so their page asks how it went (21 Nov)', () => {
+    const { person, line } = O.extraMove(lindsey(), 'pitch', TODAY, {}, 'x3', 7);
+    expect(person.pitched).toBe(TODAY);
+    expect(line.was).toEqual({});
+  });
+  it('a Pitch clears an answer to an earlier one, and its line keeps both as they were', () => {
+    const before = lindsey({ pitched: '2026-09-01', pitch: { answer: 'no', on: '2026-09-10' } });
+    const { person, line } = O.extraMove(before, 'pitch', TODAY, {}, 'x4', 8);
+    expect(person.pitched).toBe(TODAY);
+    expect(person).not.toHaveProperty('pitch');
+    expect(line.was).toEqual({ pitched: '2026-09-01', pitch: { answer: 'no', on: '2026-09-10' } });
+  });
+  it('any other kind leaves their pitch alone', () => {
+    const before = lindsey({ pitched: '2026-09-01', pitch: { answer: 'waiting', on: '2026-09-10' } });
+    const { person, line } = O.extraMove(before, 'hello', TODAY, {}, 'x5', 9);
+    expect(person.pitched).toBe('2026-09-01');
+    expect(person.pitch).toEqual({ answer: 'waiting', on: '2026-09-10' });
+    expect(line).not.toHaveProperty('was');
   });
   it('leaves out what was left empty', () => {
     const { line } = O.extraMove(lindsey({ next: { kind: 'pitch', due: TODAY } }), 'other', TODAY, {}, 'x2', 6);
@@ -77,6 +96,27 @@ describe('afterDelete', () => {
     expect(back.next.due).toBe('2026-11-20');
     expect(back.lastMove).toBe('2026-10-01');
     expect(O.undoesDue(person, line, [older, line], TODAY)).toBe(false);
+  });
+  it('gives back the pitch before an extra Pitch, and its answer', () => {
+    const was = lindsey({ pitched: '2026-09-01', pitch: { answer: 'no', on: '2026-09-10' } });
+    const { person, line } = O.extraMove(was, 'pitch', TODAY, {}, 'x', 10);
+    const back = O.afterDelete(person, line, [line], TODAY);
+    expect(back.pitched).toBe('2026-09-01');
+    expect(back.pitch).toEqual({ answer: 'no', on: '2026-09-10' });
+    const first = O.extraMove(lindsey(), 'pitch', TODAY, {}, 'y', 11);
+    expect(O.afterDelete(first.person, first.line, [first.line], TODAY)).not.toHaveProperty('pitched');
+  });
+  it('keeps a later pitch when an earlier extra Pitch is deleted', () => {
+    const { line } = O.extraMove(lindsey(), 'pitch', '2026-11-01', {}, 'x', 10);
+    const now = lindsey({ pitched: TODAY, pitch: { answer: 'waiting', on: TODAY } });
+    const back = O.afterDelete(now, line, [line], TODAY);
+    expect(back.pitched).toBe(TODAY);
+    expect(back.pitch).toEqual({ answer: 'waiting', on: TODAY });
+  });
+  it('leaves the pitch alone for an extra Pitch from before it kept one', () => {
+    const old = { id: 'o2', at: 3, personId: 'l', kind: 'pitch', day: TODAY, extra: true, keeps: true, wasLast: '2026-10-01' };
+    const now = lindsey({ pitched: TODAY });
+    expect(O.afterDelete(now, old, [old], TODAY).pitched).toBe(TODAY);
   });
   it('makes the due move done last today due again', () => {
     const after = lindsey({ lastMove: TODAY, next: { kind: 'checkin', due: '2026-12-28', step: 0 } });
