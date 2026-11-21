@@ -15,10 +15,10 @@ import { isKept, tickWords } from '../data/move-promise.js';
 // had: the promise this move made already (editing it), or null.
 export const onePromiseHtml = (person, today, had = null) => `
   <label class="label one-label" for="onePromise">Anything promised? (optional)</label>
-  <textarea class="move-text one-note one-prom-what" id="onePromise" rows="1" maxlength="${WHAT_MOST}" placeholder="Send the selects">${esc(had?.what || '')}</textarea>
+  <textarea class="move-text one-prom-what" id="onePromise" rows="1" maxlength="${WHAT_MOST}" placeholder="Send the selects">${esc(had?.what || '')}</textarea>
   <div class="one-prom-more" data-prom-more${had ? '' : ' hidden'}>
     ${whoChipsHtml(person, had ? had.mine !== false : true)}
-    <label class="label one-label" for="onePromiseDue">By when (optional)</label>
+    <label class="label one-prom-label" for="onePromiseDue">By when (optional)</label>
     ${byWhenHtml('onePromiseDue', today, had?.due || '')}
     ${had ? `<label class="save-msg one-prom-tick"><input type="checkbox" class="save-msg-input" data-prom-kept${isKept(had) ? ' checked' : ''} /><span class="save-msg-box" aria-hidden="true">${TICK}</span>
       <span class="save-msg-words">${esc(tickWords(had))}</span></label>` : ''}

@@ -375,8 +375,8 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
   font: 400 16px/23px var(--ui); color: var(--text); resize: none; outline: none; -webkit-appearance: none; }
 .move-text::placeholder { color: var(--off-1); }
 .one-said { min-height: 70px; box-shadow: inset 0 0 0 1.5px var(--text); }
-.one-note { min-height: 44px; padding-top: 10px; padding-bottom: 10px; box-shadow: inset 0 0 0 1px var(--line); }
-.one-note:focus { box-shadow: inset 0 0 0 1.5px var(--text); }
+.one-note, .one-prom-what { min-height: 44px; padding-top: 10px; padding-bottom: 10px; box-shadow: inset 0 0 0 1px var(--line); }
+.one-note:focus, .one-prom-what:focus { box-shadow: inset 0 0 0 1.5px var(--text); }
 .one-offer { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 36px; margin-top: 2px; font: 400 13px/18px var(--ui); color: var(--dim); }
 .one-offer[hidden] { display: none; }
 .one-offer svg { width: 14px; height: 14px; }
@@ -429,7 +429,7 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
    box, with MARK IT KEPT WITHOUT LOGGING. */
 .one-prom-more { display: flex; flex-direction: column; margin-top: 10px; }
 .one-prom-more[hidden] { display: none; }
-.one-prom-more .label { margin-top: 12px; }
+.one-prom-label { display: block; margin: 12px 0 6px; } /* BY WHEN, under the chips */
 .one-prom-tick { margin-top: 12px; }
 .one-keeps { margin-top: 8px; padding: 2px 14px 6px; border-radius: 12px; background: #EFEFEA; }
 .one-keeps .one-label { margin-top: 12px; margin-bottom: 4px; }

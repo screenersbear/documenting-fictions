@@ -64,7 +64,7 @@ test.describe('Rounds: Today', () => {
     await page.click('#view [data-write]');
     const move = await opened(page, 'Maya R.');
     await expect(move.locator('.move-handle')).toHaveText(/^Today, (Mon|Tue|Wed|Thu|Fri|Sat) \d{1,2} [A-Z][a-z]{2}$/);
-    await expect(move.locator('.one-label')).toHaveText(['What kind', 'What did you say?', 'How', 'A note for you (optional)']);
+    await expect(move.locator('.one-label')).toHaveText(['What kind', 'What did you say?', 'How', 'A note for you (optional)', 'Anything promised? (optional)']);
     await expect(move.locator('[data-kind]')).toHaveText(['Check in', 'Say thanks', 'Say hello', 'Ask', 'Pitch', 'Other']);
     await expect(pressed(move, 'data-kind')).toHaveText('Say thanks');
     await expect(move.locator('[data-how]')).toHaveText(['Text', 'Instagram', 'Email', 'In person']);
