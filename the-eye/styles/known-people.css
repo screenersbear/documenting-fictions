@@ -11,3 +11,6 @@
 .booked-words { flex: 1; min-width: 0; }
 .booked-title { display: block; font-size: 16px; line-height: 22px; color: var(--text); }
 .booked-line { display: block; font-size: 13px; line-height: 18px; color: #5C666D; }
+/* Find someone you know, at the top of either popup (user, 11-20): a plain box, its matches under it. */
+.known-find { -webkit-appearance: none; appearance: none; }
+.known-find::-webkit-search-cancel-button { -webkit-appearance: none; }
