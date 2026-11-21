@@ -4,7 +4,9 @@
 // someone who asks to shoot: the same Yes as after a pitch, connect/05;
 // always there since 20 Nov, also while the page asks how a pitch went),
 // Add a promise (pages/promise-add.js, 21 Nov), Merge with... (rounds/11), Let go, which keeps everything (or Bring
-// back), and Delete, which asks first and can't be undone (16 Nov).
+// back), and Delete, which asks first and can't be undone (16 Nov), naming
+// their open promises and saying their mood board in Ref stays (pitfalls,
+// 21 Nov: data/delete-words.js).
 import { choiceSheet, confirmSheet } from '../components/dialogs.js';
 import { removePhoto, hasOwnPhoto } from '../components/photo.js';
 import { changePhoto } from './person-photo.js';
@@ -18,6 +20,8 @@ import { openEdit } from './person-edit.js';
 import { answer } from './person-pitch.js';
 import { openMergeWith } from './merge-sheet.js';
 import { openAddPromise } from './promise-add.js';
+import { deleteWords } from '../data/delete-words.js';
+import { refLinkFor } from '../data/to-ref.js';
 
 // asks: the page already asks HOW DID THE PITCH GO? (its chips have the Yes).
 export async function openPersonMenu(p, redraw, { asks = false, pitched = '' } = {}) {
@@ -43,7 +47,8 @@ export async function openPersonMenu(p, redraw, { asks = false, pitched = '' } =
   else if (pick === 'promise') openAddPromise(p, redraw);
   else if (pick === 'merge') openMergeWith(p, (kept) => (kept.id === p.id ? redraw() : (location.hash = `#/person/${encodeURIComponent(kept.id)}`)));
   else if (pick === 'delete') {
-    const yes = await confirmSheet({ title: `Delete ${p.name}?`, message: "This removes them and everything logged with them. It can't be undone.", confirmLabel: 'Delete', danger: true });
+    const link = await refLinkFor(p).catch(() => null);
+    const yes = await confirmSheet({ title: `Delete ${p.name}?`, message: deleteWords(p, !!(link && link.toId)), confirmLabel: 'Delete', danger: true });
     if (!yes) return;
     await deletePerson(p);
     forgetPhoto(p.id);

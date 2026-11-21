@@ -1,5 +1,5 @@
 // How the notebooks connect, in Rounds (round 2, connect/05 and NOTES.md):
-// after a pitch, HOW DID THE PITCH GO? A yes makes a Client and passes them
+// after a pitch (anyone's, since 21 Nov), HOW DID THE PITCH GO? A yes makes a Client and passes them
 // to Ref ("Passed to Ref", OPEN), with Say thanks for the yes next; the
 // same Yes from the menu for someone who asks to shoot. A post shared from
 // Layouts gives the people tagged in it Your photos are up, with a slip on
@@ -72,6 +72,44 @@ test.describe('Rounds: how the notebooks connect', () => {
     await chip(page, 'Not now').click();
     await expect(page.locator('#view .person-rest')).toHaveText('Nothing planned. Rounds let this one rest.');
     await expect(chip(page, 'Not now')).toHaveAttribute('aria-checked', 'true');
+    expect(problems).toEqual([]);
+    await ctx.close();
+  });
+
+  test('anyone pitched gets asked how it went, not only a Prospect; Not now keeps their moves', async ({ browser }, testInfo) => {
+    // Starky, 21 Nov: "Yes" to asking after any pitch.
+    const { ctx, page, problems } = await openRounds(browser, testInfo);
+    await addPeople(page, 'name,group,instagram\nSam Lee,regular,samlee\n');
+    await personPage(page, 'Sam Lee');
+    await expect(page.locator('#view .pitch-label')).toHaveCount(0);
+    await expect(page.locator('#view .person-next-what')).toHaveText('Check in');
+    // A Pitch, logged from the move sheet (not the check-in that's due).
+    await page.click('#view [data-move]');
+    const sheet = await opened(page, 'Sam Lee');
+    await sheet.locator('[data-kind="pitch"]').click();
+    await expect(sheet.locator('[data-kind="pitch"]')).toHaveAttribute('aria-pressed', 'true');
+    await sheet.locator('[data-done]').click();
+    await expect(page.locator('.sheet')).toHaveCount(0);
+    await expect(page.locator('#view .pitch-label')).toHaveText('How did the pitch go?');
+    await expect(page.locator('#view .person-next-what')).toHaveText('Check in');
+    // No reply yet keeps asking.
+    await chip(page, 'No reply yet').click();
+    await expect(chip(page, 'No reply yet')).toHaveAttribute('aria-checked', 'true');
+    // Not now: the question goes, and Sam keeps the check-ins.
+    await chip(page, 'Not now').click();
+    await expect(page.locator('#view .pitch-label')).toHaveCount(0);
+    await expect(page.locator('#view .person-next-what')).toHaveText('Check in');
+    // Pitched again, then Yes: a Client, passed to Ref.
+    await page.click('#view [data-move]');
+    const again = await opened(page, 'Sam Lee');
+    await again.locator('[data-kind="pitch"]').click();
+    await again.locator('[data-done]').click();
+    await expect(page.locator('#view .pitch-label')).toHaveText('How did the pitch go?');
+    await expect(page.locator('#view .pitch-chip[aria-checked="true"]')).toHaveCount(0);
+    await chip(page, "Yes, let's shoot").click();
+    await expect(page.locator('#view .person-line')).toHaveText(`Client now. Pitched ${TODAY}.`);
+    await expect(page.locator('#view .person-next-what')).toHaveText('Say thanks for the yes');
+    expect(await links(page, { type: 'new-client' })).toHaveLength(1);
     expect(problems).toEqual([]);
     await ctx.close();
   });

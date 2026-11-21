@@ -67,6 +67,23 @@ describe('gatherInto', () => {
     const r = P.gatherInto(records, [{ name: 'June Park', instagram: 'june.other' }, { name: 'Ana', tiktok: 'a1' }, { name: 'Ana', tiktok: 'a2' }], NOW, () => `q${++n}`);
     expect(r.records.map((x) => [x.id, x.name, x.maybe])).toEqual([['p1', 'June Park', []], ['q1', 'June Park', ['p1']], ['q2', 'Ana', []], ['q3', 'Ana', ['q2']]]);
   });
+  it('keeps two Rounds people of the same name apart (Rounds has them as two), and asks', () => {
+    let n = 0;
+    const r = P.gatherInto([], [{ name: 'Alex Kim', roundsId: 'a' }, { name: 'Alex Kim', roundsId: 'b' }], NOW, () => `r${++n}`);
+    expect(r.records.map((x) => [x.id, x.sigs, x.maybe])).toEqual([['r1', ['rounds:a'], []], ['r2', ['rounds:b'], ['r1']]]);
+    // Each is found again as themselves.
+    expect(P.gatherInto(r.records, [{ name: 'Alex Kim', roundsId: 'b' }, { name: 'Alex Kim', roundsId: 'a' }], NOW, () => 'z').changed).toEqual([]);
+  });
+  it("still finds a Rounds person by name from another notebook, and the same Rounds person again by name", () => {
+    const { records } = gather([{ name: 'Alex Kim', roundsId: 'a' }]);
+    // The Eye's Alex Kim, no handle: the one Alex Kim.
+    const eye = P.gatherInto(records, [{ name: 'Alex Kim', role: 'Talent' }], NOW, () => 'z');
+    expect(eye.records).toHaveLength(1);
+    expect(eye.records[0].sigs).toEqual(['rounds:a', 'name:alex kim']);
+    // A name-only record found first, then Rounds' Alex Kim: the same one.
+    const first = gather([{ name: 'Alex Kim' }]).records;
+    expect(P.gatherInto(first, [{ name: 'Alex Kim', roundsId: 'a' }], NOW, () => 'z').records).toHaveLength(1);
+  });
   it('asks about a name shared by two people, and finds that name the same way after', () => {
     let records = gather([{ name: 'June Park', instagram: 'a' }, { name: 'June Park', instagram: 'b' }]).records;
     const r = P.gatherInto(records, [{ name: 'June Park' }], NOW, () => 'x');

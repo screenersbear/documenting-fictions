@@ -8,7 +8,6 @@ async function toTemplates(page, size) {
   await expect(page.locator('.sheet-guide')).toBeVisible();
   // A sheet ignores taps for its first 450ms (components/sheet.js).
   await page.waitForTimeout(500);
-  await page.locator('[data-next]').click();
   await page.locator(`.size-card[aria-label="${size}"]`).click();
   await page.locator('[data-next]').click();
   await expect(page.locator('.tpl-picks')).toBeVisible();

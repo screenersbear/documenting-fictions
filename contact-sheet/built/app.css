@@ -1923,12 +1923,6 @@ box-sizing: border-box; border: 0; border-bottom: 1px solid #E1E1DC; background:
 .guide-small { margin: 16px 0 0; font: 400 15px/21px var(--ui); color: var(--dim); }
 .guide-group { margin: 18px 0 8px; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
 .page-ask + .guide-group { margin-top: 0; }
-.guide-input {
-display: block; width: 100%; box-sizing: border-box; height: 52px; margin: 0; padding: 0 14px; border: 0; border-radius: 8px;
-background: #FFFFFF; box-shadow: inset 0 0 0 1px #E1E1DC; font: 400 17px/22px var(--ui); color: var(--text); outline: none; -webkit-appearance: none;
-}
-.guide-input:focus { box-shadow: inset 0 0 0 2px var(--text); }
-.guide-input::placeholder { color: #9AA3A8; }
 .size-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .size-card { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; padding: 12px 6px 10px; border: 0; border-radius: 12px; background: #FFFFFF; color: var(--text); letter-spacing: 0; text-transform: none; cursor: pointer; }
 .size-card[aria-checked="true"] { box-shadow: inset 0 0 0 2px var(--text); }

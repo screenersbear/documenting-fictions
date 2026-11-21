@@ -13,12 +13,13 @@ test('Layouts: each empty box in a grid shows its edge on the slide', async ({ b
   await expect(page.locator('.sheet-guide')).toBeVisible();
   // A sheet ignores taps for its first 450ms (components/sheet.js).
   await page.waitForTimeout(500);
-  await page.locator('[data-next]').click();
   await page.locator('.size-card[aria-label="Feed post 3:4"]').click();
   await page.locator('[data-next]').click();
   await expect(page.locator('.tpl-pick-name').first()).toHaveText('Blank');
   await page.locator('[data-next]').click();
   await expect(page).toHaveURL(/#\/edit\//);
+  // No Name step (21 Nov): it's named for the day, and renamed from its button.
+  await expect(page.locator('.ed-name-btn span')).toHaveText(/^Layout, \d{1,2} [A-Z][a-z]{2}$/);
 
   // The Grid button, then Grid of 4: four boxes with no space between them.
   await page.locator('.ed-tools .tool', { hasText: 'Grid' }).click();

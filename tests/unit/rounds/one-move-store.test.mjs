@@ -52,8 +52,9 @@ describe('saveOneMove: another move', () => {
     await db.setSetting('pick', pick());
     const spy = told();
     const done = await S.saveOneMove(p, 'pitch', FIELDS);
-    expect(strip(done.line)).toEqual({ id: done.line.id, at: NOW, personId: 'a', kind: 'pitch', day: TODAY, extra: true, keeps: true, ...FIELDS, wasLast: '2026-10-01', moved: { from: '2026-11-20', to: '2026-12-28' } });
-    expect(await saved('a')).toEqual({ ...p, lastMove: TODAY, next: { ...p.next, due: '2026-12-28' } });
+    expect(strip(done.line)).toEqual({ id: done.line.id, at: NOW, personId: 'a', kind: 'pitch', day: TODAY, extra: true, keeps: true, ...FIELDS, was: {}, wasLast: '2026-10-01', moved: { from: '2026-11-20', to: '2026-12-28' } });
+    // A Pitch keeps its day, so their page asks how it went (21 Nov).
+    expect(await saved('a')).toEqual({ ...p, lastMove: TODAY, pitched: TODAY, next: { ...p.next, due: '2026-12-28' } });
     expect((await db.listMoves()).map(strip)).toEqual([done.line]);
     expect(await db.getSetting('pick', null)).toEqual(pick());
     await vi.waitFor(() => expect(spy).toHaveBeenCalled());

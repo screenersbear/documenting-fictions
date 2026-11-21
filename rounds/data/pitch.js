@@ -1,8 +1,9 @@
-// HOW DID THE PITCH GO? (round 2, connect/05). Once a Pitch is done, a
-// prospect's page asks, with three answers:
-//   No reply yet: the follow ups carry on as they were.
-//   Not now: Rounds lets them go quietly (nothing more planned, as after
-//     the last follow up).
+// HOW DID THE PITCH GO? (round 2, connect/05). Once a Pitch is done, their
+// page asks (anyone's since 21 Nov, his yes: not only a prospect's), with
+// three answers:
+//   No reply yet: the follow ups (or their usual moves) carry on as they were.
+//   Not now: Rounds lets a prospect go quietly (nothing more planned, as
+//     after the last follow up); anyone else keeps their usual moves.
 //   Yes, let's shoot: they're a Client now, with a thank-you for the yes
 //     today, and they pass to Ref for a mood board (data/to-ref.js).
 // Someone who asks to shoot first gets the same Yes from their page's menu.
@@ -27,13 +28,16 @@ export function pitchedOn(person, lines = []) {
 // A yes still to be thanked for.
 export const saidYes = (person) => !!person.pitch && person.pitch.answer === 'yes' && !!person.next && person.next.kind === 'yes';
 
-// Does their page ask? A prospect once their pitch is done (a follow up is
-// next, or nothing is), and anyone whose yes is still to be thanked for.
+// Does their page ask? Once their pitch is done: a prospect while a follow
+// up is next, or nothing is; anyone else until they answer (No reply yet
+// keeps asking). And anyone whose yes is still to be thanked for.
 export function asksAboutPitch(person, pitched) {
   if (person.letGo) return false;
   if (person.pitch && person.pitch.answer === 'yes') return saidYes(person);
+  if (!pitched) return false;
   const next = person.next;
-  return person.group === 'prospect' && !!pitched && (!next || next.kind === 'followup');
+  if (person.group === 'prospect') return !next || next.kind === 'followup';
+  return !person.pitch || person.pitch.answer === 'waiting';
 }
 
 // The person after their answer (as they were, for one Rounds doesn't know).
@@ -43,7 +47,7 @@ export function answerPitch(person, answer, today) {
   const pitch = { answer, on: today, before };
   if (answer === 'yes') return { ...madeClient(person), groupPicked: true, next: move('yes', today), pitch };
   const was = { group: before.group, groups: before.groups || [before.group], groupPicked: before.groupPicked };
-  return { ...person, ...was, next: answer === 'no' ? null : before.next, pitch };
+  return { ...person, ...was, next: answer === 'no' && before.group === 'prospect' ? null : before.next, pitch };
 }
 
 // The line under their name after a yes: "Client now. Pitched 3 Nov."

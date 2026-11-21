@@ -1,6 +1,6 @@
 // rounds/data/person.js: a person as Rounds keeps them, and what happens to them.
 import { describe, it, expect } from 'vitest';
-import { newPerson, fromImport, markDone, undoDone, draftWaiting, markLater, applyEdit, letGo, bringBack } from '../../../rounds/data/person.js';
+import { newPerson, fromImport, markDone, undoDone, draftWaiting, markLater, applyEdit, letGo, bringBack, pitchWas, pitchBack } from '../../../rounds/data/person.js';
 import { move } from '../../../rounds/data/plan.js';
 
 const T = '2026-11-14';
@@ -100,6 +100,25 @@ describe('letGo and bringBack', () => {
   it('brings them back with their move, or their group\'s first', () => {
     expect(bringBack(letGo(maya), T)).toEqual(maya);
     expect(bringBack({ ...letGo(maya), next: null, group: 'prospect' }, T).next).toEqual(move('pitch', T));
+  });
+});
+
+describe('pitchWas and pitchBack', () => {
+  const ans = { answer: 'no', on: '2026-11-05' };
+  it('pitchWas keeps their pitch day and answer, as they are', () => {
+    expect(pitchWas({ pitched: '2026-11-03', pitch: ans })).toEqual({ pitched: '2026-11-03', pitch: ans });
+  });
+  it('pitchWas leaves out what they do not have', () => {
+    expect(pitchWas({})).toEqual({});
+    expect(pitchWas({ pitched: '2026-11-03' })).toEqual({ pitched: '2026-11-03' });
+    expect(pitchWas({ pitched: '', pitch: ans })).toEqual({ pitch: ans });
+  });
+  it('pitchBack puts both back, and takes off what was not there', () => {
+    const now = { id: 'p', pitched: '2026-11-20', pitch: { answer: 'waiting', on: '2026-11-20' } };
+    expect(pitchBack(now, { pitched: '2026-11-03', pitch: ans })).toEqual({ id: 'p', pitched: '2026-11-03', pitch: ans });
+    expect(pitchBack(now, {})).toEqual({ id: 'p' });
+    expect(pitchBack(now)).toEqual({ id: 'p' });
+    expect(now.pitched).toBe('2026-11-20'); // the one given stays as it was
   });
 });
 

@@ -16,5 +16,10 @@ test('Layouts: Notebooks and Options only in the band; NEW LAYOUT beside the lis
   expect(Math.round((await add.boundingBox()).height)).toBe(44);
   await add.click();
   await expect(page.locator('.sheet-guide')).toBeVisible();
+  // It starts on Size: Size and Template are its only steps (21 Nov, no Name step).
+  await expect(page.locator('.sheet-guide .page-title')).toHaveText('Size');
+  await expect(page.locator('.sheet-guide .guide-mark-name')).toHaveText(['Size', 'Template']);
+  await expect(page.locator('.sheet-guide [data-next]')).toHaveText('Next: Template');
+  await expect(page.locator('.sheet-guide input')).toHaveCount(0);
   await ctx.close();
 });
