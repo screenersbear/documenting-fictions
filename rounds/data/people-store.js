@@ -6,11 +6,14 @@
 // two records one (joinShared), so The Eye's shoots and Ref's boards with
 // either are with the one kept. Deleting takes everything logged with them
 // (it can't be undone), and the list forgets them unless another notebook
-// still has them.
+// still has them. A yes passed to Ref goes with them: to the one kept on a
+// merge, and taken back on a delete while Ref hasn't started its board
+// (refining round, 21 Nov).
 import { listMoves, savePerson, logMoves, dropPerson, dropMoves, getPhoto, savePhoto, dropPhoto } from './db.js';
 import { mergePeople, movedLines } from './merge-people.js';
 import { listedAs } from './people-out.js';
 import { shelfAgain } from './moves.js';
+import { handOverRef, undoHandOver, takeBackFromRef } from './to-ref.js';
 
 const D = () => window.DFData;
 const bytesOf = async (blob) => (blob ? { bytes: await blob.arrayBuffer(), type: blob.type } : null);
@@ -19,20 +22,23 @@ const linesOf = async (id) => (await listMoves()).filter((l) => l.personId === i
 export async function mergeInto(keep, other) {
   const [lines, mine, theirs] = await Promise.all([linesOf(other.id), getPhoto(keep.id).then(bytesOf), getPhoto(other.id).then(bytesOf)]);
   const photo = !!theirs && !mine && !keep.photoKey;
-  await savePerson(mergePeople(keep, other));
+  const merged = mergePeople(keep, other);
+  await savePerson(merged);
   if (lines.length) await logMoves(movedLines(lines, other.id, keep.id));
   if (photo) await savePhoto(keep.id, theirs.bytes, theirs.type);
   if (theirs) await dropPhoto(other.id);
   await dropPerson(other.id);
+  const ref = await handOverRef(other, merged).catch(() => null);
   shelfAgain();
-  return { keep, other, lines, theirs, photo };
+  return { keep, other, lines, theirs, photo, ref };
 }
-export async function undoMerge({ keep, other, lines, theirs, photo }) {
+export async function undoMerge({ keep, other, lines, theirs, photo, ref }) {
   await savePerson(other);
   await savePerson(keep);
   if (lines.length) await logMoves(lines);
   if (theirs) await savePhoto(other.id, theirs.bytes, theirs.type);
   if (photo) await dropPhoto(keep.id);
+  await undoHandOver(ref).catch(() => {});
   shelfAgain();
 }
 export async function joinShared({ keep, other }) {
@@ -46,6 +52,7 @@ export async function deletePerson(p) {
   if (ids.length) await dropMoves(ids);
   await dropPhoto(p.id);
   await dropPerson(p.id);
+  await takeBackFromRef(p).catch(() => {});
   shelfAgain();
   if (D() && D().forgetPerson) await D().forgetPerson('rounds', listedAs(p));
 }

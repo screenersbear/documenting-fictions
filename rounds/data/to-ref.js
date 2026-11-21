@@ -43,3 +43,22 @@ export async function takeBackFromRef(person) {
   const l = await refLinkFor(person);
   if (l && !l.toId) await D().dropLinks([l.id]);
 }
+
+// Two people made one (data/people-store.js): the yes passed on for the one
+// that goes is the kept one's now (their name and handle on it), unless the
+// kept one has a yes of their own; then the other's offer, if Ref hasn't
+// started its board, goes (one offer for one person). Gives what Undo needs
+// to put it back ({ link, pictures }), or null when nothing changed.
+export async function handOverRef(other, kept) {
+  const l = await refLinkFor(other);
+  if (!l) return null;
+  const pictures = await D().linkPictures(l.id).catch(() => null);
+  if (!(await refLinkFor(kept))) await D().saveLink({ ...l, fromId: kept.id, ...clientFor(kept, l.pitched) });
+  else if (!l.toId) await D().dropLinks([l.id]);
+  else return null;
+  return { link: l, pictures };
+}
+// Undo: the link as it was before the merge.
+export async function undoHandOver(was) {
+  if (was && ready()) await D().saveLink(was.link, was.pictures || undefined);
+}

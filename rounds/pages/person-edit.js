@@ -9,6 +9,7 @@ import { esc } from '../components/util.js';
 import { handleFieldHtml, wireHandles } from '../components/handle-field.js';
 import { savePerson } from '../data/db.js';
 import { applyEdit } from '../data/person.js';
+import { passEdit } from '../data/pass-edit.js';
 import { GROUPS, GROUP_KEYS, groupsOf, toggleGroup } from '../data/plan.js';
 import { dayOf } from '../data/dates.js';
 
@@ -68,6 +69,7 @@ export function openEdit(p, onSaved) {
     const f = Object.fromEntries(new FormData(form));
     const edited = applyEdit(p, { ...f, groups, lists: { email: form.emailList.checked, mail: form.mailList.checked } }, dayOf());
     await savePerson(edited);
+    passEdit(p, edited).catch(() => {}); // The Eye and Ref follow a new name or handle
     s.close();
     onSaved(edited);
   });

@@ -19,6 +19,12 @@
   hide.textContent = 'html.df-suite body > #book { display: none !important; }';
   document.head.appendChild(hide);
   var WELCOMED = 'df-suite-welcomed-' + id;
+  // Opened by another notebook at one thing (?client=, ?shoot=, ?board=...),
+  // not from the shelf: the first visit's cards wait for the next time it's
+  // opened from the shelf, so they don't cover what was handed over
+  // (refining round, 21 Nov).
+  var handedOff = false;
+  q.forEach(function (v, k) { if (k !== 'at') handedOff = true; });
   window.DF_SUITE = {
     id: id,
     options: false, // (the shelf no longer opens a notebook's Options over its shut book)
@@ -35,7 +41,8 @@
     // back to the shelf, then an offer of the notebook's own tour; turned
     // down, where the tour is kept. Each notebook draws these cards in its own
     // sheets, with these words, then calls welcomed().
-    firstVisit: read(WELCOMED) !== '1',
+    firstVisit: read(WELCOMED) !== '1' && !handedOff,
+    handedOff: handedOff,
     welcomed: function () { store(WELCOMED, '1'); this.firstVisit = false; },
     // The notebooks with the notebooks button in their band (round 2) say to
     // tap it; the others, to swipe the notebook shut.

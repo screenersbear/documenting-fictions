@@ -134,6 +134,60 @@ describe('takeBackFromRef', () => {
   });
 });
 
+describe('handOverRef and undoHandOver: two people made one', () => {
+  const kept = person({ id: 'kay', name: 'Kay Ruiz', instagram: 'kay.r' });
+  it("moves the other one's yes to the one kept, with the kept name and handle and its photo; Undo puts it back", async () => {
+    await db.savePhoto('ana', new Uint8Array([4, 5]).buffer, 'image/png');
+    const l = await R.passToRef(person(), '2026-11-02');
+    const was = await R.handOverRef(person(), kept);
+    expect(was.link).toMatchObject({ id: l.id, fromId: 'ana' });
+    expect(await linkOf(person())).toBeNull();
+    const now = await linkOf(kept);
+    expect(now).toMatchObject({ id: l.id, fromId: 'kay', name: 'Kay Ruiz', handle: 'kay.r', pitched: '2026-11-02', toId: '' });
+    expect(bytesOf(await coverOf(now))).toEqual([4, 5]);
+    await R.undoHandOver(was);
+    expect(await linkOf(kept)).toBeNull();
+    expect(await linkOf(person())).toMatchObject({ id: l.id, name: 'Ana Ruiz' });
+    expect(bytesOf(await coverOf(await linkOf(person())))).toEqual([4, 5]);
+  });
+  it("keeps the board Ref started for the other one, on the one kept", async () => {
+    const l = await R.passToRef(person(), '');
+    await D.saveLink({ ...l, toId: 'board-1' });
+    await R.handOverRef(person(), kept);
+    expect(await linkOf(kept)).toMatchObject({ toId: 'board-1', name: 'Kay Ruiz' });
+  });
+  it("drops the other one's offer when the kept one has a yes of their own; Undo brings it back with its photo", async () => {
+    await db.savePhoto('ana', new Uint8Array([6]).buffer, 'image/png');
+    const other = await R.passToRef(person(), '');
+    const mine = await R.passToRef(kept, '');
+    const was = await R.handOverRef(person(), kept);
+    expect(await linkOf(person())).toBeNull();
+    expect((await linkOf(kept)).id).toBe(mine.id);
+    await R.undoHandOver(was);
+    expect((await linkOf(person())).id).toBe(other.id);
+    expect(bytesOf(await coverOf(await linkOf(person())))).toEqual([6]);
+  });
+  it("leaves both when each has a board started, and does nothing for someone never passed on", async () => {
+    const other = await R.passToRef(person(), '');
+    await D.saveLink({ ...other, toId: 'board-1' });
+    await R.passToRef(kept, '');
+    expect(await R.handOverRef(person(), kept)).toBeNull();
+    expect(await linkOf(person())).toMatchObject({ toId: 'board-1' });
+    expect(await R.handOverRef(person({ id: 'cy' }), kept)).toBeNull();
+  });
+  it('keeps the link when its photo cannot be read, and Undo does nothing with nothing to put back or outside the suite', async () => {
+    const l = await R.passToRef(person(), '');
+    vi.spyOn(D, 'linkPictures').mockRejectedValue(new Error('blocked'));
+    const was = await R.handOverRef(person(), kept);
+    expect(was.pictures).toBeNull();
+    await R.undoHandOver(was);
+    expect(await linkOf(person())).toMatchObject({ id: l.id });
+    await expect(R.undoHandOver(null)).resolves.toBeUndefined();
+    delete window.DF_SUITE;
+    await expect(R.undoHandOver(was)).resolves.toBeUndefined();
+  });
+});
+
 describe('Rounds on its own', () => {
   it('passes nothing to Ref, finds no link, and takes nothing back', async () => {
     const l = await R.passToRef(person(), '2026-11-02');

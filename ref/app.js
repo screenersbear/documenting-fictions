@@ -27,6 +27,7 @@ import { tellPeople, tellPeopleFromNowOn } from './data/people-out.js';
 import { keepUp, pickBoardFor } from './data/sendshoot.js';
 import { attachWaiting } from './data/board-for.js';
 import { takeFinals } from './data/finals-in.js';
+import { takePeopleEdits } from './data/people-in.js';
 import { toast } from './components/toast.js';
 import './components/pull-shut.js';
 
@@ -102,6 +103,13 @@ route().then(() => {
     carryOn();
   }).catch(console.error), 1200);
   setTimeout(carryOn, 2500);
+  // Someone renamed on their person page or in Rounds: their boards follow
+  // (a board on a shoot is drawn again with its new name).
+  setTimeout(() => takePeopleEdits().then((changed) => {
+    changed.forEach((b) => keepUp(b.id));
+    const open = changed.some((b) => (location.hash || '') === `#/board/${encodeURIComponent(b.id)}`);
+    if (open || (changed.length && /^#\/(boards)?$/.test(location.hash || '#/'))) route();
+  }).catch(console.error), 1800);
   setTimeout(() => keepUp(), 4000);
   // Then boards waiting on someone go on, once that person has a shoot.
   setTimeout(() => attachWaiting().catch(console.error), 4500);
