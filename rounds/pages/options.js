@@ -1,4 +1,5 @@
-// Options, from the band's menu: how many moves a day (three, at most five),
+// Options, from the band's menu: Your messages (the starter message for each
+// kind of move, pages/messages.js; on the section bar until 21 Nov), how many moves a day (three, at most five),
 // the work days and days off, Sync (with Claude, through GitHub), Import people, Bring in
 // from Callback (ONE-TIME, Starky's own move: out again when it's done), the two
 // newsletter lists to export, Back up and Restore a backup (pages/backup.js), and How it works.
@@ -39,6 +40,7 @@ export async function openOptions(onChange, autoHandler) {
       <div class="work-days"><span class="field-label">Work days</span><div class="day-chips" data-chips="work">${chips(days, 'data-day')}</div><p class="work-days-note">Pitches and follow ups wait for these days.</p></div>
       <div class="work-days"><span class="field-label">Days off</span><div class="day-chips" data-chips="off">${chips(off, 'data-off')}</div><p class="work-days-note">Nothing comes up on these days.</p></div>
       <div class="choice-list">
+        ${row('data-messages', 'Your messages', 'The words each kind of move starts with')}
         ${syncRow}
         ${row('data-import', 'Import people', 'From a CSV file')}
         ${row('data-callback', 'Bring in from Callback', 'From a Callback backup')}
@@ -70,7 +72,8 @@ export async function openOptions(onChange, autoHandler) {
       out.textContent = String(n);
       await setSetting('perDay', n);
       onChange();
-    } else if (b.matches('[data-import]')) { s.close(); openImport(onChange); }
+    } else if (b.matches('[data-messages]')) { s.close(); location.hash = '#/messages'; }
+    else if (b.matches('[data-import]')) { s.close(); openImport(onChange); }
     else if (b.matches('[data-callback]')) { s.close(); openFromCallback(onChange); } // ONE-TIME, with its row above
     else if (b.matches('[data-sync]')) { s.close(); openSync(onChange, autoHandler); }
     else if (b.matches('[data-intro]')) { s.close(); openIntro(); }

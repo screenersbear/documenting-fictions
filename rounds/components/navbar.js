@@ -1,21 +1,22 @@
 // The section bar (DESIGN.md 9.4, as the other notebooks'): each section's
-// mark over its name, Today, People, Messages. Tap one, or swipe along the
+// mark over its name, Today, People, Promises (Messages until 21 Nov: it
+// looked like a place to send messages; they're in Options now). Tap one, or swipe along the
 // bar, and the notebook slides over to it (a plain slide, the page under the
 // finger); inside the suite, swiping right on Today shuts the notebook. A
 // swipe on a section's own page does the same as one on the bar.
 import { dragFrame, settleFrame, turnTo, isTurning, drawBeside, slideOffset } from './spread.js';
 
 // The marks (styles/section-bar.css colours them): a round inside a ring,
-// two people overlapping, a speech bubble.
+// two people overlapping, a seal with its ribbon.
 const MARKS = {
   today: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle class="mk-ring" cx="12" cy="12" r="10"/><circle class="mk-2" cx="12" cy="12" r="4"/></svg>',
   people: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle class="mk-1" cx="8.5" cy="12" r="7.5"/><circle class="mk-2" cx="15.5" cy="12" r="7.5" opacity=".85"/></svg>',
-  messages: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="mk-1" d="M2 4h20v12H9l-5 5v-5H2z"/><rect class="mk-2" x="6" y="8" width="12" height="2.5"/></svg>',
+  promises: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="mk-2" d="M7.5 13.5L5 23l7-3.2 7 3.2-2.5-9.5z"/><circle class="mk-1" cx="12" cy="9" r="8"/></svg>',
 };
 export const SECTIONS = [
   { href: '#/today', name: 'Today', key: 'today', icon: MARKS.today },
   { href: '#/people', name: 'People', key: 'people', icon: MARKS.people },
-  { href: '#/messages', name: 'Messages', key: 'messages', icon: MARKS.messages },
+  { href: '#/promises', name: 'Promises', key: 'promises', icon: MARKS.promises },
 ];
 
 const bar = document.getElementById('navbar');

@@ -3,7 +3,7 @@
 // types: text, dm, call, meeting, event, sent_work, comment, email, idea,
 // followed, gift, project_wrapped, other.
 import { describe, it, expect } from 'vitest';
-import { readCallback, personOf, touchOf, sentences, pieces, NOT_CALLBACK } from '../../../rounds/data/callback-read.js';
+import { readCallback, personOf, touchOf, loopOf, sentences, pieces, NOT_CALLBACK } from '../../../rounds/data/callback-read.js';
 
 const tp = (o) => ({ id: 't', personId: 'p', date: '2026-10-02', type: 'text', note: '', responded: 'pending', createdAt: '2026-10-02T15:00:00.000Z', ...o });
 const at = Date.parse('2026-10-02T15:00:00.000Z');
@@ -115,6 +115,22 @@ describe('personOf', () => {
   });
 });
 
+describe('loopOf', () => {
+  const loop = (o) => ({ id: 'l1', personId: 'p1', direction: 'iOwe', description: 'Send the  selects ', dueDate: '2026-11-30T00:00:00.000Z', status: 'open', createdAt: '2026-11-10T09:00:00Z', ...o });
+  it('an open loop on your side is your promise, its id kept so it comes in once', () => {
+    expect(loopOf(loop())).toEqual({ id: 'cb-l1', mine: true, what: 'Send the selects', due: '2026-11-30', made: '2026-11-10', open: true });
+  });
+  it('on their side it is theirs; no due day or made day is none', () => {
+    expect(loopOf(loop({ direction: 'theyOwe', dueDate: null, createdAt: 'x' }))).toMatchObject({ mine: false, due: '', made: '' });
+  });
+  it('closed ones, and ones with no words, stay out; long words are cut to 200', () => {
+    expect(loopOf(loop({ status: 'closed', outcome: 'kept' }))).toBe(null);
+    expect(loopOf(loop({ description: '  ' }))).toBe(null);
+    expect(loopOf(loop({ description: 5 }))).toBe(null);
+    expect(loopOf(loop({ description: 'a'.repeat(300) })).what).toHaveLength(200);
+  });
+});
+
 describe('readCallback', () => {
   const backup = (data) => ({ app: 'callback', version: 1, exportedAt: '2026-11-16T10:00:00Z', data });
   it('anything else throws, in plain words', () => {
@@ -139,6 +155,19 @@ describe('readCallback', () => {
     expect(out.people[0].row.note).toBe('Editor at Acme');
     expect(out.people[0].touches.map((t) => t.id)).toEqual(['t2', 't1']);
     expect(out.people[1].touches).toEqual([]);
+  });
+  it('open loops go on their person as promises', () => {
+    const out = readCallback(backup({
+      people: [{ id: 'p1', name: 'June Park' }, { id: 'p2', name: 'Dana' }],
+      openLoops: [
+        { id: 'a', personId: 'p1', direction: 'iOwe', description: 'Send the selects', status: 'open' },
+        { id: 'b', personId: 'p1', direction: 'theyOwe', description: 'Tag me', status: 'open' },
+        { id: 'c', personId: 'p1', direction: 'iOwe', description: 'Done one', status: 'closed' },
+        { id: 'd', personId: 'zz', direction: 'iOwe', description: 'Nobody', status: 'open' }, 'junk',
+      ],
+    }));
+    expect(out.people[0].promises.map((x) => [x.id, x.mine])).toEqual([['cb-a', true], ['cb-b', false]]);
+    expect(out.people[1].promises).toEqual([]);
   });
   it('stores that are missing or not lists are empty', () => {
     expect(readCallback(backup({}))).toEqual({ people: [], bad: 0 });

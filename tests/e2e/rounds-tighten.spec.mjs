@@ -1,5 +1,5 @@
 // Rounds, tightened (16 Nov, rounds/06-11 and NOTES.md "Tightening Rounds"):
-// REACH OUT on Today finds anyone (or adds someone new) straight into the
+// + CONNECTION on Today finds anyone (or adds someone new) straight into the
 // one sheet; a done move tapped shows WHAT YOU SAID, with EDIT, COPY AGAIN
 // and DELETE (with Undo), on Done today and from their page on the shelf;
 // People has a search, filter chips and a sort kept on this device (A to Z
@@ -48,23 +48,23 @@ const clipboard = (page) => page.evaluate(() => {
 });
 
 test.describe('Rounds: tightened', () => {
-  test('REACH OUT finds anyone by name or handle, or adds someone new, straight into the one sheet', async ({ browser }, testInfo) => {
+  test('+ CONNECTION finds anyone by name or handle, or adds someone new, straight into the one sheet', async ({ browser }, testInfo) => {
     const { ctx, page, problems } = await openRounds(browser, testInfo);
     await seed(page, [
       { id: 'l', name: 'Lindsey T.', group: 'regular', instagram: 'lindsey.t', due: 20 },
       { id: 'a', name: 'Ana Lee', due: 12, kind: 'hello' },
     ], [{ personId: 'a', kind: 'moment', what: 'photos', ago: 3 }]);
-    await expect(page.locator('#view [data-reach]')).toHaveText('Reach out');
+    await expect(page.locator('#view [data-reach]')).toHaveText('Connection');
     await page.click('#view [data-reach]');
-    const s = await opened(page, 'Reach out to');
+    const s = await opened(page, 'New connection');
     // Everyone, the last one in touch first, with their group and the last thing.
     await expect(s.locator('.pick-row-name')).toHaveText(['Ana Lee', 'Lindsey T.']);
     await expect(s.locator('.pick-row-line').first()).toHaveText(/^New · last: sent photos, /);
-    await expect(s.locator('[data-new]')).toHaveText('Add someone');
+    await expect(s.locator('[data-new-line]')).toHaveText('Add them, then write');
     const find = s.locator('[data-find]');
     await find.fill('lin');
     await expect(s.locator('.pick-row-name')).toHaveText(['Lindsey T.']);
-    await expect(s.locator('[data-new]')).toHaveText('Add "lin" as a new person');
+    await expect(s.locator('[data-new-line]')).toHaveText('Add "lin"');
     await find.fill('@lindsey.t');
     await expect(s.locator('.pick-row-name')).toHaveText(['Lindsey T.']);
     await s.locator('[data-pick]').click();
@@ -76,7 +76,7 @@ test.describe('Rounds: tightened', () => {
     await expect(doneWhat(page)).toHaveText(['Checked in with Lindsey T.']);
     // Someone new: their name carried over, then the one sheet for them.
     await page.click('#view [data-reach]');
-    const again = await opened(page, 'Reach out to');
+    const again = await opened(page, 'New connection');
     await again.locator('[data-find]').fill('Rita Gomez');
     await expect(again.locator('.pick-row')).toHaveCount(0);
     await again.locator('[data-new]').click();
@@ -136,6 +136,14 @@ test.describe('Rounds: tightened', () => {
     await undo(page).click();
     await expect(page.locator('#view .card.top')).toContainText('Maya R.');
     await expect(doneWhat(page)).toHaveText(['Said thanks to Jules M. · text']);
+    // Their name or picture on top goes to their page (20 Nov).
+    await doneRows(page).first().click();
+    s = await opened(page, 'Say thanks');
+    await expect(s.locator('.who-name')).toHaveText('Jules M.');
+    await s.locator('[data-who]').click();
+    await expect(page.locator('.sheet')).toHaveCount(0);
+    await expect(page).toHaveURL(/#\/person\//);
+    await expect(page.locator('#view .person-name')).toHaveText('Jules M.');
     expect(problems).toEqual([]);
     await ctx.close();
   });

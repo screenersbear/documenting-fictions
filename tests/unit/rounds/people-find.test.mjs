@@ -1,5 +1,5 @@
 // rounds/data/people-find.js: People's search, filters and sort, each card's
-// dim line, and Reach out to's rows (Tightening Rounds, rounds/10 and 07).
+// dim line, and + CONNECTION's rows (Tightening Rounds, rounds/10 and 07).
 import { describe, it, expect } from 'vitest';
 import * as F from '../../../rounds/data/people-find.js';
 
@@ -97,5 +97,20 @@ describe('cardLine and pickLine', () => {
   it('dueLine says when, as the person page does', () => {
     expect(F.dueLine({ kind: 'checkin', due: TODAY }, WEEK, TODAY)).toBe('Due today');
     expect(F.dueLine({ kind: 'checkin', due: '2026-11-17' }, WEEK, TODAY)).toBe('Due tomorrow');
+  });
+});
+
+describe('newLine', () => {
+  it('says what SOMEONE NEW does with nothing typed', () => {
+    expect(F.newLine('')).toBe('Add them, then write');
+    expect(F.newLine()).toBe('Add them, then write');
+    expect(F.newLine(null)).toBe('Add them, then write');
+  });
+  it('carries the name typed, trimmed', () => {
+    expect(F.newLine('Rita Gomez')).toBe('Add "Rita Gomez"');
+    expect(F.newLine('  lin ')).toBe('Add "lin"');
+  });
+  it('spaces alone count as nothing typed', () => {
+    expect(F.newLine('   ')).toBe('Add them, then write');
   });
 });

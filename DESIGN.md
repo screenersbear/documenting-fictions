@@ -335,7 +335,7 @@ then "No one, it's just for me" as a text button at the end.
   bottom, and any stickers. They replace the cover pictures made per colour, so a new colour needs no new art.
 - **Side tabs** in Figtree 600, alternating the light step colour with berry blade black text and berry blade black with paper
   text. Ref: Mood boards, Tags. The Eye: Overview, Shoots, Reflections, Archive, Stats. Layouts: All layouts, New layout.
-  Rounds: Today, People, Messages (14 Nov; Overthoughts' Entries and Reviews went with it).
+  Rounds: Today, People, Promises (Messages until 21 Nov; 14 Nov: Overthoughts' Entries and Reviews went with it).
 - **Top left:** DOCUMENTING FICTIONS, 13px 700 capitals.
 - **Arrangements:** Ring, Dominoes, Row and Spread (the books big, overlapping, lying back), changed by swiping up or down.
   Nothing shows which one is in use (the marks at the right edge went on 16 Nov, shelf round 7).
@@ -381,9 +381,13 @@ then "No one, it's just for me" as a text button at the end.
   pill chips, preset from the card or their next move); WHAT DID YOU SAY? with USE YOUR <KIND> MESSAGE under it; HOW
   (picked for you once COPY AND OPEN has gone out); A NOTE FOR YOU (OPTIONAL), "Only you see this"; COPY AND OPEN (outline)
   and DONE (mango on ink). Another kind than the due one is a move of its own that still counts as keeping in touch; the
-  card stays. Today has REACH OUT (button type) beside the count: a search
-  sheet (rows: photo, name, "Client · last: sent photos, 2 Nov", the last in touch first) and OR SOMEONE NEW, ADD "<TYPED>"
-  AS A NEW PERSON. A done move tapped (DONE TODAY on Today, SO FAR, the shelf's person page) shows WHAT YOU SAID: the kind's tag in
+  card stays. Today has + CONNECTION beside the count (since 20 Nov: a 40px pill, ink with mango; it was REACH OUT in
+  button type, too quiet to see): NEW CONNECTION, SOMEONE NEW first (big button, ink with mango, "Add them, then write" or
+  Add "<typed>"), then OR SOMEONE YOU KNOW over a search (rows: photo, name, "Client · last: sent photos, 2 Nov", the last
+  in touch first). WHAT YOU SAID and a moment opened from DONE TODAY have their photo and name on top, a way to their
+  page (20 Nov). A person's photo is cropped to 4:5 when chosen (from the menu, or a tap on it on their page), as The Eye
+  crops a talent photo; the menu always has YES, LET'S SHOOT (marked once they said yes). Pulled down past the top, the
+  band's colour goes on up. A done move tapped (DONE TODAY on Today, SO FAR, the shelf's person page) shows WHAT YOU SAID: the kind's tag in
   the header, "Said thanks to Jules", "Mon 16 Nov · by text", WHAT YOU SAID and YOUR NOTE, then DELETE (text, with Undo),
   EDIT and COPY AGAIN. People: a search box (name, handle, note), one filter chip at a time (All, Due, Regulars, Clients,
   New, Prospects), "Sort: A to Z ▾" (Next move, Recently in touch; kept on the device), one dim line per card (the last
@@ -410,6 +414,18 @@ then "No one, it's just for me" as a text button at the end.
   says it's done. A row in Options under Import people ("From a Callback backup"). The same tick list as Import people and
   Claude's leads, with "3 touchpoints" (or "In Rounds already: 2 touchpoints go on their page", and "· Let go" for someone
   Parked) small under each name. Touchpoints are moments in SO FAR; ADD A MOMENT gained EMAILED (after CALLED), for good.
+- **Promises (Live, 21 Nov, Starky: "messages on the bottom is misleading ... maybe that's a place for pending promises and
+  fulfillment?"; he picked the Promises tab):** the third section is PROMISES (a seal with its ribbon), where Messages was;
+  the starter messages are in Options as YOUR MESSAGES (a page with the short band and a back arrow, no section bar). The
+  tab: + PROMISE (the ink big button, "Something you or they said would happen"), then YOU PROMISED and THEY PROMISED
+  (list heads with their counts), only the open ones, the nearest day first, no day last. A row: their photo (40 x 50),
+  what (17px), their name and "Due Thursday", "Expected tomorrow" or "3 days late" (dim 13px; late in crimson, written out),
+  a chevron. None: one dim line saying what goes here. + PROMISE: WHO IS IT WITH? (the search over everyone), then the
+  promise's sheet: their photo and name as a way to their page, WHO PROMISED (I promised, <Name> promised), WHAT, BY WHEN
+  (OPTIONAL), ADD THE PROMISE, with Undo. A tap on a row: KEPT IT (theirs: GOT IT), ANOTHER WEEK (with its new day), PICK A
+  DAY, LET IT GO and <NAME>'S PAGE; each says so with Undo. A person's page lists their open ones under PROMISES (no photo
+  or name), and its ... menu has ADD A PROMISE. Bring in from Callback brings each open loop still open as a promise ("· 2
+  promises" under the name). The shelf's Rounds tabs read Today, People, Promises.
 - **Moments and SO FAR (Live, 16 Nov, thanks/05-06):** a person in Rounds: photo, name, handle, one line; the next move;
   ADD A MOMENT (outline button, full width); SO FAR (button type) over every row, newest first: the date in 11px small
   capitals (50px wide), the mark (a move's own mini; Rounds' ink + mango mark for moments and notes; The Eye's for shoots),

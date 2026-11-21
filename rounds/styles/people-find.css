@@ -1,7 +1,8 @@
 /* People, tightened (rounds/10): the search box (a light edge until it's
    typed in), the filter chips in a row that scrolls, SORT and its three
    orders, the quiet merge line on the segmented grey, and each card's one
-   dim line. + REACH OUT beside Today's count (rounds/06). */
+   dim line. + CONNECTION beside Today's count (rounds/06): a filled pill,
+   ink with mango, since REACH OUT in plain type was hard to see (20 Nov). */
 .people-find { height: 44px; margin-top: 8px; box-shadow: inset 0 0 0 1px var(--line); }
 .people-find:focus-within { box-shadow: inset 0 0 0 1.5px var(--text); }
 .people-find input { font-size: 16px; }
@@ -22,5 +23,7 @@
 .look-alike + [data-people] .people-grid, [data-sort-row] + [data-people] .people-grid { margin-top: 14px; }
 .person-card-line { display: block; margin-top: 2px; font: 400 12px/16px var(--ui); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .today-count-row { display: flex; align-items: center; gap: 14px; }
-.today-reach { margin: 0 0 0 -6px; }
+.today-reach { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px 0 12px; border-radius: 20px; background: var(--ink); color: var(--partner);
+  font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.today-reach svg { width: 14px; height: 14px; }
 /* Done today: tap the move to see what you said. */

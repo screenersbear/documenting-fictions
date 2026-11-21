@@ -9,7 +9,7 @@ import { WEEK } from './work-days.js';
 const FIELDS = {
   name: 'Name', group: 'Group', groups: 'Groups', instagram: 'Instagram', tiktok: 'TikTok', website: 'Website', email: 'Email',
   where: 'Where you met', note: 'Note', address: 'Address', next: 'Next move', draft: 'Draft in Gmail',
-  letGo: 'Let go', 'lists.email': 'Email newsletter', 'lists.mail': 'Mail newsletter', text: 'Message',
+  promises: 'Promises', letGo: 'Let go', 'lists.email': 'Email newsletter', 'lists.mail': 'Mail newsletter', text: 'Message',
 };
 const SETTINGS = { perDay: 'Moves a day', workDays: 'Work days', daysOff: 'Days off', offer: 'Your offer', city: 'Your city' };
 
@@ -20,6 +20,7 @@ export function valueWords(path, v, id = '') {
   if (path === 'group') return GROUPS[v] || String(v);
   if (path === 'groups' && Array.isArray(v)) return v.map((g) => GROUPS[g] || String(g)).join(', ') || 'Nothing';
   if (path === 'next' || path === 'draft') return KINDS[v.kind] ? [KINDS[v.kind].name, v.due && `due ${v.due}`].filter(Boolean).join(', ') : 'Nothing';
+  if (path === 'promises' && Array.isArray(v)) return v.filter((x) => x && x.open && x.what).map((x) => x.what).join('; ') || 'None open';
   if ((id === 'workDays' || id === 'daysOff') && Array.isArray(v)) return WEEK.filter(([d]) => v.includes(d)).map(([, n]) => n).join(', ') || 'Nothing';
   return typeof v === 'object' ? JSON.stringify(v) : String(v);
 }

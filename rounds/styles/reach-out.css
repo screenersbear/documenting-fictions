@@ -1,7 +1,9 @@
 /* Reach out to (rounds/07) and Merge with...: a search box, the people it
    finds (a 40 x 50 photo, the name in 17px, their group and the last thing
-   in dim 13px, a line under each), then OR SOMEONE NEW. People's own search
-   box is the same, lighter until it's typed in. */
+   in dim 13px, a line under each). + CONNECTION's sheet puts SOMEONE NEW
+   first (a big button, styles/big-buttons.css), then OR SOMEONE YOU KNOW
+   over the search. People's own search box is the same, lighter until it's
+   typed in. */
 .reach-sheet { min-height: min(724px, calc(var(--vv-height, 100svh) * .92)); }
 .find-box { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--text); color: var(--dim); }
 .find-box input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; font: 400 17px/22px var(--ui); color: var(--text); -webkit-appearance: none; }
@@ -13,9 +15,8 @@
 .pick-row-words { display: flex; flex-direction: column; min-width: 0; }
 .pick-row-name { font: 400 17px/22px var(--ui); }
 .pick-row-line { font: 400 13px/18px var(--ui); color: var(--dim); }
-.reach-label { margin: 16px 0 6px; }
-.reach-new { display: flex; align-items: center; gap: 10px; min-height: 44px; font: 400 16px/22px var(--ui); color: var(--text); text-align: left; }
-.reach-new svg { flex: none; }
+.reach-label { margin: 22px 0 8px; }
+.reach-new { margin-top: 2px; }
 
 /* Merge into one person (rounds/11): the two side by side, the one kept
    with an ink edge and KEEP THIS NAME ✓; what happens, then MERGE. */

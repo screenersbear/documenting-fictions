@@ -5,7 +5,7 @@
 // next person's starts like this. Not there when the message wasn't used,
 // or is back as it was; not ticked, nothing changes in Messages.
 import { test, expect } from '@playwright/test';
-import { openRounds, eyeShoot, opened, doneNoSheet, goTo } from './_rounds.mjs';
+import { openRounds, eyeShoot, opened, doneNoSheet, yourMessages } from './_rounds.mjs';
 
 const STARTER = 'Thank you for today, [name]! It was so good working with you.';
 const thanks = (page) => page.locator('#view [data-kind="thanks"] .msg-text');
@@ -39,11 +39,12 @@ test("a changed thank-you, ticked, is the next one's start, with [name] back in 
   await expect(save.locator('[data-save-msg]')).toBeChecked();
   await move.locator('[data-done]').click();
   await doneNoSheet(page);
-  // Messages has it, Jules turned back into [name].
-  await goTo(page, 'messages');
+  // Your messages has it, Jules turned back into [name].
+  await yourMessages(page);
   await expect(thanks(page)).toHaveText('Thank you so much for today, [name]! It was so good working with you.');
-  // And Maya's starts like this.
-  await goTo(page, 'today');
+  // And Maya's starts like this (back from Your messages, to Today).
+  await page.click('#view .band-short a[aria-label="Back"]');
+  await expect(page.locator('#navbar .sec-today')).toHaveAttribute('aria-current', 'page');
   await page.click('#view [data-write]');
   const next = await opened(page, 'Maya R.');
   await next.locator('[data-offer]').click();
@@ -61,7 +62,7 @@ test('changed but not ticked, Messages stays as it was', async ({ browser }, tes
   await expect(move.locator('.save-msg')).toBeVisible();
   await move.locator('[data-done]').click();
   await doneNoSheet(page);
-  await goTo(page, 'messages');
+  await yourMessages(page);
   await expect(thanks(page)).toHaveText(STARTER);
   expect(problems).toEqual([]);
   await ctx.close();

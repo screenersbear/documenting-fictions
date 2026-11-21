@@ -1,4 +1,4 @@
-// The band on top of Today, People and Messages (DESIGN.md 9.1): the title
+// The band on top of Today, People and Promises (DESIGN.md 9.1): the title
 // in mango, its two ring buttons (the notebooks button, only in the suite,
 // and Options), Rounds' mark (an arc with three stops: a mango arc, teal and
 // white stops, cut by the band's foot), and the label line: where you are,
@@ -23,12 +23,13 @@ export function bandHtml({ title, place }) {
     </header>`;
 }
 
-// The short band: back (a link), the place on the hairline, the ... menu.
+// The short band: back (a link), the place on the hairline, the ... menu
+// (none without more: an empty ring keeps the place centred).
 export function shortBandHtml({ place, back, more }) {
   return `
     <header class="band band-short">
       <a class="ring-btn" href="${back}" aria-label="Back"><span>${BACK}</span></a>
       <p class="band-line"><b>${esc(place)}</b><span class="band-rule"></span></p>
-      ${ring(more, 'data-band-more', MORE)}
+      ${more ? ring(more, 'data-band-more', MORE) : '<span class="ring-btn ring-none" aria-hidden="true"></span>'}
     </header>`;
 }

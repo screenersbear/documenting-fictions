@@ -5,7 +5,8 @@
 // text" and the first line of what you said (data/done-rows.js). Tap a
 // move for What you said (pages/what-you-said.js, rounds/09: edit, copy,
 // delete with Undo, which brings a due move's card back); a moment opens to
-// change or delete (pages/moment-sheet.js). No section when nothing's done.
+// change or delete (pages/moment-sheet.js). Both show who it was with on
+// top, a way to their page (20 Nov). No section when nothing's done.
 import { esc } from '../components/util.js';
 import { CHEV_SMALL } from '../components/icons.js';
 import { doneRow } from '../data/done-rows.js';
@@ -33,7 +34,7 @@ export function wireDoneToday(view, done, after) {
     const b = e.target.closest('[data-done]');
     if (!b) return;
     const { line, person } = done[Number(b.dataset.done)];
-    if (line.kind === MOMENT_KIND) openMoment(person, { line, after });
-    else openSaid(person, line, after);
+    if (line.kind === MOMENT_KIND) openMoment(person, { line, after, who: true });
+    else openSaid(person, line, after, { who: true });
   });
 }

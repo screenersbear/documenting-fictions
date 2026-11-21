@@ -2,7 +2,7 @@
    (group and where you met), then the next move as a row that opens it. */
 .person-top { display: flex; flex-direction: column; align-items: flex-start; margin-top: 10px; }
 .person-top .ph { width: 96px; height: 120px; }
-.person-photo-btn { border-radius: 4px; }
+.person-photo-btn { display: block; border-radius: 4px; }
 .person-name { margin: 14px 0 0; font: 300 28px/34px var(--ui); overflow-wrap: anywhere; }
 .person-handle { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; font: 400 15px/20px var(--ui); color: var(--text); }
 .person-handle svg { width: 12px; height: 12px; }
