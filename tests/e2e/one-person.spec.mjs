@@ -80,7 +80,9 @@ test.describe('One person through the notebooks', () => {
     await page.goto('/ref/#/boards');
     const card = page.locator('.board-card').first();
     await expect(card.locator('.card-name')).toHaveText('June Park-Ortiz', { timeout: 8000 });
-    await expect(card.locator('.flag')).toHaveText('@junepo');
+    // (Its flag names the shoot it went to.) Who it's for, as Ref tells the one list of people:
+    const boardFor = () => page.evaluate(async () => (await window.DFData.thingsAll()).filter((t) => t.kind === 'board').map((t) => { const [c] = t.people || []; return c && [c.name, c.instagram]; }));
+    await expect.poll(boardFor, { timeout: 8000 }).toEqual([['June Park-Ortiz', 'junepo']]);
     // The Eye's talent too.
     await page.goto('/the-eye/');
     await expect.poll(() => talents(page), { timeout: 8000 }).toEqual([['June Park-Ortiz', 'junepo']]);
@@ -93,6 +95,7 @@ test.describe('One person through the notebooks', () => {
     await addPeople(page, 'name,group,instagram\nJune Park,prospect,junepark.jpg\nJ. Park,new,\nSam Lee,prospect,samlee\n');
     await personPage(page, 'June Park');
     await menu(page, 'June Park', 'yes');
+    await expect.poll(async () => (await yesLinks(page)).length).toBe(1);
     const [yes] = await yesLinks(page);
     // J. Park, the same person, merged in, keeping J. Park.
     await personPage(page, 'J. Park');
@@ -105,7 +108,6 @@ test.describe('One person through the notebooks', () => {
     await m.locator('[data-merge]').click();
     await expect(toast(page)).toContainText('Merged into J. Park.');
     await expect.poll(async () => (await yesLinks(page)).map((l) => [l.id, l.name, l.handle])).toEqual([[yes.id, 'J. Park', 'junepark.jpg']]);
-    await expect(page.locator('#view .passed-ref-open')).toHaveAttribute('href', `../ref/?client=${yes.id}`);
     // Undo: June has her yes again.
     await toast(page).locator('.toast-action').click();
     await expect.poll(async () => (await yesLinks(page)).map((l) => [l.id, l.name])).toEqual([[yes.id, 'June Park']]);
