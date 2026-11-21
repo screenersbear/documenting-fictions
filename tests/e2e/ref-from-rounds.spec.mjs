@@ -3,7 +3,8 @@
 // board named for them, their handle kept on it; NOT NOW tucks the slip
 // away and the offer waits in Options; Rounds' OPEN (?client=) starts it or
 // opens it. A new shoot in The Eye made from that board has them as its
-// talent. With Mood boards switched off, Send to shoot isn't offered.
+// talent, with their photo from Rounds. With Mood boards switched off, Send
+// to shoot isn't offered.
 import { test, expect } from '@playwright/test';
 import { freshPage } from './_helpers.mjs';
 
@@ -119,13 +120,17 @@ test.describe('Ref: a new client from Rounds', () => {
   test("The Eye: a new shoot made from a client's board has them as its talent", async ({ browser }, testInfo) => {
     const { ctx, page } = await freshPage(browser, testInfo, '/the-eye/', { returning: true });
     await page.setViewportSize({ width: 390, height: 844 });
-    const id = await page.evaluate(() => window.DFData.saveLink({
+    // Her yes from Rounds, with her photo, which the board came from.
+    const yes = await passYes(page);
+    const id = await page.evaluate((from) => window.DFData.saveLink({
       fromApp: 'ref', fromId: 'b1', toApp: 'the-eye', toId: null, type: 'moodboard', name: 'Dana Ortiz', pageCount: 3, photoCount: 0,
-      drawnAt: new Date().toISOString(), frozenAt: null, importedAt: null, pending: true, client: { name: 'Dana Ortiz', handle: 'danaortiz.studio' },
-    }).then((l) => l.id));
+      drawnAt: new Date().toISOString(), frozenAt: null, importedAt: null, pending: true, client: { name: 'Dana Ortiz', handle: 'danaortiz.studio', from },
+    }).then((l) => l.id), yes);
     await page.goto(`/the-eye/?newShootFromBoard=${id}`);
     await expect(page.locator('#shootTitle')).toHaveValue('Dana Ortiz');
     await expect(page.locator('#talentsList')).toContainText('Dana Ortiz');
+    // With her photo from Rounds (refining round, 21 Nov).
+    await expect(page.locator('#talentsList .talent-summary-photo')).toHaveAttribute('src', /^data:image\/jpeg/);
     await expect.poll(() => page.evaluate(() => {
       const s = JSON.parse(localStorage.getItem('dailies_state_v1') || '{}');
       const shoot = (s.shoots || []).find((x) => x.title === 'Dana Ortiz');

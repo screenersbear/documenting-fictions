@@ -11,8 +11,9 @@ export const MARKS = ['Name', 'Size', 'Template'];
 // The sizes as the guide shows them: a short name and what's under it.
 export const SIZE_GROUPS = [
   ['Feed and story', [['4:5', 'Feed', '4:5'], ['3:4', 'Feed', '3:4'], ['1:1', 'Square', '1:1'], ['9:16', 'Story', '9:16']]],
-  ['Print', [['2:3', 'Photo', '4 × 6'], ['5:7', 'Photo', '5 × 7'], ['8:10', 'Print', '8 × 10'], ['a4', 'A4', '']]],
-  ['Screen', [['3:2', 'Landscape', '3:2'], ['4:3', 'Landscape', '4:3'], ['16:9', 'Wide', '16:9'], ['letter', 'Letter', 'US']]],
+  ['Print', [['2:3', 'Photo', '4 × 6'], ['3:2', 'Photo', '6 × 4'], ['5:7', 'Photo', '5 × 7'], ['8:10', 'Print', '8 × 10']]],
+  // Paper beside screens (refining round, 21 Nov): Letter had sat under Screen.
+  ['Paper and screen', [['letter', 'Letter', 'US'], ['a4', 'A4', ''], ['4:3', 'Landscape', '4:3'], ['16:9', 'Wide', '16:9']]],
 ];
 
 const MORE = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="19" r="1.6" fill="currentColor"/></svg>';
