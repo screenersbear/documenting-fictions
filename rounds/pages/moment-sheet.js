@@ -4,10 +4,12 @@
 // TOUCH (on) saying what it moves, then ADD THE MOMENT (with Undo). From a
 // person's page, Done today, and the person page on the shelf (which opens
 // Rounds here). A moment tapped in SO FAR opens the same sheet filled in:
-// SAVE, or DELETE THE MOMENT (with Undo).
+// SAVE, or DELETE THE MOMENT (with Undo). From DONE TODAY (who), their
+// photo and name on top go to their page (20 Nov).
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 import { esc } from '../components/util.js';
+import { whoHtml, wireWho } from '../components/who-row.js';
 import { momentChoices, keepWords } from '../data/moments.js';
 import { addMoment, changeMoment, dropMoment, undoMomentAdd, undoMomentDrop } from '../data/moment-store.js';
 import { dayOf, addDays, shortDay, dateOf } from '../data/dates.js';
@@ -22,15 +24,15 @@ export function whenBox(day, today) {
 }
 
 // person: as Rounds keeps them. line: a moment from the log, to change.
-// after: draws what's behind again.
-export function openMoment(person, { line = null, after = async () => {} } = {}) {
+// after: draws what's behind again. who: show who it's with, as a way to their page.
+export function openMoment(person, { line = null, after = async () => {}, who = false } = {}) {
   const today = dayOf();
   let what = line ? line.what : '';
   let day = line ? line.day : today;
   const s = openSheet({
     title: `A moment with ${firstName(person.name) || 'them'}`,
     className: 'sheet-small moment-sheet',
-    body: `
+    body: `${who ? whoHtml(person) : ''}
       <p class="label moment-label">What happened</p>
       <div class="pick-chips">${momentChoices(person.name).map(([k, label]) => `<button type="button" class="pick-chip${k === what ? ' on' : ''}" data-what="${esc(k)}" aria-pressed="${k === what}">${esc(label)}</button>`).join('')}</div>
       <label class="label moment-label" for="momentDay">When</label>
@@ -42,6 +44,7 @@ export function openMoment(person, { line = null, after = async () => {} } = {})
       ${line ? '<button type="button" class="text-btn" data-delete>Delete the moment</button>' : ''}</div>`,
   });
   const $ = (sel) => s.body.querySelector(sel);
+  wireWho(s, person);
   const draw = () => {
     $('.moment-when-words').textContent = whenBox(day, today);
     $('.moment-keeps-sub').textContent = $('#momentKeeps').checked ? keepWords(person, day, today) : 'Nothing in Rounds moves.';

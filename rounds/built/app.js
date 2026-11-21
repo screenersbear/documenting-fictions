@@ -164,7 +164,7 @@ function nowISO() {
 function esc(v) {
 	return String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const clamp$1 = /* @__PURE__ */ __name((v, lo, hi) => Math.min(hi, Math.max(lo, v)), "clamp");
 const clone = (v) => JSON.parse(JSON.stringify(v));
 function shortDate(iso) {
 	const d = new Date(iso);
@@ -2749,6 +2749,10 @@ function cardLine(p, line, week, today) {
 	return p.next && !p.letGo ? dueLine(p.next, week, today) : lastly;
 }
 const pickLine = (p, line, today) => [GROUPS[p.group] || GROUPS.new, line ? `last: ${lastWords(p, line, today)}` : ""].filter(Boolean).join(" · ");
+const newLine = (typed) => {
+	const t = String(typed ?? "").trim();
+	return t ? `Add "${t}"` : "Add them, then write";
+};
 
 // components/person-search.js
 const MOST$1 = 40;
@@ -2811,14 +2815,15 @@ function openAddPerson(onAdded, { name = "" } = {}) {
 }
 
 // pages/reach-out.js
+const bigNewHtml = () => `<button type="button" class="big-btn big-btn-ink reach-new" data-new><span class="big-btn-plus" aria-hidden="true">${PLUS}</span><span class="big-btn-words"><b>Someone new</b><span data-new-line>${esc(newLine(""))}</span></span></button>`;
 async function openReachOut(redraw) {
 	const [people, lines] = await Promise.all([listPeople(), listMoves()]);
 	const s = openSheet({
-		title: "Reach out to",
+		title: "New connection",
 		className: "reach-sheet",
-		body: `${searchBoxHtml("Search by name or handle")}<div class="pick-list" data-found></div>
-      <p class="label reach-label">Or someone new</p>
-      <button type="button" class="reach-new" data-new>${PLUS}<span>Add someone</span></button>`
+		body: `${bigNewHtml()}
+      <p class="label reach-label">Or someone you know</p>
+      ${searchBoxHtml("Search by name or handle")}<div class="pick-list" data-found></div>`
 	});
 	let typed = "";
 	wireSearch(s.body, people, lines, {
@@ -2828,7 +2833,7 @@ async function openReachOut(redraw) {
 		},
 		onType: (t) => {
 			typed = t;
-			s.body.querySelector("[data-new] span").textContent = t ? `Add "${t}" as a new person` : "Add someone";
+			s.body.querySelector("[data-new-line]").textContent = newLine(t);
 		}
 	});
 	s.body.querySelector("[data-new]").addEventListener("click", () => {
@@ -2860,6 +2865,16 @@ function doneRow({ line, person }) {
 		said: moment ? "" : firstLine(line.said),
 		note: firstLine(line.note)
 	};
+}
+
+// components/who-row.js
+const whoHtml = (person) => `<a class="who-row" href="#/person/${encodeURIComponent(person.id)}" data-who>${photoHtml(person, "small")}
+  <span class="who-words"><span class="who-name">${esc(person.name)}</span><span class="who-open">Their page ${CHEV_SMALL}</span></span></a>`;
+function wireWho(s, person) {
+	const a = s.body.querySelector("[data-who]");
+	if (!a) return;
+	fillPhotos(a, [person]);
+	a.addEventListener("click", () => s.close());
 }
 
 // data/moment-store.js
@@ -2917,14 +2932,14 @@ function whenBox(day, today) {
 	if (day === today) return `Today, ${words}`;
 	return day === addDays(today, -1) ? `Yesterday, ${words}` : words;
 }
-function openMoment(person, { line = null, after = async () => {} } = {}) {
+function openMoment(person, { line = null, after = async () => {}, who = false } = {}) {
 	const today = dayOf();
 	let what = line ? line.what : "";
 	let day = line ? line.day : today;
 	const s = openSheet({
 		title: `A moment with ${firstName(person.name) || "them"}`,
 		className: "sheet-small moment-sheet",
-		body: `
+		body: `${who ? whoHtml(person) : ""}
       <p class="label moment-label">What happened</p>
       <div class="pick-chips">${momentChoices(person.name).map(([k, label]) => `<button type="button" class="pick-chip${k === what ? " on" : ""}" data-what="${esc(k)}" aria-pressed="${k === what}">${esc(label)}</button>`).join("")}</div>
       <label class="label moment-label" for="momentDay">When</label>
@@ -2936,6 +2951,7 @@ function openMoment(person, { line = null, after = async () => {} } = {}) {
       ${line ? "<button type=\"button\" class=\"text-btn\" data-delete>Delete the moment</button>" : ""}</div>`
 	});
 	const $ = (sel) => s.body.querySelector(sel);
+	wireWho(s, person);
 	const draw = () => {
 		$(".moment-when-words").textContent = whenBox(day, today);
 		$(".moment-keeps-sub").textContent = $("#momentKeeps").checked ? keepWords(person, day, today) : "Nothing in Rounds moves.";
@@ -2991,11 +3007,11 @@ function openMoment(person, { line = null, after = async () => {} } = {}) {
 }
 
 // pages/what-you-said.js
-function openSaid(person, line, after) {
+function openSaid(person, line, after, { who = false } = {}) {
 	const s = openSheet({
 		title: withWords(line, person.name),
 		className: "sheet-small said-sheet",
-		body: `
+		body: `${who ? whoHtml(person) : ""}
       <p class="said-title">${esc(withWords(line, person.name))}</p>
       <p class="said-when">${esc([longDay(line.day), howWords(line)].filter(Boolean).join(" · "))}</p>
       ${line.said ? `<p class="label said-label">What you said</p><p class="said-words">${esc(line.said)}</p>` : ""}
@@ -3007,6 +3023,7 @@ function openSaid(person, line, after) {
       </div>`
 	});
 	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(moveLook(line), moveName(line));
+	wireWho(s, person);
 	s.body.addEventListener("click", async (e) => {
 		const b = e.target.closest("button");
 		if (!b) return;
@@ -3126,9 +3143,10 @@ function wireDoneToday(view, done, after) {
 		const { line, person } = done[Number(b.dataset.done)];
 		if (line.kind === "moment") openMoment(person, {
 			line,
-			after
+			after,
+			who: true
 		});
-		else openSaid(person, line, after);
+		else openSaid(person, line, after, { who: true });
 	});
 }
 
@@ -3911,7 +3929,7 @@ function wirePostSlips(root, open) {
 }
 
 // pages/today.js
-const head = (count, arc) => `<div class="today-head"><span class="today-count-row">${count ? `<span class="today-count">${count}</span>` : ""}<button type="button" class="list-act today-reach" data-reach>${PLUS}Reach out</button></span>${arc}</div>`;
+const head = (count, arc) => `<div class="today-head"><span class="today-count-row">${count ? `<span class="today-count">${count}</span>` : ""}<button type="button" class="today-reach" data-reach>${PLUS}Connection</button></span>${arc}</div>`;
 let flip = fresh();
 function stackHtml(pick, left, today, at) {
 	const n = pick.ids.length;
@@ -5190,6 +5208,227 @@ const clientFor = (person, pitched) => ({
 	pitched: pitched || ""
 });
 
+// data/crop.js
+const RATIO = 4 / 5;
+const MOST_ZOOM = 3;
+const OUT = {
+	w: 720,
+	h: 900
+};
+function coverScale(img, box) {
+	if (!(img.w > 0 && img.h > 0 && box.w > 0 && box.h > 0)) return 1;
+	return Math.max(box.w / img.w, box.h / img.h);
+}
+const zoomIn = (z) => Math.min(3, Math.max(1, Number.isFinite(z) ? z : 1));
+function clamp(view, img, box) {
+	const zoom = zoomIn(view.zoom);
+	const s = coverScale(img, box) * zoom;
+	const minX = Math.min(0, box.w - img.w * s);
+	const minY = Math.min(0, box.h - img.h * s);
+	const x = Number.isFinite(view.x) ? view.x : 0;
+	const y = Number.isFinite(view.y) ? view.y : 0;
+	return {
+		zoom,
+		x: Math.min(0, Math.max(minX, x)),
+		y: Math.min(0, Math.max(minY, y))
+	};
+}
+function centred(img, box) {
+	const s = coverScale(img, box);
+	return clamp({
+		zoom: 1,
+		x: (box.w - img.w * s) / 2,
+		y: (box.h - img.h * s) / 2
+	}, img, box);
+}
+const moveBy = (view, dx, dy, img, box) => clamp({
+	...view,
+	x: view.x + dx,
+	y: view.y + dy
+}, img, box);
+function zoomAt(view, zoom, px, py, img, box) {
+	const base = coverScale(img, box);
+	const now = base * zoomIn(view.zoom);
+	const next = base * zoomIn(zoom);
+	const ix = (px - view.x) / now;
+	const iy = (py - view.y) / now;
+	return clamp({
+		zoom: zoomIn(zoom),
+		x: px - ix * next,
+		y: py - iy * next
+	}, img, box);
+}
+function sourceRect(view, img, box) {
+	const v = clamp(view, img, box);
+	const s = coverScale(img, box) * v.zoom;
+	return {
+		sx: 0 - v.x / s,
+		sy: 0 - v.y / s,
+		sw: box.w / s,
+		sh: box.h / s
+	};
+}
+function outSize(rect) {
+	if (!(rect.sw > 0 && rect.sh > 0)) return {
+		w: 1,
+		h: 1
+	};
+	const w = Math.max(1, Math.round(Math.min(OUT.w, rect.sw)));
+	return {
+		w,
+		h: Math.max(1, Math.round(w * rect.sh / rect.sw))
+	};
+}
+
+// components/crop-sheet.js
+function openCrop(file) {
+	return new Promise((done) => {
+		const url = URL.createObjectURL(file);
+		let result = null;
+		const s = openSheet({
+			title: "Crop the photo",
+			className: "sheet-small crop-sheet",
+			body: `<div class="crop-box" data-crop-box><img alt="" draggable="false" data-crop-img /></div>
+        <p class="crop-hint">Drag to move it, pinch or slide to zoom.</p>
+        <label class="crop-zoom"><span aria-hidden="true">&minus;</span><input type="range" min="1" max="${3}" step="0.01" value="1" aria-label="Zoom" data-crop-zoom /><span aria-hidden="true">+</span></label>
+        <button type="button" class="btn primary crop-use" data-crop-use disabled>Use this photo</button>`,
+			onClose: () => {
+				URL.revokeObjectURL(url);
+				done(result);
+			}
+		});
+		const box = s.body.querySelector("[data-crop-box]");
+		const imgEl = s.body.querySelector("[data-crop-img]");
+		const slider = s.body.querySelector("[data-crop-zoom]");
+		const use = s.body.querySelector("[data-crop-use]");
+		let img = {
+			w: 0,
+			h: 0
+		};
+		let size = {
+			w: 0,
+			h: 0
+		};
+		let view = {
+			zoom: 1,
+			x: 0,
+			y: 0
+		};
+		let photo = null;
+		const draw = () => {
+			const k = coverScale(img, size) * view.zoom;
+			imgEl.style.width = `${img.w * k}px`;
+			imgEl.style.height = `${img.h * k}px`;
+			imgEl.style.transform = `translate(${view.x}px, ${view.y}px)`;
+			slider.value = String(view.zoom);
+		};
+		loadImage(url).then((el) => {
+			if (!s.overlay.isConnected) return;
+			photo = el;
+			img = {
+				w: el.naturalWidth,
+				h: el.naturalHeight
+			};
+			const r = box.getBoundingClientRect();
+			size = {
+				w: r.width,
+				h: r.height
+			};
+			view = centred(img, size);
+			imgEl.src = url;
+			draw();
+			use.disabled = false;
+		}).catch(() => {
+			result = false;
+			s.close();
+		});
+		slider.addEventListener("input", () => {
+			view = zoomAt(view, Number(slider.value), size.w / 2, size.h / 2, img, size);
+			draw();
+		});
+		const fingers = new Map();
+		let last = null;
+		let apart = 0;
+		const spread = () => {
+			const [a, b] = [...fingers.values()];
+			return Math.hypot(b.x - a.x, b.y - a.y);
+		};
+		box.addEventListener("pointerdown", (e) => {
+			fingers.set(e.pointerId, {
+				x: e.clientX,
+				y: e.clientY
+			});
+			try {
+				box.setPointerCapture(e.pointerId);
+			} catch {}
+			last = {
+				x: e.clientX,
+				y: e.clientY
+			};
+			apart = fingers.size === 2 ? spread() : 0;
+		});
+		box.addEventListener("pointermove", (e) => {
+			if (!fingers.has(e.pointerId) || !photo) return;
+			fingers.set(e.pointerId, {
+				x: e.clientX,
+				y: e.clientY
+			});
+			if (fingers.size >= 2) {
+				const now = spread();
+				const [a, b] = [...fingers.values()];
+				const r = box.getBoundingClientRect();
+				if (apart > 0) view = zoomAt(view, view.zoom * (now / apart), (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top, img, size);
+				apart = now;
+			} else if (last) {
+				view = moveBy(view, e.clientX - last.x, e.clientY - last.y, img, size);
+				last = {
+					x: e.clientX,
+					y: e.clientY
+				};
+			}
+			draw();
+		});
+		const up = (e) => {
+			fingers.delete(e.pointerId);
+			const [left] = [...fingers.values()];
+			last = left || null;
+			apart = 0;
+		};
+		box.addEventListener("pointerup", up);
+		box.addEventListener("pointercancel", up);
+		use.addEventListener("click", async () => {
+			if (!photo) return;
+			const r = sourceRect(view, img, size);
+			const out = outSize(r);
+			const c = document.createElement("canvas");
+			c.width = out.w;
+			c.height = out.h;
+			c.getContext("2d").drawImage(photo, r.sx, r.sy, r.sw, r.sh, 0, 0, out.w, out.h);
+			result = await canvasToBlob(c, "image/jpeg", .86);
+			s.close();
+		});
+	});
+}
+
+// pages/person-photo.js
+async function changePhoto(p, redraw) {
+	const file = await pickFile("image/*");
+	if (!file) return;
+	const cropped = await openCrop(file);
+	if (cropped === false) {
+		toast("That photo couldn't be opened.");
+		return;
+	}
+	if (!cropped) return;
+	try {
+		await keepPhoto(p, cropped);
+	} catch {
+		toast("That photo couldn't be opened.");
+		return;
+	}
+	redraw();
+}
+
 // pages/person-edit.js
 const field = (label, name, value, more = "") => `<label class="field"><span class="field-label">${label}</span><input type="text" name="${name}" value="${esc(value)}" autocomplete="off" ${more} /></label>`;
 const HANDLE = "autocapitalize=\"off\" spellcheck=\"false\" placeholder=\"@handle\"";
@@ -5341,6 +5580,7 @@ function wirePitch(view, person, pitched, redraw) {
 // pages/person-menu.js
 async function openPersonMenu(p, redraw, { asks = false, pitched = "" } = {}) {
 	const own = await hasOwnPhoto(p);
+	const said = !!p.pitch && p.pitch.answer === "yes";
 	const pick = await choiceSheet({
 		title: p.name,
 		options: [
@@ -5356,9 +5596,11 @@ async function openPersonMenu(p, redraw, { asks = false, pitched = "" } = {}) {
 				key: "unphoto",
 				label: "Remove the photo"
 			}] : [],
-			...asks || p.letGo ? [] : [{
+			...p.letGo ? [] : [{
 				key: "yes",
-				label: "Yes, let's shoot"
+				label: "Yes, let's shoot",
+				current: said,
+				detail: said ? "They said yes." : ""
 			}],
 			{
 				key: "merge",
@@ -5380,17 +5622,8 @@ async function openPersonMenu(p, redraw, { asks = false, pitched = "" } = {}) {
 		]
 	});
 	if (pick === "edit") openEdit(p, redraw);
-	else if (pick === "photo") {
-		const file = await pickFile("image/*");
-		if (!file) return;
-		try {
-			await keepPhoto(p, file);
-		} catch {
-			toast("That photo couldn't be opened.");
-			return;
-		}
-		redraw();
-	} else if (pick === "unphoto") {
+	else if (pick === "photo") await changePhoto(p, redraw);
+	else if (pick === "unphoto") {
 		await removePhoto(p);
 		redraw();
 	} else if (pick === "yes") {
@@ -5455,7 +5688,7 @@ async function personScreen(view, id) {
 		more: "More"
 	})}
     <div class="person-top">
-      ${photoHtml(p)}
+      <button type="button" class="person-photo-btn" data-photo aria-label="Change the photo">${photoHtml(p)}</button>
       <h1 class="person-name">${esc(p.name)}</h1>
       ${handle ? url ? `<a class="person-handle" href="${esc(url)}" target="_blank" rel="noopener" data-test-skip>${esc(handle)} ${CHEV_SMALL}</a>` : `<span class="person-handle">${esc(handle)}</span>` : ""}
       <!-- The handle opens their profile on Instagram (or TikTok, or their website): the button clicker leaves it alone. -->
@@ -5477,6 +5710,7 @@ async function personScreen(view, id) {
 		asks,
 		pitched
 	}));
+	view.querySelector("[data-photo]").addEventListener("click", () => changePhoto(p, redraw));
 	wirePitch(view, p, pitched, redraw);
 	view.querySelector("[data-moment]").addEventListener("click", () => openMoment(p, { after: redraw }));
 	wireSoFar(view, p, rows, lines, redraw);

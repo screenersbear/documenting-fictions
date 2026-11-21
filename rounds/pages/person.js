@@ -1,4 +1,4 @@
-// A person (04-person): photo, name, handle (opens their profile), one line
+// A person (04-person): photo (a tap changes it, cropped first: 20 Nov), name, handle (opens their profile), one line
 // (their group, and where you met or why they're a fit), then their next
 // move, which opens the one sheet (pages/one-sheet.js). After a pitch, HOW DID THE PITCH GO? comes between
 // (pages/person-pitch.js). Under it ADD A MOMENT (pages/moment-sheet.js)
@@ -24,6 +24,7 @@ import { whenDue } from '../data/work-days.js';
 import { shelfPageOf } from '../data/people-out.js';
 import { firstName } from '../data/fill.js';
 import { openPersonMenu } from './person-menu.js';
+import { changePhoto } from './person-photo.js';
 import { pitchHtml, wirePitch } from './person-pitch.js';
 import { openMoment } from './moment-sheet.js';
 import { soFarHtml, wireSoFar } from './so-far.js';
@@ -51,7 +52,7 @@ export async function personScreen(view, id) {
   view.innerHTML = `<div class="screen"><div class="scroll">
     ${shortBandHtml({ place: 'People', back: '#/people', more: 'More' })}
     <div class="person-top">
-      ${photoHtml(p)}
+      <button type="button" class="person-photo-btn" data-photo aria-label="Change the photo">${photoHtml(p)}</button>
       <h1 class="person-name">${esc(p.name)}</h1>
       ${handle ? (url ? `<a class="person-handle" href="${esc(url)}" target="_blank" rel="noopener" data-test-skip>${esc(handle)} ${CHEV_SMALL}</a>` : `<span class="person-handle">${esc(handle)}</span>`) : ''}
       <!-- The handle opens their profile on Instagram (or TikTok, or their website): the button clicker leaves it alone. -->
@@ -71,6 +72,7 @@ export async function personScreen(view, id) {
   });
   const redraw = () => personScreen(view, id).then(() => view.querySelector('.screen')?.classList.add('still'));
   view.querySelector('[data-band-more]').addEventListener('click', () => openPersonMenu(p, redraw, { asks, pitched }));
+  view.querySelector('[data-photo]').addEventListener('click', () => changePhoto(p, redraw));
   wirePitch(view, p, pitched, redraw);
   view.querySelector('[data-moment]').addEventListener('click', () => openMoment(p, { after: redraw }));
   wireSoFar(view, p, rows, lines, redraw);

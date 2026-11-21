@@ -43,9 +43,11 @@ built/app.css
   styles/one-sheet.css
   styles/done-note.css
   styles/people.css
+  styles/big-buttons.css
   styles/reach-out.css
   styles/people-find.css
   styles/person.css
+  styles/crop.css
   styles/so-far.css
   styles/messages.css
   styles/options.css

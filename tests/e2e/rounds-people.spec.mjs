@@ -123,7 +123,7 @@ test.describe('Rounds: People', () => {
     await ctx.close();
   });
 
-  test('a photo chosen shows in place of the initials, on their page, in People and on Today', async ({ browser }, testInfo) => {
+  test('a photo chosen (and cropped) shows in place of the initials, on their page, in People and on Today', async ({ browser }, testInfo) => {
     const { ctx, page, problems } = await openRounds(browser, testInfo);
     await addDana(page);
     await goTo(page, 'people');
@@ -137,9 +137,21 @@ test.describe('Rounds: People', () => {
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), m.locator('.choice', { hasText: 'Choose a photo' }).click()]);
     await chooser.setFiles({ name: 'dana.png', mimeType: 'image/png', buffer: png });
+    // Cropped first (20 Nov), as The Eye crops a talent photo.
+    const crop = await opened(page, 'Crop the photo');
+    await expect(crop.locator('[data-crop-use]')).toBeEnabled();
+    await crop.locator('[data-crop-use]').click();
+    await expect(crop).toHaveCount(0);
     const photo = page.locator('#view .ph').first();
     await expect(photo.locator('img')).toBeVisible();
     await expect(photo.locator('.ph-initials')).toBeHidden();
+    // A tap on the photo changes it too; closing the crop keeps the one there.
+    const [again] = await Promise.all([page.waitForEvent('filechooser'), page.click('#view [data-photo]')]);
+    await again.setFiles({ name: 'dana2.png', mimeType: 'image/png', buffer: png });
+    const crop2 = await opened(page, 'Crop the photo');
+    await crop2.locator('[data-close]').click();
+    await expect(page.locator('.sheet')).toHaveCount(0);
+    await expect(photo.locator('img')).toBeVisible();
     await page.click('#view .band-short a[aria-label="Back"]');
     await expect(card.locator('img')).toBeVisible();
     await expect(card.locator('.ph-initials')).toBeHidden();

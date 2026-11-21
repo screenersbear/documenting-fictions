@@ -145,6 +145,9 @@ svg { display: block; }
   position: relative; flex: none; display: flex; align-items: flex-start; gap: 8px; height: 92px; margin: 0 -16px 53px; padding: 8px 8px 0 16px;
   background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal; color: var(--partner);
 }
+/* Pulled down past the top, the band's colour goes on up, not the paper (20 Nov). */
+.band::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 100vh; pointer-events: none;
+  background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal; }
 .band::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 41.4px; pointer-events: none;
   background: linear-gradient(var(--step1) 0 14px, var(--step2) 14px 25.2px, var(--step3) 25.2px 34.2px, var(--step4) 34.2px); }
 .band-title { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -412,6 +415,14 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .save-msg-input:focus-visible + .save-msg-box { outline: 2px solid var(--text); outline-offset: 2px; }
 .save-msg-words { flex: 1; min-width: 0; font: 400 14px/19px var(--ui); }
 .save-msg-sub { display: block; font: 400 12px/16px var(--ui); color: var(--dim); }
+/* Who it's with, on WHAT YOU SAID and a moment opened from DONE TODAY (20
+   Nov): their photo and name, a way to their page. */
+.who-row { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 0 0 12px; border-bottom: 1px solid var(--line); color: var(--text); }
+.who-row .ph { width: 40px; height: 50px; flex: none; }
+.who-words { display: flex; flex-direction: column; min-width: 0; }
+.who-name { font: 400 17px/22px var(--ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who-open { display: inline-flex; align-items: center; gap: 4px; font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.who-open svg { width: 10px; height: 10px; }
 
 /* ---- styles/done-note.css ---- */
 /* Right after a move is done (thanks/02): HOW and A NOTE (OPTIONAL), each
@@ -441,11 +452,27 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .people-gone { margin-top: 32px; }
 .people-gone .people-grid { opacity: .6; }
 
+/* ---- styles/big-buttons.css ---- */
+/* The big buttons (DESIGN.md 9.4, Big button, Live 17 Nov), as The Eye has
+   them: full width, 56px, radius 10, a 28px disc with a plus, the action in
+   capitals over a short line. Ink with mango here (Rounds' pair): SOMEONE
+   NEW on + CONNECTION's sheet. */
+.big-btn { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 0 16px; border-radius: 10px; text-align: left; }
+.big-btn-plus { flex: none; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; }
+.big-btn-plus svg { width: 16px; height: 16px; stroke-width: 2.5; }
+.big-btn-words { flex: 1; min-width: 0; }
+.big-btn-words b { display: block; font: 700 14px/18px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.big-btn-words span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 13px/17px var(--ui); opacity: .8; }
+.big-btn-ink { background: var(--ink); color: var(--partner); }
+.big-btn-ink .big-btn-plus { background: var(--partner); color: var(--ink); }
+
 /* ---- styles/reach-out.css ---- */
 /* Reach out to (rounds/07) and Merge with...: a search box, the people it
    finds (a 40 x 50 photo, the name in 17px, their group and the last thing
-   in dim 13px, a line under each), then OR SOMEONE NEW. People's own search
-   box is the same, lighter until it's typed in. */
+   in dim 13px, a line under each). + CONNECTION's sheet puts SOMEONE NEW
+   first (a big button, styles/big-buttons.css), then OR SOMEONE YOU KNOW
+   over the search. People's own search box is the same, lighter until it's
+   typed in. */
 .reach-sheet { min-height: min(724px, calc(var(--vv-height, 100svh) * .92)); }
 .find-box { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--text); color: var(--dim); }
 .find-box input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; font: 400 17px/22px var(--ui); color: var(--text); -webkit-appearance: none; }
@@ -457,9 +484,8 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .pick-row-words { display: flex; flex-direction: column; min-width: 0; }
 .pick-row-name { font: 400 17px/22px var(--ui); }
 .pick-row-line { font: 400 13px/18px var(--ui); color: var(--dim); }
-.reach-label { margin: 16px 0 6px; }
-.reach-new { display: flex; align-items: center; gap: 10px; min-height: 44px; font: 400 16px/22px var(--ui); color: var(--text); text-align: left; }
-.reach-new svg { flex: none; }
+.reach-label { margin: 22px 0 8px; }
+.reach-new { margin-top: 2px; }
 
 /* Merge into one person (rounds/11): the two side by side, the one kept
    with an ink edge and KEEP THIS NAME ✓; what happens, then MERGE. */
@@ -480,7 +506,8 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 /* People, tightened (rounds/10): the search box (a light edge until it's
    typed in), the filter chips in a row that scrolls, SORT and its three
    orders, the quiet merge line on the segmented grey, and each card's one
-   dim line. + REACH OUT beside Today's count (rounds/06). */
+   dim line. + CONNECTION beside Today's count (rounds/06): a filled pill,
+   ink with mango, since REACH OUT in plain type was hard to see (20 Nov). */
 .people-find { height: 44px; margin-top: 8px; box-shadow: inset 0 0 0 1px var(--line); }
 .people-find:focus-within { box-shadow: inset 0 0 0 1.5px var(--text); }
 .people-find input { font-size: 16px; }
@@ -501,7 +528,9 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .look-alike + [data-people] .people-grid, [data-sort-row] + [data-people] .people-grid { margin-top: 14px; }
 .person-card-line { display: block; margin-top: 2px; font: 400 12px/16px var(--ui); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .today-count-row { display: flex; align-items: center; gap: 14px; }
-.today-reach { margin: 0 0 0 -6px; }
+.today-reach { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px 0 12px; border-radius: 20px; background: var(--ink); color: var(--partner);
+  font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.today-reach svg { width: 14px; height: 14px; }
 /* Done today: tap the move to see what you said. */
 
 /* ---- styles/person.css ---- */
@@ -509,7 +538,7 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
    (group and where you met), then the next move as a row that opens it. */
 .person-top { display: flex; flex-direction: column; align-items: flex-start; margin-top: 10px; }
 .person-top .ph { width: 96px; height: 120px; }
-.person-photo-btn { border-radius: 4px; }
+.person-photo-btn { display: block; border-radius: 4px; }
 .person-name { margin: 14px 0 0; font: 300 28px/34px var(--ui); overflow-wrap: anywhere; }
 .person-handle { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; font: 400 15px/20px var(--ui); color: var(--text); }
 .person-handle svg { width: 12px; height: 12px; }
@@ -522,6 +551,17 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 /* EVERYTHING WITH <NAME>, IN ALL FOUR: their page on the shelf (suite only), at the bottom. */
 .person-everything { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: 14px 0 24px; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); text-decoration: none; }
 .person-everything svg { width: 12px; height: 12px; }
+
+/* ---- styles/crop.css ---- */
+/* Crop the photo (20 Nov): the 4:5 box the photo covers (it's never tinted
+   or covered, DESIGN.md 4.4), a dim hint, the zoom slider, then USE THIS
+   PHOTO, mango on ink. */
+.crop-box { position: relative; width: min(100%, 280px); aspect-ratio: 4 / 5; margin: 4px auto 0; overflow: hidden; border-radius: 6px; background: var(--off-2); touch-action: none; cursor: grab; }
+.crop-box img { position: absolute; left: 0; top: 0; max-width: none; user-select: none; -webkit-user-drag: none; }
+.crop-hint { margin: 10px 0 0; text-align: center; font: 400 13px/18px var(--ui); color: var(--dim); }
+.crop-zoom { display: flex; align-items: center; gap: 12px; margin: 10px 0 0; font: 400 20px/24px var(--ui); color: var(--dim); }
+.crop-zoom input { flex: 1; accent-color: var(--ink); }
+.crop-use.btn { width: 100%; height: 50px; margin-top: 18px; color: var(--partner); }
 
 /* ---- styles/so-far.css ---- */
 /* ADD A MOMENT and SO FAR on a person (round 2, thanks/06): the outline
@@ -547,6 +587,7 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .moment-sheet .sheet-header h2 { font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
 .moment-sheet .moment-label { display: block; margin: 20px 0 6px; }
 .moment-sheet .moment-label:first-child { margin: 8px 0 8px; }
+.moment-sheet .who-row + .moment-label { margin-top: 4px; }
 .moment-sheet .pick-chip { height: 36px; padding: 0 14px; border-radius: 18px; }
 .moment-when { position: relative; display: flex; align-items: center; min-height: 48px; padding: 0 14px; border-radius: 12px; background: var(--paper); box-shadow: inset 0 0 0 1px var(--line); font: 400 17px/22px var(--ui); color: var(--text); }
 .moment-when input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }

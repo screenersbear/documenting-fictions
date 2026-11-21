@@ -87,10 +87,11 @@ test.describe('Rounds: how the notebooks connect', () => {
     await expect(page.locator('#view .passed-ref-line')).toHaveText("Ana's mood board is waiting there.");
     await expect(page.locator('#view .person-next-what')).toHaveText('Say thanks for the yes');
     expect(await links(page, { type: 'new-client' })).toHaveLength(1);
-    // The menu doesn't offer it again while the chips are there.
+    // The menu still shows it (20 Nov), marked as said.
     await page.click('#view [data-band-more]');
     const m = await opened(page, 'Ana Lima');
-    await expect(m.locator('.choice', { hasText: "Yes, let's shoot" })).toHaveCount(0);
+    await expect(m.locator('.choice', { hasText: "Yes, let's shoot" })).toHaveClass(/current/);
+    await expect(m.locator('.choice', { hasText: "Yes, let's shoot" })).toContainText('They said yes.');
     await ctx.close();
   });
 

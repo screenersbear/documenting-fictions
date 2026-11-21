@@ -381,9 +381,13 @@ then "No one, it's just for me" as a text button at the end.
   pill chips, preset from the card or their next move); WHAT DID YOU SAY? with USE YOUR <KIND> MESSAGE under it; HOW
   (picked for you once COPY AND OPEN has gone out); A NOTE FOR YOU (OPTIONAL), "Only you see this"; COPY AND OPEN (outline)
   and DONE (mango on ink). Another kind than the due one is a move of its own that still counts as keeping in touch; the
-  card stays. Today has REACH OUT (button type) beside the count: a search
-  sheet (rows: photo, name, "Client · last: sent photos, 2 Nov", the last in touch first) and OR SOMEONE NEW, ADD "<TYPED>"
-  AS A NEW PERSON. A done move tapped (DONE TODAY on Today, SO FAR, the shelf's person page) shows WHAT YOU SAID: the kind's tag in
+  card stays. Today has + CONNECTION beside the count (since 20 Nov: a 40px pill, ink with mango; it was REACH OUT in
+  button type, too quiet to see): NEW CONNECTION, SOMEONE NEW first (big button, ink with mango, "Add them, then write" or
+  Add "<typed>"), then OR SOMEONE YOU KNOW over a search (rows: photo, name, "Client · last: sent photos, 2 Nov", the last
+  in touch first). WHAT YOU SAID and a moment opened from DONE TODAY have their photo and name on top, a way to their
+  page (20 Nov). A person's photo is cropped to 4:5 when chosen (from the menu, or a tap on it on their page), as The Eye
+  crops a talent photo; the menu always has YES, LET'S SHOOT (marked once they said yes). Pulled down past the top, the
+  band's colour goes on up. A done move tapped (DONE TODAY on Today, SO FAR, the shelf's person page) shows WHAT YOU SAID: the kind's tag in
   the header, "Said thanks to Jules", "Mon 16 Nov · by text", WHAT YOU SAID and YOUR NOTE, then DELETE (text, with Undo),
   EDIT and COPY AGAIN. People: a search box (name, handle, note), one filter chip at a time (All, Due, Regulars, Clients,
   New, Prospects), "Sort: A to Z ▾" (Next move, Recently in touch; kept on the device), one dim line per card (the last
