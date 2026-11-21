@@ -326,6 +326,15 @@ label with the file's name and its pages ("FROM LOOKBOOK.PDF · 8 PAGES", 11px 5
 Ref's IMPORT makes a board of a PDF the same way: a page of the board for each page, edge to edge, named after the file with
 "(from PDF)" after it in the list until it's renamed; photos imported go through the usual layout step.
 
+**Getting around a board (Live, 20 Nov):** the editor's tray starts with PAGES: the board's pages in order, each its first
+photo with its number on a small ink pill, the one you're on ringed in ink; a tap goes to that page. A board from a PDF opens
+on PAGES; others on ALL. Tapping a photo that's already on another page, with no spot free, goes to that page. A sideways
+swipe on a picked photo that can't move sideways (a PDF's page) turns the page, as it does anywhere else on the page.
+
+**Ref's first visit (Live, 20 Nov):** after the cards (or after the tour is turned down), someone with no photos goes to
+Incoming, with an ink note: STEP 1 OF 2, Bring your photos in, SKIP; once photos are in, STEP 2 OF 2, Now tag them, GOT IT.
+Tagging some ends it. The section bar shows as soon as a section starts loading, not once its photos are drawn.
+
 **Who it's for (Live, 17 Nov, ref round 3):** ADD A NEW PERSON (big button, "Name and handle") first, then search, then RECENT
 (the 12 people with the newest shoot or board; each with a short line: their group or role, then their shoots or their handle),
 then "No one, it's just for me" as a text button at the end.

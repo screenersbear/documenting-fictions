@@ -63,6 +63,19 @@ test.describe('Ref: IMPORT', () => {
     expect(b.fromPdf).toBe(true);
     expect(b.shape).toBe('wide-16x9');
     expect(b.pages.map((p) => [p.template, p.images.length])).toEqual([['w-bleed', 1], ['w-bleed', 1]]);
+    // The tray opens on PAGES (user, 11-20): the pages in order; a tap goes to one.
+    await expect(page.locator('[data-source="pages"]')).toHaveClass(/\bon\b/);
+    await expect(page.locator('.tray-page .tray-num')).toHaveText(['1', '2']);
+    await expect(page.locator('.tray-page.on .tray-num')).toHaveText('1');
+    await page.locator('.tray-page[data-goto="1"]').click();
+    await expect(page.locator('[data-at]')).toHaveText('Page 2 of 2');
+    await expect(page.locator('.tray-page.on .tray-num')).toHaveText('2');
+    // The page's photo, picked, swiped sideways: the page turns back (it can't be cropped sideways).
+    const stage = await page.locator('[data-stage] .page').boundingBox();
+    const cx = stage.x + stage.width / 2, cy = stage.y + stage.height / 2;
+    await page.mouse.click(cx, cy);
+    await page.mouse.move(cx - 100, cy); await page.mouse.down(); await page.mouse.move(cx, cy, { steps: 6 }); await page.mouse.move(cx + 100, cy, { steps: 6 }); await page.mouse.up();
+    await expect(page.locator('[data-at]')).toHaveText('Page 1 of 2');
     await page.goto('/ref/#/boards');
     await expect(page.locator('.card-name')).toHaveText(['Lookbook (from PDF)']);
     // Renamed, it's the name alone.
