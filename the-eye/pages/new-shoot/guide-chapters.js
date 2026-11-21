@@ -1,6 +1,9 @@
-// The new shoot guide's seven chapters, the same as a shoot's parts
+// The new shoot guide's six chapters, from a shoot's parts
 // (components/shoot-stage.js): which of the guide's steps (wizard-steps.js)
-// each one asks, and the chapter marks along its top.
+// each one asks, and the chapter marks along its top. The shot list is on
+// the Visuals page, under the mood board (Starky, 20 Nov), and Directions
+// for the day went to Direction, so the guide has no Shot list chapter of
+// its own; opened for the shot list, it opens Visuals.
 // (Loaded before app.js, which runs it in its turn.)
 window.EyeParts = window.EyeParts || {};
 window.EyeParts.addNewShootGuideChapters = function addNewShootGuideChapters(ed) {
@@ -11,15 +14,16 @@ window.EyeParts.addNewShootGuideChapters = function addNewShootGuideChapters(ed)
     { key: 'basics', parts: ['basics', 'talent'], question: "What's the shoot, when is it, and who's in it?" },
     { key: 'logistics', parts: ['when', 'location'], question: 'When it starts, and where it happens.' },
     { key: 'team', parts: ['team'], question: "Who's working with you on this one?" },
-    { key: 'direction', parts: ['goals', 'idea', 'story'], question: "What it's for, and the idea behind it." },
-    { key: 'visuals', parts: ['moodboard', 'references', 'lighting'], question: 'How it should look.' },
-    { key: 'shotList', parts: ['shotList', 'directions'], question: 'Every shot you want to come away with.' },
+    { key: 'direction', parts: ['goals', 'idea', 'story', 'directions'], question: "What it's for, the idea behind it, and what you'll ask on the day." },
+    { key: 'visuals', parts: ['moodboard', 'shotList', 'references', 'lighting'], question: 'How it should look, and every shot you want.' },
     { key: 'deadline', parts: ['deadline'], question: "When everything's due, if there's a date to hit." },
   ].map(ch => ({ ...ch, title: ed.SETUP_CHAPTERS.find(c => c.key === ch.key).label }));
   ed.GUIDE_CHAPTERS = GUIDE_CHAPTERS;
 
+  // A chapter by its key, or the chapter that asks that part (the shoot
+  // page's Shot list opens Visuals).
   function guideChapter(key) {
-    return GUIDE_CHAPTERS.find(ch => ch.key === key) || null;
+    return GUIDE_CHAPTERS.find(ch => ch.key === key) || GUIDE_CHAPTERS.find(ch => ch.parts.includes(key)) || null;
   }
 
   // The steps of a chapter that apply to this shoot (the story, say, only
@@ -29,7 +33,7 @@ window.EyeParts.addNewShootGuideChapters = function addNewShootGuideChapters(ed)
       .filter(step => step && (!step.when || step.when()));
   }
 
-  // Seven marks on a hairline: done ones solid, this one larger with a mango
+  // Six marks on a hairline: done ones solid, this one larger with a mango
   // dot, the rest open rings. The line is ink up to this chapter. It never
   // starts empty (progress/NOTES.md, 15 Nov): making the shoot counts, so a
   // short inked line leads into the first mark.
@@ -41,7 +45,7 @@ window.EyeParts.addNewShootGuideChapters = function addNewShootGuideChapters(ed)
     }).join('');
   }
 
-  // Over the chapter's title: "Chapter 1 of 7", then near the end what's
+  // Over the chapter's title: "Chapter 1 of 6", then near the end what's
   // left, "2 to go" and "Last one" (progress/NOTES.md), counting only the
   // chapters that apply to this shoot. Opened for one chapter: just where
   // it is.

@@ -125,18 +125,26 @@ window.EyeParts.addShootTeamMemberPopup = function addShootTeamMemberPopup(ed) {
     refreshPastTeamMembersSelect();
     ed.knownPeople();
     suggest.hide();
+    find.hide();
+    document.getElementById('teamFindInput').value = '';
     fillTeamMemberModalForm();
     document.getElementById('teamMemberModalOverlay').hidden = false;
   }
 
   // People you know (talent too: people/NOTES.md, 15 Nov), up to five under
   // Name as you type; picking one fills their name and handle.
-  const suggest = ed.attachSuggestions(document.getElementById('teamMemberModalNameInput'), p => {
+  const pickKnown = p => {
     const draft = teamMemberModalDraft;
     draft.name = p.name;
     const h = ed.bestHandle(p);
     if (h) { draft.socialPlatform = h.platform; draft.socialHandle = h.handle; }
     fillTeamMemberModalForm();
+  };
+  const suggest = ed.attachSuggestions(document.getElementById('teamMemberModalNameInput'), pickKnown);
+  // The same, from the search at the top (user, 11-20): no scrolling the whole list to find someone.
+  const find = ed.attachSuggestions(document.getElementById('teamFindInput'), p => {
+    document.getElementById('teamFindInput').value = '';
+    pickKnown(p);
   });
 
   document.getElementById('teamMemberModalRoleSelect').addEventListener('change', (e) => {

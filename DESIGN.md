@@ -300,7 +300,9 @@ button. Used for a shoot's page, a guide, a board.
 
 - **Step marks on a hairline** instead of "Step N of M": done = a solid 14px berry blade black dot, this one = a 22px berry
   blade black dot with a notebook-colour dot inside, still to come = a 13px open `#9AA3A8` ring. The line is berry blade black
-  up to this step. A small label under it ("CHAPTER 3 OF 7").
+  up to this step. A small label under it ("CHAPTER 3 OF 6").
+- **The Eye's guide has six chapters (20 Nov):** the shot list is on the Visuals page, under the mood board; Directions for
+  the day are asked in Direction. The shoot page's own seven parts (and its Add the shot list, which opens Visuals) stay.
 - Each step: a title (30px 300), one question (17px dim), answers as option cards (white, a 2px berry blade black ring when
   picked) or chips from saved lists. Honest answers ("Not sure yet") count as answered.
 - **The Eye's Basics asks SHOOT PROGRESS:** Prospect, Active planning, Shoot ready and Captured as chips (40px, radius 20,
@@ -439,14 +441,15 @@ then "No one, it's just for me" as a text button at the end.
 - **Someone you know (Live, 15 Nov, people/NOTES.md):** The Eye's talent picker is SOMEONE YOU KNOW: everyone, talent
   and team, from its shoots and the one list of people, newest first, labelled "Iryna V. · team, 3 shoots". Typing a name
   (first, last or a handle) lists up to five under it, in the talent and team member popups; picking fills name, handles
-  and photo. In the suite the talent popup has BOOKED ME (They're the paying client.), a df-switch: on for headshot,
+  and photo. Both popups open with FIND SOMEONE YOU KNOW, a search box that does the same, so nobody scrolls the whole
+  list (20 Nov); the list follows as OR PICK FROM EVERYONE (team: OR PICK A PAST TEAM MEMBER). In the suite the talent popup has BOOKED ME (They're the paying client.), a df-switch: on for headshot,
   branding and other portrait kinds, off for portfolio building, test shoots and editorial, set per person. Rounds: a
   person can be in more than one group (Edit shows them as chips; Prospect drops once Client is in); a captured shoot makes
   whoever booked you a Client too, and a Regular who's a Client gets the client moves with check-ins between, one card
   at a time. People pages read "Regular. Client."
 - **Progress bars (Live, 15 Nov, progress/NOTES.md):** never start empty, say what's left near the end, never drop back
   to empty. The Eye's new-shoot guide: a short inked line leads into the first mark (making the shoot counts), and the
-  label goes "Chapter 1 of 7" ... "Chapter 5 of 7", then "2 to go" and "Last one" (just "Chapter N of 7" when opened for
+  label goes "Chapter 1 of 6" ... "Chapter 4 of 6", then "2 to go" and "Last one" (just "Chapter N of 6" when opened for
   one chapter). Rounds' Today: the arc is inked up to this card's stop, which is half teal in an ink ring ("started");
   the count reads "3 TODAY", "2 TO GO", "LAST ONE"; a finished day keeps the whole arc and every stop ink beside "That's
   today" until tomorrow. The shoot's status card: "2 to go", then "1 to go: delivery"; delivered stays "7 of 7", all

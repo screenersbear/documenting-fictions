@@ -109,12 +109,19 @@ window.EyeParts.addShootTalentPopup = function addShootTalentPopup(ed) {
     ed.talentModalDraft._matchName = ed.talentModalDraft.name || '';
     ed.refreshPastTalentsSelect();
     suggest.hide();
+    find.hide();
+    document.getElementById('talentFindInput').value = '';
     fillTalentModalForm();
     document.getElementById('talentModalOverlay').hidden = false;
   }
 
   // Up to five people you know under Name as you type; picking one fills the card.
   const suggest = ed.attachSuggestions(document.getElementById('talentModalNameInput'), p => ed.pickKnownTalent(p));
+  // The same, from the search at the top (user, 11-20): no scrolling the whole list to find someone.
+  const find = ed.attachSuggestions(document.getElementById('talentFindInput'), p => {
+    document.getElementById('talentFindInput').value = '';
+    ed.pickKnownTalent(p);
+  });
 
   document.getElementById('talentModalNameInput').addEventListener('input', (e) => {
     ed.talentModalDraft.name = e.target.value;
