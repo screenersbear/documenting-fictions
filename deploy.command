@@ -1,5 +1,5 @@
 #!/bin/bash
-cd "/Users/starkyproductions/Library/CloudStorage/OneDrive-SharedLibraries-Onedrive/Documents/Claude/Documenting Fictions"
+cd "/Users/starkyproductions/Library/CloudStorage/GoogleDrive-starky@starkymorillo.com/My Drive/Claude/Documenting Fictions"
 git add .
 echo "What did you change?"
 read message
