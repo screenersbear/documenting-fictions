@@ -217,6 +217,7 @@ window.EyeParts.addNoticesMondayBrief = function addNoticesMondayBrief(ed) {
   }
   // Inside Documenting Fictions, the first visit's cards come before all of
   // these; they follow once the cards (and the tour, if taken) are done
-  // (setupNotebook).
-  if (!(window.DF_SUITE && window.DF_SUITE.firstVisit)) launchPopups();
+  // (setupNotebook). Opened by another notebook at one shoot, none of them:
+  // they'd cover what was handed over (refining round, 21 Nov).
+  if (!(window.DF_SUITE && (window.DF_SUITE.firstVisit || window.DF_SUITE.handedOff))) launchPopups();
 };

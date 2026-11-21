@@ -1,5 +1,7 @@
 // The board's tools bar: the layout sheet, adding a page, the page's menu
-// (move, duplicate, delete) and saving the board as a PDF.
+// (move, duplicate, delete, and Send to shoot for the whole board, so a board
+// just made goes on from where it was made: refining round, 21 Nov) and
+// saving the board as a PDF.
 import { withTextDefaults } from '../components/textsize.js';
 import { TEMPLATES, SHAPES, styleTemplate, defaultTemplate } from '../data/templates.js';
 import { pageToCanvas } from '../components/board-page.js';
@@ -9,6 +11,10 @@ import { choiceSheet, confirmSheet } from '../components/dialogs.js';
 import { toast, hideToast } from '../components/toast.js';
 import { esc, clone, slug, canvasToBlob, downloadBlob } from '../components/util.js';
 import { cardHtml } from '../components/option-card.js';
+import { sendToShoot } from '../data/sendshoot.js';
+
+// Send to shoot is left out while Mood boards is switched off (the shelf's HOW THEY CONNECT), as on Mood boards.
+const sending = () => !window.DFConnect || window.DFConnect.connectOn('moodboards');
 
 export function addTools(ed) {
   Object.assign(ed, { layoutSheet, addPage, moreSheet, exportPdf });
@@ -50,9 +56,11 @@ export function addTools(ed) {
         ...(ed.at < ed.board.pages.length - 1 ? [{ key: 'down', label: 'Move later' }] : []),
         { key: 'dup', label: 'Duplicate page' },
         ...(ed.board.pages.length > 1 ? [{ key: 'delete', label: 'Delete page', danger: true }] : []),
+        ...(sending() ? [{ key: 'send', label: 'Send to shoot' }] : []),
       ],
     });
     if (!key) return;
+    if (key === 'send') { await ed.persist.flush(); await sendToShoot(ed.board); return; }
     if (key === 'delete' && !(await confirmSheet({ title: 'Delete this page?', message: 'Its photos stay in the notebook.', confirmLabel: 'Delete', danger: true }))) return;
     ed.snapshot();
     if (key === 'up' || key === 'down') {

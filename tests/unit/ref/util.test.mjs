@@ -162,19 +162,19 @@ describe.each([
   });
 
   describe('shortDate', () => {
-    const fmt = (d, opts) => d.toLocaleDateString(undefined, opts);
-    it('leaves the year off for a date this year', () => {
+    it('leaves the year off for a date this year, the day first as every notebook says it', () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date(2026, 10, 12, 12));
       const d = new Date(2026, 9, 30, 12);
-      expect(u.shortDate(d.toISOString())).toBe(fmt(d, { month: 'short', day: 'numeric' }));
+      expect(u.shortDate(d.toISOString())).toBe('30 Oct');
+      expect(u.shortDate(new Date(2026, 0, 1, 12).toISOString())).toBe('1 Jan');
       expect(u.shortDate(d.toISOString())).not.toContain('2026');
     });
     it('adds the year for a date in another year', () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date(2026, 10, 12, 12));
       const d = new Date(2025, 9, 30, 12);
-      expect(u.shortDate(d.toISOString())).toBe(fmt(d, { month: 'short', day: 'numeric', year: 'numeric' }));
+      expect(u.shortDate(d.toISOString())).toBe('30 Oct 2025');
       expect(u.shortDate(d.toISOString())).toContain('2025');
     });
     it('treats new year\'s eve as last year once the clock passes midnight', () => {

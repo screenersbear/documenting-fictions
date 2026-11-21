@@ -125,3 +125,46 @@ describe('deletePerson', () => {
     expect(await tombs()).toEqual(['l']);
   });
 });
+
+describe('a yes passed to Ref goes with them', () => {
+  const refOf = async (id) => (await D.linksWhere({ fromApp: 'rounds', fromId: id, type: 'new-client' }))[0] || null;
+  const pass = (p) => D.saveLink({ fromApp: 'rounds', fromId: p.id, toApp: 'ref', toId: '', type: 'new-client', name: p.name, handle: p.instagram || '', pitched: '2026-11-02' });
+  beforeEach(() => { window.DF_SUITE = { get: () => null }; });
+  afterEach(() => { delete window.DF_SUITE; });
+  it("a merge gives the other one's yes to the one kept, under the kept name; Undo gives it back", async () => {
+    await seed();
+    const l = await pass(lindsay);
+    const undo = await S.mergeInto(await db.getPerson('l'), await db.getPerson('n'));
+    expect(await refOf('n')).toBeNull();
+    expect(await refOf('l')).toMatchObject({ id: l.id, name: 'Lindsey T.', handle: 'lindsey.t' });
+    await S.undoMerge(undo);
+    expect(await refOf('l')).toBeNull();
+    expect(await refOf('n')).toMatchObject({ id: l.id, name: 'Lindsay Tran' });
+  });
+  it('a merge still goes through when the hand-offs cannot be read, and so does its Undo', async () => {
+    await seed();
+    await pass(lindsay);
+    vi.spyOn(D, 'linksWhere').mockRejectedValue(new Error('blocked'));
+    const undo = await S.mergeInto(await db.getPerson('l'), await db.getPerson('n'));
+    expect(undo.ref).toBeNull();
+    expect((await db.listPeople()).map((p) => p.id)).toEqual(['l']);
+    vi.spyOn(D, 'saveLink').mockRejectedValue(new Error('blocked'));
+    await S.undoMerge({ ...undo, ref: { link: { id: 'x' } } });
+    expect((await db.listPeople()).map((p) => p.id).sort()).toEqual(['l', 'n']);
+  });
+  it('a delete takes back a yes Ref has not made a board for, and leaves one it has', async () => {
+    await seed();
+    await pass(lindsay);
+    await D.saveLink({ ...(await pass(lindsey)), toId: 'board-1' });
+    await S.deletePerson(await db.getPerson('n'));
+    expect(await refOf('n')).toBeNull();
+    await S.deletePerson(await db.getPerson('l'));
+    expect(await refOf('l')).toMatchObject({ toId: 'board-1' });
+  });
+  it('a delete still goes through when the hand-offs cannot be read', async () => {
+    await seed();
+    vi.spyOn(D, 'linksWhere').mockRejectedValue(new Error('blocked'));
+    await S.deletePerson(await db.getPerson('n'));
+    expect((await db.listPeople()).map((p) => p.id)).toEqual(['l']);
+  });
+});
