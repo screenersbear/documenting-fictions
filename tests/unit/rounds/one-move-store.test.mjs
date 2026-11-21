@@ -8,6 +8,7 @@ import { loadDFData } from '../shared/_env.mjs';
 
 let S; // rounds/data/one-move-store.js
 let db; // rounds/data/db.js
+let PS; // rounds/data/promise-store.js
 const TODAY = '2026-11-16'; // a Monday
 const NOW = new Date(2026, 10, 16, 10, 0, 0).getTime();
 beforeEach(async () => {
@@ -16,6 +17,7 @@ beforeEach(async () => {
   await loadDFData();
   db = await import('../../../rounds/data/db.js');
   S = await import('../../../rounds/data/one-move-store.js');
+  PS = await import('../../../rounds/data/promise-store.js');
 });
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
@@ -68,6 +70,83 @@ describe('saveOneMove: another move', () => {
     expect((await db.getPerson('a')).updatedAt).toBe(before.updatedAt);
     await S.undoOneMove(done);
     expect(await db.listMoves()).toEqual([]);
+  });
+});
+
+describe('saveOneMove: a promise made with it (21 Nov)', () => {
+  it('is kept with them, tied to the move; Undo takes the move and the promise back', async () => {
+    const p = ana();
+    await db.savePerson(p);
+    const done = await S.saveOneMove(p, 'checkin', FIELDS, { promise: { what: 'Send the selects', mine: true, due: '2026-11-20' } });
+    expect(done.promised).toBe(true);
+    expect(done.kept).toBe(false);
+    const { promises } = await saved('a');
+    expect(promises).toHaveLength(1);
+    expect(promises[0]).toMatchObject({ what: 'Send the selects', mine: true, due: '2026-11-20', made: TODAY, open: true, moveId: done.line.id });
+    expect(promises[0].id).toMatch(/^pr-/);
+    await S.undoOneMove(done);
+    expect(await saved('a')).toEqual(p);
+  });
+  it('on another move too, theirs; nothing typed makes none', async () => {
+    const p = ana({ next: { kind: 'checkin', due: '2026-11-20', step: 0 } });
+    await db.savePerson(p);
+    const done = await S.saveOneMove(p, 'pitch', {}, { promise: { what: 'Intro to Dev', mine: false } });
+    expect((await saved('a')).promises).toMatchObject([{ what: 'Intro to Dev', mine: false, moveId: done.line.id }]);
+    await S.undoOneMove(done);
+    expect(await saved('a')).toEqual(p);
+    const none = await S.saveOneMove(p, 'pitch', {}, { promise: { what: '  ' } });
+    expect(none.promised).toBe(false);
+    expect((await saved('a')).promises).toBeUndefined();
+  });
+  it('someone not saved: the move is logged, and no promise', async () => {
+    const ghost = ana({ id: 'ghost', next: { kind: 'pitch', due: '2026-11-20', step: 0 }, lastMove: TODAY });
+    const done = await S.saveOneMove(ghost, 'other', {}, { promise: { what: 'Send the selects' } });
+    expect(done.promised).toBe(false);
+    expect(await db.getPerson('ghost')).toBeFalsy();
+  });
+  it('KEPT IT, logged: the promise closed by this move; Undo opens it again', async () => {
+    const promise = { id: 'p1', mine: true, what: 'Send the selects', due: TODAY, made: '2026-11-10', open: true };
+    const p = ana({ promises: [promise] });
+    await db.savePerson(p);
+    const done = await S.saveOneMove(p, 'other', { said: 'Here they are' }, { keeps: promise });
+    expect(done.kept).toBe(true);
+    expect(done.promised).toBe(false);
+    expect((await saved('a')).promises).toEqual([{ ...promise, open: false, outcome: 'kept', closed: TODAY, keptBy: done.line.id }]);
+    await S.undoOneMove(done);
+    expect((await saved('a')).promises).toEqual([promise]);
+  });
+});
+
+describe('saveLinePromise: EDIT on a logged move', () => {
+  it('adds one to a move that had none', async () => {
+    const p = ana();
+    await db.savePerson(p);
+    const { after, line } = await S.saveOneMove(p, 'checkin', FIELDS);
+    const changed = await S.saveLinePromise(after, line, { what: 'Print the cover', mine: true });
+    expect(changed.gone).toBe(false);
+    expect((await saved('a')).promises).toMatchObject([{ what: 'Print the cover', moveId: line.id, open: true }]);
+  });
+  it('ticks it kept, and nothing changed gives null', async () => {
+    const p = ana();
+    await db.savePerson(p);
+    const { after, line } = await S.saveOneMove(p, 'checkin', FIELDS, { promise: { what: 'Print the cover' } });
+    expect(await S.saveLinePromise(after, line, { what: 'Print the cover', mine: true, due: '' })).toBe(null);
+    await S.saveLinePromise(after, line, { what: 'Print the cover', mine: true, due: '', kept: true });
+    expect((await saved('a')).promises[0]).toMatchObject({ open: false, outcome: 'kept', closed: TODAY });
+  });
+  it('its words cleared: taken off, and Undo puts it back', async () => {
+    const p = ana();
+    await db.savePerson(p);
+    const { after, line } = await S.saveOneMove(p, 'checkin', FIELDS, { promise: { what: 'Print the cover' } });
+    const had = (await saved('a')).promises;
+    const changed = await S.saveLinePromise(after, line, null);
+    expect(changed.gone).toBe(true);
+    expect((await saved('a')).promises).toEqual([]);
+    await PS.undoChange(changed.undo);
+    expect((await saved('a')).promises).toEqual(had);
+  });
+  it('someone gone: null', async () => {
+    expect(await S.saveLinePromise(ana({ id: 'zz' }), { id: 'l1' }, { what: 'x' })).toBe(null);
   });
 });
 

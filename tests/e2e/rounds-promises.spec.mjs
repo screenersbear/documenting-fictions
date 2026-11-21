@@ -44,6 +44,10 @@ test('+ PROMISE: who it is with, then what and by when; Kept it takes it off, Un
   const act = await opened(page, 'You promised June');
   await expect(act.locator('.choice-label')).toHaveText(['Kept it', 'Another week', 'Pick another day', 'Let it go', "June Park's page"]);
   await act.locator('[data-key="kept"]').click();
+  // Kept it opens the one sheet to log it, the promise on top; or just mark it.
+  const log = await opened(page, 'June Park');
+  await expect(log.locator('.one-keeps-what')).toHaveText('Send the selects');
+  await log.locator('[data-keep-only]').click();
   await expect(page.locator('#toast')).toContainText('Marked as kept.');
   await expect(rows(page)).toHaveCount(0);
   await page.click('#toast .toast-action');
@@ -94,6 +98,79 @@ test('Your messages is in Options, with a way back; the section bar has Promises
   await expect(page.locator('#view .msg-row').first()).toBeVisible();
   await page.click('#view .band-short a[aria-label="Back"]');
   await expect(page.locator('#navbar .sec-today')).toHaveAttribute('aria-current', 'page');
+  expect(problems).toEqual([]);
+  await ctx.close();
+});
+
+// 21 Nov (Starky: "is there a way to add a promise to a connection you're
+// logging? that's the real thing"), as Callback's log sheet: ANYTHING
+// PROMISED? on the one sheet, then beside the move on their page with a
+// tick, and on its EDIT; KEPT IT can log a connection.
+test('a promise made while logging a connection: on the tab, ticked on their page, changed or taken off on its edit', async ({ browser }, testInfo) => {
+  const { ctx, page, problems } = await withJune(browser, testInfo);
+  await page.click('#view [data-reach]');
+  const reach = await opened(page, 'New connection');
+  await reach.locator('[data-pick]', { hasText: 'June Park' }).click();
+  const log = await opened(page, 'June Park');
+  const more = log.locator('[data-prom-more]');
+  await expect(more).toBeHidden();
+  await log.locator('#onePromise').fill('Send the selects');
+  await expect(more).toBeVisible();
+  await expect(more.locator('[data-mine]')).toHaveText(['I promised', 'June promised']);
+  await log.locator('#onePromiseDue').fill(iso(dayN(3)));
+  await log.locator('[data-done]').click();
+  await expect(page.locator('#toast')).toContainText('Done, with a promise.');
+  await goTo(page, 'promises');
+  await expect(rows(page).locator('.prom-what')).toHaveText(['Send the selects']);
+  // Beside the move on her page, with its tick.
+  await goTo(page, 'people');
+  await page.locator('#view .person-card', { hasText: 'June Park' }).click();
+  const prom = page.locator('#view .so-far-prom');
+  await expect(prom.locator('.so-far-prom-what')).toHaveText('You promised: Send the selects');
+  const tick = prom.locator('[data-prom-tick]');
+  await expect(tick).toHaveAttribute('aria-checked', 'false');
+  await tick.click();
+  await expect(page.locator('#toast')).toContainText('Marked as kept.');
+  await expect(page.locator('#view [data-prom-tick]')).toHaveAttribute('aria-checked', 'true');
+  // Its edit: there, ticked; cleared, it comes off, and Undo puts it back.
+  await page.locator('#view button.so-far-row').first().click();
+  const said = page.locator('.sheet.said-sheet');
+  await expect(said).toBeVisible();
+  await page.waitForTimeout(500);
+  await expect(said.locator('.said-promise')).toHaveText('You promised: Send the selects · Promise kept');
+  await said.locator('[data-edit]').click();
+  const edit = await opened(page, 'June Park');
+  await expect(edit.locator('#onePromise')).toHaveValue('Send the selects');
+  await expect(edit.locator('[data-prom-kept]')).toBeChecked();
+  await edit.locator('#onePromise').fill('');
+  await edit.locator('[data-done]').click();
+  await expect(page.locator('#toast')).toContainText('Promise taken off.');
+  await expect(page.locator('#view .so-far-prom')).toHaveCount(0);
+  await page.click('#toast .toast-action');
+  await expect(page.locator('#view .so-far-prom-what')).toHaveText('You promised: Send the selects');
+  expect(problems).toEqual([]);
+  await ctx.close();
+});
+
+test('KEPT IT, logged: the one sheet with the promise on top closes it', async ({ browser }, testInfo) => {
+  const { ctx, page, problems } = await withJune(browser, testInfo);
+  await goTo(page, 'people');
+  await page.locator('#view .person-card', { hasText: 'June Park' }).click();
+  await page.click('#view [data-band-more]');
+  await (await opened(page, 'June Park')).locator('[data-key="promise"]').click();
+  const add = await opened(page, 'A promise with June');
+  await add.locator('#promiseWhat').fill('Print the cover');
+  await add.locator('[data-save]').click();
+  await goTo(page, 'promises');
+  await rows(page).first().click();
+  await (await opened(page, 'You promised June')).locator('[data-key="kept"]').click();
+  const log = await opened(page, 'June Park');
+  await expect(log.locator('.one-keeps-what')).toHaveText('Print the cover');
+  await log.locator('[data-done]').click();
+  await expect(page.locator('#toast')).toContainText('Done. Marked as kept.');
+  await expect(rows(page)).toHaveCount(0);
+  await page.click('#toast .toast-action');
+  await expect(rows(page).locator('.prom-what')).toHaveText(['Print the cover']);
   expect(problems).toEqual([]);
   await ctx.close();
 });

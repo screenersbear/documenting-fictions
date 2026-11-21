@@ -5,14 +5,20 @@
 // Tap a move to see what you said (pages/what-you-said.js, rounds/09: EDIT,
 // COPY AGAIN, DELETE); a note on its own to change it or delete it; a
 // moment to change it or delete it (pages/moment-sheet.js). Deleting has
-// Undo. Shoots and answers are as they are.
+// Undo. Shoots and answers are as they are. A promise made with a move
+// (data/move-promise.js, 21 Nov) sits under it with a tick: PROMISE KEPT
+// (yours) or THEY CAME THROUGH (theirs), ticked or unticked with Undo.
 import { openSheet } from '../components/sheet.js';
 import { miniHtml } from '../components/marks.js';
 import { toast } from '../components/toast.js';
 import { esc } from '../components/util.js';
 import { NOTE_HOWS } from '../data/done-notes.js';
 import { saveNote, dropNote, putNoteBack } from '../data/moves.js';
-import { shortDay } from '../data/dates.js';
+import { promiseFor, promiseWho, tickWords, isKept } from '../data/move-promise.js';
+import { keepPromise, openAgain, promiseWhen } from '../data/promises.js';
+import { changeSaved, undoChange } from '../data/promise-store.js';
+import { TICK } from '../components/icons.js';
+import { shortDay, dayOf } from '../data/dates.js';
 import { openMoment } from './moment-sheet.js';
 import { openSaid } from './what-you-said.js';
 
@@ -32,8 +38,20 @@ const rowHtml = (r, i) => {
     <span class="so-far-words"><span class="so-far-what">${esc(r.what)}${r.howWords ? ` <span>· ${esc(r.howWords)}</span>` : ''}</span>${r.note ? `<span class="so-far-note">${esc(r.note)}</span>` : ''}</span></${tag.split(' ')[0]}>`;
 };
 
-// The heading and the rows ('' when there's nothing yet).
-export const soFarHtml = (rows) => (rows.length ? `<h2 class="so-far-head">So far</h2><div class="so-far-list">${rows.map(rowHtml).join('')}</div>` : '');
+// The promise made with a move, under it: what, when, and its tick.
+function promiseHtml(x, person) {
+  const kept = isKept(x);
+  const when = kept ? '' : promiseWhen(x, dayOf());
+  return `<div class="so-far-prom"><span class="so-far-prom-words"><span class="so-far-prom-what">${esc(promiseWho(x, person.name))}</span>${when ? `<span class="so-far-prom-when">${esc(when)}</span>` : ''}</span>
+    <button type="button" class="so-far-prom-tick" role="checkbox" aria-checked="${kept}" data-prom-tick="${esc(x.id)}"><span class="save-msg-box" aria-hidden="true">${TICK}</span>${esc(tickWords(x))}</button></div>`;
+}
+const withPromiseHtml = (person) => (r, i) => {
+  const x = person && r.kind === 'move' ? promiseFor(person, r.id) : null;
+  return `${rowHtml(r, i)}${x ? promiseHtml(x, person) : ''}`;
+};
+
+// The heading and the rows ('' when there's nothing yet). person: for the promises made with their moves.
+export const soFarHtml = (rows, person = null) => (rows.length ? `<h2 class="so-far-head">So far</h2><div class="so-far-list">${rows.map(withPromiseHtml(person)).join('')}</div>` : '');
 
 const chipsHtml = (list, on) => Object.entries(list).map(([k, label]) => `<button type="button" class="pick-chip${k === on ? ' on' : ''}" data-how="${esc(k)}" aria-pressed="${k === on}">${esc(label)}</button>`).join('');
 
@@ -80,5 +98,13 @@ export function wireSoFar(view, person, rows, lines, after) {
     if (row.kind === 'moment') openMoment(person, { line, after });
     else if (row.kind === 'move') openSaid(person, line, after);
     else openEdit(row, line, after);
+  }));
+  view.querySelectorAll('[data-prom-tick]').forEach((b) => b.addEventListener('click', async () => {
+    const id = b.dataset.promTick;
+    const kept = b.getAttribute('aria-checked') !== 'true';
+    const theirs = person.promises?.find((x) => x.id === id)?.mine === false;
+    const undo = await changeSaved(person.id, (p) => (kept ? keepPromise(p, id, dayOf()) : openAgain(p, id)));
+    await after();
+    if (undo) toast(kept ? (theirs ? 'Marked as happened.' : 'Marked as kept.') : 'Open again.', { action: { label: 'Undo', run: () => undoChange(undo).then(after) } });
   }));
 }

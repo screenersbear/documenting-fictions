@@ -1,7 +1,9 @@
 // What to do with a promise (21 Nov, as Callback's Not yet sheet): KEPT IT
 // (yours) or GOT IT (theirs), ANOTHER WEEK, PICK A DAY, LET IT GO, and, on
 // the Promises tab, their page. Each change says so with Undo. Kept and let
-// go ones leave the lists and stay on the person.
+// go ones leave the lists and stay on the person. KEPT IT on one of yours
+// opens the one sheet to log what you did (as Callback's "Promise kept"),
+// with MARK IT KEPT WITHOUT LOGGING (21 Nov).
 import { choiceSheet } from '../components/dialogs.js';
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
@@ -10,6 +12,7 @@ import { keepPromise, letGoPromise, dueOn, anotherWeek, promiseWhen } from '../d
 import { changeSaved, undoChange } from '../data/promise-store.js';
 import { dayOf, longDay } from '../data/dates.js';
 import { firstName } from '../data/fill.js';
+import { writeTo } from './move-done.js';
 
 // A day for it: resolves with the day, '' for none, or null if closed.
 export function pickPromiseDay(promise, today = dayOf()) {
@@ -49,7 +52,7 @@ export async function openPromiseActions(person, promise, after, { who = true } 
     title: theirs ? `${first} promised` : `You promised ${first}`,
     message: `${esc(promise.what)}${when ? `<span class="prom-sheet-when">${esc(when)}</span>` : ''}`,
     options: [
-      { key: 'kept', label: theirs ? 'Got it' : 'Kept it', detail: theirs ? 'It happened. Off the list.' : 'Done. Off the list.' },
+      { key: 'kept', label: theirs ? 'Got it' : 'Kept it', detail: theirs ? 'It happened. Off the list.' : 'Log what you did. Off the list.' },
       { key: 'week', label: 'Another week', detail: `${theirs ? 'Expected' : 'Due'} ${longDay(week)}` },
       { key: 'day', label: promise.due ? 'Pick another day' : 'Pick a day' },
       { key: 'go', label: 'Let it go', detail: 'Off the list, without it happening.' },
@@ -60,7 +63,18 @@ export async function openPromiseActions(person, promise, after, { who = true } 
   if (pick === 'page') { location.hash = `#/person/${encodeURIComponent(person.id)}`; return; }
   let change;
   let said;
-  if (pick === 'kept') { change = (p) => keepPromise(p, promise.id, today); said = theirs ? 'Marked as happened.' : 'Marked as kept.'; }
+  const save = async () => {
+    const undo = await changeSaved(person.id, change);
+    await after();
+    if (undo) toast(said, { action: { label: 'Undo', run: () => undoChange(undo).then(after) } });
+  };
+  if (pick === 'kept' && !theirs) {
+    change = (p) => keepPromise(p, promise.id, today);
+    said = 'Marked as kept.';
+    writeTo(person, after, { keeps: promise, keptOnly: save });
+    return;
+  }
+  if (pick === 'kept') { change = (p) => keepPromise(p, promise.id, today); said = 'Marked as happened.'; }
   else if (pick === 'go') { change = (p) => letGoPromise(p, promise.id, today); said = 'Let go.'; }
   else if (pick === 'week') { change = (p) => dueOn(p, promise.id, week); said = `Now ${theirs ? 'expected' : 'due'} ${longDay(week)}.`; }
   else {
@@ -69,7 +83,5 @@ export async function openPromiseActions(person, promise, after, { who = true } 
     change = (p) => dueOn(p, promise.id, day);
     said = day ? `Now ${theirs ? 'expected' : 'due'} ${longDay(day)}.` : 'No day now.';
   }
-  const undo = await changeSaved(person.id, change);
-  await after();
-  if (undo) toast(said, { action: { label: 'Undo', run: () => undoChange(undo).then(after) } });
+  await save();
 }

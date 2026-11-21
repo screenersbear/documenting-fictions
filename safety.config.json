@@ -56,7 +56,7 @@
     "rounds/data/callback-read.js",
     "rounds/data/callback-bring.js",
     "rounds/data/done-rows.js",
-    "rounds/data/next-up.js", "rounds/data/promises.js", "rounds/data/promise-store.js", "rounds/data/crop.js"
+    "rounds/data/next-up.js", "rounds/data/promises.js", "rounds/data/promise-store.js", "rounds/data/move-promise.js", "rounds/data/crop.js"
   ],
   "ignore": [
     "**/vendor/**",
