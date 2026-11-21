@@ -39,7 +39,8 @@ export function sizeStep(W) {
     ${SIZE_GROUPS.map(([group, sizes]) => `<p class="guide-group">${esc(group)}</p><div class="size-cards" role="radiogroup" aria-label="${esc(group)}">${sizes.map(card).join('')}</div>`).join('')}`;
 }
 
-// list: the saved templates, each already in the size being made.
+// list: the templates for this size, each already in it. Built-in ones (the
+// Story set) have no More menu: there's nothing to rename or delete.
 export function templateStep(W, list, blank) {
   const card = (t, id) => `
     <div class="tpl-pick${W.template === id ? ' on' : ''}">
@@ -47,9 +48,10 @@ export function templateStep(W, list, blank) {
         <span class="tpl-pick-art">${spreadSvg(t, !!id)}</span>
         <span class="tpl-pick-name">${esc(t.name)}</span>
       </button>
-      ${id ? `<button type="button" class="tpl-pick-more" data-tmore="${esc(id)}" aria-label="More for ${esc(t.name)}">${MORE}</button>` : ''}
+      ${id && !t.builtIn ? `<button type="button" class="tpl-pick-more" data-tmore="${esc(id)}" aria-label="More for ${esc(t.name)}">${MORE}</button>` : ''}
     </div>`;
-  return `${head('Template', 'Start from a layout you\'ve saved, or blank.')}
+  const ask = RATIOS[W.ratio]?.story ? 'Start from a story layout, or blank.' : 'Start from a layout you\'ve saved, or blank.';
+  return `${head('Template', ask)}
     <div class="tpl-picks" role="radiogroup" aria-label="Template">${card(blank, '')}${list.map((t) => card(t, t.id)).join('')}</div>
     <p class="guide-small">Save any layout as a template from its More menu.</p>`;
 }

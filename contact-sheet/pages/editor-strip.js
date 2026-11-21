@@ -1,6 +1,6 @@
 // Drawing the strip: every frame and its photo (videos play on the open
 // pages), the spine, a frame's x and the lines a moving photo snaps to.
-import { SLIDE_W, SAFE_TOP, SAFE_BOTTOM, isStory, pageTitle } from '../data/formats.js';
+import { SLIDE_W, pageTitle } from '../data/formats.js';
 import { cssTransform } from '../components/placement.js';
 import { anchorSlide } from '../data/slides.js';
 import { borderBands } from '../data/slide-layouts.js';
@@ -10,7 +10,7 @@ import { esc } from '../components/util.js';
 import { lineH } from './editor-sizes.js';
 
 export function addStrip(ed) {
-  Object.assign(ed, { dropVideo, placeFrame, renderSafe, placeSel, placeX, showGuides, showFrameGuides, renderStrip, renderTop, render });
+  Object.assign(ed, { dropVideo, placeFrame, placeSel, placeX, showGuides, showFrameGuides, renderStrip, renderTop, render });
   // ---------- Strip rendering ----------
   const frameEls = new Map(); ed.frameEls = frameEls;
 
@@ -136,20 +136,6 @@ export function addStrip(ed) {
     ed.seamsEl.innerHTML = '';
   }
 
-  function renderSafe() {
-    const on = isStory(ed.p) && ed.showSafe;
-    ed.safeEl.hidden = !on;
-    if (!on) return;
-    let html = '';
-    for (let i = 0; i < ed.p.slides; i++) {
-      const x = i * SLIDE_W * ed.z;
-      const w = SLIDE_W * ed.z;
-      html += `<div class="safe-band top" style="left:${x}px;top:0;width:${w}px;height:${SAFE_TOP * ed.z}px"><span>Instagram covers this</span></div>
-        <div class="safe-band bottom" style="left:${x}px;top:${(ed.H() - SAFE_BOTTOM) * ed.z}px;width:${w}px;height:${SAFE_BOTTOM * ed.z}px"><span>Instagram covers this</span></div>`;
-    }
-    ed.safeEl.innerHTML = html;
-  }
-
   function renderLabels() {
     const sw = SLIDE_W * ed.z;
     const word = pageTitle(ed.p);
@@ -211,7 +197,6 @@ export function addStrip(ed) {
     renderFrames();
     renderBands();
     renderSeams();
-    renderSafe();
     renderLabels();
     placeSel();
   }

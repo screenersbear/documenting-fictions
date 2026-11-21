@@ -822,7 +822,7 @@ scrollbar-width: thin;
 .ws-inner { position: relative; }
 .strip { position: absolute; box-shadow: 0 2px 14px rgba(0, 0, 0, 0.3); }
 .strip-frames { position: absolute; inset: 0; overflow: hidden; }
-.strip-bands, .strip-seams, .strip-safe { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.strip-bands, .strip-seams { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .strip-guides { position: absolute; inset: 0; pointer-events: none; }
 .fr { position: absolute; overflow: hidden; cursor: grab; }
 .fr img {
@@ -880,24 +880,6 @@ width: 1px;
 margin-left: -0.5px;
 background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.9) 0 6px, rgba(0, 0, 0, 0.5) 6px 12px);
 }
-.safe-band {
-position: absolute;
-display: flex;
-align-items: center;
-justify-content: center;
-overflow: hidden;
-background: rgba(0, 0, 0, 0.32);
-color: rgba(255, 255, 255, 0.92);
-font-size: 11px;
-font-weight: 700;
-text-transform: uppercase;
-letter-spacing: 1px;
-text-align: center;
-line-height: 1.2;
-padding: 0 4px;
-}
-.safe-band.top { border-bottom: 1px dashed rgba(255, 255, 255, 0.85); }
-.safe-band.bottom { border-top: 1px dashed rgba(255, 255, 255, 0.85); }
 .guide { position: absolute; background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4); }
 .guide.v { top: -14px; bottom: -14px; width: 1px; margin-left: -0.5px; }
 .guide.h { left: -14px; right: -14px; height: 1px; margin-top: -0.5px; }

@@ -4,7 +4,7 @@
 // it. The steps themselves are drawn in new-layout-steps.js.
 import { saveProject, listTemplates } from '../data/db.js';
 import { blankLayout, layoutFromTemplate } from '../data/templates.js';
-import { changeRatio } from '../data/slides.js';
+import { templateChoices } from '../data/story-templates.js';
 import { DEFAULT_RATIO } from '../data/formats.js';
 import { openSheet } from '../components/sheet.js';
 import { shortBandHtml, CLOSE } from '../components/band.js';
@@ -15,9 +15,6 @@ import { templateMenu } from './template-menu.js';
 import { MARKS, nameStep, sizeStep, templateStep } from './new-layout-steps.js';
 
 const dateName = () => `Layout, ${shortDate(new Date().toISOString())}`;
-
-// Any template fits any size: boxes keep their place relative to the slide.
-const inRatio = (t, ratio) => (t.ratio === ratio ? t : changeRatio(t, ratio));
 
 // Resolves true once a layout is made, false if the guide was left.
 export async function newLayout() {
@@ -38,10 +35,15 @@ export async function newLayout() {
     const next = s.body.querySelector('[data-next]');
 
     async function draw(keepPlace = false) {
-      if (W.step === 2) list = (await listTemplates()).filter((t) => t.starterKey !== 'story' && t.starterKey !== 'full-bleed');
+      // Any template fits any size (boxes keep their place relative to the
+      // slide); Stories get their own set. A pick not on the list goes back to Blank.
+      if (W.step === 2) {
+        list = templateChoices(await listTemplates(), W.ratio);
+        if (W.template && !list.some((t) => t.id === W.template)) W.template = '';
+      }
       if (!s.overlay.isConnected) return;
       const blank = { ...blankLayout(W.ratio), name: 'Blank' };
-      const body = W.step === 0 ? nameStep(W) : W.step === 1 ? sizeStep(W) : templateStep(W, list.map((t) => inRatio(t, W.ratio)), blank);
+      const body = W.step === 0 ? nameStep(W) : W.step === 1 ? sizeStep(W) : templateStep(W, list, blank);
       const top = scroll.scrollTop;
       scroll.innerHTML = marksHtml(MARKS, W.step) + body;
       scroll.scrollTop = keepPlace ? top : 0;
@@ -58,7 +60,7 @@ export async function newLayout() {
 
     async function make() {
       const t = list.find((x) => x.id === W.template);
-      const layout = t ? layoutFromTemplate(inRatio(t, W.ratio)) : blankLayout(W.ratio);
+      const layout = t ? layoutFromTemplate(t) : blankLayout(W.ratio);
       made = true;
       const p = await saveProject({ name: W.name.trim() || W.defaultName, photoIds: [], thumb: null, ...layout });
       s.close();
@@ -84,13 +86,7 @@ export async function newLayout() {
       if (more) {
         // Renamed, copied, moved or deleted: drawn again, and a deleted pick
         // goes back to Blank.
-        return templateMenu(more.dataset.tmore, async () => {
-          await draw(true);
-          if (W.template && !list.some((t) => t.id === W.template)) {
-            W.template = '';
-            draw(true);
-          }
-        });
+        return templateMenu(more.dataset.tmore, () => draw(true));
       }
       const use = e.target.closest('[data-use]');
       if (use) {

@@ -1,9 +1,10 @@
 // Fingers on the strip: tap, pan, pinch, and holding a photo to drag it
 // onto another frame (they swap).
-import { SLIDE_W, MIN_FRAME } from '../data/formats.js';
+import { MIN_FRAME } from '../data/formats.js';
 import { defaultCrop } from '../data/templates.js';
 import { placement, clampedCrop } from '../components/placement.js';
 import { snapTargets, nearest } from '../components/snapping.js';
+import { resizeRoom } from '../data/spreads.js';
 import { clamp } from '../components/util.js';
 import { SNAP_PX } from './editor-sizes.js';
 
@@ -139,9 +140,8 @@ export function addGestures(ed) {
     };
     if (h.includes('w')) [l, gx] = snap(s.x + dxu, ed.g.targets.xs);
     if (h.includes('e')) [r, gx] = snap(s.x + s.w + dxu, ed.g.targets.xs);
-    // The edges of the open spread are as far as a frame can go.
-    const lo = ed.spread * 2 * SLIDE_W;
-    const hi2 = lo + 2 * SLIDE_W;
+    // The edges of the open spread (a Story's own edges) are as far as a frame can go.
+    const [lo, hi2] = resizeRoom(ed.p, ed.spread, s.x);
     if (l < lo) [l, gx] = [lo, null];
     if (r > hi2) [r, gx] = [hi2, null];
     if (h.includes('n')) [t, gy] = snap(s.y + dyu, ed.g.targets.ys);
@@ -203,7 +203,7 @@ export function addGestures(ed) {
     const frEl = e.target.closest('.fr');
     const f = handle ? ed.selFrame() : frEl && ed.frameById(frEl.dataset.id);
     if (handle && f) {
-      ed.g = { ...base, type: 'resize', id: f.id, h: handle.dataset.h, start: { x: f.x, y: f.y, w: f.w, h: f.h }, targets: snapTargets(ed.p, f.id, { safeZone: ed.showSafe }) };
+      ed.g = { ...base, type: 'resize', id: f.id, h: handle.dataset.h, start: { x: f.x, y: f.y, w: f.w, h: f.h }, targets: snapTargets(ed.p, f.id) };
       return;
     }
     // Frames stay where the layout put them. Dragging the selected frame

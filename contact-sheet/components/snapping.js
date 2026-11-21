@@ -1,10 +1,10 @@
 // Snapping: the lines a moving frame or photo snaps to.
-import { SLIDE_W, slideH, isStory, SAFE_TOP, SAFE_BOTTOM } from '../data/formats.js';
+import { SLIDE_W, slideH } from '../data/formats.js';
 
 // ---------- Snapping ----------
 
 // Lines a frame's edges and centre can snap to, in strip units.
-export function snapTargets(p, skipId, { safeZone = false } = {}) {
+export function snapTargets(p, skipId) {
   const W = SLIDE_W;
   const H = slideH(p);
   const P = p.padding || 0;
@@ -16,7 +16,6 @@ export function snapTargets(p, skipId, { safeZone = false } = {}) {
     if (P) xs.push(k * W + P, (k + 1) * W - P);
   }
   if (P) ys.push(P, H - P);
-  if (safeZone && isStory(p)) ys.push(SAFE_TOP, H - SAFE_BOTTOM);
   for (const f of p.frames) {
     if (f.id === skipId) continue;
     xs.push(f.x, f.x + f.w, f.x + f.w / 2);
