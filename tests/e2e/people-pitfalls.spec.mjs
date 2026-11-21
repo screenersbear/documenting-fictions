@@ -39,12 +39,16 @@ test('a mood board stays when its shoot is deleted in The Eye, and when its pers
   // The shoot is deleted in The Eye.
   await page.click('#shootWizardExitBtn');
   await expect(page.locator('#shootWizard')).toBeHidden();
-  await page.locator('#deleteShootBtn').scrollIntoViewIfNeeded();
-  await page.click('#deleteShootBtn');
+  const shoots = () => page.evaluate(() => (JSON.parse(localStorage.getItem('dailies_state_v1') || '{}').shoots || []).length);
+  await expect.poll(shoots).toBe(1);
+  // Delete shoot is in the page's More menu (the page's own button stays hidden).
+  await page.locator('#shootBandMore').click();
+  await expect(page.locator('#shootMoreDeleteBtn')).toBeVisible();
+  await page.locator('#shootMoreDeleteBtn').click();
   await expect(page.locator('#appConfirmOverlay')).toBeVisible();
   await page.waitForTimeout(500); // the card ignores a tap in its first moments
   await page.click('#appConfirmOkBtn');
-  await expect.poll(() => page.evaluate(() => (JSON.parse(localStorage.getItem('dailies_state_v1') || '{}').shoots || []).length)).toBe(0);
+  await expect.poll(shoots).toBe(0);
   // Her board is still in Ref.
   await page.goto('/ref/#/boards');
   await expect(boards(page)).toHaveText(['June Park']);

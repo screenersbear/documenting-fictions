@@ -71,6 +71,9 @@ test.describe('Ref: IMPORT', () => {
     await expect(page.locator('[data-at]')).toHaveText('Page 2 of 2');
     await expect(page.locator('.tray-page.on .tray-num')).toHaveText('2');
     // The page's photo, picked, swiped sideways: the page turns back (it can't be cropped sideways).
+    // boundingBox() doesn't wait: right after the turn the page can still be
+    // drawing, and a page not yet shown has no box (PR #12's run, 21 Nov).
+    await expect(page.locator('[data-stage] .page')).toBeVisible();
     const stage = await page.locator('[data-stage] .page').boundingBox();
     const cx = stage.x + stage.width / 2, cy = stage.y + stage.height / 2;
     await page.mouse.click(cx, cy);
