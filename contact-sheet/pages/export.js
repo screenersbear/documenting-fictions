@@ -109,7 +109,7 @@ export function openExport(p, photos) {
         ${files.map((f, i) => `<li data-i="${i}"><img style="aspect-ratio:${f.width}/${f.height}" src="${urls[i]}" alt="${esc(word)} ${i + 1}" draggable="false" /><span class="order-num"></span>${f.isVideo ? `<span class="order-vid">${ICONS.play}</span>` : ''}<span class="order-off">Left out</span></li>`).join('')}
       </ol>
       ${n > 1 ? '<p class="order-count" data-count></p>' : ''}
-      ${empty ? `<p class="tip">${empty === 1 ? '1 box is' : `${empty} boxes are`} empty and show the background color.</p>` : ''}
+      ${empty ? `<p class="tip">${empty === 1 ? '1 box is empty and shows' : `${empty} boxes are empty and show`} the background color.</p>` : ''}
       ${slidesWithVideo.length && !record ? `<p class="tip">This browser can't save video, so those ${esc(pageWord(p, true))} are saved as still images. Safari and Chrome can.</p>` : ''}
       <button type="button" class="exp-row" data-pdf>
         <span class="exp-row-icon">${PDF_ICON}</span>
