@@ -7,13 +7,15 @@
 // only read: Callback itself never changes. Each of its people becomes what
 // Rounds needs: the row the tick list shows, Let go or not, the day of
 // their next Check in, their touchpoints (moments, or a note for a project
-// wrapped) and their notes. Left out: warmth levels (Parked is Let go),
-// interest, organizations as records (the name goes in the note), news,
-// promises and weekly data.
+// wrapped), their notes, and their open loops still open, as promises (21
+// Nov). Left out: warmth levels (Parked is Let go), interest,
+// organizations as records (the name goes in the note), news, closed loops
+// and weekly data.
 import { isDay } from './dates.js';
 import { cleanGroups, leadGroup } from './plan.js';
 import { cleanHandle, cleanSite } from './contact.js';
 import { NOTE_MOST } from './done-notes.js';
+import { WHAT_MOST } from './promises.js';
 
 export const NOT_CALLBACK = "This file isn't a Callback backup. In Callback's Settings, Export backup makes one.";
 // Callback's relationship types as Rounds' groups (its Other has none: New).
@@ -61,10 +63,20 @@ export function touchOf(tp) {
   return { id: tp.id, day, at, kind: 'moment', what, note: sentences([first, tp.note, reply]) };
 }
 
+// One of Callback's open loops still open, as a promise (data/promises.js):
+// on your side is yours, on their side theirs. The same id each time
+// (cb-<its id>), so it never comes in twice. Null for a closed one, or one
+// with no words.
+export function loopOf(l) {
+  const what = text(l.description).replace(/\s+/g, ' ').slice(0, WHAT_MOST);
+  if (!what || l.status === 'closed') return null;
+  return { id: `cb-${l.id}`, mine: l.direction !== 'theyOwe', what, due: dayFrom(l.dueDate), made: dayFrom(l.createdAt), open: true };
+}
+
 // One person: { row (as the tick list and newPerson take it), letGo,
 // nextDay, touches (oldest first), notes (their Callback notes, as a note
-// on the day they were added there, or null) }.
-export function personOf(p, orgName, touches = []) {
+// on the day they were added there, or null), promises (their open loops) }.
+export function personOf(p, orgName, touches = [], promises = []) {
   const types = Array.isArray(p.relationshipTypes) && p.relationshipTypes.length ? p.relationshipTypes : [p.relationshipType || 'prospect'];
   const groups = cleanGroups(types.map((t) => GROUP_OF[t]));
   const role = text(p.role);
@@ -80,6 +92,7 @@ export function personOf(p, orgName, touches = []) {
     nextDay: dayFrom(p.nextTouchpointDate),
     touches: [...touches].sort((a, b) => a.day.localeCompare(b.day) || a.at - b.at),
     notes: notes ? { id: `${p.id}-notes`, day: dayFrom(p.createdAt), at: Date.parse(p.createdAt) || 0, kind: 'note', what: '', note: notes, fromNotes: true } : null,
+    promises: [...promises],
   };
 }
 
@@ -94,10 +107,15 @@ export function readCallback(payload) {
     const t = touchOf(tp);
     if (t) touches.set(tp.personId, [...(touches.get(tp.personId) || []), t]);
   }
+  const loops = new Map();
+  for (const l of list('openLoops')) {
+    const x = loopOf(l);
+    if (x) loops.set(l.personId, [...(loops.get(l.personId) || []), x]);
+  }
   const people = [];
   let bad = 0;
   for (const p of list('people')) {
-    const one = personOf(p, orgs.get(p.organizationId), touches.get(p.id));
+    const one = personOf(p, orgs.get(p.organizationId), touches.get(p.id), loops.get(p.id));
     if (one.row.name) people.push(one);
     else bad++;
   }

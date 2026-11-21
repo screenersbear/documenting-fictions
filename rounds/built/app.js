@@ -164,7 +164,7 @@ function nowISO() {
 function esc(v) {
 	return String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const clamp$1 = /* @__PURE__ */ __name((v, lo, hi) => Math.min(hi, Math.max(lo, v)), "clamp");
 const clone = (v) => JSON.parse(JSON.stringify(v));
 function shortDate(iso) {
 	const d = new Date(iso);
@@ -350,7 +350,7 @@ function shortBandHtml({ place, back, more }) {
     <header class="band band-short">
       <a class="ring-btn" href="${back}" aria-label="Back"><span>${BACK}</span></a>
       <p class="band-line"><b>${esc(place)}</b><span class="band-rule"></span></p>
-      ${ring(more, "data-band-more", MORE)}
+      ${more ? ring(more, "data-band-more", MORE) : "<span class=\"ring-btn ring-none\" aria-hidden=\"true\"></span>"}
     </header>`;
 }
 
@@ -1102,22 +1102,22 @@ function markSvg(key, size) {
 }
 
 // data/person.js
-const text$1 = /* @__PURE__ */ __name((v) => String(v ?? "").trim(), "text");
+const text$2 = /* @__PURE__ */ __name((v) => String(v ?? "").trim(), "text");
 function newPerson(f, today) {
 	const groups = cleanGroups(f.groups || [f.group || "new"]);
 	const group = leadGroup(groups);
 	return {
 		id: f.id,
-		name: text$1(f.name),
+		name: text$2(f.name),
 		group,
 		groups,
 		groupPicked: false,
 		instagram: cleanHandle(f.instagram),
 		tiktok: cleanHandle(f.tiktok),
 		website: cleanSite(f.website),
-		email: text$1(f.email),
-		where: text$1(f.where),
-		note: text$1(f.note),
+		email: text$2(f.email),
+		where: text$2(f.where),
+		note: text$2(f.note),
 		lists: {
 			email: false,
 			mail: false
@@ -1216,7 +1216,7 @@ const markLater = (person, today) => ({
 });
 function applyEdit(person, f, today) {
 	const p = { ...person };
-	if ("name" in f && text$1(f.name)) p.name = text$1(f.name);
+	if ("name" in f && text$2(f.name)) p.name = text$2(f.name);
 	for (const k of ["instagram", "tiktok"]) if (k in f) p[k] = cleanHandle(f[k]);
 	if ("website" in f) p.website = cleanSite(f.website);
 	for (const k of [
@@ -1224,7 +1224,7 @@ function applyEdit(person, f, today) {
 		"where",
 		"note",
 		"address"
-	]) if (k in f) p[k] = text$1(f[k]);
+	]) if (k in f) p[k] = text$2(f[k]);
 	if ("lists" in f) p.lists = {
 		email: !!f.lists.email,
 		mail: !!f.lists.mail
@@ -1839,16 +1839,17 @@ const MOST$2 = 5;
 const rank$1 = /* @__PURE__ */ __name((k) => KIND_KEYS.indexOf(k), "rank");
 const perDayOf = (n) => Math.min(5, Math.max(1, Math.floor(Number(n)) || 3));
 const isDue = (p, today, week) => !p.letGo && comesUp(p.next, today, week);
-function dueOn(people, today, week = ANY_DAY) {
+function dueOn$1(people, today, week = ANY_DAY) {
 	return people.filter((p) => isDue(p, today, week)).sort((a, b) => rank$1(a.next.kind) - rank$1(b.next.kind) || a.next.due.localeCompare(b.next.due) || a.added.localeCompare(b.added) || a.name.localeCompare(b.name));
 }
+__name(dueOn$1, "dueOn");
 function pickFor(people, saved, today, perDay = 3, week = ANY_DAY) {
 	const same = !!saved && saved.date === today;
 	const marks = same ? { ...saved.marks } : {};
 	const byId = new Map(people.map((p) => [p.id, p]));
 	const keep = same ? saved.ids.filter((id) => byId.has(id) && (marks[id] || isDue(byId.get(id), today, week))) : [];
 	const room = Math.max(0, perDayOf(perDay) - keep.length);
-	const more = dueOn(people, today, week).map((p) => p.id).filter((id) => !keep.includes(id)).slice(0, room);
+	const more = dueOn$1(people, today, week).map((p) => p.id).filter((id) => !keep.includes(id)).slice(0, room);
 	return {
 		date: today,
 		ids: [...keep, ...more],
@@ -2749,6 +2750,10 @@ function cardLine(p, line, week, today) {
 	return p.next && !p.letGo ? dueLine(p.next, week, today) : lastly;
 }
 const pickLine = (p, line, today) => [GROUPS[p.group] || GROUPS.new, line ? `last: ${lastWords(p, line, today)}` : ""].filter(Boolean).join(" · ");
+const newLine = (typed) => {
+	const t = String(typed ?? "").trim();
+	return t ? `Add "${t}"` : "Add them, then write";
+};
 
 // components/person-search.js
 const MOST$1 = 40;
@@ -2811,14 +2816,15 @@ function openAddPerson(onAdded, { name = "" } = {}) {
 }
 
 // pages/reach-out.js
+const bigNewHtml = () => `<button type="button" class="big-btn big-btn-ink reach-new" data-new><span class="big-btn-plus" aria-hidden="true">${PLUS}</span><span class="big-btn-words"><b>Someone new</b><span data-new-line>${esc(newLine(""))}</span></span></button>`;
 async function openReachOut(redraw) {
 	const [people, lines] = await Promise.all([listPeople(), listMoves()]);
 	const s = openSheet({
-		title: "Reach out to",
+		title: "New connection",
 		className: "reach-sheet",
-		body: `${searchBoxHtml("Search by name or handle")}<div class="pick-list" data-found></div>
-      <p class="label reach-label">Or someone new</p>
-      <button type="button" class="reach-new" data-new>${PLUS}<span>Add someone</span></button>`
+		body: `${bigNewHtml()}
+      <p class="label reach-label">Or someone you know</p>
+      ${searchBoxHtml("Search by name or handle")}<div class="pick-list" data-found></div>`
 	});
 	let typed = "";
 	wireSearch(s.body, people, lines, {
@@ -2828,7 +2834,7 @@ async function openReachOut(redraw) {
 		},
 		onType: (t) => {
 			typed = t;
-			s.body.querySelector("[data-new] span").textContent = t ? `Add "${t}" as a new person` : "Add someone";
+			s.body.querySelector("[data-new-line]").textContent = newLine(t);
 		}
 	});
 	s.body.querySelector("[data-new]").addEventListener("click", () => {
@@ -2860,6 +2866,16 @@ function doneRow({ line, person }) {
 		said: moment ? "" : firstLine(line.said),
 		note: firstLine(line.note)
 	};
+}
+
+// components/who-row.js
+const whoHtml = (person) => `<a class="who-row" href="#/person/${encodeURIComponent(person.id)}" data-who>${photoHtml(person, "small")}
+  <span class="who-words"><span class="who-name">${esc(person.name)}</span><span class="who-open">Their page ${CHEV_SMALL}</span></span></a>`;
+function wireWho(s, person) {
+	const a = s.body.querySelector("[data-who]");
+	if (!a) return;
+	fillPhotos(a, [person]);
+	a.addEventListener("click", () => s.close());
 }
 
 // data/moment-store.js
@@ -2917,14 +2933,14 @@ function whenBox(day, today) {
 	if (day === today) return `Today, ${words}`;
 	return day === addDays(today, -1) ? `Yesterday, ${words}` : words;
 }
-function openMoment(person, { line = null, after = async () => {} } = {}) {
+function openMoment(person, { line = null, after = async () => {}, who = false } = {}) {
 	const today = dayOf();
 	let what = line ? line.what : "";
 	let day = line ? line.day : today;
 	const s = openSheet({
 		title: `A moment with ${firstName(person.name) || "them"}`,
 		className: "sheet-small moment-sheet",
-		body: `
+		body: `${who ? whoHtml(person) : ""}
       <p class="label moment-label">What happened</p>
       <div class="pick-chips">${momentChoices(person.name).map(([k, label]) => `<button type="button" class="pick-chip${k === what ? " on" : ""}" data-what="${esc(k)}" aria-pressed="${k === what}">${esc(label)}</button>`).join("")}</div>
       <label class="label moment-label" for="momentDay">When</label>
@@ -2936,6 +2952,7 @@ function openMoment(person, { line = null, after = async () => {} } = {}) {
       ${line ? "<button type=\"button\" class=\"text-btn\" data-delete>Delete the moment</button>" : ""}</div>`
 	});
 	const $ = (sel) => s.body.querySelector(sel);
+	wireWho(s, person);
 	const draw = () => {
 		$(".moment-when-words").textContent = whenBox(day, today);
 		$(".moment-keeps-sub").textContent = $("#momentKeeps").checked ? keepWords(person, day, today) : "Nothing in Rounds moves.";
@@ -2991,11 +3008,11 @@ function openMoment(person, { line = null, after = async () => {} } = {}) {
 }
 
 // pages/what-you-said.js
-function openSaid(person, line, after) {
+function openSaid(person, line, after, { who = false } = {}) {
 	const s = openSheet({
 		title: withWords(line, person.name),
 		className: "sheet-small said-sheet",
-		body: `
+		body: `${who ? whoHtml(person) : ""}
       <p class="said-title">${esc(withWords(line, person.name))}</p>
       <p class="said-when">${esc([longDay(line.day), howWords(line)].filter(Boolean).join(" · "))}</p>
       ${line.said ? `<p class="label said-label">What you said</p><p class="said-words">${esc(line.said)}</p>` : ""}
@@ -3007,6 +3024,7 @@ function openSaid(person, line, after) {
       </div>`
 	});
 	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(moveLook(line), moveName(line));
+	wireWho(s, person);
 	s.body.addEventListener("click", async (e) => {
 		const b = e.target.closest("button");
 		if (!b) return;
@@ -3126,9 +3144,10 @@ function wireDoneToday(view, done, after) {
 		const { line, person } = done[Number(b.dataset.done)];
 		if (line.kind === "moment") openMoment(person, {
 			line,
-			after
+			after,
+			who: true
 		});
-		else openSaid(person, line, after);
+		else openSaid(person, line, after, { who: true });
 	});
 }
 
@@ -3911,7 +3930,7 @@ function wirePostSlips(root, open) {
 }
 
 // pages/today.js
-const head = (count, arc) => `<div class="today-head"><span class="today-count-row">${count ? `<span class="today-count">${count}</span>` : ""}<button type="button" class="list-act today-reach" data-reach>${PLUS}Reach out</button></span>${arc}</div>`;
+const head = (count, arc) => `<div class="today-head"><span class="today-count-row">${count ? `<span class="today-count">${count}</span>` : ""}<button type="button" class="today-reach" data-reach>${PLUS}Connection</button></span>${arc}</div>`;
 let flip = fresh();
 function stackHtml(pick, left, today, at) {
 	const n = pick.ids.length;
@@ -4041,6 +4060,90 @@ function lookAlike(people, waved = []) {
 	return null;
 }
 
+// data/promises.js
+const WHAT_MOST = 200;
+const text$1 = /* @__PURE__ */ __name((v) => typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, 200) : "", "text");
+const valid = (x) => !!x && typeof x === "object" && typeof x.id === "string" && x.id && !!text$1(x.what);
+function newPromise({ mine = true, what, due = "" } = {}, id, today) {
+	const words = text$1(what);
+	if (!words || typeof id !== "string" || !id) return null;
+	return {
+		id,
+		mine: mine !== false,
+		what: words,
+		due: isDay(due) ? due : "",
+		made: isDay(today) ? today : "",
+		open: true
+	};
+}
+const promisesOf = (p) => p && Array.isArray(p.promises) ? p.promises.filter(valid) : [];
+const openOf = (p) => promisesOf(p).filter((x) => x.open);
+function withPromise(person, promise) {
+	if (!valid(promise)) return person;
+	const list = promisesOf(person);
+	const at = list.findIndex((x) => x.id === promise.id);
+	return {
+		...person,
+		promises: at < 0 ? [...list, promise] : list.map((x, i) => i === at ? promise : x)
+	};
+}
+function changePromise(person, id, changes) {
+	const list = promisesOf(person);
+	if (!list.some((x) => x.id === id)) return person;
+	return {
+		...person,
+		promises: list.map((x) => x.id === id ? {
+			...x,
+			...changes
+		} : x)
+	};
+}
+const keepPromise = (person, id, today) => changePromise(person, id, {
+	open: false,
+	outcome: "kept",
+	closed: today
+});
+const letGoPromise = (person, id, today) => changePromise(person, id, {
+	open: false,
+	outcome: "letGo",
+	closed: today
+});
+const openAgain = (person, id) => changePromise(person, id, {
+	open: true,
+	outcome: "",
+	closed: ""
+});
+const dueOn = (person, id, day) => changePromise(person, id, { due: isDay(day) ? day : "" });
+function anotherWeek(due, today) {
+	return addDays(later(isDay(due) ? due : "", today), 7);
+}
+const isLate = (x, today) => !!x && x.open && isDay(x.due) && x.due < today;
+function promiseWhen(x, today) {
+	if (!x || !isDay(x.due) || !isDay(today)) return "";
+	const n = daysBetween(today, x.due);
+	if (n < 0) return `${-n} ${n === -1 ? "day" : "days"} late`;
+	const lead = x.mine === false ? "Expected" : "Due";
+	const w = dueWords(x.due, today);
+	return `${lead} ${n < 2 ? w.toLowerCase() : w}`;
+}
+function promiseList(people) {
+	const all = (Array.isArray(people) ? people : []).flatMap((person) => openOf(person).map((promise) => ({
+		person,
+		promise
+	})));
+	const order = (a, b) => (a.promise.due || "9999").localeCompare(b.promise.due || "9999") || (a.promise.made || "").localeCompare(b.promise.made || "") || a.promise.what.localeCompare(b.promise.what);
+	return {
+		mine: all.filter((x) => x.promise.mine !== false).sort(order),
+		theirs: all.filter((x) => x.promise.mine === false).sort(order)
+	};
+}
+function bothPromises(a, b) {
+	const out = [...Array.isArray(a) ? a : []].filter(valid);
+	for (const x of Array.isArray(b) ? b : []) if (valid(x) && !out.some((y) => y.id === x.id)) out.push(x);
+	return out;
+}
+const promiseCount = (n) => `${n} ${n === 1 ? "promise" : "promises"}`;
+
 // data/merge-people.js
 const FILL = [
 	"instagram",
@@ -4082,6 +4185,8 @@ function mergePeople(keep, other) {
 		letGo: !!(keep.letGo && other.letGo),
 		next: nextOf(keep, other)
 	});
+	const promises = bothPromises(keep.promises, other.promises);
+	if (promises.length) out.promises = promises;
 	return out;
 }
 const movedLines = (lines, from, to) => lines.filter((l) => l.personId === from).map((l) => ({
@@ -4558,6 +4663,113 @@ async function peopleScreen(root, { beside = false } = {}) {
 	});
 }
 
+// components/promise-row.js
+function promiseRowHtml({ person, promise }, today, { who = true } = {}) {
+	const when = promiseWhen(promise, today);
+	const line = [who ? person.name : "", when].filter(Boolean).join(" · ") || "No day set";
+	return `<button type="button" class="prom-row${who ? "" : " prom-row-own"}" data-promise="${esc(promise.id)}" data-person="${esc(person.id)}">${who ? photoHtml(person, "small") : ""}
+    <span class="prom-words"><span class="prom-what">${esc(promise.what)}</span><span class="prom-line${isLate(promise, today) ? " is-late" : ""}">${esc(line)}</span></span>${CHEV}</button>`;
+}
+
+// data/promise-store.js
+async function changeSaved(personId, change) {
+	const before = await getPerson(personId);
+	if (!before) return null;
+	const after = change(before);
+	if (after !== before) await savePerson(after);
+	return {
+		before,
+		after
+	};
+}
+async function undoChange(undo) {
+	if (!undo || !undo.before) return false;
+	const now = await getPerson(undo.before.id);
+	if (!now) return false;
+	await savePerson({
+		...now,
+		promises: Array.isArray(undo.before.promises) ? undo.before.promises : []
+	});
+	return true;
+}
+
+// pages/promise-add.js
+async function openPickForPromise(after) {
+	const [people, lines] = await Promise.all([listPeople(), listMoves()]);
+	const s = openSheet({
+		title: "A promise",
+		className: "reach-sheet",
+		body: people.length ? `<p class="label reach-label prom-who-label">Who is it with?</p>
+      ${searchBoxHtml("Search by name or handle")}<div class="pick-list" data-found></div>` : "<p class=\"note\">Add someone in People first, then their promise.</p>"
+	});
+	if (!people.length) return s;
+	wireSearch(s.body, people, lines, { onPick: (p) => {
+		s.close();
+		openAddPromise(p, after, { who: true });
+	} });
+	return s;
+}
+const chip = (on, mine, label) => `<button type="button" class="pick-chip${on ? " on" : ""}" data-mine="${mine}" aria-pressed="${on}">${esc(label)}</button>`;
+function openAddPromise(person, after = async () => {}, { who = false } = {}) {
+	const today = dayOf();
+	const first = firstName(person.name) || "They";
+	let mine = true;
+	let due = "";
+	const s = openSheet({
+		title: `A promise with ${firstName(person.name) || "them"}`,
+		className: "sheet-small moment-sheet prom-sheet",
+		body: `${who ? whoHtml(person) : ""}
+      <p class="label moment-label">Who promised</p>
+      <div class="pick-chips">${chip(true, "yes", "I promised")}${chip(false, "no", `${first} promised`)}</div>
+      <label class="label moment-label" for="promiseWhat">What</label>
+      <textarea class="move-text" id="promiseWhat" rows="2" maxlength="${200}" placeholder="Send the selects"></textarea>
+      <label class="label moment-label" for="promiseDue">By when (optional)</label>
+      <span class="moment-when"><span class="moment-when-words"></span><input type="date" id="promiseDue" min="${today}" /></span>
+      <div class="moment-btns"><button type="button" class="btn primary" data-save disabled>Add the promise</button></div>`
+	});
+	const $ = (sel) => s.body.querySelector(sel);
+	wireWho(s, person);
+	const drawDue = () => {
+		$(".moment-when-words").textContent = due ? longDay(due) : "No day";
+	};
+	drawDue();
+	$("#promiseDue").addEventListener("change", (e) => {
+		due = e.target.value && e.target.value >= today ? e.target.value : "";
+		e.target.value = due;
+		drawDue();
+	});
+	$("#promiseWhat").addEventListener("input", (e) => {
+		$("[data-save]").disabled = !e.target.value.trim();
+	});
+	s.body.addEventListener("click", async (e) => {
+		const b = e.target.closest("button");
+		if (!b) return;
+		if (b.dataset.mine) {
+			mine = b.dataset.mine === "yes";
+			s.body.querySelectorAll("[data-mine]").forEach((c) => {
+				const on = c.dataset.mine === "yes" === mine;
+				c.classList.toggle("on", on);
+				c.setAttribute("aria-pressed", on);
+			});
+		} else if (b.matches("[data-save]")) {
+			const promise = newPromise({
+				mine,
+				what: $("#promiseWhat").value,
+				due
+			}, `pr-${uuid()}`, today);
+			if (!promise) return;
+			s.close();
+			const undo = await changeSaved(person.id, (p) => withPromise(p, promise));
+			await after();
+			if (undo) toast(mine ? "Promise added." : `Added to what you're waiting on.`, { action: {
+				label: "Undo",
+				run: () => undoChange(undo).then(after)
+			} });
+		}
+	});
+	return s;
+}
+
 // components/dialogs.js
 function confirmSheet({ title, message = "", confirmLabel = "OK", cancelLabel = "Cancel", danger = false }) {
 	return new Promise((resolve) => {
@@ -4640,97 +4852,136 @@ function promptSheet({ title, label = "Name", value = "", confirmLabel = "Save",
 	});
 }
 
-// pages/message-edit.js
-function openMessage(kind, mine, onSaved) {
-	const s = openSheet({
-		title: KINDS[kind].name,
-		body: `
-      <form class="form" data-form>
-        <label class="field"><span class="field-label">Your message</span><textarea name="text" rows="6">${esc(mine ?? KINDS[kind].starter)}</textarea></label>
-        <span class="field-label">Fill in</span>
-        <div class="fill-chips">${FILLS.map((f) => `<button type="button" class="fill-chip" data-fill="${f}">[${f}]</button>`).join("")}</div>
-        ${mine === undefined ? "" : "<button type=\"button\" class=\"text-btn\" data-reset>Back to the example</button>"}
-        <div class="sheet-actions">
-          <button type="button" class="btn secondary" data-close>Cancel</button>
-          <button type="submit" class="btn primary">Save</button>
-        </div>
-      </form>`
+// pages/promise-sheet.js
+function pickPromiseDay(promise, today = dayOf()) {
+	return new Promise((resolve) => {
+		let answer = null;
+		let day = promise.due && promise.due >= today ? promise.due : "";
+		const s = openSheet({
+			title: "By when?",
+			className: "sheet-small moment-sheet prom-sheet",
+			body: `<p class="sheet-message">${esc(promise.what)}</p>
+        <span class="moment-when"><span class="moment-when-words"></span><input type="date" id="promiseDay" min="${today}" value="${esc(day)}" aria-label="The day" /></span>
+        <div class="moment-btns"><button type="button" class="btn primary" data-save>Save</button>
+        ${promise.due ? "<button type=\"button\" class=\"text-btn\" data-none>No day</button>" : ""}</div>`,
+			onClose: () => resolve(answer)
+		});
+		const words = s.body.querySelector(".moment-when-words");
+		const draw = () => {
+			words.textContent = day ? longDay(day) : "Tap to pick a day";
+		};
+		draw();
+		s.body.querySelector("#promiseDay").addEventListener("change", (e) => {
+			day = e.target.value && e.target.value >= today ? e.target.value : "";
+			e.target.value = day;
+			draw();
+		});
+		s.body.querySelector("[data-save]").addEventListener("click", () => {
+			answer = day;
+			s.close();
+		});
+		s.body.querySelector("[data-none]")?.addEventListener("click", () => {
+			answer = "";
+			s.close();
+		});
 	});
-	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(kind);
-	const text = s.body.querySelector("textarea");
-	s.body.querySelector(".fill-chips").addEventListener("click", (e) => {
-		const b = e.target.closest("[data-fill]");
-		if (!b) return;
-		const at = text.selectionStart ?? text.value.length;
-		const put = `[${b.dataset.fill}]`;
-		text.setRangeText(put, at, text.selectionEnd ?? at, "end");
-		text.focus();
+}
+async function openPromiseActions(person, promise, after, { who = true } = {}) {
+	const today = dayOf();
+	const theirs = promise.mine === false;
+	const first = firstName(person.name) || "them";
+	const when = promiseWhen(promise, today);
+	const week = anotherWeek(promise.due, today);
+	const pick = await choiceSheet({
+		title: theirs ? `${first} promised` : `You promised ${first}`,
+		message: `${esc(promise.what)}${when ? `<span class="prom-sheet-when">${esc(when)}</span>` : ""}`,
+		options: [
+			{
+				key: "kept",
+				label: theirs ? "Got it" : "Kept it",
+				detail: theirs ? "It happened. Off the list." : "Done. Off the list."
+			},
+			{
+				key: "week",
+				label: "Another week",
+				detail: `${theirs ? "Expected" : "Due"} ${longDay(week)}`
+			},
+			{
+				key: "day",
+				label: promise.due ? "Pick another day" : "Pick a day"
+			},
+			{
+				key: "go",
+				label: "Let it go",
+				detail: "Off the list, without it happening."
+			},
+			...who ? [{
+				key: "page",
+				label: `${person.name}'s page`
+			}] : []
+		]
 	});
-	s.body.querySelector("[data-reset]")?.addEventListener("click", async () => {
-		await resetMessage(kind);
-		s.close();
-		onSaved();
-	});
-	s.body.querySelector("form").addEventListener("submit", async (e) => {
-		e.preventDefault();
-		const words = text.value.trim();
-		if (!words || words === KINDS[kind].starter) await resetMessage(kind);
-		else await saveMessage(kind, words);
-		s.close();
-		onSaved();
-	});
-	return s;
+	if (!pick) return;
+	if (pick === "page") {
+		location.hash = `#/person/${encodeURIComponent(person.id)}`;
+		return;
+	}
+	let change;
+	let said;
+	if (pick === "kept") {
+		change = (p) => keepPromise(p, promise.id, today);
+		said = theirs ? "Marked as happened." : "Marked as kept.";
+	} else if (pick === "go") {
+		change = (p) => letGoPromise(p, promise.id, today);
+		said = "Let go.";
+	} else if (pick === "week") {
+		change = (p) => dueOn(p, promise.id, week);
+		said = `Now ${theirs ? "expected" : "due"} ${longDay(week)}.`;
+	} else {
+		const day = await pickPromiseDay(promise, today);
+		if (day === null || day === promise.due) return;
+		change = (p) => dueOn(p, promise.id, day);
+		said = day ? `Now ${theirs ? "expected" : "due"} ${longDay(day)}.` : "No day now.";
+	}
+	const undo = await changeSaved(person.id, change);
+	await after();
+	if (undo) toast(said, { action: {
+		label: "Undo",
+		run: () => undoChange(undo).then(after)
+	} });
 }
 
-// pages/messages.js
-const MINE = [{
-	key: "offer",
-	name: "Your offer",
-	fill: "[offer]",
-	ask: "What do you offer past clients?",
-	hint: "a free mini session"
-}, {
-	key: "city",
-	name: "Your city",
-	fill: "[city]",
-	ask: "Where are you based?",
-	hint: "Hoboken"
-}];
-const row$1 = /* @__PURE__ */ __name((attr, mark, name, text) => `<button type="button" class="msg-row" ${attr}>${mark}<span class="msg-words"><span class="msg-kind">${esc(name)}</span><span class="msg-text">${esc(text)}</span></span>${CHEV}</button>`, "row");
-async function messagesScreen(view, { beside = false } = {}) {
-	const [messages, me] = await Promise.all([getMessages(), getMe()]);
+// pages/promises.js
+const addHtml = () => `<button type="button" class="big-btn big-btn-ink prom-add" data-add-promise><span class="big-btn-plus" aria-hidden="true">${PLUS}</span><span class="big-btn-words"><b>Promise</b><span>Something you or they said would happen</span></span></button>`;
+function listHtml(title, items, today) {
+	if (!items.length) return "";
+	return `<div class="prom-part"><div class="list-head"><h2>${esc(title)} <span>${items.length}</span></h2></div>
+    <div class="prom-list">${items.map((x) => promiseRowHtml(x, today)).join("")}</div></div>`;
+}
+async function promisesScreen(view, { beside = false } = {}) {
+	const people = await listPeople();
+	const today = dayOf();
+	const { mine, theirs } = promiseList(people);
 	view.innerHTML = `<div class="screen"><div class="scroll">
     ${bandHtml({
-		title: "Messages",
+		title: "Promises",
 		place: "Rounds"
 	})}
-    <p class="note">Write each one once, in your words. [name] and the others fill in for each person.</p>
-    <div class="msg-list">${MESSAGE_ORDER.map((k) => row$1(`data-kind="${k}"`, miniHtml(k), KINDS[k].name, messages[k] ?? KINDS[k].starter)).join("")}</div>
-    <div class="msg-fills">
-      <div class="list-head"><h2>Your fill-ins</h2></div>
-      <div class="msg-list">${MINE.map((m) => row$1(`data-mine="${m.key}"`, "", `${m.name} ${m.fill}`, me[m.key] || "Not set yet")).join("")}</div>
-    </div>
+    ${addHtml()}
+    ${mine.length || theirs.length ? `${listHtml("You promised", mine, today)}${listHtml("They promised", theirs, today)}` : "<p class=\"note prom-none\">When you promise someone something, or they promise you, add it here. Rounds keeps it in front of you until it happens.</p>"}
   </div></div>`;
+	fillPhotos(view, [...mine, ...theirs].map((x) => x.person));
 	if (beside) return;
-	const redraw = () => messagesScreen(view).then(() => view.querySelector(".screen")?.classList.add("still"));
-	view.querySelector(".scroll").addEventListener("click", async (e) => {
-		const b = e.target.closest(".msg-row");
-		if (!b) return;
-		if (b.dataset.kind) {
-			openMessage(b.dataset.kind, messages[b.dataset.kind], redraw);
+	const redraw = () => promisesScreen(view).then(() => view.querySelector(".screen")?.classList.add("still"));
+	view.querySelector(".scroll").addEventListener("click", (e) => {
+		if (e.target.closest("[data-add-promise]")) {
+			openPickForPromise(redraw);
 			return;
 		}
-		const m = MINE.find((x) => x.key === b.dataset.mine);
-		const value = await promptSheet({
-			title: m.name,
-			label: m.ask,
-			value: me[m.key],
-			placeholder: m.hint,
-			allowEmpty: true
-		});
-		if (value === null) return;
-		await setSetting(m.key, value);
-		redraw();
+		const b = e.target.closest("[data-promise]");
+		if (!b) return;
+		const item = [...mine, ...theirs].find((x) => x.promise.id === b.dataset.promise && x.person.id === b.dataset.person);
+		if (item) openPromiseActions(item.person, item.promise, redraw);
 	});
 }
 
@@ -4738,7 +4989,7 @@ async function messagesScreen(view, { beside = false } = {}) {
 const SCREENS = [
 	todayScreen,
 	peopleScreen,
-	messagesScreen
+	promisesScreen
 ];
 const drawSection = (i, el, opts) => SCREENS[i](el, opts);
 
@@ -4864,7 +5115,7 @@ async function crossfade(go) {
 const MARKS = {
 	today: "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle class=\"mk-ring\" cx=\"12\" cy=\"12\" r=\"10\"/><circle class=\"mk-2\" cx=\"12\" cy=\"12\" r=\"4\"/></svg>",
 	people: "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle class=\"mk-1\" cx=\"8.5\" cy=\"12\" r=\"7.5\"/><circle class=\"mk-2\" cx=\"15.5\" cy=\"12\" r=\"7.5\" opacity=\".85\"/></svg>",
-	messages: "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path class=\"mk-1\" d=\"M2 4h20v12H9l-5 5v-5H2z\"/><rect class=\"mk-2\" x=\"6\" y=\"8\" width=\"12\" height=\"2.5\"/></svg>"
+	promises: "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path class=\"mk-2\" d=\"M7.5 13.5L5 23l7-3.2 7 3.2-2.5-9.5z\"/><circle class=\"mk-1\" cx=\"12\" cy=\"9\" r=\"8\"/></svg>"
 };
 const SECTIONS = [
 	{
@@ -4880,10 +5131,10 @@ const SECTIONS = [
 		icon: MARKS.people
 	},
 	{
-		href: "#/messages",
-		name: "Messages",
-		key: "messages",
-		icon: MARKS.messages
+		href: "#/promises",
+		name: "Promises",
+		key: "promises",
+		icon: MARKS.promises
 	}
 ];
 const bar = document.getElementById("navbar");
@@ -5190,6 +5441,227 @@ const clientFor = (person, pitched) => ({
 	pitched: pitched || ""
 });
 
+// data/crop.js
+const RATIO = 4 / 5;
+const MOST_ZOOM = 3;
+const OUT = {
+	w: 720,
+	h: 900
+};
+function coverScale(img, box) {
+	if (!(img.w > 0 && img.h > 0 && box.w > 0 && box.h > 0)) return 1;
+	return Math.max(box.w / img.w, box.h / img.h);
+}
+const zoomIn = (z) => Math.min(3, Math.max(1, Number.isFinite(z) ? z : 1));
+function clamp(view, img, box) {
+	const zoom = zoomIn(view.zoom);
+	const s = coverScale(img, box) * zoom;
+	const minX = Math.min(0, box.w - img.w * s);
+	const minY = Math.min(0, box.h - img.h * s);
+	const x = Number.isFinite(view.x) ? view.x : 0;
+	const y = Number.isFinite(view.y) ? view.y : 0;
+	return {
+		zoom,
+		x: Math.min(0, Math.max(minX, x)),
+		y: Math.min(0, Math.max(minY, y))
+	};
+}
+function centred(img, box) {
+	const s = coverScale(img, box);
+	return clamp({
+		zoom: 1,
+		x: (box.w - img.w * s) / 2,
+		y: (box.h - img.h * s) / 2
+	}, img, box);
+}
+const moveBy = (view, dx, dy, img, box) => clamp({
+	...view,
+	x: view.x + dx,
+	y: view.y + dy
+}, img, box);
+function zoomAt(view, zoom, px, py, img, box) {
+	const base = coverScale(img, box);
+	const now = base * zoomIn(view.zoom);
+	const next = base * zoomIn(zoom);
+	const ix = (px - view.x) / now;
+	const iy = (py - view.y) / now;
+	return clamp({
+		zoom: zoomIn(zoom),
+		x: px - ix * next,
+		y: py - iy * next
+	}, img, box);
+}
+function sourceRect(view, img, box) {
+	const v = clamp(view, img, box);
+	const s = coverScale(img, box) * v.zoom;
+	return {
+		sx: 0 - v.x / s,
+		sy: 0 - v.y / s,
+		sw: box.w / s,
+		sh: box.h / s
+	};
+}
+function outSize(rect) {
+	if (!(rect.sw > 0 && rect.sh > 0)) return {
+		w: 1,
+		h: 1
+	};
+	const w = Math.max(1, Math.round(Math.min(OUT.w, rect.sw)));
+	return {
+		w,
+		h: Math.max(1, Math.round(w * rect.sh / rect.sw))
+	};
+}
+
+// components/crop-sheet.js
+function openCrop(file) {
+	return new Promise((done) => {
+		const url = URL.createObjectURL(file);
+		let result = null;
+		const s = openSheet({
+			title: "Crop the photo",
+			className: "sheet-small crop-sheet",
+			body: `<div class="crop-box" data-crop-box><img alt="" draggable="false" data-crop-img /></div>
+        <p class="crop-hint">Drag to move it, pinch or slide to zoom.</p>
+        <label class="crop-zoom"><span aria-hidden="true">&minus;</span><input type="range" min="1" max="${3}" step="0.01" value="1" aria-label="Zoom" data-crop-zoom /><span aria-hidden="true">+</span></label>
+        <button type="button" class="btn primary crop-use" data-crop-use disabled>Use this photo</button>`,
+			onClose: () => {
+				URL.revokeObjectURL(url);
+				done(result);
+			}
+		});
+		const box = s.body.querySelector("[data-crop-box]");
+		const imgEl = s.body.querySelector("[data-crop-img]");
+		const slider = s.body.querySelector("[data-crop-zoom]");
+		const use = s.body.querySelector("[data-crop-use]");
+		let img = {
+			w: 0,
+			h: 0
+		};
+		let size = {
+			w: 0,
+			h: 0
+		};
+		let view = {
+			zoom: 1,
+			x: 0,
+			y: 0
+		};
+		let photo = null;
+		const draw = () => {
+			const k = coverScale(img, size) * view.zoom;
+			imgEl.style.width = `${img.w * k}px`;
+			imgEl.style.height = `${img.h * k}px`;
+			imgEl.style.transform = `translate(${view.x}px, ${view.y}px)`;
+			slider.value = String(view.zoom);
+		};
+		loadImage(url).then((el) => {
+			if (!s.overlay.isConnected) return;
+			photo = el;
+			img = {
+				w: el.naturalWidth,
+				h: el.naturalHeight
+			};
+			const r = box.getBoundingClientRect();
+			size = {
+				w: r.width,
+				h: r.height
+			};
+			view = centred(img, size);
+			imgEl.src = url;
+			draw();
+			use.disabled = false;
+		}).catch(() => {
+			result = false;
+			s.close();
+		});
+		slider.addEventListener("input", () => {
+			view = zoomAt(view, Number(slider.value), size.w / 2, size.h / 2, img, size);
+			draw();
+		});
+		const fingers = new Map();
+		let last = null;
+		let apart = 0;
+		const spread = () => {
+			const [a, b] = [...fingers.values()];
+			return Math.hypot(b.x - a.x, b.y - a.y);
+		};
+		box.addEventListener("pointerdown", (e) => {
+			fingers.set(e.pointerId, {
+				x: e.clientX,
+				y: e.clientY
+			});
+			try {
+				box.setPointerCapture(e.pointerId);
+			} catch {}
+			last = {
+				x: e.clientX,
+				y: e.clientY
+			};
+			apart = fingers.size === 2 ? spread() : 0;
+		});
+		box.addEventListener("pointermove", (e) => {
+			if (!fingers.has(e.pointerId) || !photo) return;
+			fingers.set(e.pointerId, {
+				x: e.clientX,
+				y: e.clientY
+			});
+			if (fingers.size >= 2) {
+				const now = spread();
+				const [a, b] = [...fingers.values()];
+				const r = box.getBoundingClientRect();
+				if (apart > 0) view = zoomAt(view, view.zoom * (now / apart), (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top, img, size);
+				apart = now;
+			} else if (last) {
+				view = moveBy(view, e.clientX - last.x, e.clientY - last.y, img, size);
+				last = {
+					x: e.clientX,
+					y: e.clientY
+				};
+			}
+			draw();
+		});
+		const up = (e) => {
+			fingers.delete(e.pointerId);
+			const [left] = [...fingers.values()];
+			last = left || null;
+			apart = 0;
+		};
+		box.addEventListener("pointerup", up);
+		box.addEventListener("pointercancel", up);
+		use.addEventListener("click", async () => {
+			if (!photo) return;
+			const r = sourceRect(view, img, size);
+			const out = outSize(r);
+			const c = document.createElement("canvas");
+			c.width = out.w;
+			c.height = out.h;
+			c.getContext("2d").drawImage(photo, r.sx, r.sy, r.sw, r.sh, 0, 0, out.w, out.h);
+			result = await canvasToBlob(c, "image/jpeg", .86);
+			s.close();
+		});
+	});
+}
+
+// pages/person-photo.js
+async function changePhoto(p, redraw) {
+	const file = await pickFile("image/*");
+	if (!file) return;
+	const cropped = await openCrop(file);
+	if (cropped === false) {
+		toast("That photo couldn't be opened.");
+		return;
+	}
+	if (!cropped) return;
+	try {
+		await keepPhoto(p, cropped);
+	} catch {
+		toast("That photo couldn't be opened.");
+		return;
+	}
+	redraw();
+}
+
 // pages/person-edit.js
 const field = (label, name, value, more = "") => `<label class="field"><span class="field-label">${label}</span><input type="text" name="${name}" value="${esc(value)}" autocomplete="off" ${more} /></label>`;
 const HANDLE = "autocapitalize=\"off\" spellcheck=\"false\" placeholder=\"@handle\"";
@@ -5341,6 +5813,7 @@ function wirePitch(view, person, pitched, redraw) {
 // pages/person-menu.js
 async function openPersonMenu(p, redraw, { asks = false, pitched = "" } = {}) {
 	const own = await hasOwnPhoto(p);
+	const said = !!p.pitch && p.pitch.answer === "yes";
 	const pick = await choiceSheet({
 		title: p.name,
 		options: [
@@ -5356,10 +5829,16 @@ async function openPersonMenu(p, redraw, { asks = false, pitched = "" } = {}) {
 				key: "unphoto",
 				label: "Remove the photo"
 			}] : [],
-			...asks || p.letGo ? [] : [{
+			...p.letGo ? [] : [{
 				key: "yes",
-				label: "Yes, let's shoot"
+				label: "Yes, let's shoot",
+				current: said,
+				detail: said ? "They said yes." : ""
 			}],
+			{
+				key: "promise",
+				label: "Add a promise"
+			},
 			{
 				key: "merge",
 				label: "Merge with..."
@@ -5380,23 +5859,15 @@ async function openPersonMenu(p, redraw, { asks = false, pitched = "" } = {}) {
 		]
 	});
 	if (pick === "edit") openEdit(p, redraw);
-	else if (pick === "photo") {
-		const file = await pickFile("image/*");
-		if (!file) return;
-		try {
-			await keepPhoto(p, file);
-		} catch {
-			toast("That photo couldn't be opened.");
-			return;
-		}
-		redraw();
-	} else if (pick === "unphoto") {
+	else if (pick === "photo") await changePhoto(p, redraw);
+	else if (pick === "unphoto") {
 		await removePhoto(p);
 		redraw();
 	} else if (pick === "yes") {
 		await answer(p, "yes", pitched);
 		redraw();
-	} else if (pick === "merge") openMergeWith(p, (kept) => kept.id === p.id ? redraw() : location.hash = `#/person/${encodeURIComponent(kept.id)}`);
+	} else if (pick === "promise") openAddPromise(p, redraw);
+	else if (pick === "merge") openMergeWith(p, (kept) => kept.id === p.id ? redraw() : location.hash = `#/person/${encodeURIComponent(kept.id)}`);
 	else if (pick === "delete") {
 		const yes = await confirmSheet({
 			title: `Delete ${p.name}?`,
@@ -5423,6 +5894,26 @@ async function openPersonMenu(p, redraw, { asks = false, pitched = "" } = {}) {
 			redraw();
 		}
 	}
+}
+
+// pages/person-promises.js
+const itemsOf = (p) => {
+	const { mine, theirs } = promiseList([p]);
+	return [...mine, ...theirs];
+};
+function personPromisesHtml(p) {
+	const items = itemsOf(p);
+	if (!items.length) return "";
+	const today = dayOf();
+	return `<div class="person-promises"><div class="list-head"><h2>Promises <span>${items.length}</span></h2></div>
+    <div class="prom-list">${items.map((x) => promiseRowHtml(x, today, { who: false })).join("")}</div></div>`;
+}
+function wirePersonPromises(view, p, redraw) {
+	view.querySelector(".person-promises")?.addEventListener("click", (e) => {
+		const b = e.target.closest("[data-promise]");
+		const item = b && itemsOf(p).find((x) => x.promise.id === b.dataset.promise);
+		if (item) openPromiseActions(p, item.promise, redraw, { who: false });
+	});
 }
 
 // pages/person.js
@@ -5455,7 +5946,7 @@ async function personScreen(view, id) {
 		more: "More"
 	})}
     <div class="person-top">
-      ${photoHtml(p)}
+      <button type="button" class="person-photo-btn" data-photo aria-label="Change the photo">${photoHtml(p)}</button>
       <h1 class="person-name">${esc(p.name)}</h1>
       ${handle ? url ? `<a class="person-handle" href="${esc(url)}" target="_blank" rel="noopener" data-test-skip>${esc(handle)} ${CHEV_SMALL}</a>` : `<span class="person-handle">${esc(handle)}</span>` : ""}
       <!-- The handle opens their profile on Instagram (or TikTok, or their website): the button clicker leaves it alone. -->
@@ -5463,6 +5954,7 @@ async function personScreen(view, id) {
     </div>
     ${asks ? await pitchHtml(p, pitched) : ""}
     ${next ? `<button type="button" class="person-next" data-move>${miniHtml(moveLook(p.next))}<span class="person-next-what">${esc(phrase(p.next.kind, p.name, p.next.year))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>` : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
+    ${personPromisesHtml(p)}
     <button type="button" class="btn secondary person-moment" data-moment>Add a moment</button>
     ${soFarHtml(rows)}
   </div></div>`;
@@ -5477,9 +5969,11 @@ async function personScreen(view, id) {
 		asks,
 		pitched
 	}));
+	view.querySelector("[data-photo]").addEventListener("click", () => changePhoto(p, redraw));
 	wirePitch(view, p, pitched, redraw);
 	view.querySelector("[data-moment]").addEventListener("click", () => openMoment(p, { after: redraw }));
 	wireSoFar(view, p, rows, lines, redraw);
+	wirePersonPromises(view, p, redraw);
 	view.querySelector("[data-move]")?.addEventListener("click", () => writeTo(p, redraw));
 	const once = (key) => {
 		try {
@@ -5495,6 +5989,99 @@ async function personScreen(view, id) {
 	const said = once("rounds-open-said");
 	const saidLine = said && lines.find((l) => l.id === said && l.personId === id);
 	if (saidLine) openSaid(p, saidLine, redraw);
+}
+
+// pages/message-edit.js
+function openMessage(kind, mine, onSaved) {
+	const s = openSheet({
+		title: KINDS[kind].name,
+		body: `
+      <form class="form" data-form>
+        <label class="field"><span class="field-label">Your message</span><textarea name="text" rows="6">${esc(mine ?? KINDS[kind].starter)}</textarea></label>
+        <span class="field-label">Fill in</span>
+        <div class="fill-chips">${FILLS.map((f) => `<button type="button" class="fill-chip" data-fill="${f}">[${f}]</button>`).join("")}</div>
+        ${mine === undefined ? "" : "<button type=\"button\" class=\"text-btn\" data-reset>Back to the example</button>"}
+        <div class="sheet-actions">
+          <button type="button" class="btn secondary" data-close>Cancel</button>
+          <button type="submit" class="btn primary">Save</button>
+        </div>
+      </form>`
+	});
+	s.el.querySelector(".sheet-header h2").innerHTML = tagHtml(kind);
+	const text = s.body.querySelector("textarea");
+	s.body.querySelector(".fill-chips").addEventListener("click", (e) => {
+		const b = e.target.closest("[data-fill]");
+		if (!b) return;
+		const at = text.selectionStart ?? text.value.length;
+		const put = `[${b.dataset.fill}]`;
+		text.setRangeText(put, at, text.selectionEnd ?? at, "end");
+		text.focus();
+	});
+	s.body.querySelector("[data-reset]")?.addEventListener("click", async () => {
+		await resetMessage(kind);
+		s.close();
+		onSaved();
+	});
+	s.body.querySelector("form").addEventListener("submit", async (e) => {
+		e.preventDefault();
+		const words = text.value.trim();
+		if (!words || words === KINDS[kind].starter) await resetMessage(kind);
+		else await saveMessage(kind, words);
+		s.close();
+		onSaved();
+	});
+	return s;
+}
+
+// pages/messages.js
+const MINE = [{
+	key: "offer",
+	name: "Your offer",
+	fill: "[offer]",
+	ask: "What do you offer past clients?",
+	hint: "a free mini session"
+}, {
+	key: "city",
+	name: "Your city",
+	fill: "[city]",
+	ask: "Where are you based?",
+	hint: "Hoboken"
+}];
+const row$1 = /* @__PURE__ */ __name((attr, mark, name, text) => `<button type="button" class="msg-row" ${attr}>${mark}<span class="msg-words"><span class="msg-kind">${esc(name)}</span><span class="msg-text">${esc(text)}</span></span>${CHEV}</button>`, "row");
+async function messagesScreen(view) {
+	const [messages, me] = await Promise.all([getMessages(), getMe()]);
+	view.innerHTML = `<div class="screen"><div class="scroll">
+    ${shortBandHtml({
+		place: "Your messages",
+		back: "#/today"
+	})}
+    <p class="note">Write each one once, in your words. [name] and the others fill in for each person.</p>
+    <div class="msg-list">${MESSAGE_ORDER.map((k) => row$1(`data-kind="${k}"`, miniHtml(k), KINDS[k].name, messages[k] ?? KINDS[k].starter)).join("")}</div>
+    <div class="msg-fills">
+      <div class="list-head"><h2>Your fill-ins</h2></div>
+      <div class="msg-list">${MINE.map((m) => row$1(`data-mine="${m.key}"`, "", `${m.name} ${m.fill}`, me[m.key] || "Not set yet")).join("")}</div>
+    </div>
+  </div></div>`;
+	const redraw = () => messagesScreen(view).then(() => view.querySelector(".screen")?.classList.add("still"));
+	view.querySelector(".scroll").addEventListener("click", async (e) => {
+		const b = e.target.closest(".msg-row");
+		if (!b) return;
+		if (b.dataset.kind) {
+			openMessage(b.dataset.kind, messages[b.dataset.kind], redraw);
+			return;
+		}
+		const m = MINE.find((x) => x.key === b.dataset.mine);
+		const value = await promptSheet({
+			title: m.name,
+			label: m.ask,
+			value: me[m.key],
+			placeholder: m.hint,
+			allowEmpty: true
+		});
+		if (value === null) return;
+		await setSetting(m.key, value);
+		redraw();
+	});
 }
 
 // data/lists.js
@@ -5578,7 +6165,19 @@ function touchOf(tp) {
 		])
 	};
 }
-function personOf(p, orgName, touches = []) {
+function loopOf(l) {
+	const what = text(l.description).replace(/\s+/g, " ").slice(0, 200);
+	if (!what || l.status === "closed") return null;
+	return {
+		id: `cb-${l.id}`,
+		mine: l.direction !== "theyOwe",
+		what,
+		due: dayFrom(l.dueDate),
+		made: dayFrom(l.createdAt),
+		open: true
+	};
+}
+function personOf(p, orgName, touches = [], promises = []) {
 	const types = Array.isArray(p.relationshipTypes) && p.relationshipTypes.length ? p.relationshipTypes : [p.relationshipType || "prospect"];
 	const groups = cleanGroups(types.map((t) => GROUP_OF[t]));
 	const role = text(p.role);
@@ -5606,7 +6205,8 @@ function personOf(p, orgName, touches = []) {
 			what: "",
 			note: notes,
 			fromNotes: true
-		} : null
+		} : null,
+		promises: [...promises]
 	};
 }
 function readCallback(payload) {
@@ -5618,10 +6218,15 @@ function readCallback(payload) {
 		const t = touchOf(tp);
 		if (t) touches.set(tp.personId, [...touches.get(tp.personId) || [], t]);
 	}
+	const loops = new Map();
+	for (const l of list("openLoops")) {
+		const x = loopOf(l);
+		if (x) loops.set(l.personId, [...loops.get(l.personId) || [], x]);
+	}
 	const people = [];
 	let bad = 0;
 	for (const p of list("people")) {
-		const one = personOf(p, orgs.get(p.organizationId), touches.get(p.id));
+		const one = personOf(p, orgs.get(p.organizationId), touches.get(p.id), loops.get(p.id));
 		if (one.row.name) people.push(one);
 		else bad++;
 	}
@@ -5641,15 +6246,20 @@ function bringPlan(entries, people, lines) {
 	for (const e of entries) {
 		const touches = [...e.touches, ...e.notes ? [e.notes] : []].filter((t) => !inLog.has(lineId(t)));
 		const to = findMatch(people, e.row);
+		const had = new Set(promisesOf(to).map((x) => x.id));
+		const promises = (e.promises || []).filter((x) => !had.has(x.id));
 		const same = to ? null : items.find((i) => !i.to && findMatch([i.row], e.row));
-		if (same) same.touches.push(...touches);
-		else if (to && !touches.length) skipped++;
+		if (same) {
+			same.touches.push(...touches);
+			same.promises.push(...promises);
+		} else if (to && !touches.length && !promises.length) skipped++;
 		else items.push({
 			row: e.row,
 			to,
 			letGo: e.letGo,
 			nextDay: e.nextDay,
-			touches
+			touches,
+			promises
 		});
 	}
 	return {
@@ -5659,9 +6269,12 @@ function bringPlan(entries, people, lines) {
 }
 function fromWords(item) {
 	const n = touchCount(item);
-	if (!item.to) return `${n === 1 ? "1 touchpoint" : `${n || "No"} touchpoints`}${item.letGo ? " · Let go" : ""}`;
+	const k = (item.promises || []).length;
+	const promised = k ? ` · ${k === 1 ? "1 promise" : `${k} promises`}` : "";
+	if (!item.to) return `${n === 1 ? "1 touchpoint" : `${n || "No"} touchpoints`}${promised}${item.letGo ? " · Let go" : ""}`;
+	if (!n && k) return `In Rounds already: ${k === 1 ? "1 promise goes" : `${k} promises go`} on their page`;
 	if (!n) return "In Rounds already: a note goes on their page";
-	return `In Rounds already: ${n === 1 ? "1 touchpoint goes" : `${n} touchpoints go`} on their page`;
+	return `In Rounds already: ${n === 1 ? "1 touchpoint goes" : `${n} touchpoints go`} on their page${promised}`;
 }
 function linesOf(t, personId, day, at, wasLast) {
 	const [first = "", ...more] = pieces(t.note);
@@ -5701,7 +6314,12 @@ function bring(items, today, perDay, makeId, now) {
 			lines.push(...linesOf(t, p.id, day, t.at || now, wasLast));
 			if (t.kind === "moment" && day <= today) last = later(last, day);
 		}
-		out.set(p.id, {
+		const promises = bothPromises(p.promises, i.promises);
+		out.set(p.id, promises.length ? {
+			...p,
+			lastMove: last,
+			promises
+		} : {
 			...p,
 			lastMove: last
 		});
@@ -5758,7 +6376,7 @@ const SEEN = "rounds-intro-seen";
 const CARDS = [
 	["A few people a day", "Today picks three people to write to: a thank you, a hello, a check-in. Write, tap Done, and that is it. No streaks, and nothing overdue."],
 	["Groups set the pace", "Regulars, New people, Clients, Prospects and Event guests each get their own moves, at their own pace. A person's groups are in their Edit: someone can be a Regular and a Client at once."],
-	["Your words", "Messages has one starter for each kind of move, in your words. Their name and the rest fill in for each person, and you can change it before sending."]
+	["Your words", "Your messages, in Options, have one starter for each kind of move, in your words. Their name and the rest fill in for each person, and you can change it before sending."]
 ];
 const introSeen = () => {
 	try {
@@ -5818,6 +6436,7 @@ const FIELDS = {
 	address: "Address",
 	next: "Next move",
 	draft: "Draft in Gmail",
+	promises: "Promises",
 	letGo: "Let go",
 	"lists.email": "Email newsletter",
 	"lists.mail": "Mail newsletter",
@@ -5836,6 +6455,7 @@ function valueWords(path, v, id = "") {
 	if (path === "group") return GROUPS[v] || String(v);
 	if (path === "groups" && Array.isArray(v)) return v.map((g) => GROUPS[g] || String(g)).join(", ") || "Nothing";
 	if (path === "next" || path === "draft") return KINDS[v.kind] ? [KINDS[v.kind].name, v.due && `due ${v.due}`].filter(Boolean).join(", ") : "Nothing";
+	if (path === "promises" && Array.isArray(v)) return v.filter((x) => x && x.open && x.what).map((x) => x.what).join("; ") || "None open";
 	if ((id === "workDays" || id === "daysOff") && Array.isArray(v)) return WEEK.filter(([d]) => v.includes(d)).map(([, n]) => n).join(", ") || "Nothing";
 	return typeof v === "object" ? JSON.stringify(v) : String(v);
 }
@@ -6065,6 +6685,7 @@ async function openOptions(onChange, autoHandler) {
       <div class="work-days"><span class="field-label">Work days</span><div class="day-chips" data-chips="work">${chips(days, "data-day")}</div><p class="work-days-note">Pitches and follow ups wait for these days.</p></div>
       <div class="work-days"><span class="field-label">Days off</span><div class="day-chips" data-chips="off">${chips(off, "data-off")}</div><p class="work-days-note">Nothing comes up on these days.</p></div>
       <div class="choice-list">
+        ${row("data-messages", "Your messages", "The words each kind of move starts with")}
         ${syncRow}
         ${row("data-import", "Import people", "From a CSV file")}
         ${row("data-callback", "Bring in from Callback", "From a Callback backup")}
@@ -6096,6 +6717,9 @@ async function openOptions(onChange, autoHandler) {
 			out.textContent = String(n);
 			await setSetting("perDay", n);
 			onChange();
+		} else if (b.matches("[data-messages]")) {
+			s.close();
+			location.hash = "#/messages";
 		} else if (b.matches("[data-import]")) {
 			s.close();
 			openImport(onChange);
@@ -6293,7 +6917,7 @@ const suite = window.DF_SUITE;
 const SECTION = {
 	"/today": 0,
 	"/people": 1,
-	"/messages": 2
+	"/promises": 2
 };
 let token = 0;
 async function route() {
@@ -6314,6 +6938,9 @@ async function route() {
 		} else if (m = h.match(/^\/person\/(.+)$/)) {
 			await personScreen(view, decodeURIComponent(m[1]));
 			if (mine === token) showSection(1);
+		} else if (h === "/messages") {
+			await messagesScreen(view);
+			if (mine === token) showSection(-1);
 		} else location.replace("#/today");
 	} catch (e) {
 		console.error(e);

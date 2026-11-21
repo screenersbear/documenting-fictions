@@ -57,3 +57,11 @@
 .save-msg-input:focus-visible + .save-msg-box { outline: 2px solid var(--text); outline-offset: 2px; }
 .save-msg-words { flex: 1; min-width: 0; font: 400 14px/19px var(--ui); }
 .save-msg-sub { display: block; font: 400 12px/16px var(--ui); color: var(--dim); }
+/* Who it's with, on WHAT YOU SAID and a moment opened from DONE TODAY (20
+   Nov): their photo and name, a way to their page. */
+.who-row { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 0 0 12px; border-bottom: 1px solid var(--line); color: var(--text); }
+.who-row .ph { width: 40px; height: 50px; flex: none; }
+.who-words { display: flex; flex-direction: column; min-width: 0; }
+.who-name { font: 400 17px/22px var(--ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who-open { display: inline-flex; align-items: center; gap: 4px; font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.who-open svg { width: 10px; height: 10px; }

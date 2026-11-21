@@ -40,6 +40,16 @@ describe('mergePeople', () => {
     expect(M.mergePeople({ ...lindsey, next: null }, { ...lindsay, next: null }).next).toBeNull();
     expect(M.mergePeople(lindsey, { ...lindsay, next: { kind: 'hello', due: '2027-02-01' } }).next).toBe(lindsey.next);
   });
+  it('brings both lists of promises together, each once, the kept one\'s first', () => {
+    const a = { id: 'a', mine: true, what: 'Send the selects', due: '', made: '2026-11-01', open: true };
+    const b = { id: 'b', mine: false, what: 'Tag me in the post', due: '2026-11-30', made: '2026-11-02', open: true };
+    expect(M.mergePeople({ ...lindsey, promises: [a] }, { ...lindsay, promises: [b, a] }).promises).toEqual([a, b]);
+    expect(M.mergePeople(lindsey, { ...lindsay, promises: [b] }).promises).toEqual([b]);
+  });
+  it('adds no promises when neither had any', () => {
+    expect('promises' in M.mergePeople(lindsey, { ...lindsay, promises: [] })).toBe(false);
+    expect('promises' in M.mergePeople(lindsey, { ...lindsay, promises: 'nonsense' })).toBe(false);
+  });
   it('copes with what an older record leaves out', () => {
     const bare = { id: 'b', name: 'B', group: 'new', letGo: false };
     expect(M.mergePeople(bare, { id: 'c', name: 'C', group: 'new', letGo: false })).toEqual({

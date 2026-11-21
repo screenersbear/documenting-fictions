@@ -1,11 +1,12 @@
-// A person (04-person): photo, name, handle (opens their profile), one line
+// A person (04-person): photo (a tap changes it, cropped first: 20 Nov), name, handle (opens their profile), one line
 // (their group, and where you met or why they're a fit), then their next
-// move, which opens the one sheet (pages/one-sheet.js). After a pitch, HOW DID THE PITCH GO? comes between
+// move, which opens the one sheet (pages/one-sheet.js), then their open
+// PROMISES (pages/person-promises.js, 21 Nov). After a pitch, HOW DID THE PITCH GO? comes between
 // (pages/person-pitch.js). Under it ADD A MOMENT (pages/moment-sheet.js)
 // and SO FAR, everything done with them (pages/so-far.js, thanks/06). In
 // the suite, EVERYTHING WITH <NAME>, IN ALL FOUR at the bottom opens their
-// page on the shelf (connect/08). The ... menu: Edit, a photo, Yes, Merge
-// with..., Let go and Delete.
+// page on the shelf (connect/08). The ... menu: Edit, a photo, Yes, Add a
+// promise, Merge with..., Let go and Delete.
 import { shortBandHtml } from '../components/band.js';
 import { photoHtml, fillPhotos } from '../components/photo.js';
 import { miniHtml } from '../components/marks.js';
@@ -24,12 +25,14 @@ import { whenDue } from '../data/work-days.js';
 import { shelfPageOf } from '../data/people-out.js';
 import { firstName } from '../data/fill.js';
 import { openPersonMenu } from './person-menu.js';
+import { changePhoto } from './person-photo.js';
 import { pitchHtml, wirePitch } from './person-pitch.js';
 import { openMoment } from './moment-sheet.js';
 import { soFarHtml, wireSoFar } from './so-far.js';
 import { openSaid } from './what-you-said.js';
 import { doneSoFar } from '../data/so-far.js';
 import { eyeShoots } from '../data/eye.js';
+import { personPromisesHtml, wirePersonPromises } from './person-promises.js';
 
 function restHtml(p) {
   if (p.letGo) return 'Let go. Everything about them is kept, and the menu can bring them back.';
@@ -51,7 +54,7 @@ export async function personScreen(view, id) {
   view.innerHTML = `<div class="screen"><div class="scroll">
     ${shortBandHtml({ place: 'People', back: '#/people', more: 'More' })}
     <div class="person-top">
-      ${photoHtml(p)}
+      <button type="button" class="person-photo-btn" data-photo aria-label="Change the photo">${photoHtml(p)}</button>
       <h1 class="person-name">${esc(p.name)}</h1>
       ${handle ? (url ? `<a class="person-handle" href="${esc(url)}" target="_blank" rel="noopener" data-test-skip>${esc(handle)} ${CHEV_SMALL}</a>` : `<span class="person-handle">${esc(handle)}</span>`) : ''}
       <!-- The handle opens their profile on Instagram (or TikTok, or their website): the button clicker leaves it alone. -->
@@ -60,6 +63,7 @@ export async function personScreen(view, id) {
     ${asks ? await pitchHtml(p, pitched) : ''}
     ${next ? `<button type="button" class="person-next" data-move>${miniHtml(moveLook(p.next))}<span class="person-next-what">${esc(phrase(p.next.kind, p.name, p.next.year))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>`
       : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
+    ${personPromisesHtml(p)}
     <button type="button" class="btn secondary person-moment" data-moment>Add a moment</button>
     ${soFarHtml(rows)}
   </div></div>`;
@@ -71,9 +75,11 @@ export async function personScreen(view, id) {
   });
   const redraw = () => personScreen(view, id).then(() => view.querySelector('.screen')?.classList.add('still'));
   view.querySelector('[data-band-more]').addEventListener('click', () => openPersonMenu(p, redraw, { asks, pitched }));
+  view.querySelector('[data-photo]').addEventListener('click', () => changePhoto(p, redraw));
   wirePitch(view, p, pitched, redraw);
   view.querySelector('[data-moment]').addEventListener('click', () => openMoment(p, { after: redraw }));
   wireSoFar(view, p, rows, lines, redraw);
+  wirePersonPromises(view, p, redraw);
   view.querySelector('[data-move]')?.addEventListener('click', () => writeTo(p, redraw));
   // Sent here to do the move (The Eye's OPEN ROUNDS), or to add a moment
   // (the person page on the shelf): it opens once.

@@ -43,6 +43,25 @@ describe('bringPlan', () => {
   });
 });
 
+describe('bringPlan with promises', () => {
+  const pr = (id, o = {}) => ({ id, mine: true, what: `Promise ${id}`, due: '', made: '', open: true, ...o });
+  const june = { id: 'r1', name: 'June Park', instagram: 'june.p', promises: [pr('cb-a')] };
+  it('only the promises someone does not have yet come in', () => {
+    const { items, skipped } = bringPlan([withIg('June', 'june.p', { promises: [pr('cb-a'), pr('cb-b')] })], [june], []);
+    expect(skipped).toBe(0);
+    expect(items[0].promises.map((x) => x.id)).toEqual(['cb-b']);
+  });
+  it('someone Rounds has, with only promises they have already, is skipped', () => {
+    expect(bringPlan([withIg('June', 'june.p', { promises: [pr('cb-a')] })], [june], []).skipped).toBe(1);
+    expect(bringPlan([withIg('June', 'june.p')], [june], []).skipped).toBe(1);
+  });
+  it('two of Callback\'s that are one person bring both their promises', () => {
+    const { items } = bringPlan([entry('Maya Reyes', { promises: [pr('cb-x')] }), entry('maya reyes', { promises: [pr('cb-y')] })], [], []);
+    expect(items).toHaveLength(1);
+    expect(items[0].promises.map((x) => x.id)).toEqual(['cb-x', 'cb-y']);
+  });
+});
+
 describe('fromWords and touchCount', () => {
   const item = (to, touches) => ({ to, touches });
   const notes = { id: 'n', fromNotes: true };
@@ -60,6 +79,14 @@ describe('fromWords and touchCount', () => {
     expect(fromWords(item({ id: 'r' }, [notes]))).toBe('In Rounds already: a note goes on their page');
     expect(fromWords(item({ id: 'r' }, [touch('a'), notes]))).toBe('In Rounds already: 1 touchpoint goes on their page');
     expect(fromWords(item({ id: 'r' }, [touch('a'), touch('b')]))).toBe('In Rounds already: 2 touchpoints go on their page');
+  });
+  it('their promises too', () => {
+    const p = (k) => Array.from({ length: k }, (_, i) => ({ id: `p${i}` }));
+    expect(fromWords({ ...item(null, [touch('a')]), promises: p(1) })).toBe('1 touchpoint · 1 promise');
+    expect(fromWords({ ...item(null, []), promises: p(2), letGo: true })).toBe('No touchpoints · 2 promises · Let go');
+    expect(fromWords({ ...item({ id: 'r' }, []), promises: p(1) })).toBe('In Rounds already: 1 promise goes on their page');
+    expect(fromWords({ ...item({ id: 'r' }, []), promises: p(3) })).toBe('In Rounds already: 3 promises go on their page');
+    expect(fromWords({ ...item({ id: 'r' }, [touch('a')]), promises: p(2) })).toBe('In Rounds already: 1 touchpoint goes on their page · 2 promises');
   });
 });
 
@@ -131,5 +158,15 @@ describe('bring', () => {
     const none = bring([item({ to: { id: 'r2', name: 'Lee' }, touches: [touch('c', '2026-10-01')] })], TODAY, 3, makeId, 1);
     expect(none.people[0].lastMove).toBe('2026-10-01');
     expect(none.lines[0].wasLast).toBe('');
+  });
+  it('promises go on the person, new or not, each once', () => {
+    n = 0;
+    const pr = (id) => ({ id, mine: true, what: `Promise ${id}`, due: '', made: '', open: true });
+    const fresh = bring([item({ row: row('Maya'), promises: [pr('cb-a')] })], TODAY, 3, makeId, 1);
+    expect(fresh.people[0].promises).toEqual([pr('cb-a')]);
+    const june = { id: 'r1', name: 'June', promises: [pr('cb-a')] };
+    const had = bring([item({ to: june, promises: [pr('cb-a'), pr('cb-b')] })], TODAY, 3, makeId, 1);
+    expect(had.people[0].promises.map((x) => x.id)).toEqual(['cb-a', 'cb-b']);
+    expect('promises' in bring([item({ row: row('Lee') })], TODAY, 3, makeId, 1).people[0]).toBe(false);
   });
 });

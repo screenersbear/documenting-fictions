@@ -4,11 +4,13 @@
 // YOU SAID in full and YOUR NOTE (each left out when there's none). DELETE
 // takes it out of the log, with Undo (a due move done today is due again);
 // EDIT opens the one sheet filled in; COPY AGAIN copies what you said.
+// From DONE TODAY (who), their photo and name on top go to their page (20 Nov).
 import { openSheet } from '../components/sheet.js';
 import { tagHtml } from '../components/marks.js';
 import { toast } from '../components/toast.js';
 import { copy } from '../components/copy.js';
 import { esc } from '../components/util.js';
+import { whoHtml, wireWho } from '../components/who-row.js';
 import { moveName, moveLook } from '../data/kinds.js';
 import { howWords } from '../data/done-notes.js';
 import { withWords } from '../data/one-move.js';
@@ -16,12 +18,13 @@ import { deleteLine, undoDelete } from '../data/one-move-store.js';
 import { longDay } from '../data/dates.js';
 import { openOneMove } from './one-sheet.js';
 
-// after(): the screen drawn again, once it's changed or deleted.
-export function openSaid(person, line, after) {
+// after(): the screen drawn again, once it's changed or deleted. who: show
+// who it's with, as a way to their page.
+export function openSaid(person, line, after, { who = false } = {}) {
   const s = openSheet({
     title: withWords(line, person.name),
     className: 'sheet-small said-sheet',
-    body: `
+    body: `${who ? whoHtml(person) : ''}
       <p class="said-title">${esc(withWords(line, person.name))}</p>
       <p class="said-when">${esc([longDay(line.day), howWords(line)].filter(Boolean).join(' · '))}</p>
       ${line.said ? `<p class="label said-label">What you said</p><p class="said-words">${esc(line.said)}</p>` : ''}
@@ -33,6 +36,7 @@ export function openSaid(person, line, after) {
       </div>`,
   });
   s.el.querySelector('.sheet-header h2').innerHTML = tagHtml(moveLook(line), moveName(line));
+  wireWho(s, person);
   s.body.addEventListener('click', async (e) => {
     const b = e.target.closest('button');
     if (!b) return;

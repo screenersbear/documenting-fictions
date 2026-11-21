@@ -1,0 +1,9 @@
+/* Crop the photo (20 Nov): the 4:5 box the photo covers (it's never tinted
+   or covered, DESIGN.md 4.4), a dim hint, the zoom slider, then USE THIS
+   PHOTO, mango on ink. */
+.crop-box { position: relative; width: min(100%, 280px); aspect-ratio: 4 / 5; margin: 4px auto 0; overflow: hidden; border-radius: 6px; background: var(--off-2); touch-action: none; cursor: grab; }
+.crop-box img { position: absolute; left: 0; top: 0; max-width: none; user-select: none; -webkit-user-drag: none; }
+.crop-hint { margin: 10px 0 0; text-align: center; font: 400 13px/18px var(--ui); color: var(--dim); }
+.crop-zoom { display: flex; align-items: center; gap: 12px; margin: 10px 0 0; font: 400 20px/24px var(--ui); color: var(--dim); }
+.crop-zoom input { flex: 1; accent-color: var(--ink); }
+.crop-use.btn { width: 100%; height: 50px; margin-top: 18px; color: var(--partner); }

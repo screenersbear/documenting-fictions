@@ -1,0 +1,12 @@
+/* The big buttons (DESIGN.md 9.4, Big button, Live 17 Nov), as The Eye has
+   them: full width, 56px, radius 10, a 28px disc with a plus, the action in
+   capitals over a short line. Ink with mango here (Rounds' pair): SOMEONE
+   NEW on + CONNECTION's sheet. */
+.big-btn { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 0 16px; border-radius: 10px; text-align: left; }
+.big-btn-plus { flex: none; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; }
+.big-btn-plus svg { width: 16px; height: 16px; stroke-width: 2.5; }
+.big-btn-words { flex: 1; min-width: 0; }
+.big-btn-words b { display: block; font: 700 14px/18px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.big-btn-words span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 13px/17px var(--ui); opacity: .8; }
+.big-btn-ink { background: var(--ink); color: var(--partner); }
+.big-btn-ink .big-btn-plus { background: var(--partner); color: var(--ink); }

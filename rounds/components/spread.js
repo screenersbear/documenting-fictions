@@ -1,5 +1,5 @@
 // Open, the notebook is plain pages the size of the screen. Going between
-// its sections (Today, People, Messages) is a plain slide (DESIGN.md 9.4,
+// its sections (Today, People, Promises) is a plain slide (DESIGN.md 9.4,
 // as Ref): the other section is drawn beside the page and the two move
 // together, under the finger while it's on the glass, then settling in
 // 240ms on the curve (.4, 0, .2, 1), no bounce. With Reduce Motion, a 150ms

@@ -72,3 +72,9 @@ export function cardLine(p, line, week, today) {
 }
 // A row on Reach out to: "Client · last: sent photos, 16 Nov".
 export const pickLine = (p, line, today) => [GROUPS[p.group] || GROUPS.new, line ? `last: ${lastWords(p, line, today)}` : ''].filter(Boolean).join(' · ');
+// + CONNECTION's SOMEONE NEW (20 Nov): its line under the words, with the
+// name typed in the search ("Add "Rita"") or, with none, what it does.
+export const newLine = (typed) => {
+  const t = String(typed ?? '').trim();
+  return t ? `Add "${t}"` : 'Add them, then write';
+};

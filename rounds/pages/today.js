@@ -2,8 +2,9 @@
 // Swiping only flips through them (18 Nov, data/flip.js): "2 of 3" while
 // flipping, and nothing is marked done. WRITE TO (or a tap on the card), or
 // DONE on the card for something done outside the app, opens the one sheet
-// (pages/one-sheet.js); LATER moves it to tomorrow. + REACH OUT
-// beside the count starts one with anyone (pages/reach-out.js). No overdue
+// (pages/one-sheet.js); LATER moves it to tomorrow. + CONNECTION
+// beside the count starts one with someone new or someone you know
+// (pages/reach-out.js, 20 Nov: was REACH OUT, too quiet to see). No overdue
 // counts, no streaks: when the day's done (rounds/13), the arc stays full,
 // the count says ALL 3 DONE, then a calm "That's today." and who's next.
 // DONE TODAY (pages/done-today.js, rounds/12) lists what's done under the
@@ -28,8 +29,8 @@ import { doneTodayHtml, wireDoneToday } from './done-today.js';
 import { leadsHtml, openLeads } from './leads.js';
 import { postSlipsHtml, wirePostSlips } from './post-slip.js';
 
-// The count, + REACH OUT beside it (rounds/06), and the arc.
-const head = (count, arc) => `<div class="today-head"><span class="today-count-row">${count ? `<span class="today-count">${count}</span>` : ''}<button type="button" class="list-act today-reach" data-reach>${PLUS}Reach out</button></span>${arc}</div>`;
+// The count, + CONNECTION beside it (rounds/06; a filled pill since 20 Nov), and the arc.
+const head = (count, arc) => `<div class="today-head"><span class="today-count-row">${count ? `<span class="today-count">${count}</span>` : ''}<button type="button" class="today-reach" data-reach>${PLUS}Connection</button></span>${arc}</div>`;
 
 // The card in front while flipping (data/flip.js); a new visit to Today
 // starts at the first again.
