@@ -327,6 +327,7 @@ const PLUS = line("<line x1=\"12\" y1=\"5\" x2=\"12\" y2=\"19\"/><line x1=\"5\" 
 const ARROW = line("<path d=\"M4 12h14\"/><polyline points=\"13 6 19 12 13 18\"/>", 16);
 const CHEV = line("<polyline points=\"9 5 16 12 9 19\"/>", 16).replace("<svg", "<svg class=\"chev\"");
 const CHEV_SMALL = "<svg viewBox=\"0 0 24 24\" width=\"12\" height=\"12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polyline points=\"9 5 16 12 9 19\"/></svg>";
+const TICK = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polyline points=\"5 12.5 10 17 19 7\"/></svg>";
 
 // components/band.js
 const ring = (label, attr, svg) => `<button type="button" class="ring-btn" ${attr} aria-label="${label}"><span>${svg}</span></button>`;
@@ -2294,6 +2295,163 @@ function afterDelete(person, line, lines, today) {
 }
 const undoesDue = (person, line, lines, today) => !line.extra && afterDelete(person, line, lines, today).next !== person.next;
 
+// data/promises.js
+const WHAT_MOST = 200;
+const text$1 = /* @__PURE__ */ __name((v) => typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, 200) : "", "text");
+const valid = (x) => !!x && typeof x === "object" && typeof x.id === "string" && x.id && !!text$1(x.what);
+function newPromise({ mine = true, what, due = "" } = {}, id, today) {
+	const words = text$1(what);
+	if (!words || typeof id !== "string" || !id) return null;
+	return {
+		id,
+		mine: mine !== false,
+		what: words,
+		due: isDay(due) ? due : "",
+		made: isDay(today) ? today : "",
+		open: true
+	};
+}
+const promisesOf = (p) => p && Array.isArray(p.promises) ? p.promises.filter(valid) : [];
+const openOf = (p) => promisesOf(p).filter((x) => x.open);
+function withPromise(person, promise) {
+	if (!valid(promise)) return person;
+	const list = promisesOf(person);
+	const at = list.findIndex((x) => x.id === promise.id);
+	return {
+		...person,
+		promises: at < 0 ? [...list, promise] : list.map((x, i) => i === at ? promise : x)
+	};
+}
+function changePromise(person, id, changes) {
+	const list = promisesOf(person);
+	if (!list.some((x) => x.id === id)) return person;
+	return {
+		...person,
+		promises: list.map((x) => x.id === id ? {
+			...x,
+			...changes
+		} : x)
+	};
+}
+const keepPromise = (person, id, today) => changePromise(person, id, {
+	open: false,
+	outcome: "kept",
+	closed: today
+});
+const letGoPromise = (person, id, today) => changePromise(person, id, {
+	open: false,
+	outcome: "letGo",
+	closed: today
+});
+const openAgain = (person, id) => changePromise(person, id, {
+	open: true,
+	outcome: "",
+	closed: ""
+});
+const dueOn = (person, id, day) => changePromise(person, id, { due: isDay(day) ? day : "" });
+function anotherWeek(due, today) {
+	return addDays(later(isDay(due) ? due : "", today), 7);
+}
+const isLate = (x, today) => !!x && x.open && isDay(x.due) && x.due < today;
+function promiseWhen(x, today) {
+	if (!x || !isDay(x.due) || !isDay(today)) return "";
+	const n = daysBetween(today, x.due);
+	if (n < 0) return `${-n} ${n === -1 ? "day" : "days"} late`;
+	const lead = x.mine === false ? "Expected" : "Due";
+	const w = dueWords(x.due, today);
+	return `${lead} ${n < 2 ? w.toLowerCase() : w}`;
+}
+function promiseList(people) {
+	const all = (Array.isArray(people) ? people : []).flatMap((person) => openOf(person).map((promise) => ({
+		person,
+		promise
+	})));
+	const order = (a, b) => (a.promise.due || "9999").localeCompare(b.promise.due || "9999") || (a.promise.made || "").localeCompare(b.promise.made || "") || a.promise.what.localeCompare(b.promise.what);
+	return {
+		mine: all.filter((x) => x.promise.mine !== false).sort(order),
+		theirs: all.filter((x) => x.promise.mine === false).sort(order)
+	};
+}
+function bothPromises(a, b) {
+	const out = [...Array.isArray(a) ? a : []].filter(valid);
+	for (const x of Array.isArray(b) ? b : []) if (valid(x) && !out.some((y) => y.id === x.id)) out.push(x);
+	return out;
+}
+const promiseCount = (n) => `${n} ${n === 1 ? "promise" : "promises"}`;
+
+// data/move-promise.js
+const promiseFor = (person, moveId) => moveId ? promisesOf(person).find((x) => x.moveId === moveId) || null : null;
+const isKept = (x) => !!x && !x.open && x.outcome === "kept";
+function withoutPromise(person, id) {
+	const list = promisesOf(person);
+	return list.some((x) => x.id === id) ? {
+		...person,
+		promises: list.filter((x) => x.id !== id)
+	} : person;
+}
+function ticked(person, x, kept, today) {
+	if (kept && !isKept(x)) return keepPromise(person, x.id, today);
+	if (!kept && isKept(x)) return openAgain(person, x.id);
+	return person;
+}
+function withMovePromise(person, moveId, entry, makeId, today) {
+	if (!moveId) return person;
+	const had = promiseFor(person, moveId);
+	const made = entry ? newPromise(entry, had ? had.id : makeId(), today) : null;
+	if (!made) return had ? withoutPromise(person, had.id) : person;
+	if (!had) return ticked({
+		...person,
+		promises: [...promisesOf(person), {
+			...made,
+			moveId
+		}]
+	}, {
+		...made,
+		moveId
+	}, !!entry.kept, today);
+	const same = had.what === made.what && had.mine === made.mine && had.due === made.due;
+	const now = same ? person : changePromise(person, had.id, {
+		what: made.what,
+		mine: made.mine,
+		due: made.due
+	});
+	return ticked(now, had, !!entry.kept, today);
+}
+const keptBy = (person, id, moveId, today) => changePromise(person, id, {
+	open: false,
+	outcome: "kept",
+	closed: today,
+	keptBy: moveId
+});
+const promiseWho = (x, name) => `${x && x.mine === false ? `${firstName(name) || "They"} promised` : "You promised"}: ${x ? x.what : ""}`;
+const tickWords = (x) => x && x.mine === false ? "They came through" : "Promise kept";
+function doneWords({ promised = false, kept = false } = {}) {
+	if (kept) return "Done. Marked as kept.";
+	return promised ? "Done, with a promise." : "Done.";
+}
+
+// data/promise-store.js
+async function changeSaved(personId, change) {
+	const before = await getPerson(personId);
+	if (!before) return null;
+	const after = change(before);
+	if (after !== before) await savePerson(after);
+	return {
+		before,
+		after
+	};
+}
+async function undoChange(undo) {
+	if (!undo || !undo.before) return false;
+	const now = await getPerson(undo.before.id);
+	if (!now) return false;
+	await savePerson({
+		...now,
+		promises: Array.isArray(undo.before.promises) ? undo.before.promises : []
+	});
+	return true;
+}
+
 // data/one-move-store.js
 async function keep$1(before, after) {
 	if (JSON.stringify(after) === JSON.stringify(before)) return;
@@ -2301,7 +2459,21 @@ async function keep$1(before, after) {
 	shelfAgain();
 }
 __name(keep$1, "keep");
-async function saveOneMove(person, chip, fields) {
+const newId = () => `pr-${uuid()}`;
+async function saveOneMove(person, chip, fields, { promise = null, keeps = null } = {}) {
+	const done = await saveMove(person, chip, fields);
+	const today = dayOf();
+	const changed = await changeSaved(person.id, (p) => {
+		const made = withMovePromise(p, done.line.id, promise, newId, today);
+		return keeps ? keptBy(made, keeps.id, done.line.id, today) : made;
+	});
+	return {
+		...done,
+		promised: !!changed && !!promiseFor(changed.after, done.line.id),
+		kept: !!keeps
+	};
+}
+async function saveMove(person, chip, fields) {
 	if (doesDue(person, chip)) return doMove(person, fields.said, fields);
 	const { person: after, line } = extraMove(person, kindFor(person, chip), dayOf(), fields, uuid(), Date.now());
 	await logMove(line);
@@ -2319,6 +2491,14 @@ async function undoOneMove(done) {
 	}
 	await dropMove(done.line.id);
 	await keep$1(await getPerson(done.before.id), done.before);
+}
+async function saveLinePromise(person, line, promise) {
+	const changed = await changeSaved(person.id, (p) => withMovePromise(p, line.id, promise, newId, dayOf()));
+	if (!changed || changed.after === changed.before) return null;
+	return {
+		undo: changed,
+		gone: !promiseFor(changed.after, line.id)
+	};
 }
 async function deleteLine(person, line) {
 	const today = dayOf();
@@ -2412,7 +2592,6 @@ async function showFinal(box, year) {
 }
 
 // pages/save-message.js
-const TICK = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polyline points=\"5 12.5 10 17 19 7\"/></svg>";
 const saveMessageHtml = () => `
   <label class="save-msg" hidden><input type="checkbox" class="save-msg-input" data-save-msg /><span class="save-msg-box" aria-hidden="true">${TICK}</span>
     <span class="save-msg-words"><span class="save-msg-title"></span><span class="save-msg-sub">You changed it. Next time it starts like this.</span></span></label>`;
@@ -2444,6 +2623,76 @@ function wireSaveMessage(row, box, onShow = () => {}) {
 	};
 }
 
+// components/promise-fields.js
+const chip = (on, mine, label) => `<button type="button" class="pick-chip${on ? " on" : ""}" data-mine="${mine}" aria-pressed="${on}">${esc(label)}</button>`;
+const whoChipsHtml = (person, mine = true) => `<div class="pick-chips">${chip(mine, "yes", "I promised")}${chip(!mine, "no", `${firstName(person.name) || "They"} promised`)}</div>`;
+const byWhenHtml = (id, today, due = "") => `<span class="moment-when"><span class="moment-when-words"></span><input type="date" id="${esc(id)}" min="${esc(today)}" value="${esc(due)}" /></span>`;
+const promiseFieldsHtml = (person, today) => `<p class="label moment-label">Who promised</p>
+    ${whoChipsHtml(person)}
+    <label class="label moment-label" for="promiseWhat">What</label>
+    <textarea class="move-text" id="promiseWhat" rows="2" maxlength="${200}" placeholder="Send the selects"></textarea>
+    <label class="label moment-label" for="promiseDue">By when (optional)</label>
+    ${byWhenHtml("promiseDue", today)}`;
+function wirePromiseFields(box, today, { mine: firstMine = true, due: firstDue = "" } = {}) {
+	let mine = firstMine !== false;
+	let due = firstDue || "";
+	const words = box.querySelector(".moment-when-words");
+	const drawDue = () => {
+		words.textContent = due ? longDay(due) : "No day";
+	};
+	drawDue();
+	box.querySelector("input[type=\"date\"]").addEventListener("change", (e) => {
+		due = e.target.value && e.target.value >= today ? e.target.value : "";
+		e.target.value = due;
+		drawDue();
+	});
+	box.addEventListener("click", (e) => {
+		const b = e.target.closest("[data-mine]");
+		if (!b) return;
+		mine = b.dataset.mine === "yes";
+		box.querySelectorAll("[data-mine]").forEach((c) => {
+			const on = c.dataset.mine === "yes" === mine;
+			c.classList.toggle("on", on);
+			c.setAttribute("aria-pressed", on);
+		});
+	});
+	return { read: () => ({
+		mine,
+		due
+	}) };
+}
+
+// pages/one-promise.js
+const onePromiseHtml = (person, today, had = null) => `
+  <label class="label one-label" for="onePromise">Anything promised? (optional)</label>
+  <textarea class="move-text one-note one-prom-what" id="onePromise" rows="1" maxlength="${200}" placeholder="Send the selects">${esc(had?.what || "")}</textarea>
+  <div class="one-prom-more" data-prom-more${had ? "" : " hidden"}>
+    ${whoChipsHtml(person, had ? had.mine !== false : true)}
+    <label class="label one-label" for="onePromiseDue">By when (optional)</label>
+    ${byWhenHtml("onePromiseDue", today, had?.due || "")}
+    ${had ? `<label class="save-msg one-prom-tick"><input type="checkbox" class="save-msg-input" data-prom-kept${isKept(had) ? " checked" : ""} /><span class="save-msg-box" aria-hidden="true">${TICK}</span>
+      <span class="save-msg-words">${esc(tickWords(had))}</span></label>` : ""}
+  </div>`;
+function wireOnePromise(root, today, had = null) {
+	const box = root.querySelector("#onePromise");
+	const more = root.querySelector("[data-prom-more]");
+	const fields = wirePromiseFields(more, today, {
+		mine: had ? had.mine !== false : true,
+		due: had?.due || ""
+	});
+	box.addEventListener("input", () => {
+		if (box.value.trim()) more.hidden = false;
+	});
+	return { read: () => box.value.trim() ? {
+		what: box.value,
+		...fields.read(),
+		kept: !!root.querySelector("[data-prom-kept]")?.checked
+	} : null };
+}
+const keepsHtml = (promise) => `<div class="one-keeps"><p class="label one-label">Promise kept</p>
+  <p class="one-keeps-what">${esc(promise.what)}</p>
+  <button type="button" class="text-btn one-keeps-skip" data-keep-only>Mark it kept without logging</button></div>`;
+
 // pages/one-sheet.js
 const chipHtml$1 = /* @__PURE__ */ __name((attr, k, label, on) => `<button type="button" class="pick-chip${on ? " on" : ""}" ${attr}="${esc(k)}" aria-pressed="${on}">${esc(label)}</button>`, "chipHtml");
 const setOn = (root, attr, k) => root.querySelectorAll(`[${attr}]`).forEach((c) => {
@@ -2451,17 +2700,19 @@ const setOn = (root, attr, k) => root.querySelectorAll(`[${attr}]`).forEach((c) 
 	c.classList.toggle("on", on);
 	c.setAttribute("aria-pressed", String(on));
 });
-async function openOneMove(person, { chip, line = null, after = () => {} } = {}) {
+async function openOneMove(person, { chip, line = null, after = () => {}, keeps = null, keptOnly = () => {} } = {}) {
 	const today = dayOf();
 	const [messages, me] = await Promise.all([getMessages(), getMe()]);
 	let pick = line ? chipOf(line.kind) : chip || startChip(person);
 	let how = line ? line.how || "" : "";
 	const day = line ? line.day : today;
 	const kinds = line ? KIND_CHIPS.filter(([k]) => k === pick) : KIND_CHIPS;
+	const had = line ? promiseFor(person, line.id) : null;
 	const s = openSheet({
 		title: person.name,
 		className: "one-sheet",
 		body: `
+      ${keeps ? keepsHtml(keeps) : ""}
       ${!line && person.next?.year ? finalHtml(person.next.year) : ""}
       <p class="label one-label">What kind</p>
       <div class="pick-chips">${kinds.map(([k, n]) => chipHtml$1("data-kind", k, n, k === pick)).join("")}</div>
@@ -2474,6 +2725,7 @@ async function openOneMove(person, { chip, line = null, after = () => {} } = {})
       <div class="pick-chips">${Object.entries(HOWS).map(([k, n]) => chipHtml$1("data-how", k, n, k === how)).join("")}</div>
       <label class="label one-label" for="oneNote">A note for you (optional)</label>
       <textarea class="move-text one-note" id="oneNote" rows="1" maxlength="500" placeholder="Only you see this">${esc(line?.note || "")}</textarea>
+      ${onePromiseHtml(person, today, had)}
       <div class="one-btns"></div>`
 	});
 	s.el.querySelector(".sheet-header h2").innerHTML = `<span class="move-who">${photoHtml(person, "small")}<span class="move-who-words"><span class="move-name">${esc(person.name)}</span><span class="move-handle">${esc(day === today ? `Today, ${longDay(day)}` : longDay(day))}</span></span></span>`;
@@ -2497,6 +2749,7 @@ async function openOneMove(person, { chip, line = null, after = () => {} } = {})
 		box.value = starter();
 		save.used(kind(), box.value);
 	};
+	const promised = wireOnePromise(s.body, today, had);
 	function draw() {
 		offerShown();
 		offer.querySelector("span").textContent = `Use your ${messageWord(kind())} message`;
@@ -2520,6 +2773,9 @@ async function openOneMove(person, { chip, line = null, after = () => {} } = {})
 		else if (b.matches("[data-offer]")) {
 			useStarter();
 			box.focus();
+		} else if (b.matches("[data-keep-only]")) {
+			s.close();
+			keptOnly();
 		} else if (b.matches("[data-gmail]")) {
 			pickHow("email");
 			window.open(GMAIL_DRAFTS, "_blank", "noopener");
@@ -2542,22 +2798,32 @@ async function openOneMove(person, { chip, line = null, after = () => {} } = {})
 				note: note.value
 			};
 			if (save.wanted()) await saveMessage(save.kind(), unfill(box.value, values, yours(save.kind())));
-			const result = line ? await saveHowNote(line, fields) : await saveOneMove(person, pick, fields);
+			const result = line ? await saveHowNote(line, fields) : await saveOneMove(person, pick, fields, {
+				promise: promised.read(),
+				keeps
+			});
+			const changed = line ? await saveLinePromise(person, line, promised.read()) : null;
 			s.close();
-			after(result);
+			await after(result);
+			if (changed?.gone) toast("Promise taken off.", { action: {
+				label: "Undo",
+				run: () => undoChange(changed.undo).then(() => after(result))
+			} });
 		}
 	});
 	return s;
 }
 
 // pages/move-done.js
-function writeTo(person, redraw, { chip, gone = () => null } = {}) {
+function writeTo(person, redraw, { chip, gone = () => null, keeps = null, keptOnly } = {}) {
 	return openOneMove(person, {
 		chip,
+		keeps,
+		keptOnly,
 		after: async (done) => {
 			await gone(done);
 			await redraw();
-			toast("Done.", { action: {
+			toast(doneWords(done), { action: {
 				label: "Undo",
 				run: () => undoOneMove(done).then(redraw)
 			} });
@@ -3009,6 +3275,7 @@ function openMoment(person, { line = null, after = async () => {}, who = false }
 
 // pages/what-you-said.js
 function openSaid(person, line, after, { who = false } = {}) {
+	const promise = promiseFor(person, line.id);
 	const s = openSheet({
 		title: withWords(line, person.name),
 		className: "sheet-small said-sheet",
@@ -3017,6 +3284,7 @@ function openSaid(person, line, after, { who = false } = {}) {
       <p class="said-when">${esc([longDay(line.day), howWords(line)].filter(Boolean).join(" · "))}</p>
       ${line.said ? `<p class="label said-label">What you said</p><p class="said-words">${esc(line.said)}</p>` : ""}
       ${line.note ? `<p class="label said-label">Your note</p><p class="said-note">${esc(line.note)}</p>` : ""}
+      ${promise ? `<p class="label said-label">Promised</p><p class="said-note said-promise">${esc(promiseWho(promise, person.name))}${isKept(promise) ? ` · ${esc(tickWords(promise))}` : ""}</p>` : ""}
       <div class="said-btns">
         <button type="button" class="text-btn" data-delete>Delete</button>
         <button type="button" class="btn secondary" data-edit>Edit</button>
@@ -3065,7 +3333,17 @@ const rowHtml$1 = /* @__PURE__ */ __name((r, i) => {
 	return `<${tag} class="so-far-row"><span class="so-far-day">${esc(shortDay(r.day))}</span>${markHtml(r)}
     <span class="so-far-words"><span class="so-far-what">${esc(r.what)}${r.howWords ? ` <span>· ${esc(r.howWords)}</span>` : ""}</span>${r.note ? `<span class="so-far-note">${esc(r.note)}</span>` : ""}</span></${tag.split(" ")[0]}>`;
 }, "rowHtml");
-const soFarHtml = (rows) => rows.length ? `<h2 class="so-far-head">So far</h2><div class="so-far-list">${rows.map(rowHtml$1).join("")}</div>` : "";
+function promiseHtml(x, person) {
+	const kept = isKept(x);
+	const when = kept ? "" : promiseWhen(x, dayOf());
+	return `<div class="so-far-prom"><span class="so-far-prom-words"><span class="so-far-prom-what">${esc(promiseWho(x, person.name))}</span>${when ? `<span class="so-far-prom-when">${esc(when)}</span>` : ""}</span>
+    <button type="button" class="so-far-prom-tick" role="checkbox" aria-checked="${kept}" data-prom-tick="${esc(x.id)}"><span class="save-msg-box" aria-hidden="true">${TICK}</span>${esc(tickWords(x))}</button></div>`;
+}
+const withPromiseHtml = (person) => (r, i) => {
+	const x = person && r.kind === "move" ? promiseFor(person, r.id) : null;
+	return `${rowHtml$1(r, i)}${x ? promiseHtml(x, person) : ""}`;
+};
+const soFarHtml = (rows, person = null) => rows.length ? `<h2 class="so-far-head">So far</h2><div class="so-far-list">${rows.map(withPromiseHtml(person)).join("")}</div>` : "";
 const chipsHtml$1 = /* @__PURE__ */ __name((list, on) => Object.entries(list).map(([k, label]) => `<button type="button" class="pick-chip${k === on ? " on" : ""}" data-how="${esc(k)}" aria-pressed="${k === on}">${esc(label)}</button>`).join(""), "chipsHtml");
 function openEdit$1(row, line, after) {
 	let how = line.how || "";
@@ -3123,6 +3401,17 @@ function wireSoFar(view, person, rows, lines, after) {
 		});
 		else if (row.kind === "move") openSaid(person, line, after);
 		else openEdit$1(row, line, after);
+	}));
+	view.querySelectorAll("[data-prom-tick]").forEach((b) => b.addEventListener("click", async () => {
+		const id = b.dataset.promTick;
+		const kept = b.getAttribute("aria-checked") !== "true";
+		const theirs = person.promises?.find((x) => x.id === id)?.mine === false;
+		const undo = await changeSaved(person.id, (p) => kept ? keepPromise(p, id, dayOf()) : openAgain(p, id));
+		await after();
+		if (undo) toast(kept ? theirs ? "Marked as happened." : "Marked as kept." : "Open again.", { action: {
+			label: "Undo",
+			run: () => undoChange(undo).then(after)
+		} });
 	}));
 }
 
@@ -4060,90 +4349,6 @@ function lookAlike(people, waved = []) {
 	return null;
 }
 
-// data/promises.js
-const WHAT_MOST = 200;
-const text$1 = /* @__PURE__ */ __name((v) => typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, 200) : "", "text");
-const valid = (x) => !!x && typeof x === "object" && typeof x.id === "string" && x.id && !!text$1(x.what);
-function newPromise({ mine = true, what, due = "" } = {}, id, today) {
-	const words = text$1(what);
-	if (!words || typeof id !== "string" || !id) return null;
-	return {
-		id,
-		mine: mine !== false,
-		what: words,
-		due: isDay(due) ? due : "",
-		made: isDay(today) ? today : "",
-		open: true
-	};
-}
-const promisesOf = (p) => p && Array.isArray(p.promises) ? p.promises.filter(valid) : [];
-const openOf = (p) => promisesOf(p).filter((x) => x.open);
-function withPromise(person, promise) {
-	if (!valid(promise)) return person;
-	const list = promisesOf(person);
-	const at = list.findIndex((x) => x.id === promise.id);
-	return {
-		...person,
-		promises: at < 0 ? [...list, promise] : list.map((x, i) => i === at ? promise : x)
-	};
-}
-function changePromise(person, id, changes) {
-	const list = promisesOf(person);
-	if (!list.some((x) => x.id === id)) return person;
-	return {
-		...person,
-		promises: list.map((x) => x.id === id ? {
-			...x,
-			...changes
-		} : x)
-	};
-}
-const keepPromise = (person, id, today) => changePromise(person, id, {
-	open: false,
-	outcome: "kept",
-	closed: today
-});
-const letGoPromise = (person, id, today) => changePromise(person, id, {
-	open: false,
-	outcome: "letGo",
-	closed: today
-});
-const openAgain = (person, id) => changePromise(person, id, {
-	open: true,
-	outcome: "",
-	closed: ""
-});
-const dueOn = (person, id, day) => changePromise(person, id, { due: isDay(day) ? day : "" });
-function anotherWeek(due, today) {
-	return addDays(later(isDay(due) ? due : "", today), 7);
-}
-const isLate = (x, today) => !!x && x.open && isDay(x.due) && x.due < today;
-function promiseWhen(x, today) {
-	if (!x || !isDay(x.due) || !isDay(today)) return "";
-	const n = daysBetween(today, x.due);
-	if (n < 0) return `${-n} ${n === -1 ? "day" : "days"} late`;
-	const lead = x.mine === false ? "Expected" : "Due";
-	const w = dueWords(x.due, today);
-	return `${lead} ${n < 2 ? w.toLowerCase() : w}`;
-}
-function promiseList(people) {
-	const all = (Array.isArray(people) ? people : []).flatMap((person) => openOf(person).map((promise) => ({
-		person,
-		promise
-	})));
-	const order = (a, b) => (a.promise.due || "9999").localeCompare(b.promise.due || "9999") || (a.promise.made || "").localeCompare(b.promise.made || "") || a.promise.what.localeCompare(b.promise.what);
-	return {
-		mine: all.filter((x) => x.promise.mine !== false).sort(order),
-		theirs: all.filter((x) => x.promise.mine === false).sort(order)
-	};
-}
-function bothPromises(a, b) {
-	const out = [...Array.isArray(a) ? a : []].filter(valid);
-	for (const x of Array.isArray(b) ? b : []) if (valid(x) && !out.some((y) => y.id === x.id)) out.push(x);
-	return out;
-}
-const promiseCount = (n) => `${n} ${n === 1 ? "promise" : "promises"}`;
-
 // data/merge-people.js
 const FILL = [
 	"instagram",
@@ -4671,28 +4876,6 @@ function promiseRowHtml({ person, promise }, today, { who = true } = {}) {
     <span class="prom-words"><span class="prom-what">${esc(promise.what)}</span><span class="prom-line${isLate(promise, today) ? " is-late" : ""}">${esc(line)}</span></span>${CHEV}</button>`;
 }
 
-// data/promise-store.js
-async function changeSaved(personId, change) {
-	const before = await getPerson(personId);
-	if (!before) return null;
-	const after = change(before);
-	if (after !== before) await savePerson(after);
-	return {
-		before,
-		after
-	};
-}
-async function undoChange(undo) {
-	if (!undo || !undo.before) return false;
-	const now = await getPerson(undo.before.id);
-	if (!now) return false;
-	await savePerson({
-		...now,
-		promises: Array.isArray(undo.before.promises) ? undo.before.promises : []
-	});
-	return true;
-}
-
 // pages/promise-add.js
 async function openPickForPromise(after) {
 	const [people, lines] = await Promise.all([listPeople(), listMoves()]);
@@ -4709,63 +4892,34 @@ async function openPickForPromise(after) {
 	} });
 	return s;
 }
-const chip = (on, mine, label) => `<button type="button" class="pick-chip${on ? " on" : ""}" data-mine="${mine}" aria-pressed="${on}">${esc(label)}</button>`;
 function openAddPromise(person, after = async () => {}, { who = false } = {}) {
 	const today = dayOf();
-	const first = firstName(person.name) || "They";
-	let mine = true;
-	let due = "";
 	const s = openSheet({
 		title: `A promise with ${firstName(person.name) || "them"}`,
 		className: "sheet-small moment-sheet prom-sheet",
 		body: `${who ? whoHtml(person) : ""}
-      <p class="label moment-label">Who promised</p>
-      <div class="pick-chips">${chip(true, "yes", "I promised")}${chip(false, "no", `${first} promised`)}</div>
-      <label class="label moment-label" for="promiseWhat">What</label>
-      <textarea class="move-text" id="promiseWhat" rows="2" maxlength="${200}" placeholder="Send the selects"></textarea>
-      <label class="label moment-label" for="promiseDue">By when (optional)</label>
-      <span class="moment-when"><span class="moment-when-words"></span><input type="date" id="promiseDue" min="${today}" /></span>
+      ${promiseFieldsHtml(person, today)}
       <div class="moment-btns"><button type="button" class="btn primary" data-save disabled>Add the promise</button></div>`
 	});
 	const $ = (sel) => s.body.querySelector(sel);
 	wireWho(s, person);
-	const drawDue = () => {
-		$(".moment-when-words").textContent = due ? longDay(due) : "No day";
-	};
-	drawDue();
-	$("#promiseDue").addEventListener("change", (e) => {
-		due = e.target.value && e.target.value >= today ? e.target.value : "";
-		e.target.value = due;
-		drawDue();
-	});
+	const fields = wirePromiseFields(s.body, today);
 	$("#promiseWhat").addEventListener("input", (e) => {
 		$("[data-save]").disabled = !e.target.value.trim();
 	});
-	s.body.addEventListener("click", async (e) => {
-		const b = e.target.closest("button");
-		if (!b) return;
-		if (b.dataset.mine) {
-			mine = b.dataset.mine === "yes";
-			s.body.querySelectorAll("[data-mine]").forEach((c) => {
-				const on = c.dataset.mine === "yes" === mine;
-				c.classList.toggle("on", on);
-				c.setAttribute("aria-pressed", on);
-			});
-		} else if (b.matches("[data-save]")) {
-			const promise = newPromise({
-				mine,
-				what: $("#promiseWhat").value,
-				due
-			}, `pr-${uuid()}`, today);
-			if (!promise) return;
-			s.close();
-			const undo = await changeSaved(person.id, (p) => withPromise(p, promise));
-			await after();
-			if (undo) toast(mine ? "Promise added." : `Added to what you're waiting on.`, { action: {
-				label: "Undo",
-				run: () => undoChange(undo).then(after)
-			} });
-		}
+	$("[data-save]").addEventListener("click", async () => {
+		const promise = newPromise({
+			...fields.read(),
+			what: $("#promiseWhat").value
+		}, `pr-${uuid()}`, today);
+		if (!promise) return;
+		s.close();
+		const undo = await changeSaved(person.id, (p) => withPromise(p, promise));
+		await after();
+		if (undo) toast(promise.mine ? "Promise added." : `Added to what you're waiting on.`, { action: {
+			label: "Undo",
+			run: () => undoChange(undo).then(after)
+		} });
 	});
 	return s;
 }
@@ -4899,7 +5053,7 @@ async function openPromiseActions(person, promise, after, { who = true } = {}) {
 			{
 				key: "kept",
 				label: theirs ? "Got it" : "Kept it",
-				detail: theirs ? "It happened. Off the list." : "Done. Off the list."
+				detail: theirs ? "It happened. Off the list." : "Log what you did. Off the list."
 			},
 			{
 				key: "week",
@@ -4928,9 +5082,26 @@ async function openPromiseActions(person, promise, after, { who = true } = {}) {
 	}
 	let change;
 	let said;
+	const save = async () => {
+		const undo = await changeSaved(person.id, change);
+		await after();
+		if (undo) toast(said, { action: {
+			label: "Undo",
+			run: () => undoChange(undo).then(after)
+		} });
+	};
+	if (pick === "kept" && !theirs) {
+		change = (p) => keepPromise(p, promise.id, today);
+		said = "Marked as kept.";
+		writeTo(person, after, {
+			keeps: promise,
+			keptOnly: save
+		});
+		return;
+	}
 	if (pick === "kept") {
 		change = (p) => keepPromise(p, promise.id, today);
-		said = theirs ? "Marked as happened." : "Marked as kept.";
+		said = "Marked as happened.";
 	} else if (pick === "go") {
 		change = (p) => letGoPromise(p, promise.id, today);
 		said = "Let go.";
@@ -4943,12 +5114,7 @@ async function openPromiseActions(person, promise, after, { who = true } = {}) {
 		change = (p) => dueOn(p, promise.id, day);
 		said = day ? `Now ${theirs ? "expected" : "due"} ${longDay(day)}.` : "No day now.";
 	}
-	const undo = await changeSaved(person.id, change);
-	await after();
-	if (undo) toast(said, { action: {
-		label: "Undo",
-		run: () => undoChange(undo).then(after)
-	} });
+	await save();
 }
 
 // pages/promises.js
@@ -5956,7 +6122,7 @@ async function personScreen(view, id) {
     ${next ? `<button type="button" class="person-next" data-move>${miniHtml(moveLook(p.next))}<span class="person-next-what">${esc(phrase(p.next.kind, p.name, p.next.year))}</span><span class="person-next-when">${esc(dueWords(whenDue(p.next, week, dayOf()), dayOf()))} ${CHEV_SMALL}</span></button>` : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
     ${personPromisesHtml(p)}
     <button type="button" class="btn secondary person-moment" data-moment>Add a moment</button>
-    ${soFarHtml(rows)}
+    ${soFarHtml(rows, p)}
   </div></div>`;
 	fillPhotos(view, [p]);
 	const screen = view.querySelector(".screen");

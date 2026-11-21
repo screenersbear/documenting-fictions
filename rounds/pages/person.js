@@ -65,7 +65,7 @@ export async function personScreen(view, id) {
       : `<p class="person-rest note">${esc(restHtml(p))}</p>`}
     ${personPromisesHtml(p)}
     <button type="button" class="btn secondary person-moment" data-moment>Add a moment</button>
-    ${soFarHtml(rows)}
+    ${soFarHtml(rows, p)}
   </div></div>`;
   fillPhotos(view, [p]);
   const screen = view.querySelector('.screen');

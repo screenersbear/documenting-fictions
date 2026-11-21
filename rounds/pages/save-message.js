@@ -5,9 +5,8 @@
 // into blanks (data/fill.js unfill). Not there when the message wasn't used,
 // or is back as it was.
 import { esc } from '../components/util.js';
+import { TICK } from '../components/icons.js';
 import { messageWord } from '../data/kinds.js';
-
-const TICK = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17 19 7"/></svg>';
 
 export const saveMessageHtml = () => `
   <label class="save-msg" hidden><input type="checkbox" class="save-msg-input" data-save-msg /><span class="save-msg-box" aria-hidden="true">${TICK}</span>

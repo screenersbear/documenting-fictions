@@ -1,7 +1,8 @@
 // A connection opened (Tightening Rounds, rounds/09, 16 Nov), from Done
 // today, SO FAR on their page, or their page on the shelf: the kind's tag,
 // "Checked in with Lindsey", the day and how ("Mon 16 Nov · by text"), WHAT
-// YOU SAID in full and YOUR NOTE (each left out when there's none). DELETE
+// YOU SAID in full, YOUR NOTE and what was PROMISED with it (each left out
+// when there's none). DELETE
 // takes it out of the log, with Undo (a due move done today is due again);
 // EDIT opens the one sheet filled in; COPY AGAIN copies what you said.
 // From DONE TODAY (who), their photo and name on top go to their page (20 Nov).
@@ -14,6 +15,7 @@ import { whoHtml, wireWho } from '../components/who-row.js';
 import { moveName, moveLook } from '../data/kinds.js';
 import { howWords } from '../data/done-notes.js';
 import { withWords } from '../data/one-move.js';
+import { promiseFor, promiseWho, isKept, tickWords } from '../data/move-promise.js';
 import { deleteLine, undoDelete } from '../data/one-move-store.js';
 import { longDay } from '../data/dates.js';
 import { openOneMove } from './one-sheet.js';
@@ -21,6 +23,7 @@ import { openOneMove } from './one-sheet.js';
 // after(): the screen drawn again, once it's changed or deleted. who: show
 // who it's with, as a way to their page.
 export function openSaid(person, line, after, { who = false } = {}) {
+  const promise = promiseFor(person, line.id);
   const s = openSheet({
     title: withWords(line, person.name),
     className: 'sheet-small said-sheet',
@@ -29,6 +32,7 @@ export function openSaid(person, line, after, { who = false } = {}) {
       <p class="said-when">${esc([longDay(line.day), howWords(line)].filter(Boolean).join(' · '))}</p>
       ${line.said ? `<p class="label said-label">What you said</p><p class="said-words">${esc(line.said)}</p>` : ''}
       ${line.note ? `<p class="label said-label">Your note</p><p class="said-note">${esc(line.note)}</p>` : ''}
+      ${promise ? `<p class="label said-label">Promised</p><p class="said-note said-promise">${esc(promiseWho(promise, person.name))}${isKept(promise) ? ` · ${esc(tickWords(promise))}` : ''}</p>` : ''}
       <div class="said-btns">
         <button type="button" class="text-btn" data-delete>Delete</button>
         <button type="button" class="btn secondary" data-edit>Edit</button>

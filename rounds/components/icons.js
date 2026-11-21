@@ -9,3 +9,5 @@ export const PLUS = line('<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1=
 export const ARROW = line('<path d="M4 12h14"/><polyline points="13 6 19 12 13 18"/>', 16);
 export const CHEV = line('<polyline points="9 5 16 12 9 19"/>', 16).replace('<svg', '<svg class="chev"');
 export const CHEV_SMALL = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>';
+// The tick in a tick box (SAVE THIS AS YOUR MESSAGE, a promise kept): heavier, 14px.
+export const TICK = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17 19 7"/></svg>';

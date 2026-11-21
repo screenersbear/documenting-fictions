@@ -65,3 +65,15 @@
 .who-name { font: 400 17px/22px var(--ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .who-open { display: inline-flex; align-items: center; gap: 4px; font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
 .who-open svg { width: 10px; height: 10px; }
+/* ANYTHING PROMISED? (21 Nov, as Callback's log sheet): a box like the note;
+   once something's typed, WHO PROMISED as chips and BY WHEN under it, and,
+   editing a move, its tick. From KEPT IT: the promise on top, in a pale
+   box, with MARK IT KEPT WITHOUT LOGGING. */
+.one-prom-more { display: flex; flex-direction: column; margin-top: 10px; }
+.one-prom-more[hidden] { display: none; }
+.one-prom-more .label { margin-top: 12px; }
+.one-prom-tick { margin-top: 12px; }
+.one-keeps { margin-top: 8px; padding: 2px 14px 6px; border-radius: 12px; background: #EFEFEA; }
+.one-keeps .one-label { margin-top: 12px; margin-bottom: 4px; }
+.one-keeps-what { margin: 0; font: 300 17px/24px var(--ui); overflow-wrap: anywhere; }
+.one-keeps-skip { margin: 4px 0 0 -10px; }

@@ -13,6 +13,8 @@
 // filled in, its kind as it was. A year since shows one of the shoot's
 // finals (pages/move-final.js). Your message used and then changed: SAVE
 // THIS AS YOUR <KIND> MESSAGE under the box (pages/save-message.js).
+// ANYTHING PROMISED? under the note (pages/one-promise.js, 21 Nov), kept
+// with the move; from KEPT IT on a promise (keeps), the promise on top.
 import { openSheet } from '../components/sheet.js';
 import { photoHtml, fillPhotos } from '../components/photo.js';
 import { toast } from '../components/toast.js';
@@ -27,10 +29,13 @@ import { contactFor, GMAIL_DRAFTS } from '../data/contact.js';
 import { draftWaiting } from '../data/person.js';
 import { getMessages, saveMessage } from '../data/db.js';
 import { getMe, saveHowNote } from '../data/moves.js';
-import { saveOneMove } from '../data/one-move-store.js';
+import { saveOneMove, saveLinePromise } from '../data/one-move-store.js';
+import { promiseFor } from '../data/move-promise.js';
+import { undoChange } from '../data/promise-store.js';
 import { dayOf, longDay } from '../data/dates.js';
 import { finalHtml, showFinal } from './move-final.js';
 import { saveMessageHtml, wireSaveMessage } from './save-message.js';
+import { onePromiseHtml, wireOnePromise, keepsHtml } from './one-promise.js';
 
 const chipHtml = (attr, k, label, on) => `<button type="button" class="pick-chip${on ? ' on' : ''}" ${attr}="${esc(k)}" aria-pressed="${on}">${esc(label)}</button>`;
 const setOn = (root, attr, k) => root.querySelectorAll(`[${attr}]`).forEach((c) => {
@@ -41,18 +46,21 @@ const setOn = (root, attr, k) => root.querySelectorAll(`[${attr}]`).forEach((c) 
 
 // chip: WHAT KIND to start on (else their next move's); line: a move
 // logged already, to change; after(result) once it's saved: what Undo needs
-// for a new one (data/one-move-store.js), the line for one changed.
-export async function openOneMove(person, { chip, line = null, after = () => {} } = {}) {
+// for a new one (data/one-move-store.js), the line for one changed. keeps:
+// one of your promises this move keeps; keptOnly() marks it kept without one.
+export async function openOneMove(person, { chip, line = null, after = () => {}, keeps = null, keptOnly = () => {} } = {}) {
   const today = dayOf();
   const [messages, me] = await Promise.all([getMessages(), getMe()]);
   let pick = line ? chipOf(line.kind) : chip || startChip(person);
   let how = line ? line.how || '' : '';
   const day = line ? line.day : today;
   const kinds = line ? KIND_CHIPS.filter(([k]) => k === pick) : KIND_CHIPS; // a logged move keeps its kind
+  const had = line ? promiseFor(person, line.id) : null;
   const s = openSheet({
     title: person.name,
     className: 'one-sheet',
     body: `
+      ${keeps ? keepsHtml(keeps) : ''}
       ${!line && person.next?.year ? finalHtml(person.next.year) : ''}
       <p class="label one-label">What kind</p>
       <div class="pick-chips">${kinds.map(([k, n]) => chipHtml('data-kind', k, n, k === pick)).join('')}</div>
@@ -65,6 +73,7 @@ export async function openOneMove(person, { chip, line = null, after = () => {} 
       <div class="pick-chips">${Object.entries(HOWS).map(([k, n]) => chipHtml('data-how', k, n, k === how)).join('')}</div>
       <label class="label one-label" for="oneNote">A note for you (optional)</label>
       <textarea class="move-text one-note" id="oneNote" rows="1" maxlength="500" placeholder="Only you see this">${esc(line?.note || '')}</textarea>
+      ${onePromiseHtml(person, today, had)}
       <div class="one-btns"></div>`,
   });
   s.el.querySelector('.sheet-header h2').innerHTML = `<span class="move-who">${photoHtml(person, 'small')}<span class="move-who-words"><span class="move-name">${esc(person.name)}</span><span class="move-handle">${esc(day === today ? `Today, ${longDay(day)}` : longDay(day))}</span></span></span>`;
@@ -84,6 +93,7 @@ export async function openOneMove(person, { chip, line = null, after = () => {} 
   const offerShown = () => { offer.hidden = !starter() || save.shown(); };
   const save = wireSaveMessage(s.body.querySelector('.save-msg'), box, offerShown);
   const useStarter = () => { box.value = starter(); save.used(kind(), box.value); };
+  const promised = wireOnePromise(s.body, today, had);
 
   // What follows the kind: the message offered, a draft in Gmail, the button.
   function draw() {
@@ -104,6 +114,7 @@ export async function openOneMove(person, { chip, line = null, after = () => {} 
     if (b.dataset.kind !== undefined && !line) { pick = b.dataset.kind; setOn(s.body, 'data-kind', pick); draw(); }
     else if (b.dataset.how !== undefined) pickHow(how === b.dataset.how ? '' : b.dataset.how);
     else if (b.matches('[data-offer]')) { useStarter(); box.focus(); }
+    else if (b.matches('[data-keep-only]')) { s.close(); keptOnly(); }
     else if (b.matches('[data-gmail]')) { pickHow('email'); window.open(GMAIL_DRAFTS, '_blank', 'noopener'); }
     else if (b.matches('[data-go]')) {
       if (!box.value.trim()) useStarter(); // nothing typed: your message goes
@@ -117,9 +128,11 @@ export async function openOneMove(person, { chip, line = null, after = () => {} 
       b.disabled = true;
       const fields = { said: box.value, how, note: note.value };
       if (save.wanted()) await saveMessage(save.kind(), unfill(box.value, values, yours(save.kind())));
-      const result = line ? await saveHowNote(line, fields) : await saveOneMove(person, pick, fields);
+      const result = line ? await saveHowNote(line, fields) : await saveOneMove(person, pick, fields, { promise: promised.read(), keeps });
+      const changed = line ? await saveLinePromise(person, line, promised.read()) : null;
       s.close();
-      after(result);
+      await after(result);
+      if (changed?.gone) toast('Promise taken off.', { action: { label: 'Undo', run: () => undoChange(changed.undo).then(() => after(result)) } });
     }
   });
   return s;
