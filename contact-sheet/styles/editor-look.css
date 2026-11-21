@@ -22,7 +22,10 @@
 .ws-label.has-del { justify-content: flex-start; padding-left: 0; }
 .ws-del { width: 26px; color: var(--dim); }
 .ws-del svg { width: 15px; height: 15px; }
-.fr-empty { background: #EFEFEA; box-shadow: none; color: var(--dim); }
+/* An empty box keeps a 1px edge, so the boxes of a grid with no border
+   between them still show where each photo goes (Starky, 21 Nov). The
+   editor's only: exports leave empty boxes as background. */
+.fr-empty { background: #EFEFEA; box-shadow: inset 0 0 0 1px #9AA3A8; color: var(--dim); }
 .fr-empty .fr-plus { display: none; }
 .fr-hint { font: 400 11px/14px var(--ui); letter-spacing: 0; text-transform: none; }
 
