@@ -1,4 +1,5 @@
-// Rounds starts here. Routes: #/today, #/people, #/person/<id>, #/messages.
+// Rounds starts here. Routes: #/today, #/people, #/promises, #/person/<id>,
+// #/messages (your messages, from Options since 21 Nov).
 // Inside the suite, #/ goes back to the shelf.
 // Set up once, before anything else: sheets above the keyboard, the iPhone's
 // screen, no page zoom.
@@ -11,6 +12,7 @@ import { showSection } from './components/navbar.js';
 import { esc } from './components/util.js';
 import { drawSection } from './pages/sections.js';
 import { personScreen } from './pages/person.js';
+import { messagesScreen } from './pages/messages.js';
 import { openOptions } from './pages/options.js';
 import { introSeen, openIntro } from './pages/intro.js';
 import { welcome } from './pages/welcome.js';
@@ -23,7 +25,7 @@ import { openConflicts } from './pages/conflicts.js';
 
 const view = document.getElementById('view');
 const suite = window.DF_SUITE;
-const SECTION = { '/today': 0, '/people': 1, '/messages': 2 };
+const SECTION = { '/today': 0, '/people': 1, '/promises': 2 };
 let token = 0;
 
 async function route() {
@@ -43,6 +45,9 @@ async function route() {
     } else if ((m = h.match(/^\/person\/(.+)$/))) {
       await personScreen(view, decodeURIComponent(m[1]));
       if (mine === token) showSection(1);
+    } else if (h === '/messages') {
+      await messagesScreen(view);
+      if (mine === token) showSection(-1);
     } else location.replace('#/today');
   } catch (e) {
     console.error(e);

@@ -50,6 +50,7 @@ built/app.css
   styles/crop.css
   styles/so-far.css
   styles/messages.css
+  styles/promises.css
   styles/options.css
   styles/sync.css
   styles/pitch.css

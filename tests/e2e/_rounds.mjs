@@ -114,6 +114,13 @@ export async function options(page) {
   return opened(page, 'Options');
 }
 
+// Your messages: in Options since 21 Nov (the section bar has Promises).
+export async function yourMessages(page) {
+  const s = await options(page);
+  await s.locator('[data-messages]').click();
+  await expect(page.locator('#view .band-line b')).toHaveText('Your messages');
+}
+
 // Import people, with a CSV file picked from Files.
 export async function importCsv(page, text) {
   const s = await options(page);

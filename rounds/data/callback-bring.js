@@ -5,7 +5,7 @@
 // the people and the lines of the log to save. Touchpoints are moments (or
 // notes) on their own days that count as keeping in touch, but don't move
 // anyone's next move: only Callback's next touchpoint sets that, as a Check
-// in due that day.
+// in due that day. Their open loops come in as promises (21 Nov), each once.
 import { findMatch } from './match.js';
 import { newPerson } from './person.js';
 import { firstMove, move } from './plan.js';
@@ -13,6 +13,7 @@ import { addDays, later } from './dates.js';
 import { momentLine } from './moments.js';
 import { noteLine } from './done-notes.js';
 import { pieces } from './callback-read.js';
+import { bothPromises, promisesOf } from './promises.js';
 
 // A touchpoint's line in the log, the same each time, so nothing comes in twice.
 const lineId = (t) => `cb-${t.id}`;
@@ -21,8 +22,8 @@ export const touchCount = (item) => item.touches.filter((t) => !t.fromNotes).len
 
 // entries: readCallback's people. people: Rounds'. lines: the moves log.
 // { items: [{ row, to (who Rounds has, or null), letGo, nextDay, touches
-// (those not in the log yet, and their notes) }], skipped (in Rounds
-// already, with nothing new) }. Two of Callback's that are one person
+// (those not in the log yet, and their notes), promises (those they don't
+// have yet) }], skipped (in Rounds already, with nothing new) }. Two of Callback's that are one person
 // come in as one.
 export function bringPlan(entries, people, lines) {
   const inLog = new Set(lines.map((l) => l.id));
@@ -31,20 +32,26 @@ export function bringPlan(entries, people, lines) {
   for (const e of entries) {
     const touches = [...e.touches, ...(e.notes ? [e.notes] : [])].filter((t) => !inLog.has(lineId(t)));
     const to = findMatch(people, e.row);
+    const had = new Set(promisesOf(to).map((x) => x.id));
+    const promises = (e.promises || []).filter((x) => !had.has(x.id));
     const same = to ? null : items.find((i) => !i.to && findMatch([i.row], e.row));
-    if (same) same.touches.push(...touches);
-    else if (to && !touches.length) skipped++;
-    else items.push({ row: e.row, to, letGo: e.letGo, nextDay: e.nextDay, touches });
+    if (same) { same.touches.push(...touches); same.promises.push(...promises); }
+    else if (to && !touches.length && !promises.length) skipped++;
+    else items.push({ row: e.row, to, letGo: e.letGo, nextDay: e.nextDay, touches, promises });
   }
   return { items, skipped };
 }
 
-// Under each name on the tick list (and Let go for someone Parked in Callback).
+// Under each name on the tick list (and Let go for someone Parked in
+// Callback; and their promises, when they have some).
 export function fromWords(item) {
   const n = touchCount(item);
-  if (!item.to) return `${n === 1 ? '1 touchpoint' : `${n || 'No'} touchpoints`}${item.letGo ? ' · Let go' : ''}`;
+  const k = (item.promises || []).length;
+  const promised = k ? ` · ${k === 1 ? '1 promise' : `${k} promises`}` : '';
+  if (!item.to) return `${n === 1 ? '1 touchpoint' : `${n || 'No'} touchpoints`}${promised}${item.letGo ? ' · Let go' : ''}`;
+  if (!n && k) return `In Rounds already: ${k === 1 ? '1 promise goes' : `${k} promises go`} on their page`;
   if (!n) return 'In Rounds already: a note goes on their page';
-  return `In Rounds already: ${n === 1 ? '1 touchpoint goes' : `${n} touchpoints go`} on their page`;
+  return `In Rounds already: ${n === 1 ? '1 touchpoint goes' : `${n} touchpoints go`} on their page${promised}`;
 }
 
 // One touchpoint's lines: a moment (or note), and the rest of a note too
@@ -76,7 +83,8 @@ export function bring(items, today, perDay, makeId, now) {
       lines.push(...linesOf(t, p.id, day, t.at || now, wasLast));
       if (t.kind === 'moment' && day <= today) last = later(last, day);
     }
-    out.set(p.id, { ...p, lastMove: last });
+    const promises = bothPromises(p.promises, i.promises);
+    out.set(p.id, promises.length ? { ...p, lastMove: last, promises } : { ...p, lastMove: last });
   }
   return { people: [...out.values()], lines };
 }

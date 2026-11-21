@@ -1,7 +1,9 @@
 // Messages (05-messages): one starter message per kind of move, each with its
 // tiny mark, written once in the user's words; [name] and the others fill in
 // for each person. Under them, the user's own fill-ins: their offer and city.
-import { bandHtml } from '../components/band.js';
+// In Options since 21 Nov (Your messages), with a back arrow; its place on the
+// section bar went to Promises.
+import { shortBandHtml } from '../components/band.js';
 import { miniHtml } from '../components/marks.js';
 import { promptSheet } from '../components/dialogs.js';
 import { esc } from '../components/util.js';
@@ -18,10 +20,10 @@ const MINE = [
 
 const row = (attr, mark, name, text) => `<button type="button" class="msg-row" ${attr}>${mark}<span class="msg-words"><span class="msg-kind">${esc(name)}</span><span class="msg-text">${esc(text)}</span></span>${CHEV}</button>`;
 
-export async function messagesScreen(view, { beside = false } = {}) {
+export async function messagesScreen(view) {
   const [messages, me] = await Promise.all([getMessages(), getMe()]);
   view.innerHTML = `<div class="screen"><div class="scroll">
-    ${bandHtml({ title: 'Messages', place: 'Rounds' })}
+    ${shortBandHtml({ place: 'Your messages', back: '#/today' })}
     <p class="note">Write each one once, in your words. [name] and the others fill in for each person.</p>
     <div class="msg-list">${MESSAGE_ORDER.map((k) => row(`data-kind="${k}"`, miniHtml(k), KINDS[k].name, messages[k] ?? KINDS[k].starter)).join('')}</div>
     <div class="msg-fills">
@@ -29,7 +31,6 @@ export async function messagesScreen(view, { beside = false } = {}) {
       <div class="msg-list">${MINE.map((m) => row(`data-mine="${m.key}"`, '', `${m.name} ${m.fill}`, me[m.key] || 'Not set yet')).join('')}</div>
     </div>
   </div></div>`;
-  if (beside) return;
   const redraw = () => messagesScreen(view).then(() => view.querySelector('.screen')?.classList.add('still'));
   view.querySelector('.scroll').addEventListener('click', async (e) => {
     const b = e.target.closest('.msg-row');

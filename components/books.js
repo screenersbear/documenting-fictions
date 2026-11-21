@@ -44,7 +44,7 @@
       colors: ['leaf', 'orange', 'mango', 'berry', 'fern', 'ocean', 'ink'], mark: MARKS.rounds,
       inks: { leaf: { p: '#313D45' }, orange: { s: '#FFFFFF' }, mango: { s: '#FFFFFF' }, fern: { s: '#FFFFFF' }, ink: { s: '#14BFA0' } },
       block: (c) => `rounds/art/${c}-block.webp`,
-      tabs: [['Today', 5.7, 17.7, .11, .2, true, 'today'], ['People', 24.4, 17.7, .115, 0, false, 'people'], ['Messages', 43.1, 17.7, .12, -.2, true, 'messages']],
+      tabs: [['Today', 5.7, 17.7, .11, .2, true, 'today'], ['People', 24.4, 17.7, .115, 0, false, 'people'], ['Promises', 43.1, 17.7, .12, -.2, true, 'promises']],
     },
   ];
 })();

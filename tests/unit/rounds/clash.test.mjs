@@ -3,6 +3,14 @@ import { describe, it, expect } from 'vitest';
 import { valueWords, subjectOf, clashRows, newerSide } from '../../../rounds/data/clash.js';
 
 describe('valueWords', () => {
+  it('promises: the open ones, by what they are', () => {
+    const a = { id: 'a', what: 'Send the selects', open: true };
+    const b = { id: 'b', what: 'Tag me', open: false };
+    expect(valueWords('promises', [a, b, { id: 'c', what: 'Call', open: true }])).toBe('Send the selects; Call');
+    expect(valueWords('promises', [b, null])).toBe('None open');
+    expect(valueWords('promises', [])).toBe('None open');
+    expect(valueWords('promises', 'odd')).toBe('odd');
+  });
   it('nothing, yes and no, a group', () => {
     for (const v of [undefined, null, '']) expect(valueWords('note', v)).toBe('Nothing');
     expect(valueWords('letGo', true)).toBe('Yes');

@@ -1,11 +1,12 @@
 // Two people made one (Tightening Rounds, rounds/11, 16 Nov). The one picked
 // keeps its name, id and photo; everything else comes together: groups,
 // shoots, handles and details it didn't have, both notes, the sooner next
-// move, and every line of the log (moves, moments, notes). (Not to be mixed
+// move, every promise (21 Nov), and every line of the log (moves, moments, notes). (Not to be mixed
 // up with data/merge.js, which is sync putting two copies of the same
 // records together.)
 import { cleanGroups, leadGroup, groupsOf } from './plan.js';
 import { later } from './dates.js';
+import { bothPromises } from './promises.js';
 
 const FILL = ['instagram', 'tiktok', 'website', 'email', 'address', 'photoKey', 'pitched', 'pitch', 'draft'];
 const both = (a, b) => [...new Set([a, b].map((v) => String(v ?? '').trim()).filter(Boolean))].join('. ');
@@ -38,6 +39,8 @@ export function mergePeople(keep, other) {
     letGo: !!(keep.letGo && other.letGo),
     next: nextOf(keep, other),
   });
+  const promises = bothPromises(keep.promises, other.promises);
+  if (promises.length) out.promises = promises;
   return out;
 }
 
