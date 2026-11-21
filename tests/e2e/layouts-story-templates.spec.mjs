@@ -1,11 +1,13 @@
 // Story templates (Starky, 20 Nov): a Story gets story versions of the post
 // layouts and no panoramas; posts keep theirs. No Instagram safe zone.
-import { test, expect } from '@playwright/test';
+import { test, expect, chromium } from '@playwright/test';
 import { freshPage } from './_helpers.mjs';
 
 async function toTemplates(page, size) {
   await page.locator('.list-head .list-act', { hasText: 'New layout' }).click();
   await expect(page.locator('.sheet-guide')).toBeVisible();
+  // A sheet ignores taps for its first 450ms (components/sheet.js).
+  await page.waitForTimeout(500);
   await page.locator('[data-next]').click();
   await page.locator(`.size-card[aria-label="${size}"]`).click();
   await page.locator('[data-next]').click();
@@ -14,8 +16,13 @@ async function toTemplates(page, size) {
 }
 
 test('Layouts: a Story offers story versions of the post layouts and no panoramas', async ({ browser }, testInfo) => {
-  const { ctx, page } = await freshPage(browser, testInfo, '/contact-sheet/#/contents', { returning: true });
+  // As in layouts-from-eye: Chromium made to look like the iPhone, at the
+  // phone's size from the first load.
+  const own = browser.browserType().name() === 'webkit' ? await chromium.launch() : null;
+  const { ctx, page } = await freshPage(own || browser, testInfo, '/contact-sheet/#/contents', { returning: true });
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(page.locator('.list-head')).toBeVisible();
   const story = await toTemplates(page, 'Story 9:16');
   expect(story).toEqual(['Blank', 'Full bleed', 'Series of 3', 'White border', 'Two stacked', 'Three stacked', 'Big top, two below', 'Grid of 4', 'Grid of 6', 'Small, centred']);
   await expect(page.locator('.page-ask')).toHaveText('Start from a story layout, or blank.');
@@ -41,4 +48,5 @@ test('Layouts: a Story offers story versions of the post layouts and no panorama
   await expect(page.getByText('Instagram covers this')).toHaveCount(0);
   await expect(page.locator('.safe-band')).toHaveCount(0);
   await ctx.close();
+  if (own) await own.close();
 });
