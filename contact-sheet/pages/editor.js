@@ -18,7 +18,7 @@ import { toast } from '../components/toast.js';
 import { ICONS } from '../components/icons.js';
 import { esc, debounce, canvasToBlob, loadImage } from '../components/util.js';
 import { OUT } from '../components/frame.js';
-import { SAFE_KEY, SNAP_KEYS } from './editor-sizes.js';
+import { SNAP_KEYS } from './editor-sizes.js';
 import { addLayout } from './editor-layout.js';
 import { addStrip } from './editor-strip.js';
 import { addTools } from './editor-tools.js';
@@ -84,10 +84,6 @@ export async function mountEditor(view, id) {
   ed.photoMode = false;
   ed.z = 0.3;
   ed.zoomFit = 'one';
-  ed.showSafe = true;
-  try {
-    ed.showSafe = localStorage.getItem(SAFE_KEY) !== 'off';
-  } catch {}
   ed.margX = 24;
   ed.margY = 32;
   ed.pageLeft = 24; // where the spread's left page starts
@@ -189,7 +185,6 @@ export async function mountEditor(view, id) {
             <div class="strip-frames" data-frames></div>
             <div class="strip-bands" data-bands></div>
             <div class="strip-seams" data-seams></div>
-            <div class="strip-safe" data-safe></div>
             <div class="strip-guides" data-guides></div>
           </div>
           <div class="sel" data-sel hidden>
@@ -220,7 +215,6 @@ export async function mountEditor(view, id) {
   const framesEl = $('[data-frames]'); ed.framesEl = framesEl;
   const bandsEl = $('[data-bands]'); ed.bandsEl = bandsEl;
   const seamsEl = $('[data-seams]'); ed.seamsEl = seamsEl;
-  const safeEl = $('[data-safe]'); ed.safeEl = safeEl;
   const guidesEl = $('[data-guides]'); ed.guidesEl = guidesEl;
   const labelsEl = $('[data-labels]'); ed.labelsEl = labelsEl;
   const editorEl = $('[data-editor]'); ed.editorEl = editorEl;

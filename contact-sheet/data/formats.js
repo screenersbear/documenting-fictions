@@ -38,10 +38,6 @@ export const pageTitle = (p, plural = false) => {
   return word[0].toUpperCase() + word.slice(1);
 };
 
-// Instagram's own buttons and captions cover the top and bottom of a Story.
-export const SAFE_TOP = 250;
-export const SAFE_BOTTOM = 340;
-
 export const DEFAULT_BG = '#ffffff';
 
 // The parts of a project a template keeps.

@@ -26,9 +26,9 @@ describe('constants', () => {
     expect(M.MAX_SLIDES).toBe(20);
     expect(M.MIN_FRAME).toBe(60);
   });
-  it('keeps Instagram’s Story safe zones and the default colours', () => {
-    expect(M.SAFE_TOP).toBe(250);
-    expect(M.SAFE_BOTTOM).toBe(340);
+  it('keeps the default colours, and no Instagram safe zones any more', () => {
+    expect(M.SAFE_TOP).toBeUndefined();
+    expect(M.SAFE_BOTTOM).toBeUndefined();
     expect(M.DEFAULT_BG).toBe('#ffffff');
     expect(M.DEFAULT_RATIO).toBe('3:4');
   });
@@ -970,10 +970,9 @@ describe('snapTargets', () => {
       ys: [0, 1440, 720, 60, 1380, 200, 600, 400, 140, 660],
     });
   });
-  it('adds a Story’s safe zone only when asked', () => {
+  it('adds no Instagram safe-zone lines to a Story, even if asked the old way', () => {
     const story = proj({ ratio: '9:16', slides: 1 });
-    expect(M.snapTargets(story, null, { safeZone: true }).ys).toEqual([0, 1920, 960, 250, 1580]);
-    expect(M.snapTargets(story, null, { safeZone: false }).ys).toEqual([0, 1920, 960]);
+    expect(M.snapTargets(story, null, { safeZone: true }).ys).toEqual([0, 1920, 960]);
     expect(M.snapTargets(story, null).ys).toEqual([0, 1920, 960]);
     expect(M.snapTargets(proj({ slides: 1 }), null, { safeZone: true }).ys).toEqual([0, 1440, 720]);
   });

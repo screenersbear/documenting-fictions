@@ -1,5 +1,5 @@
 // Spreads: two slides lying open, and keeping frames inside a spread.
-import { SLIDE_W, MIN_FRAME } from './formats.js';
+import { SLIDE_W, MIN_FRAME, isStory } from './formats.js';
 
 // ---------- Spreads ----------
 
@@ -7,6 +7,15 @@ import { SLIDE_W, MIN_FRAME } from './formats.js';
 // the spine of a spread, but never across a page flip.
 export const spreadOf = (k) => Math.floor(k / 2);
 export const spreadCount = (p) => Math.ceil(p.slides / 2);
+
+// How far a box starting at x can stretch, as [left, right] in strip units:
+// the open spread, or in a Story just its own story (Stories are seen one at
+// a time, so a photo can't run on into the next).
+export function resizeRoom(p, spread, x) {
+  if (!isStory(p)) return [spread * 2 * SLIDE_W, (spread + 1) * 2 * SLIDE_W];
+  const k = Math.min(Math.max(Math.floor((x + 0.5) / SLIDE_W), 0), Math.max(p.slides - 1, 0));
+  return [k * SLIDE_W, (k + 1) * SLIDE_W];
+}
 
 // Trims any frame crossing a flip back to the spread holding most of it.
 export function keepInSpreads(p) {

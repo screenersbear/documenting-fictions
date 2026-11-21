@@ -110,6 +110,8 @@ test('SAVE AS IMAGE: a preview, the notebook in front or the whole shelf, three 
   await expect.poll(ratio).toBeCloseTo(1.25, 2);
   // The picture is the notebook, not blank paper: its yellow is in it.
   const yellow = () => preview.evaluate((img) => {
+    // Mid-swap the new picture isn't decoded yet: no size to read, so poll again.
+    if (!img.complete || !img.naturalWidth) return NaN;
     const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
     const x = c.getContext('2d'); x.drawImage(img, 0, 0);
     const d = x.getImageData(0, 0, c.width, c.height).data;

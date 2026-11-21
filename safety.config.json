@@ -15,7 +15,7 @@
     "ref/components/util.js",
     "ref/components/undo.js",
     "contact-sheet/data/formats.js",
-    "contact-sheet/data/templates.js",
+    "contact-sheet/data/templates.js", "contact-sheet/data/story-templates.js",
     "contact-sheet/components/placement.js",
     "contact-sheet/data/slides.js",
     "contact-sheet/data/spreads.js",

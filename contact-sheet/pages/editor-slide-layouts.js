@@ -9,7 +9,6 @@ import { previewCanvas } from '../components/render.js';
 import { openSheet } from '../components/sheet.js';
 import { choiceSheet, promptSheet, confirmSheet } from '../components/dialogs.js';
 import { esc } from '../components/util.js';
-import { SAFE_KEY } from './editor-sizes.js';
 
 export function addSlideLayouts(ed) {
   Object.assign(ed, { pickLayout, addSlideWith, addSlide, layoutThisSlide, topMore, rename, leave });
@@ -108,8 +107,8 @@ export function addSlideLayouts(ed) {
             <span class="field-label">Slide border <b class="range-val" data-val="pad"></b></span>
             <input type="range" min="0" max="200" step="2" value="${ed.p.padding}" data-range="pad" />
             <span class="field-hint">An even border around each ${pageWord(ed.p)}, in the background color. Boxes also snap this far apart.</span>
-            <label class="check"><input type="checkbox" data-seams${ed.p.seamsOpen ? ' checked' : ''} /> Leave seams open</label>
-            <span class="field-hint">No border where ${pageWord(ed.p, true)} meet, so a panorama runs straight across.</span>
+            ${isStory(ed.p) ? '' : `<label class="check"><input type="checkbox" data-seams${ed.p.seamsOpen ? ' checked' : ''} /> Leave seams open</label>
+            <span class="field-hint">No border where ${pageWord(ed.p, true)} meet, so a panorama runs straight across.</span>`}
           </div>
           <div class="field">
             <span class="field-label">Photo border <b class="range-val" data-val="bw"></b></span>
@@ -178,7 +177,6 @@ export function addSlideLayouts(ed) {
       options: [
         { key: 'rename', label: 'Rename', detail: 'Also names the exported files.' },
         { key: 'zoom', label: both ? `See one ${pageWord(ed.p)}` : `See two ${pageWord(ed.p, true)}`, detail: both ? 'Closer in, one at a time.' : 'Side by side, two at a time.' },
-        ...(isStory(ed.p) ? [{ key: 'safe', label: ed.showSafe ? 'Hide safe zone' : 'Show safe zone', detail: 'The parts Instagram covers.' }] : []),
         { key: 'borders', label: 'Background and borders', detail: 'The background color, and space around the photos.' },
         { key: 'template', label: 'Save as template', detail: 'Keeps the boxes, not the photos.' },
         ...(isStory(ed.p) || isPrint(ed.p) ? [] : [{ key: 'grid', label: 'Profile preview', detail: 'How the first slide looks in your profile grid.' }]),
@@ -188,7 +186,6 @@ export function addSlideLayouts(ed) {
     });
     if (key === 'rename') rename();
     else if (key === 'zoom') ed.fitTo(both ? 'one' : 'all');
-    else if (key === 'safe') toggleSafe();
     else if (key === 'borders') openBorders();
     else if (key === 'template') saveAsTemplate();
     else if (key === 'grid') openGrid();
@@ -229,15 +226,6 @@ export function addSlideLayouts(ed) {
     const all = await listTemplates();
     const order = all.reduce((m, t) => Math.max(m, t.sortOrder ?? 0), -1) + 1;
     await saveTemplate({ ...templateFromProject(ed.p), name: v, sortOrder: order, starter: false });
-  }
-
-  function toggleSafe() {
-    ed.showSafe = !ed.showSafe;
-    try {
-      localStorage.setItem(SAFE_KEY, ed.showSafe ? 'on' : 'off');
-    } catch {}
-    ed.renderSafe();
-    ed.renderTools();
   }
 
   async function leave() {
