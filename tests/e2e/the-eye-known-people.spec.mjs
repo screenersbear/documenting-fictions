@@ -58,7 +58,8 @@ const savedTalents = (page, id) => page.evaluate((s) => JSON.parse(localStorage.
 test('the talent picker lists everyone you know; typing suggests them; Booked me is on for a headshot', async ({ browser }, testInfo) => {
   const { ctx, page, problems } = await openShoot(browser, testInfo, 'w1');
   const popup = await addTalent(page);
-  await expect(popup.locator('label', { hasText: 'Someone you know' })).toBeVisible();
+  await expect(popup.locator('label', { hasText: 'Find someone you know' })).toBeVisible();
+  await expect(popup.locator('label', { hasText: 'Or pick from everyone' })).toBeVisible();
   await expect(popup.locator('#pastTalentsSelect option')).toHaveText([
     'Pick someone you know…',
     'June Park · talent, 3 shoots',
@@ -92,6 +93,37 @@ test('the talent picker lists everyone you know; typing suggests them; Booked me
     { name: 'June Park', bookedMe: undefined, handles: ['junepark.jpg'] },
     { name: 'Iryna V.', bookedMe: true, handles: ['iryna.hmua'] },
   ]);
+  expect(problems).toEqual([]);
+  await ctx.close();
+});
+
+test('the search at the top of either popup finds someone without scrolling the list', async ({ browser }, testInfo) => {
+  const { ctx, page, problems } = await openShoot(browser, testInfo, 'w2');
+  const popup = await addTalent(page);
+  const find = popup.locator('#talentFindInput');
+  const rows = popup.locator('.name-suggest-row');
+  await find.pressSequentially('ana');
+  await expect(rows.locator('.name-suggest-name')).toHaveText(['Ana Ruiz']);
+  await rows.first().click();
+  await expect(rows).toHaveCount(0);
+  await expect(find).toHaveValue('');
+  await expect(popup.locator('#talentModalNameInput')).toHaveValue('Ana Ruiz');
+  expect(problems).toEqual([]);
+  await ctx.close();
+});
+
+test('the team member popup has the same search at the top', async ({ browser }, testInfo) => {
+  const { ctx, page, problems } = await openShoot(browser, testInfo, 'w2');
+  await page.locator('#shootDetailRows [data-page="teamHeading"]').click();
+  await page.locator('#addTeamMemberBtn').click();
+  const team = page.locator('#teamMemberModalOverlay');
+  await expect(team).toBeVisible();
+  await expect(team.locator('#teamFindInput')).toHaveValue('');
+  await team.locator('#teamFindInput').pressSequentially('@iryna');
+  await expect(team.locator('.name-suggest-row .name-suggest-name')).toHaveText(['Iryna V.']);
+  await team.locator('.name-suggest-row').first().click();
+  await expect(team.locator('#teamMemberModalNameInput')).toHaveValue('Iryna V.');
+  await expect(team.locator('#teamMemberModalSocialInput')).toHaveValue('iryna.hmua');
   expect(problems).toEqual([]);
   await ctx.close();
 });

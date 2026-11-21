@@ -118,11 +118,11 @@ test.describe('The Eye: the status card and Shoot progress', () => {
     await page.waitForFunction(() => !document.querySelector('.nb-turn, .nb-slide'), null, { timeout: 3000 });
     await page.click('#addShootBtn');
     const step = page.locator('#shootWizardStep');
-    await expect(step).toHaveText('Chapter 1 of 7');
+    await expect(step).toHaveText('Chapter 1 of 6');
     // Making the shoot counts: an inked line leads into the first mark.
     await expect(page.locator('#shootWizardMarks .guide-line').first()).toHaveClass(/guide-lead inked/);
     await expect(page.locator('#shootWizardMarks .guide-mark').first()).toHaveClass(/now/);
-    for (const words of ['Chapter 2 of 7', 'Chapter 3 of 7', 'Chapter 4 of 7', 'Chapter 5 of 7', '2 to go', 'Last one']) {
+    for (const words of ['Chapter 2 of 6', 'Chapter 3 of 6', 'Chapter 4 of 6', '2 to go', 'Last one']) {
       await page.click('#shootWizardNextBtn');
       await expect(step).toHaveText(words);
     }

@@ -180,8 +180,9 @@ window.EyeParts.addNewShootWizardSteps = function addNewShootWizardSteps(ed) {
       title: 'Shot list',
       hint: 'Every shot you want to come away with. Tap a line to write, and Enter starts the next one.',
       // Its own pieces rather than the whole section body: Directions for
-      // talent/team live in the same section on the page but get their own
-      // slide, right after this one.
+      // talent/team live in the same section on the page but are asked in
+      // the Direction chapter. The shot list is asked on the Visuals page,
+      // under the mood board (guide-chapters.js).
       blocks: () => [
         shootWizardBlock('shotListItems'),
         shootWizardBlock('addShotBtn'),
