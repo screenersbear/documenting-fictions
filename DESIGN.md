@@ -16,7 +16,7 @@ is marked:
 **Rounds replaces Overthoughts** (Starky, 14 Nov; taken out of the suite 15 Nov). Overthoughts' folder and code are gone,
 and it won't come back as a notebook of its own. What a phone still kept from it (its database, its few saved settings, its
 offline copy) is taken off as the shelf opens (Starky, 15 Nov). New backups leave it out; an old backup that still has it
-restores fine and skips that part. Rounds lives only in the suite for now (it gets a copy of its own later). Callback is being redesigned and isn't in round 2:
+restores fine and skips that part. Rounds has a copy of its own since 21 Nov (folder `Rounds`, below), like the other three. Callback is being redesigned and isn't in round 2:
 leave its look as it is.
 
 ---
@@ -414,6 +414,19 @@ then "No one, it's just for me" as a text button at the end.
   tick), "Save this as your <kind> message" (14px) over "You changed it. Next time it starts like this." (12px dim); it
   takes the place of the USE YOUR line. DONE with it ticked saves the words in Messages with the person's details back
   as blanks ([name], [brand], [where], [when], [offer], [city], [shoot]).
+- **Rounds on its own (Live, 21 Nov, rounds/STANDALONE.md):** a copy like the others (folder `Rounds`, repo
+  screenersbear/rounds, screenersbear.github.io/rounds/), made only by `tools/sync.py export rounds`, for other
+  photographers. Everything it keeps is under df-rounds (as The Eye's under df-theeye), so it never sees the suite's Rounds.
+  It leaves out, quietly: the Notebooks button, people from The Eye's shoots, A year since, The Eye's shoots in SO FAR,
+  Layouts' post slips, a yes passed to Ref, the shelf's person page, and Bring in from Callback. Back up is only Just this
+  notebook; a backup of all four says "This backup has all four notebooks. On its own, Rounds puts back only its part."
+  (JUST ROUNDS or CANCEL; every notebook on its own says the same). Sync stays, its words without Claude ("Off. Keeps
+  Rounds the same on all your devices."). Its first launch offers the tour: WELCOME TO ROUNDS, "A few people to write to
+  each day, and the words to start with. A quick tour of how it works?", NOT NOW or TAKE THE TOUR; Not now: ANY TIME, "The
+  tour is in Options, the button at the top of the screen, under How it works."
+- **The @ in the handle boxes (Live, 21 Nov, rounds/NOTES.md):** Add someone's Instagram box and Edit's Instagram and
+  TikTok boxes start with an @ fixed inside the box (ink, 17px like the text), the placeholder "handle" after it. Typed or
+  pasted, "@june.park" or a profile link comes out as "june.park"; spaces go. Saved as before, without the @.
 - **Done today on Today (Live, 16 Nov, rounds/12-13, rounds/NOTES.md):** no Done today button or sheet. DONE TODAY <n> is a
   section under the cards (heading in small capitals, the count dim, an ink rule under it): a row per move or moment done
   today, newest first, the 16px mark (Rounds' for moments), "Said thanks to **Maya R.** · text" (17px, the name 500, how

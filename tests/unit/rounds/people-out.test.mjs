@@ -10,8 +10,9 @@ beforeEach(async () => {
   D = await loadDFData();
   R = await import('../../../rounds/data/people-out.js');
   db = await import('../../../rounds/data/db.js');
+  window.DF_SUITE = { get: () => null }; // inside the suite (The Eye's shoots and photos are read)
 });
-afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); delete window.DF_SUITE; });
 
 const WEEK = { work: [1, 2, 3, 4, 5], off: [0] };
 const TODAY = '2026-11-16'; // a Monday

@@ -1,7 +1,8 @@
 // rounds/data/eye.js: Rounds reading The Eye, never changing it. Its shoots
 // (localStorage), the people from shoots since last time (noted for the
 // shoot's record in The Eye), A year since, and a talent photo or a shoot's
-// first final from The Eye's own database.
+// first final from The Eye's own database. Inside the suite only: on its own
+// (rounds/STANDALONE.md) Rounds has no The Eye.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { IDBObjectStore } from 'fake-indexeddb';
 import { loadDFData } from '../shared/_env.mjs';
@@ -16,8 +17,9 @@ beforeEach(async () => {
   D = await loadDFData();
   db = await import('../../../rounds/data/db.js');
   E = await import('../../../rounds/data/eye.js');
+  window.DF_SUITE = { get: () => null }; // inside the suite
 });
-afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); delete window.DF_SUITE; });
 
 const eyeHas = (shoots) => localStorage.setItem('dailies_state_v1', JSON.stringify({ shoots }));
 const shoot = (id, o) => ({
@@ -85,7 +87,7 @@ describe('bringInFromEye', () => {
     expect(await db.getSetting('eyeSeen', null)).toEqual(['s1']);
     expect(await peopleLinks()).toEqual([]);
   });
-  it('brings people in outside the suite too, with nowhere to note them', async () => {
+  it('brings people in without the hand-offs loaded, with nowhere to note them', async () => {
     delete window.DFConnect;
     window.DFData = { ...D, saveLink: undefined };
     eyeHas([shoot('s1')]);
@@ -132,7 +134,7 @@ describe('yearsFromEye', () => {
     expect((await db.listPeople())[0].next).toEqual(ana.next);
     expect(await db.getSetting('yearSeen', null)).toEqual(['s1']);
   });
-  it('works outside the suite, and is nothing with no shoots or none a year old', async () => {
+  it('works without the hand-offs loaded, and is nothing with no shoots or none a year old', async () => {
     delete window.DFConnect;
     expect(await E.yearsFromEye()).toBe(0);
     eyeHas([shoot('s1', { status: 'delivered' })]);
@@ -181,5 +183,21 @@ describe('eyePhoto', () => {
     await eyeKeeps([['k', ['data:,x']]]);
     vi.spyOn(IDBObjectStore.prototype, 'get').mockImplementation(() => { const r = {}; queueMicrotask(() => r.onerror()); return r; });
     expect(await E.eyePhoto('k')).toBe('');
+  });
+});
+
+describe('Rounds on its own', () => {
+  it("has no The Eye: no shoots, no one brought in, no A year since, no photo, and The Eye's database never opened", async () => {
+    eyeHas([shoot('s1'), shoot('s2', { date: '2025-11-10', status: 'delivered' })]);
+    await eyeKeeps([['k1', ['data:image/png;base64,AQ==']]]);
+    delete window.DF_SUITE;
+    const open = vi.spyOn(indexedDB, 'open');
+    expect(E.eyeShoots()).toEqual([]);
+    expect(await E.bringInFromEye()).toBe(0);
+    expect(await E.yearsFromEye()).toBe(0);
+    expect(await E.eyePhoto('k1')).toBe('');
+    expect(open).not.toHaveBeenCalled();
+    expect(await db.listPeople()).toEqual([]);
+    expect(await peopleLinks()).toEqual([]);
   });
 });

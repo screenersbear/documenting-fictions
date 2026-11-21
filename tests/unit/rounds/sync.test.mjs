@@ -323,7 +323,12 @@ describe('inbox.json', () => {
     await fresh({ 'inbox.json': JSON.stringify([lead('1', { name: '' })]) });
     await turnOn();
     gh.clashes['inbox.json'] = 9;
+    globalThis.DF_SUITE = { get: () => null }; // inside the suite (window, in the browser)
     await expect(sync.syncNow()).rejects.toMatchObject({ kind: 'busy', message: 'Claude was adding to the inbox at the same moment. Rounds tries again shortly.' });
+    // On its own (rounds/STANDALONE.md), Rounds' words never mention Claude.
+    delete globalThis.DF_SUITE;
+    gh.clashes['inbox.json'] = 9;
+    await expect(sync.syncNow()).rejects.toMatchObject({ kind: 'busy', message: 'Something else was adding to the inbox at the same moment. Rounds tries again shortly.' });
   });
   it("an inbox Rounds can't read is left alone", async () => {
     await fresh({ 'inbox.json': '{"not": "a list"}' });

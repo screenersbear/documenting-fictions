@@ -1,4 +1,4 @@
-// Reading The Eye, never changing it: its shoots (kept in localStorage) and
+// Reading The Eye, never changing it (inside the suite only): its shoots (kept in localStorage) and
 // its talent photos (in its own database). These few lines are Rounds' own:
 // of the suite's shared data it loads only the hand-offs (df-links), not
 // The Eye's backup code. The two notebooks share a website, inside the suite
@@ -15,8 +15,12 @@ import { dayOf } from './dates.js';
 
 const EYE_STATE = 'dailies_state_v1';
 const EYE_PHOTOS = 'starky-moodboards';
+// On its own (no ../suite.js), Rounds has no The Eye beside it: no shoots,
+// no photos (rounds/STANDALONE.md), and The Eye's database is never opened.
+const alone = () => !window.DF_SUITE;
 
 export function eyeShoots() {
+  if (alone()) return [];
   try {
     const state = JSON.parse(localStorage.getItem(EYE_STATE) || 'null');
     return state && Array.isArray(state.shoots) ? state.shoots : [];
@@ -64,6 +68,7 @@ async function notePeople(brought) {
 // without that store if Rounds happens to open it first.
 export function eyePhoto(key) {
   return new Promise((done) => {
+    if (alone()) { done(''); return; }
     let req;
     try { req = indexedDB.open(EYE_PHOTOS, 1); } catch { done(''); return; }
     req.onupgradeneeded = () => req.result.createObjectStore('images');

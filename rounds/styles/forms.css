@@ -8,6 +8,12 @@
   box-shadow: inset 0 0 0 1px var(--line); font: 400 17px/23px var(--ui); color: var(--text); outline: none; -webkit-appearance: none;
 }
 .field textarea { min-height: 96px; resize: none; }
+/* A handle box (rounds/NOTES.md, The @ in the Instagram field, 21 Nov): the
+   field's box, with an @ fixed at its start, in ink, the size of the text. */
+.handle-box { display: flex; align-items: center; margin-top: 6px; padding-left: 14px; border-radius: 12px; background: var(--paper); box-shadow: inset 0 0 0 1px var(--line); }
+.handle-box:focus-within { box-shadow: inset 0 0 0 1.5px var(--text); }
+.handle-at { flex: none; font: 400 17px/23px var(--ui); color: var(--ink); }
+.field .handle-box input { flex: 1; min-width: 0; margin: 0; padding-left: 1px; background: none; box-shadow: none; }
 .field input:focus, .field textarea:focus { box-shadow: inset 0 0 0 1.5px var(--text); }
 .field-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; margin-bottom: 14px; padding: 6px 0; border-bottom: 1px solid var(--line); text-align: left; }
 .field-row .choice-text { flex: 1; }

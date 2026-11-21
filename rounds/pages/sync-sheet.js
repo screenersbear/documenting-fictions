@@ -2,7 +2,9 @@
 // GitHub repository just for Rounds, through which Claude reads Rounds and
 // leaves leads. Off: the repository and a key, with how to make them. On:
 // where it syncs, when it last did, what went wrong, and Sync now, Change
-// key, Turn off sync. The key stays on this phone (data/device.js).
+// key, Turn off sync. The key stays on this phone (data/device.js). On its
+// own (rounds/STANDALONE.md), Rounds is for other photographers: its words
+// never mention Claude.
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 import { esc } from '../components/util.js';
@@ -14,12 +16,13 @@ import { deviceLabel } from '../data/sync-file.js';
 import { agoWords } from '../data/dates.js';
 import { openConflicts } from './conflicts.js';
 
+const OFF = () => (window.DF_SUITE ? 'Off. Lets Claude read Rounds and leave leads in it.' : 'Off. Keeps Rounds the same on all your devices.');
 const statusOf = (c) => `On, through ${c.repo}. Last synced: ${c.lastSyncAt ? agoWords(c.lastSyncAt) : 'not yet'}`;
 
 // Options' row.
 export async function syncRowHtml() {
   const c = await syncConfig();
-  return `<button type="button" class="choice" data-sync><span class="choice-text"><span class="choice-label">Sync</span><span class="choice-detail">${esc(c ? statusOf(c) : 'Off. Lets Claude read Rounds and leave leads in it.')}</span></span>${CHEV}</button>`;
+  return `<button type="button" class="choice" data-sync><span class="choice-text"><span class="choice-label">Sync</span><span class="choice-detail">${esc(c ? statusOf(c) : OFF())}</span></span>${CHEV}</button>`;
 }
 
 // onSynced: what Rounds shows may have changed.

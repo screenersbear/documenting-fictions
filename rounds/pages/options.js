@@ -1,7 +1,8 @@
 // Options, from the band's menu: Your messages (the starter message for each
 // kind of move, pages/messages.js; on the section bar until 21 Nov), how many moves a day (three, at most five),
 // the work days and days off, Sync (with Claude, through GitHub), Import people, Bring in
-// from Callback (ONE-TIME, Starky's own move: out again when it's done), the two
+// from Callback (ONE-TIME, Starky's own move: out again when it's done; inside the suite
+// only, never in Rounds on its own), the two
 // newsletter lists to export, Back up and Restore a backup (pages/backup.js), and How it works.
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
@@ -43,7 +44,7 @@ export async function openOptions(onChange, autoHandler) {
         ${row('data-messages', 'Your messages', 'The words each kind of move starts with')}
         ${syncRow}
         ${row('data-import', 'Import people', 'From a CSV file')}
-        ${row('data-callback', 'Bring in from Callback', 'From a Callback backup')}
+        ${window.DF_SUITE ? row('data-callback', 'Bring in from Callback', 'From a Callback backup') : ''}
         ${row('data-list="email"', 'Export the email list', `${people1(count('email'))}, for your newsletter tool`)}
         ${row('data-list="mail"', 'Export the mail list', `${people1(count('mail'))}, names and addresses`)}
         ${row('data-backup', 'Back up')}

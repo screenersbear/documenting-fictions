@@ -10,10 +10,12 @@ const CARDS = [
 ];
 
 export const introSeen = () => { try { return localStorage.getItem(SEEN) === '1'; } catch { return true; } };
+// Seen, or turned down (pages/welcome.js): the first launch won't offer them again.
+export const sawIntro = () => { try { localStorage.setItem(SEEN, '1'); } catch { /* private mode: offered again next time */ } };
 
 export function openIntro() {
   let at = 0;
-  const s = openSheet({ title: CARDS[0][0], className: 'sheet-small intro', onClose: () => { try { localStorage.setItem(SEEN, '1'); } catch {} } });
+  const s = openSheet({ title: CARDS[0][0], className: 'sheet-small intro', onClose: sawIntro });
   const draw = () => {
     const last = at === CARDS.length - 1;
     s.setTitle(CARDS[at][0]);

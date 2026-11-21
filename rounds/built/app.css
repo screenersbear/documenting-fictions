@@ -1,15 +1,8 @@
 /* Made by tools/join.mjs from the files listed in files.txt. Never edit it: change those files, then run node tools/join.mjs. */
 
 /* ---- styles/shared/connect.css ---- */
-/* How the notebooks connect, the looks every notebook shares (round 2,
-   connect/NOTES.md): the two minis with an arrow, a slip at the top of a
-   list ("FROM THE EYE"), and the rows of what passed on and came in.
-   The markup comes from shared/data/connect.js. This is the master copy:
-   tools/sync.py shared copies it into each notebook's styles/shared/. */
 .df-pair { flex: none; display: inline-flex; align-items: center; gap: 4px; color: #313D45; }
 .df-mini { flex: none; display: inline-flex; width: 20px; height: 20px; border-radius: 4px; }
-
-/* PASSED ON and CAME IN: a record, each row opening the other notebook. */
 .df-record { margin-top: 8px; border-top: 1px solid #313D45; }
 .df-record-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 0; border: 0; border-bottom: 1px solid #E1E1DC; background: none; color: #313D45; font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
 .df-record-row[aria-disabled="true"] { cursor: default; }
@@ -18,11 +11,6 @@
 .df-record-line { display: block; margin-top: 2px; font-size: 14px; line-height: 19px; color: #5C666D; }
 .df-record-chev { flex: none; display: inline-flex; color: #9AA3A8; }
 .df-record-chev svg { width: 18px; height: 18px; }
-
-/* A slip at the top of a notebook's list (connect/03, 05, 06): white, the
-   Rounds card shadow, a notched FROM tag in the sender's colours, a light
-   title, one dim line, what it brought, then the main button (in the
-   receiving notebook's colour: --df-slip-main, --df-slip-main-text) and NOT NOW. */
 .df-slip { margin-top: 12px; padding: 14px 14px 10px; border-radius: 8px; background: #FFFFFF; color: #313D45; box-shadow: 0 1px 0 #E1E1DC, 0 10px 24px rgba(49, 61, 69, .10); }
 .df-slip-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .df-slip-tag { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 20px 0 4px; border-radius: 3px 0 0 3px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); font-size: 11px; font-weight: 700; letter-spacing: .12em; line-height: 14px; text-transform: uppercase; white-space: nowrap; }
@@ -33,18 +21,12 @@
 .df-slip-actions { display: flex; align-items: center; gap: 4px; margin-top: 14px; }
 .df-slip-main { height: 44px; padding: 0 18px; border: 0; border-radius: 8px; background: var(--df-slip-main, #313D45); color: var(--df-slip-main-text, #FFFFFF); font: inherit; font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
 .df-slip-later { height: 44px; padding: 0 12px; border: 0; background: none; color: #5C666D; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
-/* A switch (HOW THEY CONNECT's hand-offs, The Eye's lessons going to Ref). */
 .df-switch { position: relative; flex: none; width: 52px; height: 32px; padding: 0; border: 0; border-radius: 16px; background: #E1E1DC; cursor: pointer; transition: background .15s; }
 .df-switch span { position: absolute; left: 3px; top: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(49, 61, 69, .25); transition: transform .15s; }
 .df-switch[aria-checked="true"] { background: var(--text); }
 .df-switch[aria-checked="true"] span { transform: translateX(20px); }
 
 /* ---- styles/shared/backup.css ---- */
-/* Back up and Restore (round 2, backup/01-back-up.html): the sheet every
-   notebook and the shelf share, from shared/components/backup-sheet.js and
-   restore-sheet.js. It looks the same wherever it opens, so it sets its own
-   colours. This is the master copy: tools/sync.py shared copies it into each
-   notebook's styles/shared/. */
 .dfb-dim { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: flex-end; justify-content: center; background: rgba(49, 61, 69, 0); transition: background .2s; }
 .dfb-dim.in { background: rgba(49, 61, 69, .5); }
 .dfb-sheet { width: 100%; max-width: 480px; max-height: calc(100% - 40px); overflow-y: auto; box-sizing: border-box; padding: 0 16px calc(24px + env(safe-area-inset-bottom, 0px)); border-radius: 20px 20px 0 0; background: #FFFFFF; color: #313D45; text-align: left; transform: translateY(100%); transition: transform .22s ease-out; }
@@ -54,13 +36,11 @@
 .dfb-head h2 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .12em; line-height: 16px; text-transform: uppercase; color: #313D45; }
 .dfb-close { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-right: -8px; padding: 0; border: 0; background: none; color: #313D45; cursor: pointer; }
 .dfb-close span { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #313D45; }
-
-/* The two rows: Just <the notebook>, then All four notebooks. */
 .dfb-rows { margin-top: 10px; border-top: 1px solid #313D45; }
 .dfb-row { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px 0; border: 0; border-bottom: 1px solid #E1E1DC; background: none; color: #313D45; font: inherit; text-align: left; cursor: pointer; }
 .dfb-row:disabled { cursor: default; opacity: .45; }
 .dfb-row[aria-busy="true"] { opacity: 1; }
-.dfb-rows.made .dfb-row:not(.chosen) { opacity: .45; } /* a backup's ready: the row it's of stands out */
+.dfb-rows.made .dfb-row:not(.chosen) { opacity: .45; }
 .dfb-tile { flex: none; display: inline-flex; width: 30px; height: 30px; border-radius: 6px; }
 .dfb-four { flex: none; display: grid; grid-template-columns: 14px 14px; gap: 2px; }
 .dfb-four span { display: inline-flex; width: 14px; height: 14px; border-radius: 3px; }
@@ -68,8 +48,6 @@
 .dfb-title { display: block; font-size: 17px; line-height: 22px; }
 .dfb-line { display: block; margin-top: 2px; font-size: 14px; line-height: 19px; color: #5C666D; }
 .dfb-chev { flex: none; display: inline-flex; color: #9AA3A8; }
-
-/* What's happening, and the buttons: SAVE THE BACKUP, RESTORE, JUST REF. */
 .dfb-text { margin: 14px 0 0; font-size: 15px; line-height: 21px; color: #313D45; }
 .dfb-note { margin: 14px 0 0; font-size: 14px; line-height: 19px; color: #5C666D; }
 .dfb-btn { display: block; width: 100%; height: 48px; margin-top: 12px; padding: 0 12px; border: 0; border-radius: 8px; background: #313D45; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
@@ -79,23 +57,18 @@
 .dfb-btn[hidden], .dfb-note[hidden] { display: none; }
 
 /* ---- styles/base.css ---- */
-/* Rounds' basics: its font, its colours and the page itself (DESIGN.md 4
-   and 5). The other stylesheets are listed in files.txt, in the order they
-   apply. */
 @font-face { font-family: "Figtree"; src: url("../fonts/figtree-latin.woff2") format("woff2"); font-weight: 300 900; font-display: swap; size-adjust: 96.5%; }
 :root {
-  --paper: #FAFAF7; --card: #FFFFFF; --text: #313D45; --dim: #5C666D; --line: #E1E1DC; --off-1: #9AA3A8; --off-2: #D6DADD;
-  --teal: #14BFA0; --crimson: #A1062A;
-  /* The band: berry blade black with mango (the Black pair), and its four
-     steps. Inside only: the cover on the shelf is teal (rounds/NOTES.md). */
-  --band: #313D45; --partner: #FFD100; --band-small: #FAFAF7; --step1: #636C72; --step2: #969C9E; --step3: #C8CBCA; --step4: #E6E7E5;
-  --ink: var(--band); --on-ink: var(--band-small);
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='.14'/%3E%3C/svg%3E");
-  --ui: "Figtree", "Helvetica Neue", Arial, sans-serif;
-  --safe-t: env(safe-area-inset-top, 0px);
-  --safe-b: env(safe-area-inset-bottom, 0px);
-  --nb-top: max(var(--safe-t), 10px);
-  --app-h: 100vh; /* the real height, from components/screen-fit.js */
+--paper: #FAFAF7; --card: #FFFFFF; --text: #313D45; --dim: #5C666D; --line: #E1E1DC; --off-1: #9AA3A8; --off-2: #D6DADD;
+--teal: #14BFA0; --crimson: #A1062A;
+--band: #313D45; --partner: #FFD100; --band-small: #FAFAF7; --step1: #636C72; --step2: #969C9E; --step3: #C8CBCA; --step4: #E6E7E5;
+--ink: var(--band); --on-ink: var(--band-small);
+--grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='.14'/%3E%3C/svg%3E");
+--ui: "Figtree", "Helvetica Neue", Arial, sans-serif;
+--safe-t: env(safe-area-inset-top, 0px);
+--safe-b: env(safe-area-inset-bottom, 0px);
+--nb-top: max(var(--safe-t), 10px);
+--app-h: 100vh;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
@@ -110,17 +83,14 @@ svg { display: block; }
 :focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 
 /* ---- styles/screen.css ---- */
-/* The open notebook: plain pages the size of the screen, above the section
-   bar, with the band's colour above them behind the clock. Each screen has
-   a part that scrolls; the band scrolls with it. */
 .frame {
-  position: fixed; top: var(--nb-top); height: calc(var(--app-h) - var(--nb-top) - var(--nb-bar));
-  left: max(0px, calc(50% - 310px)); right: max(0px, calc(50% - 310px)); z-index: 1;
+position: fixed; top: var(--nb-top); height: calc(var(--app-h) - var(--nb-top) - var(--nb-bar));
+left: max(0px, calc(50% - 310px)); right: max(0px, calc(50% - 310px)); z-index: 1;
 }
 .frame[data-swipe="1"] #view { touch-action: pan-y; }
 .frame::before, .slide-leaf::before {
-  content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: calc(var(--nb-top) + 1px);
-  background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal;
+content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: calc(var(--nb-top) + 1px);
+background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal;
 }
 .paper { position: absolute; inset: 0; background: var(--paper); overflow: hidden; }
 #view { position: absolute; inset: 0; outline: none; }
@@ -129,45 +99,33 @@ svg { display: block; }
 @keyframes page-in { from { opacity: 0; } }
 .scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; scrollbar-width: none; padding: 0 16px 32px; }
 .scroll::-webkit-scrollbar { display: none; }
-/* Going between sections (components/spread.js): the section beside, a page along. */
 .slide-leaf { position: absolute; z-index: 1; inset: 0; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .screen { animation: none; } }
 
 /* ---- styles/band.css ---- */
-/* The band on top of Today, People and Messages (DESIGN.md 9.1): from the
-   top of the screen, 92px under the safe area, with its grain; the title
-   (34px light capitals) and its two ring buttons on one line; the mark (an
-   arc with three stops: a mango arc, teal and white stops) at its foot; the
-   label line (the place, a hairline, the date); then four steps fading into
-   the paper. The short band, on a person's page (9.3): back, the place on
-   the hairline, the ... menu, then two steps. (components/band.js draws them.) */
 .band {
-  position: relative; flex: none; display: flex; align-items: flex-start; gap: 8px; height: 92px; margin: 0 -16px 53px; padding: 8px 8px 0 16px;
-  background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal; color: var(--partner);
+position: relative; flex: none; display: flex; align-items: flex-start; gap: 8px; height: 92px; margin: 0 -16px 53px; padding: 8px 8px 0 16px;
+background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal; color: var(--partner);
 }
-/* Pulled down past the top, the band's colour goes on up, not the paper (20 Nov). */
 .band::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 100vh; pointer-events: none;
-  background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal; }
+background: var(--grain) 0 0 / 160px 160px, var(--band); background-blend-mode: overlay, normal; }
 .band::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 41.4px; pointer-events: none;
-  background: linear-gradient(var(--step1) 0 14px, var(--step2) 14px 25.2px, var(--step3) 25.2px 34.2px, var(--step4) 34.2px); }
+background: linear-gradient(var(--step1) 0 14px, var(--step2) 14px 25.2px, var(--step3) 25.2px 34.2px, var(--step4) 34.2px); }
 .band-title { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font: 300 34px/40px var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--partner); }
+font: 300 34px/40px var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--partner); }
 .band-btns { display: flex; flex: none; }
 .band-mark { position: absolute; left: 16px; bottom: 0; width: 80px; height: 40px; pointer-events: none; }
 .band-line { position: absolute; left: 108px; right: 16px; top: 68px; display: flex; align-items: center; gap: 10px; margin: 0;
-  font: 500 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: var(--band-small); }
+font: 500 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: var(--band-small); }
 .band-line b { font-weight: 700; }
 .band-rule { flex: 1; height: 1px; background: var(--partner); }
 .band-date { font-variant-numeric: tabular-nums; }
 .band.band-short { height: 56px; justify-content: space-between; margin-bottom: 48px; padding: 6px 8px 0; }
 .band-short::after { height: 18px; background: linear-gradient(var(--step1) 0 10px, var(--step3) 10px); }
 .band-short .band-line { left: 64px; right: 64px; top: 21px; }
-/* A ring button (DESIGN.md 8): a 44px target, a 40px ring 1.5px thick. */
 .ring-btn { display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; color: inherit; }
 .ring-btn > span { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
-/* The notebooks button is the suite's: Rounds on its own has no shelf to go back to. */
 html:not(.df-suite) [data-books] { display: none; }
-/* A list's heading: its name in small capitals, a count, an action at the right. */
 .list-head { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
 .list-head h2 { margin: 0; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
 .list-head h2 span { font-weight: 500; color: var(--dim); font-variant-numeric: tabular-nums; }
@@ -177,43 +135,36 @@ html:not(.df-suite) [data-books] { display: none; }
 .note { margin: 8px 0 0; font: 400 15px/21px var(--ui); color: var(--dim); }
 
 /* ---- styles/section-bar.css ---- */
-/* The section bar (DESIGN.md 9.4): on paper, a 1px line on top, each
-   section's mark (28px) over its name (10px capitals). The one you're on is
-   in berry blade black and teal, its name bold; the others in two greys.
-   Held, its icon swells into a row of every section (components/navbar.js). */
 :root { --nb-foot: max(11px, calc(var(--safe-b) - 13px)); --nb-bar: calc(64px + var(--nb-foot)); }
 html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by, 0px))); }
 .nav-bar {
-  position: fixed; left: 0; right: 0; top: calc(var(--app-h) - var(--nb-bar)); height: var(--nb-bar); max-width: 620px; margin: 0 auto;
-  padding: 8px 12px var(--nb-foot); background: var(--paper); border-top: 1px solid var(--line); z-index: 0;
-  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+position: fixed; left: 0; right: 0; top: calc(var(--app-h) - var(--nb-bar)); height: var(--nb-bar); max-width: 620px; margin: 0 auto;
+padding: 8px 12px var(--nb-foot); background: var(--paper); border-top: 1px solid var(--line); z-index: 0;
+touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
-.nav-bar.is-docked { z-index: 2; } /* over the page while the row is up */
-/* Installed, the bar shows once iOS has its height right (screen-fit.js adds .settled). */
+.nav-bar.is-docked { z-index: 2; }
 @media (display-mode: standalone) { html:not(.settled) .nav-bar { visibility: hidden; } }
 .sec-row { display: flex; justify-content: center; align-items: flex-start; gap: 48px; }
 .sec { --mk-1: var(--off-1); --mk-2: var(--off-2); display: flex; flex-direction: column; align-items: center; gap: 6px; width: 96px; height: 52px;
-  font: 500 10px/14px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); -webkit-touch-callout: none; }
+font: 500 10px/14px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); -webkit-touch-callout: none; }
 .sec[aria-current="page"] { --mk-1: var(--teal); --mk-2: var(--text); color: var(--text); font-weight: 700; }
-.sec-today[aria-current="page"] { --mk-1: var(--text); --mk-2: var(--teal); } /* the ring dark, the round teal */
+.sec-today[aria-current="page"] { --mk-1: var(--text); --mk-2: var(--teal); }
 .sec svg, .nav-dock-icon svg { width: 28px; height: 28px; }
 .mk-1 { fill: var(--mk-1, var(--off-1)); }
 .mk-2 { fill: var(--mk-2, var(--off-2)); }
 .mk-ring { fill: none; stroke: var(--mk-1, var(--off-1)); stroke-width: 4; }
 .nav-dock { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 3; display: flex; align-items: flex-end; padding: 8px 10px; border-radius: 26px; background: var(--paper);
-  box-shadow: 0 0 14px 10px var(--paper); pointer-events: none; opacity: 0; visibility: hidden; transform: translateY(8px) scale(.9);
-  transition: opacity .14s ease, transform .16s ease, visibility 0s .16s; }
+box-shadow: 0 0 14px 10px var(--paper); pointer-events: none; opacity: 0; visibility: hidden; transform: translateY(8px) scale(.9);
+transition: opacity .14s ease, transform .16s ease, visibility 0s .16s; }
 .nav-dock.is-open { opacity: 1; visibility: visible; transform: none; transition: opacity .14s ease, transform .16s ease, visibility 0s; }
 .nav-dock-slot { position: relative; flex: 0 0 46px; height: 44px; display: flex; align-items: flex-end; justify-content: center; }
 .nav-dock-icon { --mk-1: var(--text); --mk-2: var(--teal); display: grid; place-items: center; width: 30px; height: 30px; transform-origin: 50% 100%; transition: transform .09s ease-out; }
 .nav-dock-slot.is-here::after { content: ''; position: absolute; left: 50%; bottom: -6px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--text); }
 .nav-dock-label { position: absolute; left: 0; bottom: calc(100% + 10px); transform: translateX(-50%); white-space: nowrap; padding: 0 6px; background: var(--paper);
-  box-shadow: 0 0 8px 6px var(--paper); border-radius: 10px; color: var(--text); font: 700 11px/22px var(--ui); letter-spacing: .1em; text-transform: uppercase; }
+box-shadow: 0 0 8px 6px var(--paper); border-radius: 10px; color: var(--text); font: 700 11px/22px var(--ui); letter-spacing: .1em; text-transform: uppercase; }
 @media (prefers-reduced-motion: reduce) { .nav-dock, .nav-dock.is-open, .nav-dock-icon { transition: none; } }
 
 /* ---- styles/sheet.css ---- */
-/* Sheets (DESIGN.md 9.5): white, rising from the bottom, a grip on top, the
-   title in section type and a close ring; and the buttons and choices in them. */
 .sheet-overlay { position: fixed; left: 0; right: 0; top: var(--vv-top, 0px); height: var(--vv-height, 100%); background: rgba(49, 61, 69, .5); display: flex; align-items: flex-end; justify-content: center; }
 .sheet { width: 100%; max-width: 620px; max-height: calc(var(--vv-height, 100svh) * .92); background: var(--card); color: var(--text); display: flex; flex-direction: column; outline: none; border-radius: 20px 20px 0 0; }
 .sheet::before { content: ''; flex: none; width: 36px; height: 5px; margin: 8px auto 0; border-radius: 3px; background: var(--off-2); }
@@ -228,7 +179,7 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .sheet-actions.one { grid-template-columns: 1fr; }
 .intro-dots { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 20px; border-radius: 8px;
-  font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
 .btn.primary { background: var(--ink); color: var(--on-ink); }
 .btn.secondary { box-shadow: inset 0 0 0 1.5px var(--text); color: var(--text); }
 .btn.danger { background: var(--crimson); color: #FFFFFF; }
@@ -245,16 +196,18 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .choice-heading { display: block; margin-top: 16px; }
 
 /* ---- styles/forms.css ---- */
-/* Fields (DESIGN.md 9.5): an 11px label over the value; a field row (a
-   label over a value, a chevron, 52px tall) opens a choice; a switch row. */
 .form { display: block; }
 .field { display: block; margin-bottom: 14px; }
 .field-label, .choice-heading { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
 .field input, .field textarea {
-  display: block; width: 100%; margin-top: 6px; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--paper);
-  box-shadow: inset 0 0 0 1px var(--line); font: 400 17px/23px var(--ui); color: var(--text); outline: none; -webkit-appearance: none;
+display: block; width: 100%; margin-top: 6px; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--paper);
+box-shadow: inset 0 0 0 1px var(--line); font: 400 17px/23px var(--ui); color: var(--text); outline: none; -webkit-appearance: none;
 }
 .field textarea { min-height: 96px; resize: none; }
+.handle-box { display: flex; align-items: center; margin-top: 6px; padding-left: 14px; border-radius: 12px; background: var(--paper); box-shadow: inset 0 0 0 1px var(--line); }
+.handle-box:focus-within { box-shadow: inset 0 0 0 1.5px var(--text); }
+.handle-at { flex: none; font: 400 17px/23px var(--ui); color: var(--ink); }
+.field .handle-box input { flex: 1; min-width: 0; margin: 0; padding-left: 1px; background: none; box-shadow: none; }
 .field input:focus, .field textarea:focus { box-shadow: inset 0 0 0 1.5px var(--text); }
 .field-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; margin-bottom: 14px; padding: 6px 0; border-bottom: 1px solid var(--line); text-align: left; }
 .field-row .choice-text { flex: 1; }
@@ -266,24 +219,18 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .switch:checked { background: var(--ink); }
 .switch:checked::after { transform: translateX(20px); }
 .field-error { margin: 4px 0 0; font: 400 15px/21px var(--ui); color: var(--crimson); }
-/* Edit's groups (people/NOTES.md, 15 Nov): pill chips that turn on together
-   (styles/done-note.css), and a dim line on what the ones on do. */
 .field .edit-groups { margin-top: 8px; }
 .edit-groups-words { margin: 8px 0 0; font: 400 13px/18px var(--ui); color: var(--dim); }
 
 /* ---- styles/toast.css ---- */
-/* The toast: a short message over the section bar, with an optional button (like UNDO). */
 .toast { position: fixed; left: 50%; bottom: calc(var(--nb-bar) + 12px); transform: translateX(-50%); z-index: 90; display: flex; align-items: center; gap: 16px;
-  width: max-content; max-width: calc(100vw - 32px); padding: 8px 8px 8px 16px; min-height: 44px; border-radius: 8px; background: var(--text); color: var(--paper); font: 400 15px/20px var(--ui); }
+width: max-content; max-width: calc(100vw - 32px); padding: 8px 8px 8px 16px; min-height: 44px; border-radius: 8px; background: var(--text); color: var(--paper); font: 400 15px/20px var(--ui); }
 .toast.show { animation: page-in .2s ease-out; }
 .toast-action { min-height: 32px; padding: 0 8px; font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--partner); }
 
 /* ---- styles/marks.css ---- */
-/* A move's marks (components/marks.js): the notched tag in its colour pair,
-   the tiny 16px square, and a person's photo or, with none, their initials
-   on a pale grey (never a tint over a photo). */
 .tag { display: inline-flex; align-items: center; height: 26px; padding: 0 22px 0 10px; border-radius: 3px 0 0 3px;
-  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%); font: 700 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%); font: 700 11px/14px var(--ui); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
 .mini { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 3px; }
 .ph { position: relative; flex: none; display: block; overflow: hidden; border-radius: 4px; background: var(--step4); }
 .ph img { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -292,20 +239,13 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .ph.has-photo .ph-initials { display: none; }
 
 /* ---- styles/today.css ---- */
-/* Today (01-today): "3 TODAY" (or "2 OF 3" while flipping) and the arc's stops, then a short stack
-   of cards, the next two peeking out behind (turned 3 and -2.5 degrees).
-   The top card (358 x 380 on a phone, white, radius 6): the move's mark as
-   a big corner flair, the person's photo, the move's tag, the name in light
-   30px, the handle, one line of why. Under the stack: LATER and WRITE TO. */
 .today-head { display: flex; align-items: flex-end; justify-content: space-between; margin-top: -2px; }
 .today-count { font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-variant-numeric: tabular-nums; }
 .today-arc { width: 80px; height: 44px; overflow: visible; }
 .stack { position: relative; height: 404px; margin: 4px -16px 0; }
 .card { position: absolute; top: 14px; left: 16px; right: 16px; height: 380px; border-radius: 6px; overflow: hidden; background: var(--card); color: var(--text);
-  box-shadow: 0 1px 0 #E1E1DC, 0 10px 24px rgba(49, 61, 69, .10); }
+box-shadow: 0 1px 0 #E1E1DC, 0 10px 24px rgba(49, 61, 69, .10); }
 .card.top { z-index: 3; touch-action: pan-y; cursor: pointer; text-align: left; }
-/* The top card in its holder, with DONE beside its tag (18 Nov): the holder
-   is what a swipe moves, so the two go together. */
 .card-top { position: absolute; z-index: 3; top: 14px; left: 16px; right: 16px; height: 380px; touch-action: pan-y; }
 .card-top > .card.top { top: 0; left: 0; right: 0; height: 100%; }
 .card-top .card-done { position: absolute; z-index: 4; top: 163px; right: 12px; margin: 0; color: var(--text); }
@@ -318,27 +258,19 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .card-name { margin: 10px 0 0; font: 300 30px/34px var(--ui); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card-handle { margin: 4px 0 0; font: 400 15px/20px var(--ui); color: var(--dim); }
 .card-why { margin: 14px 0 0; font: 300 17px/24px var(--ui); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-/* Claude drafted it in Gmail: one line under the reason (two lines of reason then). */
 .card-draft { margin: 8px 0 0; font: 500 15px/20px var(--ui); color: var(--text); }
 .card.has-draft .card-why { -webkit-line-clamp: 2; }
 .today-btns { display: flex; gap: 8px; margin-top: 6px; }
 .today-btns .btn.secondary { flex: 1; }
 .today-btns .btn.primary { flex: 1.6; min-width: 0; }
 .today-btns .btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* When the day's cards are done, or there were none: a calm line. */
 .today-calm { margin-top: 56px; }
 .today-calm h2 { margin: 0; font: 300 30px/34px var(--ui); }
 .today-calm p { margin: 10px 0 0; max-width: 32em; font: 400 17px/24px var(--ui); color: var(--dim); }
 .today-calm .btn { margin-top: 24px; }
-/* The day's cards all done (rounds/13): closer under the count, and who's next in 15px, then DONE TODAY. */
 .today-calm.today-finished { margin-top: 22px; }
 .today-finished h2 { line-height: 36px; }
 .today-finished p { margin-top: 6px; font: 400 15px/21px var(--ui); }
-/* DONE TODAY (rounds/12 and 13): a section under the cards, the page once
-   the day is done. The heading in small capitals with its count dim, an ink
-   rule, then a row per move or moment: the mark, "Said thanks to Maya R."
-   (17px, the name 500, how dim), the first line of what you said under it
-   (14px dim, one line), a pale chevron; a 1px line under each. */
 .done-today { margin: 28px 0 24px; }
 .done-today-head { margin: 0; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
 .done-today-head span { font-weight: 500; color: var(--dim); }
@@ -351,16 +283,10 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .done-today-what span { color: var(--dim); }
 .done-today-said { display: block; margin-top: 3px; font: 400 14px/19px var(--ui); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .done-today-chev { flex: none; padding-top: 3px; color: var(--off-1); }
-/* Leads from Claude: one quiet line above the cards, with REVIEW. */
 .today-leads { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin: 0 0 4px; border-bottom: 1px solid var(--line); font: 400 15px/20px var(--ui); }
 .today-leads .text-btn { margin-right: -10px; color: var(--text); }
 
 /* ---- styles/one-sheet.css ---- */
-/* One sheet for any move (rounds/08): in the header the person (a 40 x 50
-   photo, the name in light 20px, "Today, Mon 16 Nov"), then WHAT KIND, WHAT
-   DID YOU SAY? (white, an ink edge), "+ Use your check-in message" in dim
-   13px, HOW, A NOTE FOR YOU (a light edge, "Only you see this"), and COPY
-   AND OPEN with DONE (mango on ink) at the foot. */
 .one-sheet { min-height: min(774px, calc(var(--vv-height, 100svh) * .92)); }
 .one-sheet .sheet-body { display: flex; flex-direction: column; flex: 1; padding-top: 0; }
 .one-sheet .sheet-header h2 { min-width: 0; font: inherit; letter-spacing: 0; text-transform: none; }
@@ -372,7 +298,7 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .one-label { display: block; margin: 16px 0 8px; }
 .one-label[for] { margin-bottom: 6px; }
 .move-text { display: block; width: 100%; field-sizing: content; max-height: 40vh; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--card);
-  font: 400 16px/23px var(--ui); color: var(--text); resize: none; outline: none; -webkit-appearance: none; }
+font: 400 16px/23px var(--ui); color: var(--text); resize: none; outline: none; -webkit-appearance: none; }
 .move-text::placeholder { color: var(--off-1); }
 .one-said { min-height: 70px; box-shadow: inset 0 0 0 1.5px var(--text); }
 .one-note, .one-prom-what { min-height: 44px; padding-top: 10px; padding-bottom: 10px; box-shadow: inset 0 0 0 1px var(--line); }
@@ -384,15 +310,10 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .move-draft[hidden] { display: none; }
 .one-btns { display: flex; gap: 8px; margin-top: auto; padding-top: 20px; }
 .one-btns .btn { flex: 1; min-width: 0; }
-.one-btns .btn.primary { color: var(--partner); } /* DONE in mango, as in rounds/08 */
-/* A year since: one of the shoot's finals, as it is, ready to share. */
+.one-btns .btn.primary { color: var(--partner); }
 .move-final { display: flex; align-items: flex-end; gap: 12px; margin-top: 12px; }
 .move-final[hidden] { display: none; }
 .move-final img { display: block; width: auto; height: auto; max-width: 62%; max-height: 150px; border-radius: 4px; }
-
-/* What you said (rounds/09): the tag in the header, "Checked in with
-   Lindsey" in light 22px, the day and how, WHAT YOU SAID in light 17px, YOUR
-   NOTE in dim 15px; DELETE (dim text), EDIT and COPY AGAIN at the foot. */
 .said-sheet .sheet-body { padding-top: 2px; }
 .said-title { margin: 0; font: 300 22px/28px var(--ui); }
 .said-when { margin: 4px 0 0; font: 400 14px/20px var(--ui); color: var(--dim); }
@@ -402,9 +323,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .said-btns { display: flex; gap: 8px; align-items: center; margin-top: 28px; }
 .said-btns .btn { flex: 1; min-width: 0; }
 .said-btns .text-btn { min-height: 44px; padding: 0 12px; margin-left: -12px; }
-/* SAVE THIS AS YOUR <KIND> MESSAGE (rounds/14, 18 Nov): under the box once
-   your message was used and changed; a 20px tick box, berry blade black
-   with a mango tick when on. */
 .save-msg { position: relative; display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: #EFEFEA; cursor: pointer; }
 .save-msg[hidden] { display: none; }
 .save-msg-input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
@@ -415,21 +333,15 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .save-msg-input:focus-visible + .save-msg-box { outline: 2px solid var(--text); outline-offset: 2px; }
 .save-msg-words { flex: 1; min-width: 0; font: 400 14px/19px var(--ui); }
 .save-msg-sub { display: block; font: 400 12px/16px var(--ui); color: var(--dim); }
-/* Who it's with, on WHAT YOU SAID and a moment opened from DONE TODAY (20
-   Nov): their photo and name, a way to their page. */
 .who-row { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 0 0 12px; border-bottom: 1px solid var(--line); color: var(--text); }
 .who-row .ph { width: 40px; height: 50px; flex: none; }
 .who-words { display: flex; flex-direction: column; min-width: 0; }
 .who-name { font: 400 17px/22px var(--ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .who-open { display: inline-flex; align-items: center; gap: 4px; font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
 .who-open svg { width: 10px; height: 10px; }
-/* ANYTHING PROMISED? (21 Nov, as Callback's log sheet): a box like the note;
-   once something's typed, WHO PROMISED as chips and BY WHEN under it, and,
-   editing a move, its tick. From KEPT IT: the promise on top, in a pale
-   box, with MARK IT KEPT WITHOUT LOGGING. */
 .one-prom-more { display: flex; flex-direction: column; margin-top: 10px; }
 .one-prom-more[hidden] { display: none; }
-.one-prom-label { display: block; margin: 12px 0 6px; } /* BY WHEN, under the chips */
+.one-prom-label { display: block; margin: 12px 0 6px; }
 .one-prom-tick { margin-top: 12px; }
 .one-keeps { margin-top: 8px; padding: 2px 14px 6px; border-radius: 12px; background: #EFEFEA; }
 .one-keeps .one-label { margin-top: 12px; margin-bottom: 4px; }
@@ -437,9 +349,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .one-keeps-skip { margin: 4px 0 0 -10px; }
 
 /* ---- styles/done-note.css ---- */
-/* Right after a move is done (thanks/02): HOW and A NOTE (OPTIONAL), each
-   with pill chips (ink with mango text when picked), SKIP and SAVE (mango
-   on ink). */
 .done-note .move-who { margin-top: 12px; }
 .done-note .done-note-label { display: block; margin: 20px 0 8px; }
 .done-note .done-note-text { min-height: 76px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--text); }
@@ -449,13 +358,9 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .pick-chip.on { background: var(--text); color: #FFD100; }
 .done-note-btns { display: flex; gap: 4px; align-items: center; margin-top: 24px; }
 .done-note-btns .btn { flex: 1; height: 50px; }
-.done-note-btns .btn.primary { color: var(--partner); } /* SAVE in mango, as in thanks/02 */
-/* Done today: the note under the move, in light type. */
+.done-note-btns .btn.primary { color: var(--partner); }
 
 /* ---- styles/people.css ---- */
-/* People (03-people): plain cards, a photo over the name, with a tiny 16px
-   square in the colour and mark of their next move. No colour fields: the
-   colour lives on Today. ADD SOMEONE beside the title. Let go, at the end. */
 .people-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; row-gap: 18px; margin-top: 8px; }
 .person-card { display: block; min-width: 0; color: var(--text); }
 .person-card .ph { width: 100%; max-width: 155px; aspect-ratio: 155 / 180; }
@@ -465,10 +370,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .people-gone .people-grid { opacity: .6; }
 
 /* ---- styles/big-buttons.css ---- */
-/* The big buttons (DESIGN.md 9.4, Big button, Live 17 Nov), as The Eye has
-   them: full width, 56px, radius 10, a 28px disc with a plus, the action in
-   capitals over a short line. Ink with mango here (Rounds' pair): SOMEONE
-   NEW on + CONNECTION's sheet. */
 .big-btn { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 0 16px; border-radius: 10px; text-align: left; }
 .big-btn-plus { flex: none; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; }
 .big-btn-plus svg { width: 16px; height: 16px; stroke-width: 2.5; }
@@ -479,12 +380,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .big-btn-ink .big-btn-plus { background: var(--partner); color: var(--ink); }
 
 /* ---- styles/reach-out.css ---- */
-/* Reach out to (rounds/07) and Merge with...: a search box, the people it
-   finds (a 40 x 50 photo, the name in 17px, their group and the last thing
-   in dim 13px, a line under each). + CONNECTION's sheet puts SOMEONE NEW
-   first (a big button, styles/big-buttons.css), then OR SOMEONE YOU KNOW
-   over the search. People's own search box is the same, lighter until it's
-   typed in. */
 .reach-sheet { min-height: min(724px, calc(var(--vv-height, 100svh) * .92)); }
 .find-box { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--text); color: var(--dim); }
 .find-box input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; font: 400 17px/22px var(--ui); color: var(--text); -webkit-appearance: none; }
@@ -498,12 +393,9 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .pick-row-line { font: 400 13px/18px var(--ui); color: var(--dim); }
 .reach-label { margin: 22px 0 8px; }
 .reach-new { margin-top: 2px; }
-
-/* Merge into one person (rounds/11): the two side by side, the one kept
-   with an ink edge and KEEP THIS NAME ✓; what happens, then MERGE. */
 .merge-cards { display: flex; gap: 10px; margin-top: 2px; }
 .merge-card { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; padding: 12px; border-radius: 12px; background: var(--card);
-  box-shadow: inset 0 0 0 1px var(--line); text-align: left; color: var(--text); }
+box-shadow: inset 0 0 0 1px var(--line); text-align: left; color: var(--text); }
 .merge-card.on { box-shadow: inset 0 0 0 2px var(--text); }
 .merge-card .ph { width: 60px; height: 75px; }
 .merge-name { margin-top: 10px; font: 400 17px/22px var(--ui); overflow-wrap: anywhere; }
@@ -515,11 +407,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .merge-go.btn { width: 100%; height: 50px; margin-top: 24px; color: var(--partner); }
 
 /* ---- styles/people-find.css ---- */
-/* People, tightened (rounds/10): the search box (a light edge until it's
-   typed in), the filter chips in a row that scrolls, SORT and its three
-   orders, the quiet merge line on the segmented grey, and each card's one
-   dim line. + CONNECTION beside Today's count (rounds/06): a filled pill,
-   ink with mango, since REACH OUT in plain type was hard to see (20 Nov). */
 .people-find { height: 44px; margin-top: 8px; box-shadow: inset 0 0 0 1px var(--line); }
 .people-find:focus-within { box-shadow: inset 0 0 0 1.5px var(--text); }
 .people-find input { font-size: 16px; }
@@ -541,13 +428,10 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .person-card-line { display: block; margin-top: 2px; font: 400 12px/16px var(--ui); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .today-count-row { display: flex; align-items: center; gap: 14px; }
 .today-reach { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px 0 12px; border-radius: 20px; background: var(--ink); color: var(--partner);
-  font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+font: 700 12px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
 .today-reach svg { width: 14px; height: 14px; }
-/* Done today: tap the move to see what you said. */
 
 /* ---- styles/person.css ---- */
-/* A person (04-person): photo, name, handle (opens the profile), one line
-   (group and where you met), then the next move as a row that opens it. */
 .person-top { display: flex; flex-direction: column; align-items: flex-start; margin-top: 10px; }
 .person-top .ph { width: 96px; height: 120px; }
 .person-photo-btn { display: block; border-radius: 4px; }
@@ -560,14 +444,10 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .person-next-when { display: inline-flex; align-items: center; gap: 4px; font: 700 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
 .person-next-when svg { width: 12px; height: 12px; }
 .person-rest { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--text); }
-/* EVERYTHING WITH <NAME>, IN ALL FOUR: their page on the shelf (suite only), at the bottom. */
 .person-everything { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: 14px 0 24px; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); text-decoration: none; }
 .person-everything svg { width: 12px; height: 12px; }
 
 /* ---- styles/crop.css ---- */
-/* Crop the photo (20 Nov): the 4:5 box the photo covers (it's never tinted
-   or covered, DESIGN.md 4.4), a dim hint, the zoom slider, then USE THIS
-   PHOTO, mango on ink. */
 .crop-box { position: relative; width: min(100%, 280px); aspect-ratio: 4 / 5; margin: 4px auto 0; overflow: hidden; border-radius: 6px; background: var(--off-2); touch-action: none; cursor: grab; }
 .crop-box img { position: absolute; left: 0; top: 0; max-width: none; user-select: none; -webkit-user-drag: none; }
 .crop-hint { margin: 10px 0 0; text-align: center; font: 400 13px/18px var(--ui); color: var(--dim); }
@@ -576,11 +456,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .crop-use.btn { width: 100%; height: 50px; margin-top: 18px; color: var(--partner); }
 
 /* ---- styles/so-far.css ---- */
-/* ADD A MOMENT and SO FAR on a person (round 2, thanks/06): the outline
-   button full width under the next move, then SO FAR (button type) over
-   its rows: the date in small capitals (50px), the mark, what (17px, its
-   how dim after a dot) and the note under it (15px light), a 1px line under
-   each. */
 .person-moment { display: flex; width: 100%; margin-top: 14px; }
 .so-far-head { margin: 26px 0 0; font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
 .so-far-list { margin-top: 6px; border-top: 1px solid var(--line); }
@@ -591,11 +466,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .so-far-what { display: block; font: 400 17px/22px var(--ui); overflow-wrap: anywhere; }
 .so-far-what span { color: var(--dim); }
 .so-far-note { display: block; margin-top: 3px; font: 300 15px/21px var(--ui); overflow-wrap: anywhere; }
-
-/* The ADD A MOMENT sheet (thanks/05): A MOMENT WITH <NAME>, WHAT HAPPENED
-   as pill chips (ink with mango when picked), WHEN in a pale box (the date
-   picker over it, unseen), A NOTE in a box with an ink ring, the switch with
-   what it moves under it, and ADD THE MOMENT in mango on ink. */
 .moment-sheet .sheet-header h2 { font: 700 13px/16px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
 .moment-sheet .moment-label { display: block; margin: 20px 0 6px; }
 .moment-sheet .moment-label:first-child { margin: 8px 0 8px; }
@@ -611,11 +481,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .moment-btns .btn { height: 50px; color: var(--partner); }
 .moment-btns .btn:disabled { opacity: .4; }
 .moment-btns .text-btn { align-self: center; }
-
-/* A promise made with a move (21 Nov, as Callback's timeline): under its
-   move, lined up with what was done, its words in 15px (when it's due dim
-   under them), and its tick at the right: the 20px tick box (as SAVE THIS AS
-   YOUR MESSAGE) over PROMISE KEPT or THEY CAME THROUGH in dim 12px. */
 .so-far-row:has(+ .so-far-prom) { padding-bottom: 6px; border-bottom: 0; }
 .so-far-prom { display: flex; align-items: center; gap: 12px; padding: 0 0 12px 90px; border-bottom: 1px solid var(--line); }
 .so-far-prom-words { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -628,8 +493,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .so-far-prom-tick[aria-checked="true"] { color: var(--text); }
 
 /* ---- styles/messages.css ---- */
-/* Messages (05-messages): one starter message per kind of move, each with
-   its tiny mark, written once; then the user's own fill-ins. */
 .msg-list { margin-top: 10px; border-top: 1px solid var(--text); }
 .msg-row { display: flex; gap: 12px; width: 100%; padding: 14px 0; border-bottom: 1px solid var(--line); text-align: left; color: var(--text); }
 .msg-row .mini { margin-top: 3px; }
@@ -642,12 +505,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .fill-chip { min-height: 32px; padding: 0 12px; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line); background: var(--paper); font: 500 13px/16px var(--ui); color: var(--text); }
 
 /* ---- styles/promises.css ---- */
-/* Promises (21 Nov, the third tab, where Messages was): + PROMISE (a big
-   button, styles/big-buttons.css), then YOU PROMISED and THEY PROMISED.
-   A row: their photo (40 x 50), what in 17px, their name and when in dim
-   13px (late in crimson, written out), a chevron, a line under each. On a person's page the
-   same rows under PROMISES, with no photo or name. The sheets reuse a
-   moment's (styles/so-far.css). */
 .prom-add { margin: 2px 0 8px; }
 .prom-part { margin-top: 20px; }
 .prom-list { border-top: 1px solid var(--text); }
@@ -664,7 +521,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .prom-who-label { margin-top: 4px; }
 
 /* ---- styles/options.css ---- */
-/* Options and Import people: the import's list, a tick beside each person. */
 .import-sum { margin: 0 0 8px; font: 400 15px/21px var(--ui); color: var(--dim); }
 .import-list { display: flex; flex-direction: column; }
 .import-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 0; border-bottom: 1px solid var(--line); }
@@ -677,7 +533,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .stepper button { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; }
 .stepper button span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--text); font: 400 20px/1 var(--ui); }
 .stepper output { min-width: 24px; text-align: center; font: 700 17px/22px var(--ui); font-variant-numeric: tabular-nums; }
-/* Work days: seven chips, Monday first, the picked ones in ink. */
 .work-days { padding: 8px 0 12px; }
 .day-chips { display: flex; gap: 6px; margin-top: 8px; }
 .day-chip { flex: 1; min-width: 0; height: 40px; border-radius: 20px; box-shadow: inset 0 0 0 1px var(--line); background: var(--paper); font: 500 13px/16px var(--ui); color: var(--text); }
@@ -685,8 +540,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .work-days-note { margin: 8px 0 0; font: 400 13px/18px var(--ui); color: var(--dim); }
 
 /* ---- styles/sync.css ---- */
-/* Sync (Options) and "Changed on two devices": the status in plain type,
-   the how-to steps folded away once sync is on, each clash's two sides. */
 .sync-status { margin: 0 0 8px; font: 400 15px/21px var(--ui); color: var(--dim); }
 .sync-how { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; background: var(--paper); }
 .sync-how summary { font: 500 15px/20px var(--ui); cursor: pointer; }
@@ -702,15 +555,12 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .clash .sheet-actions { margin-top: 16px; }
 
 /* ---- styles/pitch.css ---- */
-/* HOW DID THE PITCH GO? on a person's page (connect/05): the three answers
-   as chips (the picked one in ink with mango words), then, after a yes, the
-   card saying they've passed to Ref, with OPEN. */
 .pitch-label { margin: 26px 0 8px; font: 500 11px/14px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
 .pitch-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .pitch-chip { height: 36px; padding: 0 14px; border-radius: 18px; background: #EFEFEA; font: 400 14px/18px var(--ui); color: var(--text); white-space: nowrap; }
 .pitch-chip[aria-checked="true"] { background: var(--ink); color: var(--partner); }
 .passed-ref { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding: 14px; border-radius: 8px; background: var(--card);
-  box-shadow: 0 1px 0 #E1E1DC, 0 10px 24px rgba(49, 61, 69, .10); }
+box-shadow: 0 1px 0 #E1E1DC, 0 10px 24px rgba(49, 61, 69, .10); }
 .passed-ref-words { flex: 1; min-width: 0; }
 .passed-ref-title { display: block; font: 400 17px/22px var(--ui); }
 .passed-ref-line { display: block; margin-top: 2px; font: 400 14px/19px var(--ui); color: var(--dim); }
@@ -718,9 +568,6 @@ html.is-short { --nb-foot: max(11px, calc(var(--safe-b) - 13px - var(--short-by,
 .pitch-chips + .person-next, .passed-ref + .person-next, .pitch-chips + .person-rest, .passed-ref + .person-rest { margin-top: 24px; }
 
 /* ---- styles/post-slip.css ---- */
-/* The slip on Today for a post from Layouts (connect): the shared slip
-   (styles/shared/connect.css) with Rounds' main button, ink with paper
-   words, and the people tagged in the post, their photos in a row. */
 :root { --df-slip-main: var(--ink); --df-slip-main-text: var(--on-ink); }
 .rd-slip-people { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
 .rd-slip-person { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 56px; }

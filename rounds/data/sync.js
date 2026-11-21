@@ -67,7 +67,9 @@ async function syncInbox(cfg) {
       return { changedHere };
     }
   }
-  throw new SyncError('Claude was adding to the inbox at the same moment. Rounds tries again shortly.', 'busy');
+  // On its own (rounds/STANDALONE.md) Rounds' words never mention Claude.
+  // (globalThis is window in the browser.)
+  throw new SyncError(`${globalThis.DF_SUITE ? 'Claude was' : 'Something else was'} adding to the inbox at the same moment. Rounds tries again shortly.`, 'busy');
 }
 
 // One sync. Pass cfg to try a new repository or key before keeping it.

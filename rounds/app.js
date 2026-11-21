@@ -15,7 +15,7 @@ import { personScreen } from './pages/person.js';
 import { messagesScreen } from './pages/messages.js';
 import { openOptions } from './pages/options.js';
 import { introSeen, openIntro } from './pages/intro.js';
-import { welcome } from './pages/welcome.js';
+import { welcome, offerTour } from './pages/welcome.js';
 import { bringInFromEye, yearsFromEye } from './data/eye.js';
 import { takeFromLayouts } from './data/from-layouts.js';
 import { takeAsks } from './data/asks.js';
@@ -106,8 +106,11 @@ else if ((location.hash || '#/') === '#/') history.replaceState(null, '', suite 
 // Layouts, come in first (and A year since for a shoot whose year came),
 // then the notebook's drawn; and again whenever Rounds comes back on screen.
 // One after the other: both can change the same person. A name changed on
-// the person page on the shelf comes in before them.
-const bringIn = async () => (await takePeopleEdits().catch(() => 0)) + (await bringInFromEye()) + (await yearsFromEye()) + (await takeFromLayouts()) + (await takeAsks().catch(() => 0));
+// the person page on the shelf comes in before them. On its own, Rounds has
+// no other notebooks, so nothing comes in (rounds/STANDALONE.md).
+const bringIn = suite
+  ? async () => (await takePeopleEdits().catch(() => 0)) + (await bringInFromEye()) + (await yearsFromEye()) + (await takeFromLayouts()) + (await takeAsks().catch(() => 0))
+  : async () => 0;
 // Rounds tells the one list of people its people, now and after each change.
 tellPeopleFromNowOn();
 tellPeople(3000);
@@ -117,8 +120,8 @@ document.addEventListener('visibilitychange', () => {
   bringIn().then((n) => { if (n && !document.querySelector('.sheet-overlay')) route(); }).catch(console.error);
 });
 // The first launch: inside the suite, how to get back to the shelf (and the
-// cards if they're wanted); on its own, the cards.
+// cards if they're wanted); on its own, an offer of the cards.
 if (suite) { if (suite.firstVisit) setTimeout(() => { if (!document.querySelector('.sheet-overlay')) welcome('Rounds', openIntro); }, 900); }
-else if (!introSeen()) setTimeout(() => { if (!document.querySelector('.sheet-overlay')) openIntro(); }, 1200);
+else if (!introSeen()) setTimeout(() => { if (!document.querySelector('.sheet-overlay')) offerTour(openIntro); }, 1200);
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('./sw.js').catch(() => {});

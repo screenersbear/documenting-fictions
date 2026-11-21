@@ -8,7 +8,8 @@ import { clientFor } from './pitch.js';
 
 const D = () => window.DFData;
 const C = () => window.DFConnect;
-const ready = () => !!(D() && C() && D().saveLink);
+// Inside the suite only: on its own, Rounds has no Ref (rounds/STANDALONE.md).
+const ready = () => !!(window.DF_SUITE && D() && C() && D().saveLink);
 
 // Their link to Ref (null when there's none).
 export async function refLinkFor(person) {

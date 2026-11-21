@@ -21,9 +21,10 @@
         in TARGETS, beside this repository. The notebook's files are joined
         again first (node tools/join.mjs), so its built/ is never out of date.
 
-        The Eye on its own also gets its own storage: everything it keeps is
-        under names starting df-theeye, so on the same website it never
-        shares data with The Eye inside the suite.
+        The Eye and Rounds on their own also get their own storage:
+        everything they keep is under names starting df-theeye and
+        df-rounds, so on the same website neither ever shares data with
+        itself inside the suite.
 
     --dry-run   say what would change, change nothing
     --force     export even if DEST has changes that aren't committed, or
@@ -52,15 +53,16 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BESIDE = os.path.dirname(ROOT)
-NOTEBOOKS = ['ref', 'the-eye', 'contact-sheet']
-# The notebooks that get the shared copies: those above, and Rounds, which
-# lives only in the suite (it isn't exported).
-SHARED_IN = NOTEBOOKS + ['rounds']
-NAMES = {'ref': 'Ref', 'the-eye': 'The Eye', 'contact-sheet': 'Contact Sheet'}
+NOTEBOOKS = ['ref', 'the-eye', 'contact-sheet', 'rounds']
+# The notebooks that get the shared copies: all of them (Rounds has a copy of
+# its own too, since 21 Nov).
+SHARED_IN = NOTEBOOKS
+NAMES = {'ref': 'Ref', 'the-eye': 'The Eye', 'contact-sheet': 'Contact Sheet', 'rounds': 'Rounds'}
 TARGETS = {
     'ref': os.path.join(BESIDE, 'Ref Notebook'),
     'the-eye': os.path.join(BESIDE, 'The Eye'),
     'contact-sheet': os.path.join(BESIDE, 'Contact Sheet'),
+    'rounds': os.path.join(BESIDE, 'Rounds'),
 }
 RECORD = '.suite-export.json'
 # Never touched in DEST, and never reported as left over.
@@ -73,12 +75,15 @@ SUITE_LINES = re.compile(
     r'[ \t]*<script src="\.\./suite\.js"></script>\n'
 )
 
-# The Eye on its own: its localStorage keys and IndexedDB databases get a
-# df-theeye prefix. Loaded first, before anything reads them.
-EYE_STORAGE = '''<!-- The Eye on its own: everything it keeps is under its own names (df-theeye), so it never shares data with The Eye inside Documenting Fictions on the same website. -->
+# A notebook on its own with its own storage (The Eye, Rounds): its
+# localStorage keys and IndexedDB databases get a prefix, so on the same
+# website it never shares data with itself inside the suite. Loaded first,
+# before anything reads them.
+OWN_STORAGE = {'the-eye': ('The Eye', 'df-theeye'), 'rounds': ('Rounds', 'df-rounds')}
+STORAGE_SCRIPT = '''<!-- %NAME% on its own: everything it keeps is under its own names (%PREFIX%), so it never shares data with %NAME% inside Documenting Fictions on the same website. -->
 <script>
 (function () {
-  var P = 'df-theeye:';
+  var P = '%PREFIX%:';
   var ls; try { ls = window.localStorage; } catch (e) { return; }
   var S = Storage.prototype, get = S.getItem, set = S.setItem, del = S.removeItem;
   S.getItem = function (k) { return get.call(this, this === ls ? P + k : k); };
@@ -86,12 +91,21 @@ EYE_STORAGE = '''<!-- The Eye on its own: everything it keeps is under its own n
   S.removeItem = function (k) { return del.call(this, this === ls ? P + k : k); };
   if (window.IDBFactory) {
     var F = IDBFactory.prototype, open = F.open, drop = F.deleteDatabase;
-    F.open = function (name, version) { return version === undefined ? open.call(this, 'df-theeye-' + name) : open.call(this, 'df-theeye-' + name, version); };
-    F.deleteDatabase = function (name) { return drop.call(this, 'df-theeye-' + name); };
+    F.open = function (name, version) { return version === undefined ? open.call(this, '%PREFIX%-' + name) : open.call(this, '%PREFIX%-' + name, version); };
+    F.deleteDatabase = function (name) { return drop.call(this, '%PREFIX%-' + name); };
   }
 })();
 </script>
 '''
+
+
+def own_storage(nb):
+    """The storage lines for a notebook on its own ('' for one that needs none)."""
+    if nb not in OWN_STORAGE:
+        return ''
+    name, prefix = OWN_STORAGE[nb]
+    return STORAGE_SCRIPT.replace('%NAME%', name).replace('%PREFIX%', prefix)
+
 
 COPY_NOTE = '''# This folder is a copy
 
@@ -207,7 +221,7 @@ def shared(dry):
 def standalone_index(nb, text):
     if not SUITE_LINES.search(text):
         raise SystemExit(f'{nb}/index.html: the ../suite.js line is not where it was expected; nothing exported.')
-    return SUITE_LINES.sub(EYE_STORAGE if nb == 'the-eye' else '', text, count=1)
+    return SUITE_LINES.sub(own_storage(nb), text, count=1)
 
 
 def dirty(dest):

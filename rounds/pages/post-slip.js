@@ -2,6 +2,7 @@
 // Rounds knows (round 2, connect): the shoot, who's tagged (their photos),
 // then WRITE TO <NAME> (the first one's move, as from their card) or NOT
 // NOW. Their moves stay on Today either way (data/photos-up.js). It shows once.
+// Inside the suite only: on its own, Rounds has no Layouts (rounds/STANDALONE.md).
 import { photoHtml } from '../components/photo.js';
 import { esc } from '../components/util.js';
 import { firstName } from '../data/fill.js';
@@ -13,7 +14,7 @@ const personHtml = (p) => `<span class="rd-slip-person">${photoHtml(p, 'small')}
 
 // Every slip waiting here, as markup. people: everyone, for their names and photos.
 export async function postSlipsHtml(people) {
-  if (!C() || !window.DFData) return '';
+  if (!window.DF_SUITE || !C() || !window.DFData) return '';
   const byId = new Map(people.map((p) => [p.id, p]));
   const out = [];
   for (const link of await C().slipsFor('rounds')) {

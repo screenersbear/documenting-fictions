@@ -1,8 +1,9 @@
-// ADD SOMEONE (rounds/NOTES.md): a name, their handle, one line about where
-// you met. They start as New, with a Say hello; Edit has the rest.
+// ADD SOMEONE (rounds/NOTES.md): a name, their handle (after a fixed @,
+// components/handle-field.js), one line about where you met. They start as New, with a Say hello; Edit has the rest.
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 import { uuid, esc } from '../components/util.js';
+import { handleFieldHtml, wireHandles } from '../components/handle-field.js';
 import { newPerson } from '../data/person.js';
 import { savePerson } from '../data/db.js';
 import { dayOf } from '../data/dates.js';
@@ -15,7 +16,7 @@ export function openAddPerson(onAdded, { name = '' } = {}) {
     body: `
       <form class="form" data-form>
         <label class="field"><span class="field-label">Name</span><input type="text" name="name" value="${esc(name)}" autocomplete="off" required /></label>
-        <label class="field"><span class="field-label">Instagram</span><input type="text" name="instagram" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="@handle" /></label>
+        ${handleFieldHtml('Instagram', 'instagram')}
         <label class="field"><span class="field-label">Where you met</span><input type="text" name="where" autocomplete="off" placeholder="The Brooklyn portrait meetup" /></label>
         <div class="sheet-actions">
           <button type="button" class="btn secondary" data-close>Cancel</button>
@@ -24,6 +25,7 @@ export function openAddPerson(onAdded, { name = '' } = {}) {
       </form>`,
   });
   const form = s.body.querySelector('form');
+  wireHandles(form);
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(form));

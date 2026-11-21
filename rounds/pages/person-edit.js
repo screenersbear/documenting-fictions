@@ -1,17 +1,18 @@
 // Edit, from a person's ... menu (04-person): their name, groups (Regular,
 // New, Client, Prospect, Event guest: chips that turn on together, as
-// people/NOTES.md has it, 15 Nov), handles, where you met, a note, and
+// people/NOTES.md has it, 15 Nov), handles (after a fixed @,
+// components/handle-field.js), where you met, a note, and
 // the newsletter lists: the email list asks for an email, the mail list
 // for an address. No phone numbers (rounds/NOTES.md).
 import { openSheet } from '../components/sheet.js';
 import { esc } from '../components/util.js';
+import { handleFieldHtml, wireHandles } from '../components/handle-field.js';
 import { savePerson } from '../data/db.js';
 import { applyEdit } from '../data/person.js';
 import { GROUPS, GROUP_KEYS, groupsOf, toggleGroup } from '../data/plan.js';
 import { dayOf } from '../data/dates.js';
 
 const field = (label, name, value, more = '') => `<label class="field"><span class="field-label">${label}</span><input type="text" name="${name}" value="${esc(value)}" autocomplete="off" ${more} /></label>`;
-const HANDLE = 'autocapitalize="off" spellcheck="false" placeholder="@handle"';
 const GROUP_WORDS = {
   regular: 'Repeat collaborators. A check-in every six weeks.',
   new: 'Just met, or shot once. Thanks or hello, then a check-in.',
@@ -35,8 +36,8 @@ export function openEdit(p, onSaved) {
         <div class="field"><span class="field-label" id="groupsLabel">Groups</span>
           <div class="pick-chips edit-groups" role="group" aria-labelledby="groupsLabel">${chipsHtml(groups)}</div>
           <p class="edit-groups-words" data-group-words>${esc(wordsOf(groups))}</p></div>
-        ${field('Instagram', 'instagram', p.instagram, HANDLE)}
-        ${field('TikTok', 'tiktok', p.tiktok, HANDLE)}
+        ${handleFieldHtml('Instagram', 'instagram', p.instagram)}
+        ${handleFieldHtml('TikTok', 'tiktok', p.tiktok)}
         ${field('Website', 'website', p.website, 'autocapitalize="off" spellcheck="false" inputmode="url"')}
         ${field('Where you met', 'where', p.where)}
         <label class="field"><span class="field-label">Note</span><textarea name="note" rows="2">${esc(p.note)}</textarea></label>
@@ -51,6 +52,7 @@ export function openEdit(p, onSaved) {
       </form>`,
   });
   const form = s.body.querySelector('form');
+  wireHandles(form);
   form.emailList.addEventListener('change', () => { s.body.querySelector('[data-email]').hidden = !form.emailList.checked && !form.email.value.trim(); });
   form.mailList.addEventListener('change', () => { s.body.querySelector('[data-address]').hidden = !form.mailList.checked; });
   const chips = s.body.querySelector('.edit-groups');

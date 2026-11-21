@@ -1,7 +1,8 @@
 // rounds/data/to-ref.js: a yes passed to Ref as a 'new-client' link in
 // df-links (who it is, their handle, when they were pitched, their photo),
 // only while New clients is switched on; and taken back while Ref hasn't
-// started their board.
+// started their board. Inside the suite only: on its own (rounds/STANDALONE.md)
+// Rounds has no Ref.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { loadDFData, NodeBlob } from '../shared/_env.mjs';
 
@@ -12,8 +13,9 @@ beforeEach(async () => {
   D = await loadDFData();
   db = await import('../../../rounds/data/db.js');
   R = await import('../../../rounds/data/to-ref.js');
+  window.DF_SUITE = { get: () => null }; // inside the suite
 });
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); delete window.DF_SUITE; });
 
 const person = (o) => ({ id: 'ana', name: 'Ana Ruiz', group: 'client', instagram: 'ana.jpg', photoKey: '', ...o });
 const linkOf = async (p) => R.refLinkFor(p);
@@ -125,9 +127,21 @@ describe('takeBackFromRef', () => {
     await R.takeBackFromRef(person());
     expect(await linkOf(person())).toMatchObject({ toId: 'board-1' });
   });
-  it('does nothing for someone never passed on, or outside the suite', async () => {
+  it('does nothing for someone never passed on, or without the hand-offs loaded', async () => {
     await expect(R.takeBackFromRef(person())).resolves.toBeUndefined();
     delete window.DFConnect;
     await expect(R.takeBackFromRef(person())).resolves.toBeUndefined();
+  });
+});
+
+describe('Rounds on its own', () => {
+  it('passes nothing to Ref, finds no link, and takes nothing back', async () => {
+    const l = await R.passToRef(person(), '2026-11-02');
+    delete window.DF_SUITE;
+    expect(await R.passToRef(person({ id: 'bo', name: 'Bo' }), '')).toBeNull();
+    expect(await D.linksWhere({ fromApp: 'rounds', fromId: 'bo' })).toEqual([]);
+    expect(await linkOf(person())).toBeNull();
+    await R.takeBackFromRef(person());
+    expect((await D.linksWhere({ fromApp: 'rounds', type: 'new-client' })).map((x) => x.id)).toEqual([l.id]);
   });
 });
