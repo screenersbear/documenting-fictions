@@ -2,8 +2,7 @@
 // shoot, their next-time notes from The Eye, the notes as the board's first
 // page, and the people to pick from.
 import { describe, it, expect, beforeEach } from 'vitest';
-import { nextShootFor, notesFor, noteSource, notesPage, peopleMatching } from '../../../ref/data/next-time.js';
-import { withTextDefaults } from '../../../ref/components/textsize.js';
+import { nextShootFor, notesFor, noteSource, peopleMatching } from '../../../ref/data/next-time.js';
 
 beforeEach(() => localStorage.clear());
 
@@ -93,23 +92,6 @@ describe('noteSource', () => {
   });
   it('is the day alone with no name', () => {
     expect(noteSource({ title: '', day: '2026-11-07' })).toBe('7 Nov');
-  });
-});
-
-describe('notesPage', () => {
-  const notes = [{ title: 'Rooftop portraits', day: '2026-11-07', text: 'Bring a reflector.' }, { title: 'Studio', day: '', text: 'Warm up first.' }];
-  it('is a tall page with room for words: NEXT TIME, each note with where it came from', () => {
-    expect(notesPage(notes, 'letter-portrait')).toEqual(withTextDefaults({
-      template: 'lp-text', images: [], nextTime: true, title: 'Next time', text: 'Bring a reflector. (Rooftop portraits, 7 Nov)\n\nWarm up first. (Studio)',
-    }));
-  });
-  it('is the wide page with words beside on a wide board', () => {
-    expect(notesPage(notes.slice(0, 1), 'wide-16x9')).toMatchObject({ template: 'w-single-text', text: 'Bring a reflector. (Rooftop portraits, 7 Nov)' });
-  });
-  it('takes the text sizes set as the defaults', () => {
-    localStorage.setItem('ref-notebook-text-defaults', JSON.stringify({ title: 2 }));
-    const plain = notesPage([], 'letter-portrait');
-    expect(plain).toEqual(withTextDefaults({ template: 'lp-text', images: [], nextTime: true, title: 'Next time', text: '' }));
   });
 });
 

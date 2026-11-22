@@ -258,6 +258,12 @@ describe('special folders', () => {
     expect(L.folderById('f2')).toBeUndefined();
     expect(L.folderById(undefined)).toBeUndefined();
   });
+  it('folderById finds what Ref found in the photos, while one has it', async () => {
+    await loaded([photo('a', { tags: ['sea shell'] })], []);
+    expect(L.folderById('found:sea shell')).toEqual({ id: 'found:sea shell', name: 'Sea shell', label: 'sea shell', found: true });
+    expect(L.folderById('found:dog')).toBeUndefined();
+    expect(L.isSpecial('found:sea shell')).toBe(false);
+  });
 });
 
 describe('photosIn', () => {
@@ -282,6 +288,11 @@ describe('photosIn', () => {
   });
   it('an unknown folder is empty', () => {
     expect(L.photosIn('nope')).toEqual([]);
+  });
+  it('a found tag is the photos Ref found it in', () => {
+    L.lib.photos = [photo('x', { tags: ['dog'] }), photo('y'), photo('z', { tags: ['cat', 'dog'] })];
+    expect(L.photosIn('found:dog').map((p) => p.id)).toEqual(['x', 'z']);
+    expect(L.photosIn('found:bird')).toEqual([]);
   });
   it('everything is empty with no photos', () => {
     L.lib.photos = [];
@@ -548,6 +559,9 @@ describe('chipsFor', () => {
   });
   it('leaves out the folder you are in and folders that no longer exist', () => {
     expect(keys(L.chipsFor([p1, p2, p3], [], 'f1'))).toEqual(['t:dog', 't:cat', 't:park', 'f:f2', 'c:blue', 'c:red', 'm:cool', 'm:warm']);
+  });
+  it('leaves out the found tag you are in', () => {
+    expect(keys(L.chipsFor([p1, p2], [], 'found:dog'))).toEqual(['t:park', 'f:f1', 'f:f2', 'c:red', 'm:cool', 'm:warm']);
   });
   it('with a filter on, offers only filters that still leave photos', () => {
     expect(keys(L.chipsFor([p1, p2, p3], ['t:dog'], undefined))).toEqual(['t:dog', 't:park', 'f:f1', 'f:f2', 'c:red', 'm:cool', 'm:warm']);

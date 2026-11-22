@@ -44,7 +44,7 @@ async function makeIt(page) {
 }
 
 test.describe("Ref: a board for someone", () => {
-  test("picking someone shows their next-time notes; the board starts with them and goes on their next shoot", async ({ browser }, testInfo) => {
+  test("picking someone shows their next-time notes, kept off the board; it goes on their next shoot", async ({ browser }, testInfo) => {
     const { ctx, page, problems } = await openNew(browser, testInfo, [...PAST, COMING]);
     await expect(page.locator('.who-row .who-name')).toHaveText('Pick someone');
     await expect(page.locator('.who-hint')).toHaveText('Pick someone, or add a new person. The board shows on their next shoot in The Eye.');
@@ -57,17 +57,18 @@ test.describe("Ref: a board for someone", () => {
     const notes = page.locator('.who-notes');
     await expect(notes.locator('.who-note-head')).toHaveText(['Rooftop portraits, 7 Nov']);
     await expect(notes.locator('.who-note-text')).toHaveText(['Bring a reflector for the last half hour.']);
-    await expect(notes.locator('.who-note-foot')).toHaveText('Added to the board as its first page. You can take it off.');
+    await expect(notes.locator('.who-note-foot')).toHaveText("To keep in mind as you make it. They don't go on the board.");
     await page.locator('[data-name]').fill('June, winter set');
     await makeIt(page);
     await expect(page.locator('.toast')).toHaveText('On Winter portraits in The Eye', { timeout: 10000 });
     const [b] = await boards(page);
     expect(b.name).toBe('June, winter set');
-    expect(b.pages[0]).toMatchObject({ title: 'Next time', text: 'Bring a reflector for the last half hour. (Rooftop portraits, 7 Nov)', nextTime: true });
-    expect(b.pages).toHaveLength(4);
+    // The notes stay out of the board (Starky, 21 Nov).
+    expect(b.pages.some((p) => p.nextTime || p.title === 'Next time')).toBe(false);
+    expect(b.pages).toHaveLength(3);
     expect(b.client).toMatchObject({ name: 'June Park', handle: 'junepark.jpg', waiting: false });
     const [l] = await linksTo(page, 'w1');
-    expect(l).toMatchObject({ fromId: b.id, name: 'June, winter set', pageCount: 4, pending: false, client: { name: 'June Park', handle: 'junepark.jpg' } });
+    expect(l).toMatchObject({ fromId: b.id, name: 'June, winter set', pageCount: 3, pending: false, client: { name: 'June Park', handle: 'junepark.jpg' } });
     expect(problems).toEqual([]);
     await ctx.close();
   });

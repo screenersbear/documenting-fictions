@@ -1,7 +1,7 @@
 // ref/data/import-board.js: IMPORT on Mood boards (round 3,
 // ref/08-new-and-import), its words and lists.
 import { describe, it, expect } from 'vitest';
-import { isPdf, baseName, pdfShape, pdfBoardPages, listName, failedWords } from '../../../ref/data/import-board.js';
+import { isPdf, baseName, listName, failedWords } from '../../../ref/data/import-board.js';
 
 describe('isPdf', () => {
   it('knows a PDF by its type, or by its name with no type', () => {
@@ -23,23 +23,6 @@ describe('baseName', () => {
   it('says PDF when there is nothing else', () => {
     expect(baseName('.pdf')).toBe('PDF');
     expect(baseName(undefined)).toBe('PDF');
-  });
-});
-
-describe('pdfShape', () => {
-  it('is wide when the first page is', () => {
-    expect(pdfShape(true)).toBe('wide-16x9');
-    expect(pdfShape(false)).toBe('letter-portrait');
-  });
-});
-
-describe('pdfBoardPages', () => {
-  it('puts each photo on a page of its own, edge to edge', () => {
-    expect(pdfBoardPages('letter-portrait', ['a', 'b'])).toEqual([{ template: 'lp-bleed', images: ['a'] }, { template: 'lp-bleed', images: ['b'] }]);
-    expect(pdfBoardPages('wide-16x9', ['a'])).toEqual([{ template: 'w-bleed', images: ['a'] }]);
-  });
-  it('takes the tall page for a size it does not know', () => {
-    expect(pdfBoardPages('square', ['a'])).toEqual([{ template: 'lp-bleed', images: ['a'] }]);
   });
 });
 

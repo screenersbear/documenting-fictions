@@ -47,6 +47,7 @@ describe('pageOf', () => {
 
 describe('trayStart', () => {
   it('starts a PDF board on its pages', () => { expect(trayStart({ fromPdf: true })).toBe('pages'); });
+  it('starts a board brought in as it is on its pages', () => { expect(trayStart({ shape: 'own' })).toBe('pages'); });
   it('starts any other board on All', () => { expect(trayStart({ fromPdf: false })).toBe('all'); expect(trayStart({})).toBe('all'); });
   it('starts on All with no board', () => { expect(trayStart(null)).toBe('all'); expect(trayStart(undefined)).toBe('all'); });
 });

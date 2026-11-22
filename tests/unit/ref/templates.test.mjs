@@ -45,13 +45,18 @@ describe('TEMPLATES', () => {
   it('lists the letter layouts, then the guides, in order', () => {
     expect(ids(LP)).toEqual([
       'lp-bleed', 'lp-single', 'lp-two-stack', 'lp-two-side', 'lp-three-top', 'lp-three-left',
-      'lp-grid-4', 'lp-five', 'lp-grid-6', 'lp-grid-9', 'lp-cover', 'lp-text', ...guideIds('lp'),
+      'lp-grid-4', 'lp-five', 'lp-grid-6', 'lp-grid-9', 'lp-cover', 'lp-text',
+      // Thin lines, no lines, edge to edge (Starky, 21 Nov: data/tight-templates.js).
+      'lp-grid-4-thin', 'lp-grid-4-none', 'lp-grid-6-thin', 'lp-grid-6-none', 'lp-grid-9-thin', 'lp-grid-9-none',
+      'lp-grid-12-thin', 'lp-two-stack-none', 'lp-three-top-thin', 'lp-strip-3', 'lp-edge-4', 'lp-edge-9', ...guideIds('lp'),
     ]);
   });
   it('lists the wide layouts, then the guides, in order', () => {
     expect(ids(WIDE)).toEqual([
       'w-bleed', 'w-cover', 'w-single-text', 'w-two', 'w-three', 'w-three-left',
-      'w-grid-4', 'w-four-across', 'w-grid-6', 'w-grid-8', 'w-grid-10', ...guideIds('w'),
+      'w-grid-4', 'w-four-across', 'w-grid-6', 'w-grid-8', 'w-grid-10',
+      'w-grid-4-thin', 'w-grid-4-none', 'w-grid-6-thin', 'w-grid-6-none', 'w-grid-8-thin', 'w-two-none', 'w-three-none',
+      'w-four-across-thin', 'w-three-left-thin', 'w-edge-6', 'w-edge-8', ...guideIds('w'),
     ]);
   });
   it('gives every template a name and a unique id', () => {
@@ -281,10 +286,10 @@ describe('defaultTemplate', () => {
     expect(defaultTemplate(LP, 10).id).toBe('lp-grid-9');
     expect(defaultTemplate(LP, 500).id).toBe('lp-grid-9');
   });
-  it('never picks a bleed, cover or guide page', () => {
+  it('never picks a bleed, cover, guide or thin-line page', () => {
     for (const shape of [LP, WIDE]) for (let n = -1; n <= 13; n++) {
       const t = defaultTemplate(shape, n);
-      expect(t.guide || t.cover || t.id.endsWith('bleed')).toBeFalsy();
+      expect(t.guide || t.cover || t.extra || t.id.endsWith('bleed')).toBeFalsy();
     }
   });
   it('throws for an unknown shape', () => {
@@ -355,8 +360,8 @@ describe('makeCover', () => {
 });
 
 describe('STYLES and styleFor', () => {
-  it('lists the six layout approaches in wizard order', () => {
-    expect(STYLES.map((s) => s.id)).toEqual(['grid', 'hero', 'mosaic', 'bleed', 'editorial', 'pairs']);
+  it('lists the eight layout approaches in wizard order', () => {
+    expect(STYLES.map((s) => s.id)).toEqual(['grid', 'hero', 'mosaic', 'bleed', 'editorial', 'pairs', 'thin', 'seamless']);
   });
   it('gives each a name, a blurb and a cycle for both shapes using real templates', () => {
     for (const s of STYLES) {
@@ -371,6 +376,8 @@ describe('STYLES and styleFor', () => {
   it('finds a style by id', () => {
     expect(styleFor('hero')).toBe(STYLES[1]);
     expect(styleFor('pairs').name).toBe('Pairs');
+    expect(styleFor('thin').name).toBe('Thin lines');
+    expect(styleFor('seamless').name).toBe('No lines');
   });
   it('is null for an unknown or missing id', () => {
     expect(styleFor('nope')).toBeNull();

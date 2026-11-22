@@ -1,7 +1,8 @@
 // Ref round 3 (17 Nov): NEW BOARD and IMPORT at the top of Mood boards
 // (ref/08). IMPORT makes a board from a PDF (each page a page of the board,
-// "(from PDF)" after its name until it's renamed) or from photos (the usual
-// layout step). WHO IT'S FOR starts with ADD A NEW PERSON, then search,
+// "(from PDF)" after its name until it's renamed) or from photos, each
+// page as it came in, at its full size, never fitted into a layout
+// (Starky, 21 Nov). WHO IT'S FOR starts with ADD A NEW PERSON, then search,
 // RECENT people with a short line, and "No one" last (ref/09). And The
 // Eye's FROM REF (the-eye/16) picks one of these boards in Ref.
 import { test, expect } from '@playwright/test';
@@ -50,8 +51,9 @@ test.describe('Ref: IMPORT', () => {
   test('a PDF becomes a board, a page for each page, "(from PDF)" until renamed', async ({ browser }, testInfo) => {
     const { ctx, page, problems } = await openRef(browser, testInfo);
     await importFiles(page, { name: 'Lookbook.pdf', mimeType: 'application/pdf', buffer: testPdf(2, { wide: true }) });
-    // Only a name and who it's for: the PDF sets the page size.
+    // Only a name and who it's for: each page as it is, at its full size.
     await expect(page.locator('.new-board .guide-title')).toHaveText('Name');
+    await expect(page.locator('.new-board')).toContainText('Each page of the PDF is a page of the board, at its full size.');
     await expect(page.locator('[data-name]')).toHaveValue('Lookbook');
     await expect(page.locator('[data-shape]')).toHaveCount(0);
     await expect(page.locator('[data-who]')).toBeVisible();
@@ -61,8 +63,10 @@ test.describe('Ref: IMPORT', () => {
     const [b] = await boards(page);
     expect(b.name).toBe('Lookbook');
     expect(b.fromPdf).toBe(true);
-    expect(b.shape).toBe('wide-16x9');
-    expect(b.pages.map((p) => [p.template, p.images.length])).toEqual([['w-bleed', 1], ['w-bleed', 1]]);
+    expect(b.shape).toBe('own');
+    expect(b.pages.map((p) => [p.template, p.images.length])).toEqual([['own', 1], ['own', 1]]);
+    for (const p of b.pages) { expect(p.size.W).toBe(11); expect(p.size.H).toBeLessThan(11); }
+    expect(b.pages.some((p) => p.nextTime)).toBe(false);
     // The tray opens on PAGES (user, 11-20): the pages in order; a tap goes to one.
     await expect(page.locator('[data-source="pages"]')).toHaveClass(/\bon\b/);
     await expect(page.locator('.tray-page .tray-num')).toHaveText(['1', '2']);
@@ -94,20 +98,56 @@ test.describe('Ref: IMPORT', () => {
     await ctx.close();
   });
 
-  test('photos go the usual way: a name and page size, then the layout', async ({ browser }, testInfo) => {
+  test('photos come in as they are, each its own page; the editor adds, deletes and exports pages', async ({ browser }, testInfo) => {
     const { ctx, page, problems } = await openRef(browser, testInfo);
     await importFiles(page, [await photo(page, 'one.jpg', 400, 500), await photo(page, 'two.jpg', 500, 400)]);
-    await expect(page.locator('.new-board .guide-title')).toHaveText('Name and page size');
-    await expect(page.locator('[data-shape]')).toHaveCount(2);
+    await expect(page.locator('.new-board .guide-title')).toHaveText('Name');
+    await expect(page.locator('.new-board')).toContainText('Each photo is a page of the board, at its full size.');
+    await expect(page.locator('[data-shape]')).toHaveCount(0);
     await page.locator('[data-name]').fill('Window light');
-    await page.locator('[data-next]').click();
-    await expect(page.locator('.new-board .guide-title')).toHaveText('Layout');
     await expect(page.locator('[data-next]')).toHaveText('Make the board');
     await page.locator('[data-next]').click();
     await expect(page).toHaveURL(/#\/board\/.+$/);
-    const [b] = await boards(page);
+    let [b] = await boards(page);
     expect(b.fromPdf).toBeFalsy();
-    expect(b.pages.flatMap((p) => p.images).filter(Boolean)).toHaveLength(2);
+    expect(b.shape).toBe('own');
+    expect(b.fonts).toEqual({ title: 'courier', text: 'courier' });
+    expect(b.pages.map((p) => [p.template, p.size])).toEqual([['own', { W: 8.8, H: 11 }], ['own', { W: 11, H: 8.8 }]]);
+    // Uncropped: the page is the photo's shape.
+    await expect(page.locator('[data-stage] .page')).toBeVisible();
+    const box = await page.locator('[data-stage] .page').boundingBox();
+    expect(box.width / box.height).toBeCloseTo(0.8, 1);
+    // The tray opens on its pages, so + PHOTOS waits for All.
+    await expect(page.locator('[data-tray-add]')).toBeHidden();
+    // ADD A PAGE: the layouts first, this page's own first of all.
+    await page.locator('[data-add]').click();
+    const sh = page.locator('.sheet', { has: page.locator('h2', { hasText: 'New page' }) });
+    await expect(sh).toBeVisible();
+    await expect(sh.locator('.opt-name').first()).toHaveText('Like this page');
+    await expect(sh.locator('.opt-name').nth(1)).toHaveText('As imported');
+    await expect(sh.locator('.opt-name', { hasText: 'thin lines' }).first()).toBeVisible();
+    await settle(page);
+    await sh.locator('.opt-card', { hasText: 'Grid of four, no lines' }).click();
+    await expect(page.locator('[data-at]')).toHaveText('Page 2 of 3');
+    await expect.poll(async () => (await boards(page))[0].pages.length).toBe(3); // saved a moment after
+    [b] = await boards(page);
+    expect(b.pages[1]).toMatchObject({ template: 'lp-grid-4-none', size: { W: 8.8, H: 11 } });
+    // Its x asks first.
+    await page.locator('.page-x').click();
+    const ask = page.locator('.sheet', { has: page.locator('h2', { hasText: 'Delete page 2?' }) });
+    await expect(ask).toBeVisible();
+    await settle(page);
+    await ask.locator('[data-yes]').click();
+    await expect(page.locator('[data-at]')).toHaveText('Page 2 of 2');
+    // EXPORT asks: images or a PDF.
+    await page.locator('[data-t=export]').click();
+    await expect(page.locator('.sheet .choice-label')).toHaveText(['Images', 'PDF']);
+    await expect(page.locator('.sheet .choice-detail').first()).toHaveText('2 pictures, one for each page. For Photos or to send');
+    await settle(page);
+    await page.locator('.sheet .choice', { hasText: 'Images' }).click();
+    const ready = page.locator('.sheet', { has: page.locator('h2', { hasText: 'Your images are ready' }) });
+    await expect(ready).toBeVisible({ timeout: 20000 });
+    await expect(ready.locator('[data-send]')).toHaveText(/^(Save all 2 or share|Download 2 as ZIP)$/);
     await page.goto('/ref/#/boards');
     await expect(page.locator('.card-name')).toHaveText(['Window light']);
     expect(problems).toEqual([]);
