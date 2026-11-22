@@ -160,9 +160,13 @@ so the shapes do the shouting.
 
 ### 5.3 Handwriting (Decided)
 
-Klee One is retired. The shelf's book tabs (Figtree 600, round 2) and Ref's board pages move to Figtree. Ref's board pictures
-are drawn on a canvas in Klee One (`pages.js`), so that drawing changes with it, and saved boards will look different once it's
-done.
+Klee One is retired. The shelf's book tabs (Figtree 600, round 2) move to Figtree.
+
+**Ref's board fonts (Live, 21 Nov, Starky):** a board's words are in the Ref Mac app's fonts, in its order: Courier New,
+American Typewriter, Helvetica Neue, Avenir Next, Futura, Gill Sans, Georgia, Baskerville, Didot, Michroma (comes with Ref,
+OFL), Menlo. One font for the board's titles and one for its text, picked in the text menu (FONT, each name written in its
+font) and kept for every page. A new board starts in Courier New, as on the Mac. A board made before keeps Klee One until its
+font is changed, so nothing already made looks different. Pictures of the pages (Export, Send to shoot) use the same fonts.
 
 ### 5.4 Wordmark
 
@@ -323,16 +327,38 @@ pages; coming back to it opens where you were.
 
 **PDFs on a mood board (Live, 17 Nov):** each page becomes one photo, made on the phone (long side 2400px), under a small
 label with the file's name and its pages ("FROM LOOKBOOK.PDF · 8 PAGES", 11px 500 capitals, dim). A toast says they're in.
-Ref's IMPORT makes a board of a PDF the same way: a page of the board for each page, edge to edge, named after the file with
-"(from PDF)" after it in the list until it's renamed; photos imported go through the usual layout step.
+Ref's IMPORT makes a board as it came in (Starky, 21 Nov): a page of the board for each page of a PDF or each photo, at the
+picture's own shape (its long side 11 inches), never cropped and never fitted into a layout ("As imported"). It asks only the
+name and who it's for. A PDF's board is named after the file with "(from PDF)" after it in the list until it's renamed.
 
 **Getting around a board (Live, 20 Nov):** the editor's tray starts with PAGES: the board's pages in order, each its first
-photo with its number on a small ink pill, the one you're on ringed in ink; a tap goes to that page. A board from a PDF opens
-on PAGES; others on ALL. Tapping a photo that's already on another page, with no spot free, goes to that page. A sideways
+photo with its number on a small ink pill, the one you're on ringed in ink; a tap goes to that page. A board brought in with
+IMPORT opens on PAGES; others on ALL. Tapping a photo that's already on another page, with no spot free, goes to that page. A sideways
 swipe on a picked photo that can't move sideways (a PDF's page) turns the page, as it does anywhere else on the page.
 
-**Ref's first visit (Live, 20 Nov):** after the cards (or after the tour is turned down), someone with no photos goes to
-Incoming, with an ink note: STEP 1 OF 2, Bring your photos in, SKIP; once photos are in, STEP 2 OF 2, Now tag them, GOT IT.
+**Ref's board editor works like Layouts (Live, 21 Nov, Starky):** ADD A PAGE (13px bold caps with a plus) beside the page
+count opens NEW PAGE, the layouts first ("Like this page" first of all), then makes the page after this one. Each page has a
+round ink x on its top left corner (28px) that asks "Delete page 2?" first (Layouts' trash doesn't ask). + PHOTOS, a 56px
+ringed tile at the start of the tray (on ALL), brings photos in from the phone; they fill the page's empty spots, the rest
+wait in the tray. EXPORT asks IMAGES (a picture of each page: saved or shared on a phone, a ZIP on a computer) or PDF.
+More layouts: grids with thin lines (0.05 inch), with no lines, and edge to edge with the words over the photos; they're
+in the Layout sheet and two new New board styles, THIN LINES and NO LINES, and a page is never given one on its own.
+Next-time notes show on New board's first step only: "They don't go on the board."
+
+**Ref's Tags (Live, 21 Nov, Starky):** "Your photos N" with ADD PHOTOS heads the page, so photos come in before any tag is
+opened. Under Your tags, "Found in your photos N": what Ref found in the photos, as tags of their own, most photos first.
+Deleting a tag asks what goes: JUST THE TAG (its photos stay; a found tag is taken off them and not found again) or THE TAG
+AND ITS N PHOTOS (red). Both can be undone.
+
+**The Eye's mood board SHARE (Live, 21 Nov, Starky):** a line big button under the board, "Share / as a PDF or images". It
+asks PDF or IMAGES, then puts the Ref boards' pages and the board's own photos together (each its own shape), then SAVE OR
+SHARE (a tap, for the iPhone's share sheet). Not in the New shoot guide.
+
+**Back to The Eye (Live, 21 Nov):** a board opened with a shoot's OPEN IN REF says "The Eye" in its band, and Back goes to
+that shoot, on the page it was on. Anywhere else in Ref ends it.
+
+**Ref's first visit (Live, 20 Nov; the ask 21 Nov):** after the cards (or after the tour is turned down), someone with no
+photos is asked "Bring your photos in" (LATER, OPEN YOUR PHOTOS). Either way they go to Incoming, with an ink note: STEP 1 OF 2, Bring your photos in, SKIP; once photos are in, STEP 2 OF 2, Now tag them, GOT IT.
 Tagging some ends it. The section bar shows as soon as a section starts loading, not once its photos are drawn.
 
 **Who it's for (Live, 17 Nov, ref round 3):** ADD A NEW PERSON (big button, "Name and handle") first, then search, then RECENT
@@ -374,10 +400,9 @@ then "No one, it's just for me" as a text button at the end.
   **Restore** takes either kind: on the shelf, a backup of one notebook says which ("RESTORE THE EYE?") and puts back only
   that one; inside a notebook, a backup of all four asks first, "This backup has all four notebooks.", JUST REF (main)
   or ALL FOUR (outline). The sheet looks the same everywhere: styles/shared/backup.css.
-- **The floating ! (Live, 15 Nov):** over a notebook with something waiting (a hand-off, or its own Today items), just above
-  its top edge: an ink bar (12 x 34 units on the 24-unit grid), a gap, a mango dot (16 units). No disc behind it, a soft
-  floor shadow, the books' slow bob (still with Reduce Motion). Tapping it shows what's waiting without opening the book.
-  It replaced the slips tucked into the covers.
+- **No floating ! (Starky, 21 Nov):** the ! over a notebook with something waiting (15 Nov, in place of the slips tucked
+  into the covers) is gone. What's waiting still shows inside each notebook (Today, its tray), and the notebooks still keep
+  it (shared/data/waiting.js) in case the shelf shows it again.
 - **Search (Live, 15 Nov):** a magnifier at the top right. One box: people first, then each notebook's results under its
   mark in loop order (Rounds, Ref, The Eye, Layouts).
 - **Paper pages (Live, 15 Nov):** the person page, HOW THEY CONNECT and YOUR YEAR are paper with no band: a back ring
@@ -558,7 +583,7 @@ then "No one, it's just for me" as a text button at the end.
 | — | Bands | Only Notebooks and Options; adding beside its list; The Eye's bell gone (14 Nov) |
 | — | Turning sections | A plain slide, no page turn (14 Nov) |
 | — | Fourth notebook | Rounds, a light networking checklist, in Overthoughts' place (14 Nov); Overthoughts taken out (15 Nov) |
-| — | Shelf slips | Replaced by the floating ! and its preview (15 Nov) |
+| — | Shelf slips | Replaced by the floating ! and its preview (15 Nov); the ! taken off too (21 Nov) |
 | — | Turned down | A Today strip on the shelf, and board colours carrying into posts (15 Nov) |
 
 Still open: the shelf's own mark (7), and the hidden up/down swipe on the
