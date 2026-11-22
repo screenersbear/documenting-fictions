@@ -9,7 +9,7 @@ import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { freshPage } from './_helpers.mjs';
-import { eyeShoot, opened, sheet } from './_rounds.mjs';
+import { eyeShoot, opened, sheet, weekdayDate } from './_rounds.mjs';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 let path = '';
@@ -21,10 +21,12 @@ test.beforeAll(({ browserName }, testInfo) => {
   path = `/${dir}/`;
 });
 
-// Opened as someone who's been before (no tour offer), at 390 wide.
+// Opened as someone who's been before (no tour offer), at 390 wide, on a day
+// Rounds works (on a Sunday, its day off, the page's date is Monday: _rounds.mjs).
 async function openAlone(browser, testInfo, seed = null) {
   const { ctx, page, problems } = await freshPage(browser, testInfo, path);
   await page.evaluate(() => localStorage.setItem('rounds-intro-seen', '1'));
+  await ctx.addInitScript(weekdayDate);
   if (seed) await ctx.addInitScript(seed);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
