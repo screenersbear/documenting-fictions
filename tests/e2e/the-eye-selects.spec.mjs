@@ -7,7 +7,7 @@
 // tests/unit/the-eye/selects-wait.test.mjs, today-items.test.mjs.)
 import { test, expect } from '@playwright/test';
 import { freshPage } from './_helpers.mjs';
-import { openRounds } from './_rounds.mjs';
+import { openRounds, weekdayNow } from './_rounds.mjs';
 
 const STARTER = "Hi June! Just checking you got the proofs from Rooftop portraits. No rush, send your picks whenever you're ready.";
 
@@ -50,7 +50,10 @@ async function openEye(browser, testInfo, path = '/the-eye/') {
 }
 
 const saved = (page, id) => page.evaluate((s) => JSON.parse(localStorage.getItem('dailies_state_v1')).shoots.find((x) => x.id === s), id);
-const today = (n = 0) => { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const dayStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const today = (n = 0) => { const d = new Date(); d.setDate(d.getDate() + n); return dayStr(d); };
+// openRounds moves the page's date on to Monday on a Sunday (Rounds' day off): the day the page counts as today.
+const roundsToday = () => dayStr(weekdayNow());
 const selectsItem = (page) => page.locator('#todayCardItems .today-item', { hasText: 'Still waiting on' });
 
 test('the Today card asks after 3 days; STILL WAITING asks again in 3; an older wait counts from now', async ({ browser }, testInfo) => {
@@ -156,7 +159,7 @@ test('in the suite, the reminder is a moment with June in Rounds, Messaged on In
   await sheet.locator('.remind-ask-btns [data-done]').click();
   await expect(sheet).toBeHidden();
   const asked = () => page.evaluate(async () => (await window.DFData.roundsAsks()).map((l) => l.ask));
-  await expect.poll(asked).toEqual([expect.objectContaining({ do: 'moment', what: 'instagram', keeps: true, note: STARTER, day: today() })]);
+  await expect.poll(asked).toEqual([expect.objectContaining({ do: 'moment', what: 'instagram', keeps: true, note: STARTER, day: roundsToday() })]);
 
   // Rounds takes it as it opens; June's page on the shelf has it, the latest.
   await page.goto('/rounds/');
