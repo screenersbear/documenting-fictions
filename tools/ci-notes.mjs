@@ -37,3 +37,33 @@ if (process.argv[2] === 'lighthouse') {
     .forEach((a) => note(a.level === 'error' ? 'error' : 'warning',
       `Lighthouse ${a.auditProperty || a.auditId}: ${a.url.replace(/^https?:\/\/[^/]+/, '')} scored ${a.actual} (runs ${(a.values || []).join(', ')}), needs ${a.operator} ${a.expected}`));
 }
+
+// Every page's speed score, passing or not, so a slow drift shows before it
+// fails: one note per page (its runs and their middle value), and in the log,
+// for each page's middle run, the timings and what costs it most.
+if (process.argv[2] === 'lighthouse') {
+  let files = [];
+  try { files = fs.readdirSync('.lighthouseci').filter((f) => /^lhr-.*\.json$/.test(f)); } catch { /* no runs */ }
+  const byPage = {};
+  for (const f of files) {
+    const lhr = read(`.lighthouseci/${f}`);
+    if (lhr?.categories?.performance) (byPage[lhr.requestedUrl.replace(/^https?:\/\/[^/]+/, '')] ||= []).push(lhr);
+  }
+  const ms = (a) => (a?.numericValue == null ? '?' : `${Math.round(a.numericValue)}`);
+  for (const [page, runs] of Object.entries(byPage)) {
+    runs.sort((a, b) => a.categories.performance.score - b.categories.performance.score);
+    const mid = runs[Math.floor(runs.length / 2)];
+    const au = mid.audits;
+    note('notice', `Lighthouse speed ${page}: middle ${mid.categories.performance.score} (runs ${runs.map((r) => r.categories.performance.score).join(', ')})`);
+    console.log(`[speed] ${page} FCP ${ms(au['first-contentful-paint'])} LCP ${ms(au['largest-contentful-paint'])} TBT ${ms(au['total-blocking-time'])} SI ${ms(au['speed-index'])} CLS ${au['cumulative-layout-shift']?.numericValue?.toFixed(3)}`);
+    const costs = Object.values(au)
+      .filter((a) => a.score !== null && a.score < 1 && (a.details?.overallSavingsMs > 0 || a.metricSavings))
+      .map((a) => [a.id, a.details?.overallSavingsMs || Math.max(0, ...Object.values(a.metricSavings || {}))])
+      .filter(([, s]) => s > 0).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    console.log(`[speed] ${page} costs: ${costs.map(([id, s]) => `${id} ${Math.round(s)}`).join(', ')}`);
+    const boot = au['bootup-time']?.details?.items || [];
+    console.log(`[speed] ${page} scripts: ${boot.slice(0, 4).map((i) => `${i.url.replace(/^https?:\/\/[^/]+/, '')} ${Math.round(i.total)}`).join(', ')}`);
+    const lcp = au['largest-contentful-paint-element']?.details?.items?.[0]?.items?.[0]?.node?.snippet;
+    if (lcp) console.log(`[speed] ${page} LCP element: ${lcp.slice(0, 160)}`);
+  }
+}
