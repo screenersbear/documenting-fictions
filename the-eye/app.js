@@ -121,7 +121,9 @@
   window.EyeParts.addShootOpen(ed);
   window.EyeParts.addShootMoodboard(ed);
   window.EyeParts.addBoardGroups(ed);
+  window.EyeParts.addRefReturn(ed);
   window.EyeParts.addMoodboardAdd(ed);
+  window.EyeParts.addMoodboardShare(ed);
   window.EyeParts.addImageViewer(ed);
   window.EyeParts.addProjectsPhotoCrop(ed);
   window.EyeParts.addImageViewerTouch(ed);

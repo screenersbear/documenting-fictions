@@ -36,3 +36,6 @@
 /* Installed, the navigator and the sun show once iOS has its height right
    (app.js adds .settled), so they never show high and then drop. */
 @media (display-mode: standalone) { :root:not(.settled) :is(.tabbar, .nb-sun) { visibility: hidden; } }
+
+/* SHARE (pages/shoot/moodboard-share.js) is for a shoot already made. */
+#shootWizardBody .moodboard-share { display: none; }

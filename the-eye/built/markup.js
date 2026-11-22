@@ -467,6 +467,8 @@
           <input type="file" id="moodboardFileInput" accept="image/*,application/pdf,.pdf" multiple hidden />
           <div id="refBoards" class="ref-boards" hidden></div>
           <div id="moodboardGrid" class="moodboard-grid"></div>
+          <!-- SHARE: the whole board as a PDF or images (pages/shoot/moodboard-share.js). -->
+          <button type="button" id="shareMoodboardBtn" class="big-btn big-btn-line moodboard-share"><span class="big-btn-plus" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 13v6h14v-6"/></svg></span><span class="big-btn-words"><b>Share</b><span>as a PDF or images</span></span></button>
           <label class="checkbox-row" id="moodboardCompleteRow"><input type="checkbox" id="shootMoodboardComplete" /> <span id="moodboardCompleteLabel">Mood board complete or not required?</span></label>
         </div>
 
@@ -1959,6 +1961,21 @@
     <div class="modal-actions fit-pair" id="appConfirmActions">
       <button type="button" class="secondary" id="appConfirmCancelBtn">Cancel</button>
       <button type="button" class="primary" id="appConfirmOkBtn">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Share a mood board (pages/shoot/moodboard-share.js): as a PDF or as
+     images, then the files, a tap to hand them over. -->
+<div id="shareBoardOverlay" class="modal-overlay intro-overlay app-confirm-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2>Share the mood board</h2>
+    <p id="shareBoardText"></p>
+    <div class="modal-actions fit-pair" id="shareBoardActions">
+      <button type="button" class="secondary" id="shareBoardCancelBtn">Cancel</button>
+      <button type="button" class="primary" data-share-as="images" hidden>Images</button>
+      <button type="button" class="primary" data-share-as="pdf" hidden>PDF</button>
+      <button type="button" class="primary" id="shareBoardSendBtn" hidden>Save or share</button>
     </div>
   </div>
 </div>

@@ -5161,6 +5161,7 @@ font-family: var(--head); font-size: 20px; line-height: 28px; text-transform: up
 :root.nb-hold body { min-height: calc(100vh + 1px); }
 :is(.tabbar, .nb-shoot-bar, #shootModeOverlay .shoot-mode-bottom-bar) { box-shadow: inset 0 2px 0 #d6dadd; }
 @media (display-mode: standalone) { :root:not(.settled) :is(.tabbar, .nb-sun) { visibility: hidden; } }
+#shootWizardBody .moodboard-share { display: none; }
 
 /* ---- styles/header-band.css ---- */
 @font-face { font-family: "Figtree"; src: url("../fonts/figtree-latin.woff2") format("woff2"); font-weight: 300 900; font-display: swap; size-adjust: 96.5%; }

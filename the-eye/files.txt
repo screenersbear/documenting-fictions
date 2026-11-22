@@ -282,7 +282,9 @@ built/app.js smaller
   pages/shoot/shoot-open.js
   pages/shoot/moodboard.js
   components/board-groups.js
+  components/ref-return.js
   pages/shoot/moodboard-add.js
+  pages/shoot/moodboard-share.js
   components/image-viewer.js
   pages/projects/photo-crop.js
   components/image-viewer-touch.js

@@ -118,7 +118,9 @@ window.EyeParts.addShootMoodboard = function addShootMoodboard(ed) {
         const openBtn = row.querySelector('[data-ref-open]');
         if (openBtn) openBtn.addEventListener('click', () => {
           ed.saveShootNow();
-          location.href = ed.refApi.notebookUrl('ref', { board: l.fromId });
+          // Ref's back goes to this shoot, on this page (components/ref-return.js).
+          ed.noteRefReturn(ed.currentShootId, { id: ed.shootPageId, sub: ed.shootSub });
+          location.href = ed.refApi.notebookUrl('ref', { board: l.fromId, shoot: ed.currentShootId });
         });
         row.querySelector('[data-ref-detach]').addEventListener('click', async () => {
           const yes = await ed.askConfirm({

@@ -15,6 +15,21 @@
   </div>
 </div>
 
+<!-- Share a mood board (pages/shoot/moodboard-share.js): as a PDF or as
+     images, then the files, a tap to hand them over. -->
+<div id="shareBoardOverlay" class="modal-overlay intro-overlay app-confirm-overlay" hidden>
+  <div class="modal intro-modal">
+    <h2>Share the mood board</h2>
+    <p id="shareBoardText"></p>
+    <div class="modal-actions fit-pair" id="shareBoardActions">
+      <button type="button" class="secondary" id="shareBoardCancelBtn">Cancel</button>
+      <button type="button" class="primary" data-share-as="images" hidden>Images</button>
+      <button type="button" class="primary" data-share-as="pdf" hidden>PDF</button>
+      <button type="button" class="primary" id="shareBoardSendBtn" hidden>Save or share</button>
+    </div>
+  </div>
+</div>
+
 <!-- Save a backup: "Putting it together", then the file (or files) to save, a tap each. -->
 <div id="backupOverlay" class="modal-overlay intro-overlay app-confirm-overlay" hidden>
   <div class="modal intro-modal">
