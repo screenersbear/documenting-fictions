@@ -40,3 +40,10 @@ Keep every app (the shelf, Ref, The Eye, Contact Sheet, Overthoughts) organized 
 
 The look of every app is in `DESIGN.md`, the STKY design rulebook. Read it before any change you can see. Follow its **Live**
 rules; build its **Decided** ones only when Starky asks to bring an app up to the rulebook; don't build **Proposed** ones.
+
+## The design handoff (Starky's shortcut, 2026-11-13)
+
+When Starky says just "handoff" (or "build the handoff", "check the handoff", "anything new?"), or runs `/handoff` here, it
+means: read `../STKY mockup handoff/round-2/CODE-INSTRUCTIONS.md` and follow it. Build every entry in that folder's
+`CHANGES.md` above the `Built up to here` line, check each against its mockups, commit, then move that line up. Don't ask
+what he means. If nothing is above the line, say so in one sentence.
