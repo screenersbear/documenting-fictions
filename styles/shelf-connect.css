@@ -1,5 +1,5 @@
 /* How the notebooks connect (pages/shelf-connect.js): HOW THEY CONNECT and
-   its row in Options. (What's waiting: styles/shelf-waiting.css.) */
+   its row in Options. */
 .opt-row { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 52px; margin-top: 18px; padding: 0; border: 0; border-top: 1px solid #E1E1DC; border-bottom: 1px solid #E1E1DC; background: none; color: var(--text); font: inherit; font-size: 17px; text-align: left; cursor: pointer; }
 .opt-row svg { width: 18px; height: 18px; color: var(--dim); }
 

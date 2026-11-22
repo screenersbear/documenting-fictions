@@ -1,8 +1,8 @@
 // How the notebooks connect, on the shelf (round 2, connect/01, 16 and 17):
 // HOW THEY CONNECT from Options, the loop and a switch per hand-off (all on
-// unless turned off, and kept), and the floating ! over a notebook with
-// something waiting, its preview, and gone once it's all opened. Rounds and
-// The Eye tell the shelf what's waiting in them as they open.
+// unless turned off, and kept). The floating ! over a notebook with
+// something waiting is gone (Starky, 21 Nov): what's waiting is still kept
+// (Rounds and The Eye tell it as they open), the shelf just shows none.
 import { test, expect } from '@playwright/test';
 import { freshPage } from './_helpers.mjs';
 import { openRounds } from './_rounds.mjs';
@@ -64,55 +64,17 @@ async function seedWaiting(p) {
     return (await window.DFData.saveLink({ type: 'finals', fromApp: 'the-eye', fromId: 's1', toApp: 'contact-sheet', title: 'Rooftop portraits', postIds: ['a', 'b'] })).id;
   });
 }
-const mark = (p, label) => p.locator(`.waiting-mark[aria-label^="${label}:"]`);
+const counts = (p, ids) => p.evaluate(async (list) => Object.fromEntries(Object.entries(await window.DFWaiting.waitingAll(list)).map(([k, v]) => [k, v.length])), ids);
 
-test("a notebook with something waiting has a floating ! above it, gone once it's all opened", async ({ browser }, testInfo) => {
-  const r = await onShelf(browser, testInfo);
-  const p = r.page;
-  await expect(p.locator('.waiting-mark:visible')).toHaveCount(0);
-  const id = await seedWaiting(p);
-  await p.reload();
-  await expect(mark(p, 'Layouts')).toHaveAttribute('aria-label', 'Layouts: 1 thing waiting');
-  await expect(mark(p, 'Rounds')).toHaveAttribute('aria-label', 'Rounds: 2 things waiting');
-  await expect(p.locator('.waiting-mark:visible')).toHaveCount(2);
-  await expect(p.locator('.cover-slip')).toHaveCount(0);
-  // Floating just above its book's top edge, a 44 x 58 target.
-  const layouts = p.locator('.slot', { has: p.locator('.front[aria-label="Layouts"]') });
-  const [m, book] = [await mark(p, 'Layouts').boundingBox(), await layouts.locator('.front').boundingBox()];
-  expect([Math.round(m.width), Math.round(m.height)]).toEqual([44, 58]);
-  expect(m.y + m.height).toBeLessThan(book.y);
-  expect(Math.abs(m.x + m.width / 2 - (book.x + book.width / 2))).toBeLessThan(2);
-  // Opened in Layouts: gone.
-  await p.evaluate(async (linkId) => window.DFConnect.openSlip(await window.DFData.getLink(linkId)), id);
-  await p.reload();
-  await expect(mark(p, 'Rounds')).toBeVisible();
-  await expect(p.locator('.waiting-mark:visible')).toHaveCount(1);
-  expect(r.problems).toEqual([]);
-  await r.ctx.close();
-});
-
-test("tapping the ! shows what's waiting, each row opening it in its notebook", async ({ browser }, testInfo) => {
+test('no floating ! over the notebooks, even with something waiting in them', async ({ browser }, testInfo) => {
   const r = await onShelf(browser, testInfo);
   const p = r.page;
   await seedWaiting(p);
   await p.reload();
-  await mark(p, 'Layouts').click();
-  const sheet = p.locator('.waiting-sheet');
-  await expect(sheet).toBeVisible();
-  await expect(sheet.locator('h2')).toHaveText('Waiting in Layouts');
-  await expect(sheet.locator('.waiting-title')).toHaveText(['Two posts from Rooftop portraits']);
-  await expect(sheet.locator('.waiting-line')).toHaveText(['From The Eye, today']);
-  await expect(sheet.locator('.waiting-row .df-pair')).toHaveCount(1);
-  await expect(sheet.locator('[data-open]')).toHaveText('Open Layouts');
-  await expect(sheet.locator('[data-open]')).toHaveCSS('background-color', 'rgb(204, 46, 138)');
-  await sheet.locator('[data-close]').click();
-  await expect(sheet).toHaveCount(0);
-  // Rounds: its own items for today, each under its mini; a row opens it there.
-  await mark(p, 'Rounds').click();
-  await expect(sheet.locator('.waiting-title')).toHaveText(['June Park', 'Ana Lima']);
-  await expect(sheet.locator('.waiting-row .df-mini')).toHaveCount(2);
-  await sheet.locator('.waiting-row').first().click();
-  await expect(p).toHaveURL(/\/rounds\/(\?at=|#\/)today$/); // Rounds keeps where it is as #/today
+  await expect.poll(() => counts(p, ['contact-sheet', 'rounds'])).toEqual({ 'contact-sheet': 1, rounds: 2 });
+  await expect(p.locator('.waiting-mark, .waiting-marks, .bang')).toHaveCount(0);
+  await expect(p.locator('.cover-slip')).toHaveCount(0);
+  expect(r.problems).toEqual([]);
   await r.ctx.close();
 });
 
@@ -135,7 +97,7 @@ function eyeAndRounds() {
   localStorage.setItem('dailies_monday_brief_shown_v1', day(new Date().getHours() < 5 ? -1 : 0));
 }
 
-test('Rounds and The Eye tell the shelf what is waiting in them, before the shelf opens either', async ({ browser }, testInfo) => {
+test('Rounds and The Eye keep what is waiting in them as they open', async ({ browser }, testInfo) => {
   // On a working day (Rounds rests on Sundays): the whole tab keeps that date.
   const { ctx, page: p, problems } = await openRounds(browser, testInfo, '/rounds/', eyeAndRounds);
   await expect(p.locator('#view .band')).toBeVisible();
@@ -143,14 +105,10 @@ test('Rounds and The Eye tell the shelf what is waiting in them, before the shel
   await expect(p.locator('#todayCard')).toBeVisible();
   await expect(p.locator('#todayCardItems')).toContainText('Garden light');
   await p.goto('/?from=the-eye'); // back to the shelf, as the notebooks button does
-  await expect(mark(p, 'Rounds')).toHaveAttribute('aria-label', 'Rounds: 2 things waiting');
-  await expect(mark(p, 'The Eye')).toHaveAttribute('aria-label', 'The Eye: 1 thing waiting');
-  await mark(p, 'The Eye').click();
-  const sheet = p.locator('.waiting-sheet');
-  await expect(sheet.locator('.waiting-title')).toHaveText(['Garden light']);
-  await expect(sheet.locator('.waiting-line')).toHaveText(['Shooting today']);
-  await sheet.locator('.waiting-row').click();
-  await expect(p).toHaveURL(/\/the-eye\/$/);
+  await expect.poll(() => counts(p, ['rounds', 'the-eye'])).toEqual({ rounds: 2, 'the-eye': 1 });
+  const eye = await p.evaluate(async () => (await window.DFWaiting.waitingAll(['the-eye']))['the-eye'].map((w) => [w.title, w.line]));
+  expect(eye).toEqual([['Garden light', 'Shooting today']]);
+  await expect(p.locator('.waiting-mark')).toHaveCount(0);
   expect(problems).toEqual([]);
   await ctx.close();
 });

@@ -87,7 +87,6 @@ window.ShelfParts.addOpening = function addOpening(ed) {
     await wait(ed.TURN_MS);
     s.classList.remove('opening', 'turning', 'still');
     ed.busy = false;
-    if (ed.placeWaiting) ed.placeWaiting(); // the floating ! back over each book
   }
 
   function reset() {

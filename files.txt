@@ -22,7 +22,6 @@ built/app.css smaller
   styles/shelf-connect.css
   styles/shelf-year.css
   styles/shelf-save-image.css
-  styles/shelf-waiting.css
   styles/shelf-person.css
   styles/shelf-search.css
   styles/type.css
@@ -50,7 +49,6 @@ built/app.js smaller
   components/cover-image.js
   components/shelf-image.js
   pages/shelf-save-image.js
-  pages/shelf-waiting.js
   components/thing-rows.js
   pages/shelf-person-done.js
   pages/shelf-person.js

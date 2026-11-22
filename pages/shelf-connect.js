@@ -1,7 +1,8 @@
 // How the notebooks connect, on the shelf (round 2, connect/01): HOW THEY
 // CONNECT, from Options (the loop, then a switch per hand-off). The slips
-// once tucked into the covers gave way to the floating ! (15 Nov,
-// pages/shelf-waiting.js). The hand-offs themselves: shared/data/connect.js.
+// once tucked into the covers gave way to the floating ! (15 Nov), and that
+// went too (Starky, 21 Nov): what's waiting shows inside each notebook. The
+// hand-offs themselves: shared/data/connect.js.
 // (Loaded before app.js.)
 window.ShelfParts = window.ShelfParts || {};
 window.ShelfParts.addConnect = function addConnect(ed) {

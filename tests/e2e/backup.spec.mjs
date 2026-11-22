@@ -73,6 +73,9 @@ test('the shelf: Back up is Just the notebook in front, or All four notebooks, e
 
 test("the shelf: Restore a backup of one notebook puts back just that one, and says which", async ({ browser }, testInfo) => {
   const { ctx, page, problems } = await onShelf(browser, testInfo);
+  // The Eye's picture store, there on any phone The Eye has been opened on
+  // (the shelf's floating ! used to open it too, until 21 Nov).
+  await page.evaluate(() => new Promise((ok) => { const r = indexedDB.open('starky-moodboards', 1); r.onupgradeneeded = () => r.result.createObjectStore('images'); r.onsuccess = () => { r.result.close(); ok(); }; }));
   await page.evaluate((s) => localStorage.setItem('dailies_state_v1', s), state('From the backup'));
   const file = await backupFile(page, 'the-eye');
   await page.evaluate((s) => localStorage.setItem('dailies_state_v1', s), state('Changed since'));

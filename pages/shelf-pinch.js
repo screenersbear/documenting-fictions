@@ -35,7 +35,6 @@ window.ShelfParts.addPinch = function addPinch(ed) {
     ed.stage.classList.toggle('settling', settling);
     ed.stage.style.transform = css;
     ed.shelf.classList.toggle('close', t > 0);
-    if (ed.placeWaiting) ed.placeWaiting();
   }
   async function settle(to) {
     clearTimeout(settle.t);

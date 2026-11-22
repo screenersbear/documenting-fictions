@@ -135,7 +135,6 @@
   window.ShelfParts.addCoverImage(ed);
   window.ShelfParts.addShelfImage(ed);
   window.ShelfParts.addSaveImage(ed);
-  window.ShelfParts.addWaiting(ed);
   window.ShelfParts.addPersonDone(ed);
   window.ShelfParts.addPerson(ed);
   window.ShelfParts.addPersonEdit(ed);
