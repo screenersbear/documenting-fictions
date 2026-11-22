@@ -77,8 +77,9 @@ test.describe('Ref: IMPORT', () => {
     // The page's photo, picked, swiped sideways: the page turns back (it can't be cropped sideways).
     // boundingBox() doesn't wait: right after the turn the page can still be
     // drawing, and a page not yet shown has no box (PR #12's run, 21 Nov).
-    await expect(page.locator('[data-stage] .page')).toBeVisible();
-    const stage = await page.locator('[data-stage] .page').boundingBox();
+    // It can also be drawn again between the two, so wait for a box.
+    let stage = null;
+    await expect.poll(async () => { stage = await page.locator('[data-stage] .page').boundingBox(); return !!stage; }).toBe(true);
     const cx = stage.x + stage.width / 2, cy = stage.y + stage.height / 2;
     await page.mouse.click(cx, cy);
     await page.mouse.move(cx - 100, cy); await page.mouse.down(); await page.mouse.move(cx, cy, { steps: 6 }); await page.mouse.move(cx + 100, cy, { steps: 6 }); await page.mouse.up();
@@ -114,8 +115,8 @@ test.describe('Ref: IMPORT', () => {
     expect(b.fonts).toEqual({ title: 'courier', text: 'courier' });
     expect(b.pages.map((p) => [p.template, p.size])).toEqual([['own', { W: 8.8, H: 11 }], ['own', { W: 11, H: 8.8 }]]);
     // Uncropped: the page is the photo's shape.
-    await expect(page.locator('[data-stage] .page')).toBeVisible();
-    const box = await page.locator('[data-stage] .page').boundingBox();
+    let box = null;
+    await expect.poll(async () => { box = await page.locator('[data-stage] .page').boundingBox(); return !!box; }).toBe(true);
     expect(box.width / box.height).toBeCloseTo(0.8, 1);
     // The tray opens on its pages, so + PHOTOS waits for All.
     await expect(page.locator('[data-tray-add]')).toBeHidden();
