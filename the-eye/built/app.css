@@ -189,6 +189,16 @@ pointer-events: none;
 .dfb-btn:disabled { cursor: default; opacity: .6; }
 .dfb-btn[hidden], .dfb-note[hidden] { display: none; }
 
+/* ---- styles/shared/brain.css ---- */
+.dfbn-kind { display: flex; align-items: flex-start; gap: 14px; padding: 16px 0; border-bottom: 1px solid #E1E1DC; }
+.dfbn-said { display: block; margin-top: 4px; font-size: 13px; line-height: 18px; color: #5C666D; }
+.dfbn-said:empty { display: none; }
+.dfbn-switch { margin-top: 2px; }
+.dfbn-label { display: block; margin-top: 20px; font-size: 13px; font-weight: 700; letter-spacing: .12em; line-height: 16px; text-transform: uppercase; color: #313D45; }
+.dfbn-recent { margin: 8px 0 0; padding: 0; list-style: none; border-top: 1px solid #313D45; }
+.dfbn-recent li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #E1E1DC; font-size: 14px; line-height: 19px; color: #313D45; }
+.dfbn-when { flex: none; color: #5C666D; }
+
 /* ---- styles/band-colors.css ---- */
 :root {
 --paper: #FAFAF7;
