@@ -40,6 +40,7 @@ window.EyeParts.addShootOptionsChangeStatus = function addShootOptionsChangeStat
     else delete shoot.offScheduleDate;
     ed.state.shoots[idx] = shoot;
     ed.saveState();
+    if (oldStatus !== newStatus && ed.brainNote) ed.brainNote('status', 'change', newStatus, { from: oldStatus });
     ed.renderAll();
     // A stat box popup left open underneath would otherwise keep listing a
     // shoot that no longer belongs in it.

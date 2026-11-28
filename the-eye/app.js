@@ -178,6 +178,7 @@
   window.EyeParts.addAppMenuOptions(ed);
   window.EyeParts.addAppMenuDeleteAll(ed);
   window.EyeParts.addAppMenuBackup(ed);
+  window.EyeParts.addAppMenuBrain(ed);
   window.EyeParts.addAppMenuRestore(ed);
   window.EyeParts.addStatsWords(ed);
   window.EyeParts.addStatsTab(ed);
