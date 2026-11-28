@@ -28,14 +28,17 @@ built/shared-data.js smaller
   data/shared/backup-books.js
   data/shared/backup-json.js
   data/shared/backups.js
+  data/shared/brain-notes.js
   components/shared/backup-sheet.js
   components/shared/restore-sheet.js
+  components/shared/brain-sheet.js
 
 # How it looks, in the order the rules apply.
 built/app.css smaller
   styles/base.css
   styles/shared/connect.css
   styles/shared/backup.css
+  styles/shared/brain.css
   styles/band-colors.css
   styles/icon-buttons.css
   styles/journal-log.css
@@ -342,6 +345,7 @@ built/app.js smaller
   pages/app-menu/options.js
   pages/app-menu/delete-all.js
   pages/app-menu/backup.js
+  pages/app-menu/brain.js
   pages/app-menu/restore.js
   components/stats-words.js
   pages/stats/stats-tab.js

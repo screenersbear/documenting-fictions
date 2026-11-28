@@ -1340,6 +1340,12 @@
         <button type="button" class="opt-row" id="exportPreviousShootsBtn"><span class="opt-row-words"><span class="opt-row-name">Export previous shoots</span><span class="opt-row-sub">One PDF of archived months</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
         <button type="button" class="opt-row" id="storageUsageBtn"><span class="opt-row-words"><span class="opt-row-name">Storage usage</span><span class="opt-row-sub" id="storageUsageHint"></span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
       </div>
+      <span class="opt-label opt-gap">Your brain</span>
+      <!-- For the brain (pages/app-menu/brain.js): what The Eye writes down
+           for shakusky's brain, a switch a kind, and the file it's saved in. -->
+      <div class="opt-rows">
+        <button type="button" class="opt-row" id="brainNotesBtn"><span class="opt-row-words"><span class="opt-row-name">For the brain</span><span class="opt-row-sub">What The Eye writes down for it, and your switches</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>
+      </div>
       <span class="opt-label opt-gap">Help</span>
       <div class="opt-rows">
         <button type="button" class="opt-row" id="appTourBtn"><span class="opt-row-words"><span class="opt-row-name">How it works</span></span><svg class="opt-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>

@@ -32,6 +32,7 @@ window.EyeParts.addSelectsActs = function addSelectsActs(ed) {
     const after = ed.selectsAskAgain(ed.todayStr());
     ed.selectsGroup(ed.state.shoots, id).forEach((s) => { s.selectsAskAfter = after; });
     saved();
+    if (ed.brainNote) ed.brainNote('selects', 'other', 'put off asking for selects');
   }
 
   // Their person in Rounds, if they're there: its id, or ''.
